@@ -15,6 +15,7 @@ import { z } from "zod";
 import { NextResponse, type NextRequest } from "next/server";
 
 import { ok, fail } from "@/lib/api/wrappers";
+import { audit } from "@/lib/audit";
 import { requireRole } from "@/lib/auth/require-role";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { requireSupportWrite } from "@/lib/impersonate/support";
@@ -99,7 +100,7 @@ export async function GET(req: NextRequest, ctx: RouteCtx): Promise<NextResponse
   if (!authz.ok) return authz.response;
 
   const db = createAdminClient();
-  const { data: flow, error } = await buscarFlow(db, id, authz.organizationId);
+  const { data: flow, error } = await buscarFlow(db, id, authz.org.orgId);
 
   if (error || !flow) {
     return fail("not_found", "Flow não encontrado", 404, { requestId });
@@ -117,13 +118,8 @@ export async function PATCH(req: NextRequest, ctx: RouteCtx): Promise<NextRespon
   const authz = await requireRole("manager", { requestId, resource: "ig_automation_flows" });
   if (!authz.ok) return authz.response;
 
-  const { organizationId, userId } = authz;
-
-  const guardaSuporteWrite = await requireSupportWrite({
-    requestId,
-    resource: "ig_automation_flows.update",
-  });
-  if (!guardaSuporteWrite.ok) return guardaSuporteWrite.response;
+  const supportDenied = await requireSupportWrite(authz.org.orgId);
+  if (supportDenied) return supportDenied;
 
   let body: unknown;
   try {
@@ -147,7 +143,7 @@ export async function PATCH(req: NextRequest, ctx: RouteCtx): Promise<NextRespon
   const db = createAdminClient();
 
   // Verificar existência + tenant
-  const { data: existente, error: errBusca } = await buscarFlow(db, id, organizationId);
+  const { data: existente, error: errBusca } = await buscarFlow(db, id, authz.org.orgId);
   if (errBusca || !existente) {
     return fail("not_found", "Flow não encontrado", 404, { requestId });
   }
@@ -156,7 +152,7 @@ export async function PATCH(req: NextRequest, ctx: RouteCtx): Promise<NextRespon
     .from("ig_automation_flows")
     .update(parsed.data)
     .eq("id", id)
-    .eq("organization_id", organizationId)
+    .eq("organization_id", authz.org.orgId)
     .select()
     .single();
 
@@ -164,12 +160,12 @@ export async function PATCH(req: NextRequest, ctx: RouteCtx): Promise<NextRespon
     return fail("internal_error", "Erro ao atualizar flow", 500, { requestId });
   }
 
-  // Audit log
-  await db.from("api_audit_log").insert({
-    organization_id: organizationId,
-    user_id: userId,
+  void audit({
     action: "ig_automation_flows.update",
-    resource_id: id,
+    actorUserId: authz.user.id,
+    organizationId: authz.org.orgId,
+    resourceId: id,
+    requestId,
     metadata: { campos_alterados: Object.keys(parsed.data) },
   });
 
@@ -185,17 +181,12 @@ export async function DELETE(req: NextRequest, ctx: RouteCtx): Promise<NextRespo
   const authz = await requireRole("manager", { requestId, resource: "ig_automation_flows" });
   if (!authz.ok) return authz.response;
 
-  const { organizationId, userId } = authz;
-
-  const guardaSuporteWrite = await requireSupportWrite({
-    requestId,
-    resource: "ig_automation_flows.delete",
-  });
-  if (!guardaSuporteWrite.ok) return guardaSuporteWrite.response;
+  const supportDenied = await requireSupportWrite(authz.org.orgId);
+  if (supportDenied) return supportDenied;
 
   const db = createAdminClient();
 
-  const { data: existente, error: errBusca } = await buscarFlow(db, id, organizationId);
+  const { data: existente, error: errBusca } = await buscarFlow(db, id, authz.org.orgId);
   if (errBusca || !existente) {
     return fail("not_found", "Flow não encontrado", 404, { requestId });
   }
@@ -205,18 +196,18 @@ export async function DELETE(req: NextRequest, ctx: RouteCtx): Promise<NextRespo
     .from("ig_automation_flows")
     .update({ ativo: false })
     .eq("id", id)
-    .eq("organization_id", organizationId);
+    .eq("organization_id", authz.org.orgId);
 
   if (errDelete) {
     return fail("internal_error", "Erro ao desativar flow", 500, { requestId });
   }
 
-  // Audit log
-  await db.from("api_audit_log").insert({
-    organization_id: organizationId,
-    user_id: userId,
+  void audit({
     action: "ig_automation_flows.delete",
-    resource_id: id,
+    actorUserId: authz.user.id,
+    organizationId: authz.org.orgId,
+    resourceId: id,
+    requestId,
     metadata: { nome: existente.nome },
   });
 

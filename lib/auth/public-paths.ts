@@ -76,6 +76,17 @@ export const PUBLIC_PATHS: RegExp[] = [
   // volta do Google não tem, e não pode ter, o cookie.
   /^\/api\/v1\/plataformas-de-anuncio\/google\/callback$/,
   /^\/api\/v1\/integrations\/nuvemshop\/callback$/,
+  // WEBHOOKS DO INSTAGRAM (Graph API). Quem chega é o Meta — POST com assinatura
+  // HMAC SHA256, e GET de verificação com verify_token. Sem cookie, sem sessão.
+  // A auth mora DENTRO da rota (assinatura no POST, token no GET). Âncorado com
+  // `$`: nenhum sub-path nasce público de carona.
+  /^\/api\/v1\/ig-webhooks$/,
+  // VOLTA DO OAUTH DO INSTAGRAM. O Facebook devolve o NAVEGADOR para cá, e essa
+  // navegação vem de outro site — o cookie `sameSite: "strict"` não viaja. Sem
+  // esta linha o proxy responde 401 antes de a rota existir. A identidade vem do
+  // `state` assinado (HMAC), não da sessão. Mesma natureza de
+  // `/api/v1/agenda/google/callback` acima.
+  /^\/api\/v1\/ig-oauth\/callback$/,
   /^\/api\/internal\//,
   /^\/api\/mcp(\/.*)?$/,
   // GET /api/v1/contacts aceita SESSÃO ou Bearer `dsk_...` (api_tokens) — a

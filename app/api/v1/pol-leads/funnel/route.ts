@@ -48,13 +48,11 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
   const authz = await requireRole("manager", { requestId, resource: "pol_leads" });
   if (!authz.ok) return authz.response;
 
-  const { organizationId, userId } = authz;
+  const orgId = authz.org.orgId;
+  const userId = authz.user.id;
 
-  const guardaSuporteWrite = await requireSupportWrite({
-    requestId,
-    resource: "pol_leads.funnel_transition",
-  });
-  if (!guardaSuporteWrite.ok) return guardaSuporteWrite.response;
+  const denied = await requireSupportWrite(orgId);
+  if (denied) return denied;
 
   let body: unknown;
   try {
@@ -84,7 +82,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     .from("pol_leads")
     .select("id, support_level")
     .eq("contact_id", contact_id)
-    .eq("organization_id", organizationId)
+    .eq("organization_id", orgId)
     .single();
 
   if (errBusca || !polLead) {
@@ -105,7 +103,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
   const { data: transicao, error: errTransicao } = await db
     .from("pol_funnel_transitions")
     .insert({
-      organization_id: organizationId,
+      organization_id: orgId,
       contact_id,
       from_stage,
       to_stage,
@@ -124,7 +122,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     .from("pol_leads")
     .update({ support_level: to_stage })
     .eq("id", polLead.id)
-    .eq("organization_id", organizationId)
+    .eq("organization_id", orgId)
     .select()
     .single();
 
@@ -134,7 +132,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
 
   // Audit log
   await db.from("api_audit_log").insert({
-    organization_id: organizationId,
+    organization_id: orgId,
     user_id: userId,
     action: "pol_leads.funnel_transition",
     resource_id: polLead.id,

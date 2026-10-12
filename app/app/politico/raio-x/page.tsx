@@ -10,9 +10,8 @@
 
 import { redirect } from "next/navigation";
 import Link from "next/link";
-import { createServerClient } from "@/lib/supabase/server";
-import { getUser } from "@/lib/auth/get-user";
-import { resolverOrganizacaoAtiva } from "@/lib/organizations/resolver";
+import { createClient } from "@/lib/supabase/server";
+import { requireAuth, resolveActiveOrg } from "@/lib/auth/server";
 
 // -- Tipos -------------------------------------------------------------------
 
@@ -40,7 +39,7 @@ interface ResumoTerritorial {
 // -- Data fetching -----------------------------------------------------------
 
 async function buscarDadosTSE(organizationId: string): Promise<DadoTSE[]> {
-  const db = createServerClient();
+  const db = await createClient();
   const { data } = await db
     .from("pol_tse_data")
     .select("id, election_year, state, city, zone, section, candidate_name, party, votes, valid_votes, turnout")
@@ -72,13 +71,12 @@ function calcularResumo(dados: DadoTSE[]): ResumoTerritorial {
 // -- Componente --------------------------------------------------------------
 
 export default async function RaioXPage() {
-  const user = await getUser();
-  if (!user) redirect("/login");
+  const user = await requireAuth();
 
-  const org = await resolverOrganizacaoAtiva(user.id);
+  const org = await resolveActiveOrg(user);
   if (!org) redirect("/app/onboarding");
 
-  const dados = await buscarDadosTSE(org.id);
+  const dados = await buscarDadosTSE(org.orgId);
   const resumo = calcularResumo(dados);
 
   // Agrupar por ano para a visão de evolução
@@ -137,7 +135,8 @@ export default async function RaioXPage() {
             </h2>
             <div className="space-y-1">
               {topCidades.map(([cidade, votos], i) => {
-                const pct = topCidades[0][1] > 0 ? (votos / topCidades[0][1]) * 100 : 0;
+                const maxVotos = topCidades[0]?.[1] ?? 0;
+                const pct = maxVotos > 0 ? (votos / maxVotos) * 100 : 0;
                 return (
                   <div key={cidade} className="flex items-center gap-3">
                     <span className="w-6 text-right text-xs font-mono text-muted-foreground">{i + 1}</span>
@@ -168,7 +167,7 @@ export default async function RaioXPage() {
             </h2>
             <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
               {anos.map((ano) => {
-                const dadosAno = porAno[ano];
+                const dadosAno = porAno[ano] ?? [];
                 const totalAno = dadosAno.reduce((s, d) => s + d.votes, 0);
                 const secoesAno = new Set(dadosAno.map((d) => `${d.zone}-${d.section}`)).size;
                 return (

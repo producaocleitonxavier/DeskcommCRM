@@ -1113,6 +1113,16 @@ export const AUDIT_ACTIONS = [
   // dedicada `PATCH /contacts/[id]/carteira` (#2591) — a escrita é do servidor,
   // então o audit é a única trilha de quem mudou o dono.
   "contact.carteira_changed",
+
+  // Instagram Business OAuth (migration 0642, fase F do War Room).
+  "instagram.oauth_started",
+  "instagram.oauth_failed",
+  "instagram.oauth_connected",
+
+  // Instagram automation flows CRUD (migration 0642+, fase G do War Room).
+  "ig_automation_flows.create",
+  "ig_automation_flows.update",
+  "ig_automation_flows.delete",
 ] as const;
 
 /** Um código de auditoria. Derivado de `AUDIT_ACTIONS` — não redigite a lista. */

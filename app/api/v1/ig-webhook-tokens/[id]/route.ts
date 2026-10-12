@@ -28,10 +28,11 @@ export async function DELETE(req: NextRequest, ctx: RouteCtx): Promise<NextRespo
   const authz = await requireRole("manager", { requestId, resource: "ig_webhook_tokens" });
   if (!authz.ok) return authz.response;
 
-  const { organizationId, userId } = authz;
+  const organizationId = authz.org.orgId;
+  const userId = authz.user.id;
 
-  const guarda = await requireSupportWrite({ requestId, resource: "ig_webhook_tokens.delete" });
-  if (!guarda.ok) return guarda.response;
+  const guarda = await requireSupportWrite(organizationId);
+  if (guarda) return guarda;
 
   const db = createAdminClient();
 

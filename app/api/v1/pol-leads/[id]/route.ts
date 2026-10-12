@@ -55,12 +55,12 @@ const atualizarPolLeadSchema = z
 
 // -- Helpers ------------------------------------------------------------------
 
-async function buscarPolLead(db: ReturnType<typeof createAdminClient>, id: string, organizationId: string) {
+async function buscarPolLead(db: ReturnType<typeof createAdminClient>, id: string, orgId: string) {
   return db
     .from("pol_leads")
     .select("*, contacts(id, name, phone, email)")
     .eq("id", id)
-    .eq("organization_id", organizationId)
+    .eq("organization_id", orgId)
     .single();
 }
 
@@ -74,7 +74,7 @@ export async function GET(req: NextRequest, ctx: RouteCtx): Promise<NextResponse
   if (!authz.ok) return authz.response;
 
   const db = createAdminClient();
-  const { data: polLead, error } = await buscarPolLead(db, id, authz.organizationId);
+  const { data: polLead, error } = await buscarPolLead(db, id, authz.org.orgId);
 
   if (error || !polLead) {
     return fail("not_found", "Pol_lead nao encontrado", 404, { requestId });
@@ -92,13 +92,11 @@ export async function PATCH(req: NextRequest, ctx: RouteCtx): Promise<NextRespon
   const authz = await requireRole("manager", { requestId, resource: "pol_leads" });
   if (!authz.ok) return authz.response;
 
-  const { organizationId, userId } = authz;
+  const orgId = authz.org.orgId;
+  const userId = authz.user.id;
 
-  const guardaSuporteWrite = await requireSupportWrite({
-    requestId,
-    resource: "pol_leads.update",
-  });
-  if (!guardaSuporteWrite.ok) return guardaSuporteWrite.response;
+  const denied = await requireSupportWrite(orgId);
+  if (denied) return denied;
 
   let body: unknown;
   try {
@@ -126,7 +124,7 @@ export async function PATCH(req: NextRequest, ctx: RouteCtx): Promise<NextRespon
     .from("pol_leads")
     .select("id")
     .eq("id", id)
-    .eq("organization_id", organizationId)
+    .eq("organization_id", orgId)
     .single();
 
   if (errBusca || !existente) {
@@ -137,7 +135,7 @@ export async function PATCH(req: NextRequest, ctx: RouteCtx): Promise<NextRespon
     .from("pol_leads")
     .update(parsed.data)
     .eq("id", id)
-    .eq("organization_id", organizationId)
+    .eq("organization_id", orgId)
     .select()
     .single();
 
@@ -147,7 +145,7 @@ export async function PATCH(req: NextRequest, ctx: RouteCtx): Promise<NextRespon
 
   // Audit log
   await db.from("api_audit_log").insert({
-    organization_id: organizationId,
+    organization_id: orgId,
     user_id: userId,
     action: "pol_leads.update",
     resource_id: id,
@@ -166,13 +164,11 @@ export async function DELETE(req: NextRequest, ctx: RouteCtx): Promise<NextRespo
   const authz = await requireRole("admin", { requestId, resource: "pol_leads" });
   if (!authz.ok) return authz.response;
 
-  const { organizationId, userId } = authz;
+  const orgId = authz.org.orgId;
+  const userId = authz.user.id;
 
-  const guardaSuporteWrite = await requireSupportWrite({
-    requestId,
-    resource: "pol_leads.delete",
-  });
-  if (!guardaSuporteWrite.ok) return guardaSuporteWrite.response;
+  const denied = await requireSupportWrite(orgId);
+  if (denied) return denied;
 
   const db = createAdminClient();
 
@@ -180,7 +176,7 @@ export async function DELETE(req: NextRequest, ctx: RouteCtx): Promise<NextRespo
     .from("pol_leads")
     .select("id, contact_id")
     .eq("id", id)
-    .eq("organization_id", organizationId)
+    .eq("organization_id", orgId)
     .single();
 
   if (errBusca || !existente) {
@@ -192,7 +188,7 @@ export async function DELETE(req: NextRequest, ctx: RouteCtx): Promise<NextRespo
     .from("pol_leads")
     .delete()
     .eq("id", id)
-    .eq("organization_id", organizationId);
+    .eq("organization_id", orgId);
 
   if (errDelete) {
     return fail("internal_error", "Erro ao deletar pol_lead", 500, { requestId });
@@ -200,7 +196,7 @@ export async function DELETE(req: NextRequest, ctx: RouteCtx): Promise<NextRespo
 
   // Audit log
   await db.from("api_audit_log").insert({
-    organization_id: organizationId,
+    organization_id: orgId,
     user_id: userId,
     action: "pol_leads.delete",
     resource_id: id,

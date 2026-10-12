@@ -56,12 +56,12 @@ const atualizarPolOpponentSchema = z
 
 // -- Helpers ------------------------------------------------------------------
 
-async function buscarPolOpponent(db: ReturnType<typeof createAdminClient>, id: string, organizationId: string) {
+async function buscarPolOpponent(db: ReturnType<typeof createAdminClient>, id: string, orgId: string) {
   return db
     .from("pol_opponents")
     .select("*")
     .eq("id", id)
-    .eq("organization_id", organizationId)
+    .eq("organization_id", orgId)
     .single();
 }
 
@@ -75,7 +75,7 @@ export async function GET(req: NextRequest, ctx: RouteCtx): Promise<NextResponse
   if (!authz.ok) return authz.response;
 
   const db = createAdminClient();
-  const { data: polOpponent, error } = await buscarPolOpponent(db, id, authz.organizationId);
+  const { data: polOpponent, error } = await buscarPolOpponent(db, id, authz.org.orgId);
 
   if (error || !polOpponent) {
     return fail("not_found", "Pol_opponent nao encontrado", 404, { requestId });
@@ -93,13 +93,11 @@ export async function PATCH(req: NextRequest, ctx: RouteCtx): Promise<NextRespon
   const authz = await requireRole("manager", { requestId, resource: "pol_opponents" });
   if (!authz.ok) return authz.response;
 
-  const { organizationId, userId } = authz;
+  const orgId = authz.org.orgId;
+  const userId = authz.user.id;
 
-  const guardaSuporteWrite = await requireSupportWrite({
-    requestId,
-    resource: "pol_opponents.update",
-  });
-  if (!guardaSuporteWrite.ok) return guardaSuporteWrite.response;
+  const denied = await requireSupportWrite(orgId);
+  if (denied) return denied;
 
   let body: unknown;
   try {
@@ -127,7 +125,7 @@ export async function PATCH(req: NextRequest, ctx: RouteCtx): Promise<NextRespon
     .from("pol_opponents")
     .select("id")
     .eq("id", id)
-    .eq("organization_id", organizationId)
+    .eq("organization_id", orgId)
     .single();
 
   if (errBusca || !existente) {
@@ -138,7 +136,7 @@ export async function PATCH(req: NextRequest, ctx: RouteCtx): Promise<NextRespon
     .from("pol_opponents")
     .update(parsed.data)
     .eq("id", id)
-    .eq("organization_id", organizationId)
+    .eq("organization_id", orgId)
     .select()
     .single();
 
@@ -148,7 +146,7 @@ export async function PATCH(req: NextRequest, ctx: RouteCtx): Promise<NextRespon
 
   // Audit log
   await db.from("api_audit_log").insert({
-    organization_id: organizationId,
+    organization_id: orgId,
     user_id: userId,
     action: "pol_opponents.update",
     resource_id: id,
@@ -167,13 +165,11 @@ export async function DELETE(req: NextRequest, ctx: RouteCtx): Promise<NextRespo
   const authz = await requireRole("manager", { requestId, resource: "pol_opponents" });
   if (!authz.ok) return authz.response;
 
-  const { organizationId, userId } = authz;
+  const orgId = authz.org.orgId;
+  const userId = authz.user.id;
 
-  const guardaSuporteWrite = await requireSupportWrite({
-    requestId,
-    resource: "pol_opponents.delete",
-  });
-  if (!guardaSuporteWrite.ok) return guardaSuporteWrite.response;
+  const denied = await requireSupportWrite(orgId);
+  if (denied) return denied;
 
   const db = createAdminClient();
 
@@ -181,7 +177,7 @@ export async function DELETE(req: NextRequest, ctx: RouteCtx): Promise<NextRespo
     .from("pol_opponents")
     .select("id, name")
     .eq("id", id)
-    .eq("organization_id", organizationId)
+    .eq("organization_id", orgId)
     .single();
 
   if (errBusca || !existente) {
@@ -193,7 +189,7 @@ export async function DELETE(req: NextRequest, ctx: RouteCtx): Promise<NextRespo
     .from("pol_opponents")
     .delete()
     .eq("id", id)
-    .eq("organization_id", organizationId);
+    .eq("organization_id", orgId);
 
   if (errDelete) {
     return fail("internal_error", "Erro ao deletar pol_opponent", 500, { requestId });
@@ -201,7 +197,7 @@ export async function DELETE(req: NextRequest, ctx: RouteCtx): Promise<NextRespo
 
   // Audit log
   await db.from("api_audit_log").insert({
-    organization_id: organizationId,
+    organization_id: orgId,
     user_id: userId,
     action: "pol_opponents.delete",
     resource_id: id,

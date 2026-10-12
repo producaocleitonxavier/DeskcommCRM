@@ -9,9 +9,8 @@
 
 import { redirect } from "next/navigation";
 import Link from "next/link";
-import { createServerClient } from "@/lib/supabase/server";
-import { getUser } from "@/lib/auth/get-user";
-import { resolverOrganizacaoAtiva } from "@/lib/organizations/resolver";
+import { createClient } from "@/lib/supabase/server";
+import { requireAuth, resolveActiveOrg } from "@/lib/auth/server";
 
 // -- Tipos -------------------------------------------------------------------
 
@@ -28,7 +27,7 @@ interface MetricasHoje {
 // -- Data fetching -----------------------------------------------------------
 
 async function buscarMetricas(organizationId: string): Promise<MetricasHoje> {
-  const db = createServerClient();
+  const db = await createClient();
   const agora = new Date();
   const inicioSemana = new Date(agora);
   inicioSemana.setDate(agora.getDate() - agora.getDay());
@@ -134,14 +133,13 @@ function primeiroNome(nome: string | null | undefined): string {
 // -- Componente --------------------------------------------------------------
 
 export default async function HojePage() {
-  const user = await getUser();
-  if (!user) redirect("/login");
+  const user = await requireAuth();
 
-  const org = await resolverOrganizacaoAtiva(user.id);
+  const org = await resolveActiveOrg(user);
   if (!org) redirect("/app/onboarding");
 
-  const m = await buscarMetricas(org.id);
-  const nome = primeiroNome(user.user_metadata?.full_name as string | undefined);
+  const m = await buscarMetricas(org.orgId);
+  const nome = primeiroNome(user.full_name);
 
   return (
     <div className="mx-auto max-w-[1140px] space-y-5">

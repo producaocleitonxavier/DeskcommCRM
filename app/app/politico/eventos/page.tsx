@@ -9,9 +9,8 @@
 
 import { redirect } from "next/navigation";
 import Link from "next/link";
-import { createServerClient } from "@/lib/supabase/server";
-import { getUser } from "@/lib/auth/get-user";
-import { resolverOrganizacaoAtiva } from "@/lib/organizations/resolver";
+import { createClient } from "@/lib/supabase/server";
+import { requireAuth, resolveActiveOrg } from "@/lib/auth/server";
 
 // -- Tipos -------------------------------------------------------------------
 
@@ -58,7 +57,7 @@ async function buscarEventos(
   filtroStatus?: string,
   filtroType?: string,
 ): Promise<Evento[]> {
-  const db = createServerClient();
+  const db = await createClient();
 
   let query = db
     .from("pol_events")
@@ -90,17 +89,16 @@ export default async function EventosPage({
 }: {
   searchParams: Promise<{ status?: string; type?: string }>;
 }) {
-  const user = await getUser();
-  if (!user) redirect("/login");
+  const user = await requireAuth();
 
-  const org = await resolverOrganizacaoAtiva(user.id);
+  const org = await resolveActiveOrg(user);
   if (!org) redirect("/app/onboarding");
 
   const params = await searchParams;
   const filtroStatus = params.status ?? "";
   const filtroType = params.type ?? "";
 
-  const eventos = await buscarEventos(org.id, filtroStatus || undefined, filtroType || undefined);
+  const eventos = await buscarEventos(org.orgId, filtroStatus || undefined, filtroType || undefined);
 
   return (
     <div className="mx-auto max-w-5xl px-4 py-8 space-y-6">

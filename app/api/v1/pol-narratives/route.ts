@@ -67,7 +67,7 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
   const authz = await requireRole("viewer", { requestId, resource: "pol_narratives" });
   if (!authz.ok) return authz.response;
 
-  const { organizationId } = authz;
+  const orgId = authz.org.orgId;
   const db = createAdminClient();
   const params = req.nextUrl.searchParams;
 
@@ -76,7 +76,7 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
     .select(
       "id, theme, platform, city, sentiment, strength, posts_count, reach, engagement_score, strategic_status, recommended_action, created_at, updated_at",
     )
-    .eq("organization_id", organizationId)
+    .eq("organization_id", orgId)
     .order("strength", { ascending: false, nullsFirst: false });
 
   // Filtros opcionais
@@ -117,10 +117,11 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
   const authz = await requireRole("manager", { requestId, resource: "pol_narratives" });
   if (!authz.ok) return authz.response;
 
-  const { organizationId, userId } = authz;
+  const orgId = authz.org.orgId;
+  const userId = authz.user.id;
 
-  const guardaSuporteWrite = await requireSupportWrite({ requestId, resource: "pol_narratives.create" });
-  if (!guardaSuporteWrite.ok) return guardaSuporteWrite.response;
+  const denied = await requireSupportWrite(orgId);
+  if (denied) return denied;
 
   let body: unknown;
   try {
@@ -142,7 +143,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
   const { data: narrativa, error } = await db
     .from("pol_narratives")
     .insert({
-      organization_id: organizationId,
+      organization_id: orgId,
       theme: parsed.data.theme,
       platform: parsed.data.platform ?? null,
       city: parsed.data.city ?? null,
@@ -168,7 +169,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
 
   // Audit log
   await db.from("api_audit_log").insert({
-    organization_id: organizationId,
+    organization_id: orgId,
     user_id: userId,
     action: "pol_narratives.create",
     resource_id: narrativa.id,

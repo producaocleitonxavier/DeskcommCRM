@@ -9,9 +9,8 @@
 
 import { redirect } from "next/navigation";
 import Link from "next/link";
-import { createServerClient } from "@/lib/supabase/server";
-import { getUser } from "@/lib/auth/get-user";
-import { resolverOrganizacaoAtiva } from "@/lib/organizations/resolver";
+import { createClient } from "@/lib/supabase/server";
+import { requireAuth, resolveActiveOrg } from "@/lib/auth/server";
 
 // -- Tipos -------------------------------------------------------------------
 
@@ -94,7 +93,7 @@ function statusEstilo(status: string): { bg: string; color: string } {
 // -- Data fetching -----------------------------------------------------------
 
 async function buscarOportunidades(organizationId: string): Promise<OportunidadeRow[]> {
-  const db = createServerClient();
+  const db = await createClient();
 
   const { data, error } = await db
     .from("pol_vw_mapa_oportunidades")
@@ -112,7 +111,7 @@ async function buscarOportunidades(organizationId: string): Promise<Oportunidade
 }
 
 async function buscarPrioridades(organizationId: string): Promise<PrioridadeRow[]> {
-  const db = createServerClient();
+  const db = await createClient();
 
   const { data, error } = await db
     .from("pol_vw_mapa_prioridade")
@@ -224,18 +223,17 @@ export default async function TerritorioPage({
 }: {
   searchParams: Promise<{ camada?: string }>;
 }) {
-  const user = await getUser();
-  if (!user) redirect("/login");
+  const user = await requireAuth();
 
-  const org = await resolverOrganizacaoAtiva(user.id);
+  const org = await resolveActiveOrg(user);
   if (!org) redirect("/app/onboarding");
 
   const params = await searchParams;
   const camada = params.camada ?? "oportunidades";
 
   const [oportunidades, prioridades] = await Promise.all([
-    camada === "oportunidades" ? buscarOportunidades(org.id) : Promise.resolve([]),
-    camada === "prioridade" ? buscarPrioridades(org.id) : Promise.resolve([]),
+    camada === "oportunidades" ? buscarOportunidades(org.orgId) : Promise.resolve([]),
+    camada === "prioridade" ? buscarPrioridades(org.orgId) : Promise.resolve([]),
   ]);
 
   // -- Stats para a camada oportunidades --

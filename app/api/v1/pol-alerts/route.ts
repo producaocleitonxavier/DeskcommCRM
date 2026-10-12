@@ -71,14 +71,14 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
   const authz = await requireRole("viewer", { requestId, resource: "pol_alerts" });
   if (!authz.ok) return authz.response;
 
-  const { organizationId } = authz;
+  const orgId = authz.org.orgId;
   const db = createAdminClient();
   const params = req.nextUrl.searchParams;
 
   let query = db
     .from("pol_alerts")
     .select("*")
-    .eq("organization_id", organizationId)
+    .eq("organization_id", orgId)
     .order("created_at", { ascending: false });
 
   // Filtros opcionais
@@ -119,10 +119,11 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
   const authz = await requireRole("manager", { requestId, resource: "pol_alerts" });
   if (!authz.ok) return authz.response;
 
-  const { organizationId, userId } = authz;
+  const orgId = authz.org.orgId;
+  const userId = authz.user.id;
 
-  const guardaSuporteWrite = await requireSupportWrite({ requestId, resource: "pol_alerts.create" });
-  if (!guardaSuporteWrite.ok) return guardaSuporteWrite.response;
+  const denied = await requireSupportWrite(orgId);
+  if (denied) return denied;
 
   let body: unknown;
   try {
@@ -144,7 +145,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
   const { data: alert, error } = await db
     .from("pol_alerts")
     .insert({
-      organization_id: organizationId,
+      organization_id: orgId,
       alert_type: parsed.data.alert_type,
       severity: parsed.data.severity,
       status: "open" as const,
@@ -165,7 +166,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
 
   // Audit log
   db.from("api_audit_log").insert({
-    organization_id: organizationId,
+    organization_id: orgId,
     user_id: userId,
     action: "pol_alerts.create",
     resource_type: "pol_alerts",

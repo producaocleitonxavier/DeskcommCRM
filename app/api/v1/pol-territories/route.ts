@@ -53,7 +53,7 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
   const authz = await requireRole("viewer", { requestId, resource: "pol_territories" });
   if (!authz.ok) return authz.response;
 
-  const { organizationId } = authz;
+  const orgId = authz.org.orgId;
   const db = createAdminClient();
   const params = req.nextUrl.searchParams;
 
@@ -62,7 +62,7 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
     .select(
       "id, name, type, parent_id, ibge_code, state_code, latitude, longitude, population, electorate, created_at, updated_at",
     )
-    .eq("organization_id", organizationId)
+    .eq("organization_id", orgId)
     .order("created_at", { ascending: false });
 
   // Filtros opcionais
@@ -103,10 +103,11 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
   const authz = await requireRole("manager", { requestId, resource: "pol_territories" });
   if (!authz.ok) return authz.response;
 
-  const { organizationId, userId } = authz;
+  const orgId = authz.org.orgId;
+  const userId = authz.user.id;
 
-  const guardaSuporteWrite = await requireSupportWrite({ requestId, resource: "pol_territories.create" });
-  if (!guardaSuporteWrite.ok) return guardaSuporteWrite.response;
+  const denied = await requireSupportWrite(orgId);
+  if (denied) return denied;
 
   let body: unknown;
   try {
@@ -131,7 +132,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
       .from("pol_territories")
       .select("id")
       .eq("id", parsed.data.parent_id)
-      .eq("organization_id", organizationId)
+      .eq("organization_id", orgId)
       .single();
 
     if (errParent || !parent) {
@@ -142,7 +143,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
   const { data: territory, error } = await db
     .from("pol_territories")
     .insert({
-      organization_id: organizationId,
+      organization_id: orgId,
       name: parsed.data.name,
       type: parsed.data.type,
       parent_id: parsed.data.parent_id ?? null,
@@ -162,7 +163,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
 
   // Audit log
   await db.from("api_audit_log").insert({
-    organization_id: organizationId,
+    organization_id: orgId,
     user_id: userId,
     action: "pol_territories.create",
     resource_id: territory.id,

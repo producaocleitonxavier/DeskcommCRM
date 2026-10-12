@@ -9,9 +9,8 @@
 
 import { redirect } from "next/navigation";
 import Link from "next/link";
-import { createServerClient } from "@/lib/supabase/server";
-import { getUser } from "@/lib/auth/get-user";
-import { resolverOrganizacaoAtiva } from "@/lib/organizations/resolver";
+import { createClient } from "@/lib/supabase/server";
+import { requireAuth, resolveActiveOrg } from "@/lib/auth/server";
 
 // -- Tipos -------------------------------------------------------------------
 
@@ -55,7 +54,7 @@ const ENGAJAMENTO_COLORS: Record<string, string> = {
 // -- Data fetching -----------------------------------------------------------
 
 async function buscarLiderancas(organizationId: string): Promise<Lideranca[]> {
-  const db = createServerClient();
+  const db = await createClient();
   const { data } = await db
     .from("pol_liderancas")
     .select(
@@ -76,7 +75,7 @@ function proximosAniversarios(liderancas: Lideranca[]): Lideranca[] {
   return liderancas
     .filter((l) => l.aniversario)
     .map((l) => {
-      const [, mes, dia] = l.aniversario!.split("-").map(Number);
+      const [, mes = 1, dia = 1] = l.aniversario!.split("-").map(Number);
       let diasAte = (mes - mesAtual) * 30 + (dia - diaAtual);
       if (diasAte < 0) diasAte += 365;
       return { ...l, _diasAte: diasAte };
@@ -88,13 +87,12 @@ function proximosAniversarios(liderancas: Lideranca[]): Lideranca[] {
 // -- Componente --------------------------------------------------------------
 
 export default async function LiderancasPage() {
-  const user = await getUser();
-  if (!user) redirect("/login");
+  const user = await requireAuth();
 
-  const org = await resolverOrganizacaoAtiva(user.id);
+  const org = await resolveActiveOrg(user);
   if (!org) redirect("/app/onboarding");
 
-  const liderancas = await buscarLiderancas(org.id);
+  const liderancas = await buscarLiderancas(org.orgId);
   const aniversariantes = proximosAniversarios(liderancas);
 
   return (

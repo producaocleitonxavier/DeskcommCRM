@@ -10,9 +10,8 @@
 
 import { redirect } from "next/navigation";
 import Link from "next/link";
-import { createServerClient } from "@/lib/supabase/server";
-import { getUser } from "@/lib/auth/get-user";
-import { resolverOrganizacaoAtiva } from "@/lib/organizations/resolver";
+import { createClient } from "@/lib/supabase/server";
+import { requireAuth, resolveActiveOrg } from "@/lib/auth/server";
 
 // -- Tipos -------------------------------------------------------------------
 
@@ -53,7 +52,7 @@ async function buscarProjecao(
   filtroType?: string,
   ordenacao?: string,
 ): Promise<ProjecaoRow[]> {
-  const db = createServerClient();
+  const db = await createClient();
 
   let query = db
     .from("pol_vw_projecao_eleitoral")
@@ -97,17 +96,16 @@ export default async function ProjecaoPage({
 }: {
   searchParams: Promise<{ type?: string; ordem?: string }>;
 }) {
-  const user = await getUser();
-  if (!user) redirect("/login");
+  const user = await requireAuth();
 
-  const org = await resolverOrganizacaoAtiva(user.id);
+  const org = await resolveActiveOrg(user);
   if (!org) redirect("/app/onboarding");
 
   const params = await searchParams;
   const filtroType = params.type ?? "";
   const ordenacao = params.ordem ?? "";
 
-  const projecoes = await buscarProjecao(org.id, filtroType || undefined, ordenacao || undefined);
+  const projecoes = await buscarProjecao(org.orgId, filtroType || undefined, ordenacao || undefined);
 
   // Totais
   const totalBaseSegura = projecoes.reduce((s, r) => s + r.base_segura, 0);

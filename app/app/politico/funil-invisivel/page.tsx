@@ -9,9 +9,8 @@
 
 import { redirect } from "next/navigation";
 import Link from "next/link";
-import { createServerClient } from "@/lib/supabase/server";
-import { getUser } from "@/lib/auth/get-user";
-import { resolverOrganizacaoAtiva } from "@/lib/organizations/resolver";
+import { createClient } from "@/lib/supabase/server";
+import { requireAuth, resolveActiveOrg } from "@/lib/auth/server";
 
 // -- Tipos -------------------------------------------------------------------
 
@@ -55,7 +54,7 @@ async function buscarFunil(
   filtroStage?: string,
   filtroClass?: string,
 ): Promise<FunilEntry[]> {
-  const db = createServerClient();
+  const db = await createClient();
 
   let query = db
     .from("pol_invisible_funnel")
@@ -87,17 +86,16 @@ export default async function FunilInvisivelPage({
 }: {
   searchParams: Promise<{ stage?: string; class?: string }>;
 }) {
-  const user = await getUser();
-  if (!user) redirect("/login");
+  const user = await requireAuth();
 
-  const org = await resolverOrganizacaoAtiva(user.id);
+  const org = await resolveActiveOrg(user);
   if (!org) redirect("/app/onboarding");
 
   const params = await searchParams;
   const filtroStage = params.stage ?? "";
   const filtroClass = params.class ?? "";
 
-  const entradas = await buscarFunil(org.id, filtroStage || undefined, filtroClass || undefined);
+  const entradas = await buscarFunil(org.orgId, filtroStage || undefined, filtroClass || undefined);
 
   return (
     <div className="mx-auto max-w-5xl px-4 py-8 space-y-6">

@@ -2242,7 +2242,7 @@ export const DICIONARIO: Traducoes = {
   "caracteres a menos": { es: "caracteres a menos" },
   "sem alteração": { es: "sin cambios" },
   // ─── Agentes de IA: execuções e trace ───
-  Execução: { es: "Ejecución" },
+  // Execução — já declarado acima (nav groups, L1291)
   Iniciado: { es: "Iniciado" },
   Concluído: { es: "Concluido" },
   "Tokens (in/out)": { es: "Tokens (entrada/salida)" },

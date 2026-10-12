@@ -10,9 +10,8 @@
 
 import { redirect } from "next/navigation";
 import Link from "next/link";
-import { createServerClient } from "@/lib/supabase/server";
-import { getUser } from "@/lib/auth/get-user";
-import { resolverOrganizacaoAtiva } from "@/lib/organizations/resolver";
+import { createClient } from "@/lib/supabase/server";
+import { requireAuth, resolveActiveOrg } from "@/lib/auth/server";
 
 // -- Tipos -------------------------------------------------------------------
 
@@ -82,7 +81,7 @@ const STATUS_CONFIG: Record<string, { label: string; cor: string }> = {
 // -- Data fetching -----------------------------------------------------------
 
 async function buscarMetricas(organizationId: string): Promise<MetricasNarrativas> {
-  const db = createServerClient();
+  const db = await createClient();
 
   const seteDiasAtras = new Date();
   seteDiasAtras.setDate(seteDiasAtras.getDate() - 7);
@@ -124,7 +123,7 @@ async function buscarNarrativas(
   organizationId: string,
   pagina: number,
 ): Promise<{ narrativas: Narrativa[]; total: number }> {
-  const db = createServerClient();
+  const db = await createClient();
   const offset = (pagina - 1) * POR_PAGINA;
 
   const { data, count } = await db
@@ -147,18 +146,17 @@ async function buscarNarrativas(
 export default async function NarrativasPage(props: {
   searchParams: Promise<{ pagina?: string }>;
 }) {
-  const user = await getUser();
-  if (!user) redirect("/login");
+  const user = await requireAuth();
 
-  const org = await resolverOrganizacaoAtiva(user.id);
+  const org = await resolveActiveOrg(user);
   if (!org) redirect("/app/onboarding");
 
   const searchParams = await props.searchParams;
   const paginaAtual = Math.max(1, parseInt(searchParams.pagina ?? "1", 10) || 1);
 
   const [metricas, { narrativas, total }] = await Promise.all([
-    buscarMetricas(org.id),
-    buscarNarrativas(org.id, paginaAtual),
+    buscarMetricas(org.orgId),
+    buscarNarrativas(org.orgId, paginaAtual),
   ]);
 
   const totalPaginas = Math.ceil(total / POR_PAGINA);
@@ -199,8 +197,8 @@ export default async function NarrativasPage(props: {
                 </thead>
                 <tbody>
                   {narrativas.map((n) => {
-                    const sentimentConfig = SENTIMENT_CONFIG[n.sentiment ?? ""] ?? SENTIMENT_CONFIG.neutral;
-                    const statusConfig = STATUS_CONFIG[n.strategic_status ?? ""] ?? STATUS_CONFIG.monitoring;
+                    const sentimentConfig = SENTIMENT_CONFIG[n.sentiment ?? ""] ?? SENTIMENT_CONFIG.neutral ?? { label: "", cor: "" };
+                    const statusConfig = STATUS_CONFIG[n.strategic_status ?? ""] ?? STATUS_CONFIG.monitoring ?? { label: "", cor: "" };
 
                     return (
                       <tr

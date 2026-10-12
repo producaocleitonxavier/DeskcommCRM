@@ -14,6 +14,7 @@ import { z } from "zod";
 import { NextResponse, type NextRequest } from "next/server";
 
 import { ok, fail } from "@/lib/api/wrappers";
+import { audit } from "@/lib/audit";
 import { requireRole } from "@/lib/auth/require-role";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { requireSupportWrite } from "@/lib/impersonate/support";
@@ -75,7 +76,6 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
   const authz = await requireRole("viewer", { requestId, resource: "ig_automation_flows" });
   if (!authz.ok) return authz.response;
 
-  const { organizationId } = authz;
   const db = createAdminClient();
   const params = req.nextUrl.searchParams;
 
@@ -84,7 +84,7 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
     .select(
       "id, nome, descricao, ativo, trigger_tipo, trigger_config, acoes, stats, ultima_ativacao_at, created_at, updated_at",
     )
-    .eq("organization_id", organizationId)
+    .eq("organization_id", authz.org.orgId)
     .order("created_at", { ascending: false });
 
   // Filtros opcionais
@@ -123,10 +123,8 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
   const authz = await requireRole("manager", { requestId, resource: "ig_automation_flows" });
   if (!authz.ok) return authz.response;
 
-  const { organizationId, userId } = authz;
-
-  const guardaSuporteWrite = await requireSupportWrite({ requestId, resource: "ig_automation_flows.create" });
-  if (!guardaSuporteWrite.ok) return guardaSuporteWrite.response;
+  const supportDenied = await requireSupportWrite(authz.org.orgId);
+  if (supportDenied) return supportDenied;
 
   let body: unknown;
   try {
@@ -147,7 +145,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
   const { data: flow, error } = await db
     .from("ig_automation_flows")
     .insert({
-      organization_id: organizationId,
+      organization_id: authz.org.orgId,
       nome: parsed.data.nome,
       descricao: parsed.data.descricao ?? null,
       ativo: parsed.data.ativo,
@@ -162,12 +160,12 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     return fail("internal_error", "Erro ao criar flow", 500, { requestId });
   }
 
-  // Audit log
-  await db.from("api_audit_log").insert({
-    organization_id: organizationId,
-    user_id: userId,
+  void audit({
     action: "ig_automation_flows.create",
-    resource_id: flow.id,
+    actorUserId: authz.user.id,
+    organizationId: authz.org.orgId,
+    resourceId: flow.id,
+    requestId,
     metadata: { nome: flow.nome, trigger_tipo: flow.trigger_tipo },
   });
 

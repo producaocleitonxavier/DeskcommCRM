@@ -10,9 +10,8 @@
 
 import { redirect } from "next/navigation";
 import Link from "next/link";
-import { createServerClient } from "@/lib/supabase/server";
-import { getUser } from "@/lib/auth/get-user";
-import { resolverOrganizacaoAtiva } from "@/lib/organizations/resolver";
+import { createClient } from "@/lib/supabase/server";
+import { requireAuth, resolveActiveOrg } from "@/lib/auth/server";
 
 // ── Tipos ────────────────────────────────────────────────────────────────────
 
@@ -26,7 +25,7 @@ interface MetricasCanal {
 // ── Data fetching ────────────────────────────────────────────────────────────
 
 async function buscarMetricas(organizationId: string): Promise<MetricasCanal> {
-  const db = createServerClient();
+  const db = await createClient();
   const hoje = new Date();
   hoje.setHours(0, 0, 0, 0);
   const hojeISO = hoje.toISOString();
@@ -146,13 +145,12 @@ function SecaoCard({
 // ── Componente principal ─────────────────────────────────────────────────────
 
 export default async function InstagramHubPage() {
-  const user = await getUser();
-  if (!user) redirect("/login");
+  const user = await requireAuth();
 
-  const org = await resolverOrganizacaoAtiva(user.id);
+  const org = await resolveActiveOrg(user);
   if (!org) redirect("/app/onboarding");
 
-  const metricas = await buscarMetricas(org.id);
+  const metricas = await buscarMetricas(org.orgId);
 
   const secoes = [
     {

@@ -8,9 +8,8 @@
  */
 
 import { redirect } from "next/navigation";
-import { createServerClient } from "@/lib/supabase/server";
-import { getUser } from "@/lib/auth/get-user";
-import { resolverOrganizacaoAtiva } from "@/lib/organizations/resolver";
+import { createClient } from "@/lib/supabase/server";
+import { requireAuth, resolveActiveOrg } from "@/lib/auth/server";
 
 // -- Tipos -------------------------------------------------------------------
 
@@ -35,7 +34,7 @@ interface PerfilSocial {
 // -- Data fetching -----------------------------------------------------------
 
 async function buscarMetricas(organizationId: string): Promise<MetricasSocial> {
-  const db = createServerClient();
+  const db = await createClient();
 
   const [totalPerfis, influenciadores, postsColetados, alertasInteligencia] = await Promise.all([
     db
@@ -72,7 +71,7 @@ async function buscarPerfis(
   organizationId: string,
   pagina: number,
 ): Promise<{ perfis: PerfilSocial[]; total: number }> {
-  const db = createServerClient();
+  const db = await createClient();
   const limite = 20;
   const offset = (pagina - 1) * limite;
 
@@ -96,18 +95,17 @@ async function buscarPerfis(
 export default async function SocialHubPage(props: {
   searchParams: Promise<{ pagina?: string }>;
 }) {
-  const user = await getUser();
-  if (!user) redirect("/login");
+  const user = await requireAuth();
 
-  const org = await resolverOrganizacaoAtiva(user.id);
+  const org = await resolveActiveOrg(user);
   if (!org) redirect("/app/onboarding");
 
   const searchParams = await props.searchParams;
   const paginaAtual = Math.max(1, parseInt(searchParams.pagina ?? "1", 10) || 1);
 
   const [metricas, { perfis, total }] = await Promise.all([
-    buscarMetricas(org.id),
-    buscarPerfis(org.id, paginaAtual),
+    buscarMetricas(org.orgId),
+    buscarPerfis(org.orgId, paginaAtual),
   ]);
 
   const totalPaginas = Math.ceil(total / 20);
@@ -251,7 +249,7 @@ const CATEGORIA_LABELS: Record<string, { label: string; cor: string }> = {
 };
 
 function CategoriaLabel({ categoria }: { categoria: string }) {
-  const config = CATEGORIA_LABELS[categoria] ?? CATEGORIA_LABELS.monitorado;
+  const config = CATEGORIA_LABELS[categoria] ?? CATEGORIA_LABELS.monitorado ?? { label: "", cor: "" };
   return (
     <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${config.cor}`}>
       {config.label}

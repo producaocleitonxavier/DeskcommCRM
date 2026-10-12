@@ -9,9 +9,8 @@
 
 import { redirect } from "next/navigation";
 import Link from "next/link";
-import { createServerClient } from "@/lib/supabase/server";
-import { getUser } from "@/lib/auth/get-user";
-import { resolverOrganizacaoAtiva } from "@/lib/organizations/resolver";
+import { createClient } from "@/lib/supabase/server";
+import { requireAuth, resolveActiveOrg } from "@/lib/auth/server";
 
 // -- Constantes --------------------------------------------------------------
 
@@ -48,7 +47,7 @@ interface TransicaoRow {
 async function buscarContagemPorEstagio(
   organizationId: string,
 ): Promise<Record<string, number>> {
-  const db = createServerClient();
+  const db = await createClient();
 
   const { data } = await db
     .from("pol_leads")
@@ -66,7 +65,7 @@ async function buscarContagemPorEstagio(
 }
 
 async function buscarTransicoesRecentes(organizationId: string) {
-  const db = createServerClient();
+  const db = await createClient();
 
   const { data } = await db
     .from("pol_funnel_transitions")
@@ -81,15 +80,14 @@ async function buscarTransicoesRecentes(organizationId: string) {
 // -- Componente --------------------------------------------------------------
 
 export default async function FunilPoliticoPage() {
-  const user = await getUser();
-  if (!user) redirect("/login");
+  const user = await requireAuth();
 
-  const org = await resolverOrganizacaoAtiva(user.id);
+  const org = await resolveActiveOrg(user);
   if (!org) redirect("/app/onboarding");
 
   const [contagem, transicoes] = await Promise.all([
-    buscarContagemPorEstagio(org.id),
-    buscarTransicoesRecentes(org.id),
+    buscarContagemPorEstagio(org.orgId),
+    buscarTransicoesRecentes(org.orgId),
   ]);
 
   const totalLeads = Object.values(contagem).reduce((a, b) => a + b, 0);

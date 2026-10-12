@@ -9,9 +9,8 @@
 
 import { redirect } from "next/navigation";
 import Link from "next/link";
-import { createServerClient } from "@/lib/supabase/server";
-import { getUser } from "@/lib/auth/get-user";
-import { resolverOrganizacaoAtiva } from "@/lib/organizations/resolver";
+import { createClient } from "@/lib/supabase/server";
+import { requireAuth, resolveActiveOrg } from "@/lib/auth/server";
 
 // -- Tipos -------------------------------------------------------------------
 
@@ -77,7 +76,7 @@ function formatarMoeda(cents: number): string {
 // -- Data fetching -----------------------------------------------------------
 
 async function buscarEmendas(organizationId: string): Promise<Emenda[]> {
-  const db = createServerClient();
+  const db = await createClient();
   const { data } = await db
     .from("pol_emendas")
     .select(
@@ -94,13 +93,12 @@ async function buscarEmendas(organizationId: string): Promise<Emenda[]> {
 // -- Componente --------------------------------------------------------------
 
 export default async function EmendasPage() {
-  const user = await getUser();
-  if (!user) redirect("/login");
+  const user = await requireAuth();
 
-  const org = await resolverOrganizacaoAtiva(user.id);
+  const org = await resolveActiveOrg(user);
   if (!org) redirect("/app/onboarding");
 
-  const emendas = await buscarEmendas(org.id);
+  const emendas = await buscarEmendas(org.orgId);
 
   const totalIndicado = emendas.reduce((s, e) => s + e.valor_indicado_cents, 0);
   const totalEmpenhado = emendas.reduce((s, e) => s + e.valor_empenhado_cents, 0);

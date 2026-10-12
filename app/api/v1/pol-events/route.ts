@@ -71,14 +71,14 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
   const authz = await requireRole("viewer", { requestId, resource: "pol_events" });
   if (!authz.ok) return authz.response;
 
-  const { organizationId } = authz;
+  const orgId = authz.org.orgId;
   const db = createAdminClient();
   const params = req.nextUrl.searchParams;
 
   let query = db
     .from("pol_events")
     .select("*")
-    .eq("organization_id", organizationId)
+    .eq("organization_id", orgId)
     .order("event_date", { ascending: false });
 
   // Filtros opcionais
@@ -119,10 +119,11 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
   const authz = await requireRole("manager", { requestId, resource: "pol_events" });
   if (!authz.ok) return authz.response;
 
-  const { organizationId, userId } = authz;
+  const orgId = authz.org.orgId;
+  const userId = authz.user.id;
 
-  const guardaSuporteWrite = await requireSupportWrite({ requestId, resource: "pol_events.create" });
-  if (!guardaSuporteWrite.ok) return guardaSuporteWrite.response;
+  const denied = await requireSupportWrite(orgId);
+  if (denied) return denied;
 
   let body: unknown;
   try {
@@ -144,7 +145,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
   const { data: polEvent, error } = await db
     .from("pol_events")
     .insert({
-      organization_id: organizationId,
+      organization_id: orgId,
       title: parsed.data.title,
       type: parsed.data.type,
       status: "scheduled" as const,
@@ -171,7 +172,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
 
   // Audit log
   db.from("api_audit_log").insert({
-    organization_id: organizationId,
+    organization_id: orgId,
     user_id: userId,
     action: "pol_events.create",
     resource_type: "pol_events",

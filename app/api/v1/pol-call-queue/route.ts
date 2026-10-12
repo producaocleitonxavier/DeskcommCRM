@@ -62,14 +62,14 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
   const authz = await requireRole("viewer", { requestId, resource: "pol_call_queue" });
   if (!authz.ok) return authz.response;
 
-  const { organizationId } = authz;
+  const orgId = authz.org.orgId;
   const db = createAdminClient();
   const params = req.nextUrl.searchParams;
 
   let query = db
     .from("pol_call_queue")
     .select("*")
-    .eq("organization_id", organizationId)
+    .eq("organization_id", orgId)
     .order("created_at", { ascending: false });
 
   // Filtros opcionais
@@ -110,10 +110,11 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
   const authz = await requireRole("manager", { requestId, resource: "pol_call_queue" });
   if (!authz.ok) return authz.response;
 
-  const { organizationId, userId } = authz;
+  const orgId = authz.org.orgId;
+  const userId = authz.user.id;
 
-  const guardaSuporteWrite = await requireSupportWrite({ requestId, resource: "pol_call_queue.create" });
-  if (!guardaSuporteWrite.ok) return guardaSuporteWrite.response;
+  const denied = await requireSupportWrite(orgId);
+  if (denied) return denied;
 
   let body: unknown;
   try {
@@ -137,7 +138,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     .from("contacts")
     .select("id")
     .eq("id", parsed.data.contact_id)
-    .eq("organization_id", organizationId)
+    .eq("organization_id", orgId)
     .single();
 
   if (errContact || !contact) {
@@ -147,7 +148,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
   const { data: callItem, error } = await db
     .from("pol_call_queue")
     .insert({
-      organization_id: organizationId,
+      organization_id: orgId,
       contact_id: parsed.data.contact_id,
       assigned_to: parsed.data.assigned_to ?? null,
       call_status: parsed.data.call_status,
@@ -168,7 +169,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
 
   // Audit log
   db.from("api_audit_log").insert({
-    organization_id: organizationId,
+    organization_id: orgId,
     user_id: userId,
     action: "pol_call_queue.create",
     resource_type: "pol_call_queue",

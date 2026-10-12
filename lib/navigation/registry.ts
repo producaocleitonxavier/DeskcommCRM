@@ -40,6 +40,7 @@ import {
   UserCircle,
   Users,
   UsersThree,
+  InstagramLogo,
   WebhooksLogo,
 } from "@/lib/ui/icons";
 
@@ -74,6 +75,7 @@ const ICONS = {
   Funnel,
   Gauge,
   Inbox,
+  InstagramLogo,
   Kanban,
   Key,
   Lightbulb,

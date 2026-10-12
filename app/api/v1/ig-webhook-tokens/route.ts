@@ -41,7 +41,7 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
   let query = db
     .from("ig_webhook_tokens")
     .select("id, path_token, descricao, ativo, ultimo_ping_at, created_at, channel_session_id")
-    .eq("organization_id", authz.organizationId)
+    .eq("organization_id", authz.org.orgId)
     .order("created_at", { ascending: false });
 
   const ativoParam = params.get("ativo");
@@ -65,10 +65,11 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
   const authz = await requireRole("manager", { requestId, resource: "ig_webhook_tokens" });
   if (!authz.ok) return authz.response;
 
-  const { organizationId, userId } = authz;
+  const organizationId = authz.org.orgId;
+  const userId = authz.user.id;
 
-  const guarda = await requireSupportWrite({ requestId, resource: "ig_webhook_tokens.create" });
-  if (!guarda.ok) return guarda.response;
+  const guarda = await requireSupportWrite(organizationId);
+  if (guarda) return guarda;
 
   let body: unknown;
   try {

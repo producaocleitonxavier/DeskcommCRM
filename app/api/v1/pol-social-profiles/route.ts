@@ -62,7 +62,7 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
   const authz = await requireRole("viewer", { requestId, resource: "pol_social_profiles" });
   if (!authz.ok) return authz.response;
 
-  const { organizationId } = authz;
+  const orgId = authz.org.orgId;
   const db = createAdminClient();
   const params = req.nextUrl.searchParams;
 
@@ -71,7 +71,7 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
     .select(
       "id, platform, username, display_name, bio, followers, following, posts_count, engagement_rate, category, active, created_at, updated_at",
     )
-    .eq("organization_id", organizationId)
+    .eq("organization_id", orgId)
     .order("created_at", { ascending: false });
 
   // Filtros opcionais
@@ -112,10 +112,11 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
   const authz = await requireRole("manager", { requestId, resource: "pol_social_profiles" });
   if (!authz.ok) return authz.response;
 
-  const { organizationId, userId } = authz;
+  const orgId = authz.org.orgId;
+  const userId = authz.user.id;
 
-  const guardaSuporteWrite = await requireSupportWrite({ requestId, resource: "pol_social_profiles.create" });
-  if (!guardaSuporteWrite.ok) return guardaSuporteWrite.response;
+  const denied = await requireSupportWrite(orgId);
+  if (denied) return denied;
 
   let body: unknown;
   try {
@@ -137,7 +138,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
   const { data: profile, error } = await db
     .from("pol_social_profiles")
     .insert({
-      organization_id: organizationId,
+      organization_id: orgId,
       platform: parsed.data.platform,
       username: parsed.data.username,
       display_name: parsed.data.display_name ?? null,
@@ -164,7 +165,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
 
   // Audit log
   await db.from("api_audit_log").insert({
-    organization_id: organizationId,
+    organization_id: orgId,
     user_id: userId,
     action: "pol_social_profiles.create",
     resource_id: profile.id,

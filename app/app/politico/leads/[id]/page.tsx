@@ -9,9 +9,8 @@
 
 import { redirect, notFound } from "next/navigation";
 import Link from "next/link";
-import { createServerClient } from "@/lib/supabase/server";
-import { getUser } from "@/lib/auth/get-user";
-import { resolverOrganizacaoAtiva } from "@/lib/organizations/resolver";
+import { createClient } from "@/lib/supabase/server";
+import { requireAuth, resolveActiveOrg } from "@/lib/auth/server";
 
 // -- Tipos -------------------------------------------------------------------
 
@@ -161,14 +160,14 @@ function sourceLabel(source: string | null): string {
 function iniciais(name: string | null): string {
   if (!name) return "?";
   const partes = name.trim().split(/\s+/);
-  if (partes.length === 1) return partes[0][0].toUpperCase();
-  return (partes[0][0] + partes[partes.length - 1][0]).toUpperCase();
+  if (partes.length === 1) return (partes[0]?.[0] ?? "?").toUpperCase();
+  return ((partes[0]?.[0] ?? "") + (partes[partes.length - 1]?.[0] ?? "")).toUpperCase();
 }
 
 // -- Data fetching -----------------------------------------------------------
 
 async function buscarLead(organizationId: string, leadId: string) {
-  const db = createServerClient();
+  const db = await createClient();
 
   // Buscar pol_lead
   const { data: lead } = await db
@@ -265,7 +264,7 @@ function FunilProgresso({ current }: { current: string }) {
                 className="h-[3px] rounded-full"
                 style={{
                   width: 20,
-                  background: etapa.idx < idx ? etapaCor(ETAPAS_FUNIL[etapa.idx + 1].value) : "#F0F0EB",
+                  background: etapa.idx < idx ? etapaCor(ETAPAS_FUNIL[etapa.idx + 1]?.value ?? "") : "#F0F0EB",
                 }}
               />
             )}
@@ -308,14 +307,13 @@ export default async function FichaPage({
 }: {
   params: Promise<{ id: string }>;
 }) {
-  const user = await getUser();
-  if (!user) redirect("/login");
+  const user = await requireAuth();
 
-  const org = await resolverOrganizacaoAtiva(user.id);
+  const org = await resolveActiveOrg(user);
   if (!org) redirect("/app/onboarding");
 
   const { id } = await params;
-  const dados = await buscarLead(org.id, id);
+  const dados = await buscarLead(org.orgId, id);
 
   if (!dados) notFound();
 

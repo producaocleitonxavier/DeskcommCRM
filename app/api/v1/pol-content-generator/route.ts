@@ -78,7 +78,7 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
   const authz = await requireRole("viewer", { requestId, resource: "pol_generated_content" });
   if (!authz.ok) return authz.response;
 
-  const { organizationId } = authz;
+  const orgId = authz.org.orgId;
   const db = createAdminClient();
   const params = req.nextUrl.searchParams;
 
@@ -87,7 +87,7 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
     .select(
       "id, title, topic, target_audience, content_type, script, caption, hashtags, cta, platform, viral_score, quality_score, generation_source, created_at, updated_at",
     )
-    .eq("organization_id", organizationId)
+    .eq("organization_id", orgId)
     .order("created_at", { ascending: false });
 
   // Filtros opcionais
@@ -128,10 +128,11 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
   const authz = await requireRole("manager", { requestId, resource: "pol_generated_content" });
   if (!authz.ok) return authz.response;
 
-  const { organizationId, userId } = authz;
+  const orgId = authz.org.orgId;
+  const userId = authz.user.id;
 
-  const guardaSuporteWrite = await requireSupportWrite({ requestId, resource: "pol_generated_content.create" });
-  if (!guardaSuporteWrite.ok) return guardaSuporteWrite.response;
+  const denied = await requireSupportWrite(orgId);
+  if (denied) return denied;
 
   let body: unknown;
   try {
@@ -153,7 +154,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
   const { data: conteudo, error } = await db
     .from("pol_generated_content")
     .insert({
-      organization_id: organizationId,
+      organization_id: orgId,
       title: parsed.data.title,
       topic: parsed.data.topic,
       target_audience: parsed.data.target_audience ?? null,
@@ -181,7 +182,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
 
   // Audit log
   await db.from("api_audit_log").insert({
-    organization_id: organizationId,
+    organization_id: orgId,
     user_id: userId,
     action: "pol_generated_content.create",
     resource_id: conteudo.id,

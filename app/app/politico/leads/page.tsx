@@ -10,9 +10,8 @@
 
 import { redirect } from "next/navigation";
 import Link from "next/link";
-import { createServerClient } from "@/lib/supabase/server";
-import { getUser } from "@/lib/auth/get-user";
-import { resolverOrganizacaoAtiva } from "@/lib/organizations/resolver";
+import { createClient } from "@/lib/supabase/server";
+import { requireAuth, resolveActiveOrg } from "@/lib/auth/server";
 
 // -- Constantes --------------------------------------------------------------
 
@@ -102,7 +101,7 @@ async function buscarLeads(
   etapa?: string,
   busca?: string,
 ) {
-  const db = createServerClient();
+  const db = await createClient();
   const offset = (pagina - 1) * POR_PAGINA;
 
   let query = db
@@ -132,7 +131,7 @@ async function buscarLeads(
 }
 
 async function contarPorEtapa(organizationId: string) {
-  const db = createServerClient();
+  const db = await createClient();
   const counts: Record<string, number> = {};
 
   // Total
@@ -209,7 +208,7 @@ function EtapaPill({ value }: { value: string }) {
     f4: { bg: "#4352C4", color: "#FFFFFF" },
     f5: { bg: "#26318F", color: "#FFFFFF" },
   };
-  const s = pillStyles[cls] ?? pillStyles.f1;
+  const s = pillStyles[cls] ?? pillStyles.f1 ?? { bg: "#EEF0FB", color: "#3B4280" };
 
   return (
     <span
@@ -228,10 +227,9 @@ export default async function PessoasPage({
 }: {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
-  const user = await getUser();
-  if (!user) redirect("/login");
+  const user = await requireAuth();
 
-  const org = await resolverOrganizacaoAtiva(user.id);
+  const org = await resolveActiveOrg(user);
   if (!org) redirect("/app/onboarding");
 
   const params = await searchParams;
@@ -240,8 +238,8 @@ export default async function PessoasPage({
   const busca = typeof params.busca === "string" ? params.busca : undefined;
 
   const [{ leads, total }, contagens] = await Promise.all([
-    buscarLeads(org.id, pagina, etapa, busca),
-    contarPorEtapa(org.id),
+    buscarLeads(org.orgId, pagina, etapa, busca),
+    contarPorEtapa(org.orgId),
   ]);
 
   const totalPaginas = Math.ceil(total / POR_PAGINA);
@@ -306,7 +304,7 @@ export default async function PessoasPage({
       <section aria-label="Etapas do funil" className="flex flex-wrap gap-3">
         <EtapaCard
           label="Todas"
-          count={contagens._total}
+          count={contagens._total ?? 0}
           active={!etapa}
           href={`/app/politico/leads${montarQuery({ etapa: undefined, pagina: "1" })}`}
         />
@@ -422,7 +420,7 @@ export default async function PessoasPage({
                           </span>
                         ) : (
                           <span style={{ color: "#4A4F59" }}>
-                            {tempoRelativo(lastActivity)}
+                            {tempoRelativo(lastActivity ?? null)}
                           </span>
                         )}
                       </td>

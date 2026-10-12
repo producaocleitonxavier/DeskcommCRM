@@ -10,9 +10,8 @@
 
 import { redirect } from "next/navigation";
 import Link from "next/link";
-import { createServerClient } from "@/lib/supabase/server";
-import { getUser } from "@/lib/auth/get-user";
-import { resolverOrganizacaoAtiva } from "@/lib/organizations/resolver";
+import { createClient } from "@/lib/supabase/server";
+import { requireAuth, resolveActiveOrg } from "@/lib/auth/server";
 
 // -- Tipos -------------------------------------------------------------------
 
@@ -84,7 +83,7 @@ const GENERATION_SOURCE_CONFIG: Record<string, { label: string; cor: string }> =
 // -- Data fetching -----------------------------------------------------------
 
 async function buscarMetricas(organizationId: string): Promise<MetricasMotorViral> {
-  const db = createServerClient();
+  const db = await createClient();
 
   const [totalRes, iaRes, viralRes] = await Promise.all([
     db
@@ -122,7 +121,7 @@ async function buscarConteudos(
   organizationId: string,
   pagina: number,
 ): Promise<{ conteudos: ConteudoGerado[]; total: number }> {
-  const db = createServerClient();
+  const db = await createClient();
   const offset = (pagina - 1) * POR_PAGINA;
 
   const { data, count } = await db
@@ -146,18 +145,17 @@ async function buscarConteudos(
 export default async function MotorViralPage(props: {
   searchParams: Promise<{ pagina?: string }>;
 }) {
-  const user = await getUser();
-  if (!user) redirect("/login");
+  const user = await requireAuth();
 
-  const org = await resolverOrganizacaoAtiva(user.id);
+  const org = await resolveActiveOrg(user);
   if (!org) redirect("/app/onboarding");
 
   const searchParams = await props.searchParams;
   const paginaAtual = Math.max(1, parseInt(searchParams.pagina ?? "1", 10) || 1);
 
   const [metricas, { conteudos, total }] = await Promise.all([
-    buscarMetricas(org.id),
-    buscarConteudos(org.id, paginaAtual),
+    buscarMetricas(org.orgId),
+    buscarConteudos(org.orgId, paginaAtual),
   ]);
 
   const totalPaginas = Math.ceil(total / POR_PAGINA);
@@ -265,7 +263,7 @@ function ScoreDisplay({ score, label }: { score: number | null; label: string })
 
 function ConteudoCard({ conteudo }: { conteudo: ConteudoGerado }) {
   const sourceConfig = GENERATION_SOURCE_CONFIG[conteudo.generation_source] ??
-    GENERATION_SOURCE_CONFIG.manual;
+    GENERATION_SOURCE_CONFIG.manual ?? { label: "Manual", cor: "" };
 
   return (
     <div className="flex flex-col gap-3 rounded-xl border bg-card p-4">

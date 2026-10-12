@@ -806,6 +806,15 @@ export const NAV_CATALOG = [
     sidebar: false, // acessa pelo hub /app/instagram
   },
   {
+    href: "/app/instagram/conectar",
+    label: "Conectar Instagram",
+    description: "Vincule uma conta Instagram Business via OAuth do Facebook para enviar DMs e responder comentários.",
+    icon: "InstagramLogo",
+    group: "canais",
+    minRole: "admin",
+    sidebar: false, // acessa pelo hub /app/instagram
+  },
+  {
     href: "/app/webhooks",
     label: "Webhooks",
     description: "Avise outros sistemas quando algo acontecer aqui dentro.",

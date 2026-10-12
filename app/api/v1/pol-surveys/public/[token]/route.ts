@@ -25,7 +25,7 @@ export const runtime = "nodejs";
 // -- Validacao ----------------------------------------------------------------
 
 const submeterRespostaSchema = z.object({
-  answers: z.record(z.unknown()),
+  answers: z.record(z.string(), z.unknown()),
   contact_id: z.string().uuid().nullable().optional(),
   city: z.string().max(120).nullable().optional(),
   state: z.string().length(2).nullable().optional(),

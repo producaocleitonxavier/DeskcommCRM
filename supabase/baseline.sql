@@ -55417,3 +55417,63 @@ alter table public.demandas
   add column if not exists pol_orgao_destino text,
   add column if not exists pol_prioridade text default 'normal'
     check (pol_prioridade in ('baixa', 'normal', 'alta', 'urgente'));
+
+-- ---- Instagram Graph API credentials (migration 0642) ----
+alter table public.channel_sessions
+  add column if not exists ig_business_account_id text,
+  add column if not exists ig_page_id text,
+  add column if not exists ig_access_token_encrypted bytea,
+  add column if not exists ig_token_expires_at timestamptz;
+
+create unique index if not exists channel_sessions_ig_business_account_id_ativo_unique
+  on public.channel_sessions (organization_id, ig_business_account_id)
+  where ig_business_account_id is not null and archived_at is null;
+
+alter table public.channel_sessions
+  drop constraint if exists channel_sessions_provider_check;
+alter table public.channel_sessions
+  add constraint channel_sessions_provider_check
+  check (provider = any (array[
+    'waha'::text, 'meta_cloud'::text, 'zernio'::text,
+    'wacalls'::text, 'zernio_social'::text, 'datafy'::text,
+    'instagram'::text
+  ]));
+
+alter table public.channel_sessions
+  drop constraint if exists channel_sessions_provider_ref_check;
+alter table public.channel_sessions
+  add constraint channel_sessions_provider_ref_check check (
+    (provider = 'waha'       and waha_session_name      is not null) or
+    (provider = 'meta_cloud' and meta_phone_number_id    is not null) or
+    (provider in ('zernio', 'zernio_social') and zernio_account_id is not null) or
+    (provider = 'wacalls'    and wacalls_session_id      is not null) or
+    (provider = 'datafy'     and datafy_phone_number_id  is not null) or
+    (provider = 'instagram'  and ig_business_account_id  is not null)
+  );
+
+-- ---- fn_ig_incrementar_stats_flow (migration 0643) ----
+--
+-- Incremento atômico de stats.total_acionamentos em ig_automation_flows.
+-- Chamada pelo motor de automação Instagram (motor.handler.ts).
+
+create or replace function public.fn_ig_incrementar_stats_flow(
+  p_flow_id uuid
+)
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  update public.ig_automation_flows
+  set stats = jsonb_set(
+    coalesce(stats, '{"total_acionamentos":0}'::jsonb),
+    '{total_acionamentos}',
+    to_jsonb(coalesce((stats->>'total_acionamentos')::int, 0) + 1)
+  )
+  where id = p_flow_id;
+end;
+$$;
+
+revoke execute on function public.fn_ig_incrementar_stats_flow(uuid) from public, anon;
+grant  execute on function public.fn_ig_incrementar_stats_flow(uuid) to service_role;

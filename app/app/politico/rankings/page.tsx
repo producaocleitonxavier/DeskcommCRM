@@ -9,9 +9,8 @@
 
 import { redirect } from "next/navigation";
 import Link from "next/link";
-import { createServerClient } from "@/lib/supabase/server";
-import { getUser } from "@/lib/auth/get-user";
-import { resolverOrganizacaoAtiva } from "@/lib/organizations/resolver";
+import { createClient } from "@/lib/supabase/server";
+import { requireAuth, resolveActiveOrg } from "@/lib/auth/server";
 
 // -- Tipos -------------------------------------------------------------------
 
@@ -65,7 +64,7 @@ const STATUS_LABELS: Record<string, string> = {
 // -- Data fetching -----------------------------------------------------------
 
 async function buscarRankings(organizationId: string, tab: string) {
-  const db = createServerClient();
+  const db = await createClient();
 
   if (tab === "liderancas") {
     const { data, error } = await db
@@ -104,16 +103,15 @@ export default async function RankingsPage({
 }: {
   searchParams: Promise<{ tab?: string }>;
 }) {
-  const user = await getUser();
-  if (!user) redirect("/login");
+  const user = await requireAuth();
 
-  const org = await resolverOrganizacaoAtiva(user.id);
+  const org = await resolveActiveOrg(user);
   if (!org) redirect("/app/onboarding");
 
   const params = await searchParams;
   const tab = params.tab ?? "cidades";
 
-  const { cidades, liderancas } = await buscarRankings(org.id, tab);
+  const { cidades, liderancas } = await buscarRankings(org.orgId, tab);
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-8 space-y-6">

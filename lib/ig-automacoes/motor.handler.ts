@@ -1,7 +1,7 @@
 /**
  * Worker de automação do Instagram — handler do event_log.
  *
- * Consome eventos `ig.comment_received` e avalia TODOS os flows de automação
+ * Consome eventos `ig.comment_received` e `ig.mention_received` e avalia TODOS os flows de automação
  * ativos da organização, executando as ações do primeiro que bater.
  *
  * ── Por que "primeiro que bater" ─────────────────────────────────────────────
@@ -117,7 +117,7 @@ function flowCasaComEvento(
 
 export const igAutomacaoHandler: EventHandler = {
   key: IG_AUTOMACAO_CONSUMER_KEY,
-  events: ["ig.comment_received"],
+  events: ["ig.comment_received", "ig.mention_received"],
   naOrgParada: "pula",
 
   async handle(row: EventRow): Promise<HandlerResult> {
@@ -233,21 +233,17 @@ export const igAutomacaoHandler: EventHandler = {
         organization_id,
       });
 
-      // Atualizar stats do flow
+      // Atualizar timestamp de última ativação + stats atômico via RPC
       await db
         .from("ig_automation_flows")
-        .update({
-          ultima_ativacao_at: new Date().toISOString(),
-          // Incrementar total_acionamentos via SQL raw (evita race condition)
-          stats: db.rpc as unknown as Record<string, unknown>, // será atualizado abaixo
-        })
+        .update({ ultima_ativacao_at: new Date().toISOString() })
         .eq("id", flow.id)
         .eq("organization_id", organization_id);
 
-      // Atualizar stats via rpc ou update com jsonb concat
-      await db.rpc("fn_ig_incrementar_stats_flow", { p_flow_id: flow.id }).catch(() => {
-        // Se a função não existe ainda, fallback silencioso — não é bloqueante
-      });
+      const { error: rpcError } = await db.rpc("fn_ig_incrementar_stats_flow", { p_flow_id: flow.id });
+      if (rpcError) {
+        logger.warn("[ig-motor] stats increment failed", { flowId: flow.id, error: rpcError.message });
+      }
 
       if (temErro) {
         logger.warn("[ig-motor] flow acionado com erros parciais", {

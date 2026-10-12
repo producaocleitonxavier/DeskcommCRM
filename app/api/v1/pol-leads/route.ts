@@ -55,7 +55,7 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
   const authz = await requireRole("viewer", { requestId, resource: "pol_leads" });
   if (!authz.ok) return authz.response;
 
-  const { organizationId } = authz;
+  const orgId = authz.org.orgId;
   const db = createAdminClient();
   const params = req.nextUrl.searchParams;
 
@@ -64,7 +64,7 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
     .select(
       "id, contact_id, support_level, political_score, temperature, zona_eleitoral, secao_eleitoral, mobilizer_id, leader_potential, community_role, territory_id, opt_out, consent_origin, consent_at, created_at, updated_at, contacts(id, name, phone, email)",
     )
-    .eq("organization_id", organizationId)
+    .eq("organization_id", orgId)
     .order("created_at", { ascending: false });
 
   // Filtros opcionais
@@ -105,10 +105,11 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
   const authz = await requireRole("manager", { requestId, resource: "pol_leads" });
   if (!authz.ok) return authz.response;
 
-  const { organizationId, userId } = authz;
+  const orgId = authz.org.orgId;
+  const userId = authz.user.id;
 
-  const guardaSuporteWrite = await requireSupportWrite({ requestId, resource: "pol_leads.create" });
-  if (!guardaSuporteWrite.ok) return guardaSuporteWrite.response;
+  const denied = await requireSupportWrite(orgId);
+  if (denied) return denied;
 
   let body: unknown;
   try {
@@ -132,7 +133,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     .from("contacts")
     .select("id")
     .eq("id", parsed.data.contact_id)
-    .eq("organization_id", organizationId)
+    .eq("organization_id", orgId)
     .single();
 
   if (errContact || !contact) {
@@ -142,7 +143,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
   const { data: polLead, error } = await db
     .from("pol_leads")
     .insert({
-      organization_id: organizationId,
+      organization_id: orgId,
       contact_id: parsed.data.contact_id,
       support_level: parsed.data.support_level,
       temperature: parsed.data.temperature,
@@ -169,7 +170,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
 
   // Audit log
   await db.from("api_audit_log").insert({
-    organization_id: organizationId,
+    organization_id: orgId,
     user_id: userId,
     action: "pol_leads.create",
     resource_id: polLead.id,

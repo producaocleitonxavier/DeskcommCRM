@@ -9,9 +9,8 @@
 
 import { redirect } from "next/navigation";
 import Link from "next/link";
-import { createServerClient } from "@/lib/supabase/server";
-import { getUser } from "@/lib/auth/get-user";
-import { resolverOrganizacaoAtiva } from "@/lib/organizations/resolver";
+import { createClient } from "@/lib/supabase/server";
+import { requireAuth, resolveActiveOrg } from "@/lib/auth/server";
 
 // -- Tipos -------------------------------------------------------------------
 
@@ -56,7 +55,7 @@ const SIGNAL_TYPE_LABELS: Record<string, string> = {
 // -- Data fetching -----------------------------------------------------------
 
 async function buscarSinais(organizationId: string): Promise<Sinal[]> {
-  const db = createServerClient();
+  const db = await createClient();
   const { data } = await db
     .from("pol_decision_signals")
     .select("id, signal_type, title, description, severity, status, recommended_action, source_data, created_at")
@@ -68,7 +67,7 @@ async function buscarSinais(organizationId: string): Promise<Sinal[]> {
 }
 
 async function buscarAlertasAtivos(organizationId: string): Promise<AlertaResumo[]> {
-  const db = createServerClient();
+  const db = await createClient();
   const { data } = await db
     .from("pol_alerts")
     .select("id, title, alert_type, severity, status, created_at")
@@ -83,15 +82,14 @@ async function buscarAlertasAtivos(organizationId: string): Promise<AlertaResumo
 // -- Componente --------------------------------------------------------------
 
 export default async function DecisaoPage() {
-  const user = await getUser();
-  if (!user) redirect("/login");
+  const user = await requireAuth();
 
-  const org = await resolverOrganizacaoAtiva(user.id);
+  const org = await resolveActiveOrg(user);
   if (!org) redirect("/app/onboarding");
 
   const [sinais, alertas] = await Promise.all([
-    buscarSinais(org.id),
-    buscarAlertasAtivos(org.id),
+    buscarSinais(org.orgId),
+    buscarAlertasAtivos(org.orgId),
   ]);
 
   const sinaisPendentes = sinais.filter((s) => s.status === "pending");

@@ -54,12 +54,12 @@ const atualizarTerritorySchema = z
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
 
-async function buscarTerritory(db: ReturnType<typeof createAdminClient>, id: string, organizationId: string) {
+async function buscarTerritory(db: ReturnType<typeof createAdminClient>, id: string, orgId: string) {
   return db
     .from("pol_territories")
     .select("*")
     .eq("id", id)
-    .eq("organization_id", organizationId)
+    .eq("organization_id", orgId)
     .single();
 }
 
@@ -73,7 +73,7 @@ export async function GET(req: NextRequest, ctx: RouteCtx): Promise<NextResponse
   if (!authz.ok) return authz.response;
 
   const db = createAdminClient();
-  const { data: territory, error } = await buscarTerritory(db, id, authz.organizationId);
+  const { data: territory, error } = await buscarTerritory(db, id, authz.org.orgId);
 
   if (error || !territory) {
     return fail("not_found", "Territorio nao encontrado", 404, { requestId });
@@ -83,14 +83,14 @@ export async function GET(req: NextRequest, ctx: RouteCtx): Promise<NextResponse
   const { count: childCount } = await db
     .from("pol_territories")
     .select("id", { count: "exact", head: true })
-    .eq("organization_id", authz.organizationId)
+    .eq("organization_id", authz.org.orgId)
     .eq("parent_id", id);
 
   // Resumo de metricas: soma de populacao e eleitorado dos filhos diretos
   const { data: childMetrics } = await db
     .from("pol_territories")
     .select("population, electorate")
-    .eq("organization_id", authz.organizationId)
+    .eq("organization_id", authz.org.orgId)
     .eq("parent_id", id);
 
   const metricsSummary = {
@@ -111,13 +111,11 @@ export async function PATCH(req: NextRequest, ctx: RouteCtx): Promise<NextRespon
   const authz = await requireRole("manager", { requestId, resource: "pol_territories" });
   if (!authz.ok) return authz.response;
 
-  const { organizationId, userId } = authz;
+  const orgId = authz.org.orgId;
+  const userId = authz.user.id;
 
-  const guardaSuporteWrite = await requireSupportWrite({
-    requestId,
-    resource: "pol_territories.update",
-  });
-  if (!guardaSuporteWrite.ok) return guardaSuporteWrite.response;
+  const denied = await requireSupportWrite(orgId);
+  if (denied) return denied;
 
   let body: unknown;
   try {
@@ -141,7 +139,7 @@ export async function PATCH(req: NextRequest, ctx: RouteCtx): Promise<NextRespon
   const db = createAdminClient();
 
   // Verificar existencia + tenant
-  const { data: existente, error: errBusca } = await buscarTerritory(db, id, organizationId);
+  const { data: existente, error: errBusca } = await buscarTerritory(db, id, orgId);
   if (errBusca || !existente) {
     return fail("not_found", "Territorio nao encontrado", 404, { requestId });
   }
@@ -156,7 +154,7 @@ export async function PATCH(req: NextRequest, ctx: RouteCtx): Promise<NextRespon
       .from("pol_territories")
       .select("id")
       .eq("id", parsed.data.parent_id)
-      .eq("organization_id", organizationId)
+      .eq("organization_id", orgId)
       .single();
 
     if (errParent || !parent) {
@@ -168,7 +166,7 @@ export async function PATCH(req: NextRequest, ctx: RouteCtx): Promise<NextRespon
     .from("pol_territories")
     .update(parsed.data)
     .eq("id", id)
-    .eq("organization_id", organizationId)
+    .eq("organization_id", orgId)
     .select()
     .single();
 
@@ -178,7 +176,7 @@ export async function PATCH(req: NextRequest, ctx: RouteCtx): Promise<NextRespon
 
   // Audit log
   await db.from("api_audit_log").insert({
-    organization_id: organizationId,
+    organization_id: orgId,
     user_id: userId,
     action: "pol_territories.update",
     resource_id: id,
@@ -197,17 +195,15 @@ export async function DELETE(req: NextRequest, ctx: RouteCtx): Promise<NextRespo
   const authz = await requireRole("admin", { requestId, resource: "pol_territories" });
   if (!authz.ok) return authz.response;
 
-  const { organizationId, userId } = authz;
+  const orgId = authz.org.orgId;
+  const userId = authz.user.id;
 
-  const guardaSuporteWrite = await requireSupportWrite({
-    requestId,
-    resource: "pol_territories.delete",
-  });
-  if (!guardaSuporteWrite.ok) return guardaSuporteWrite.response;
+  const denied = await requireSupportWrite(orgId);
+  if (denied) return denied;
 
   const db = createAdminClient();
 
-  const { data: existente, error: errBusca } = await buscarTerritory(db, id, organizationId);
+  const { data: existente, error: errBusca } = await buscarTerritory(db, id, orgId);
   if (errBusca || !existente) {
     return fail("not_found", "Territorio nao encontrado", 404, { requestId });
   }
@@ -216,7 +212,7 @@ export async function DELETE(req: NextRequest, ctx: RouteCtx): Promise<NextRespo
   const { count: childCount } = await db
     .from("pol_territories")
     .select("id", { count: "exact", head: true })
-    .eq("organization_id", organizationId)
+    .eq("organization_id", orgId)
     .eq("parent_id", id);
 
   if (childCount && childCount > 0) {
@@ -231,7 +227,7 @@ export async function DELETE(req: NextRequest, ctx: RouteCtx): Promise<NextRespo
     .from("pol_territories")
     .delete()
     .eq("id", id)
-    .eq("organization_id", organizationId);
+    .eq("organization_id", orgId);
 
   if (errDelete) {
     return fail("internal_error", "Erro ao deletar territorio", 500, { requestId });
@@ -239,7 +235,7 @@ export async function DELETE(req: NextRequest, ctx: RouteCtx): Promise<NextRespo
 
   // Audit log
   await db.from("api_audit_log").insert({
-    organization_id: organizationId,
+    organization_id: orgId,
     user_id: userId,
     action: "pol_territories.delete",
     resource_id: id,

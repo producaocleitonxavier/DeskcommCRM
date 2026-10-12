@@ -10,9 +10,8 @@
 
 import { redirect } from "next/navigation";
 import Link from "next/link";
-import { createServerClient } from "@/lib/supabase/server";
-import { getUser } from "@/lib/auth/get-user";
-import { resolverOrganizacaoAtiva } from "@/lib/organizations/resolver";
+import { createClient } from "@/lib/supabase/server";
+import { requireAuth, resolveActiveOrg } from "@/lib/auth/server";
 
 // -- Tipos -------------------------------------------------------------------
 
@@ -71,7 +70,7 @@ interface CallQueueStatus {
 // -- Data fetching -----------------------------------------------------------
 
 async function buscarDashboard(organizationId: string) {
-  const db = createServerClient();
+  const db = await createClient();
 
   const [dashRes, funilRes, callRes] = await Promise.all([
     db
@@ -110,13 +109,12 @@ async function buscarDashboard(organizationId: string) {
 // -- Componente --------------------------------------------------------------
 
 export default async function DashboardPage() {
-  const user = await getUser();
-  if (!user) redirect("/login");
+  const user = await requireAuth();
 
-  const org = await resolverOrganizacaoAtiva(user.id);
+  const org = await resolveActiveOrg(user);
   if (!org) redirect("/app/onboarding");
 
-  const { dash, funil, calls } = await buscarDashboard(org.id);
+  const { dash, funil, calls } = await buscarDashboard(org.orgId);
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-8 space-y-8">

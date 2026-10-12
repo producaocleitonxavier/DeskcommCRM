@@ -34,6 +34,11 @@ import { avisoDeCasoAoSuporteHandler } from "@/lib/escalacao/aviso-ao-suporte.ha
 import { avisoDePropostaNoWhatsAppHandler } from "@/lib/propostas/aviso-no-whatsapp.handler";
 import { cobrancaSinalHandler } from "@/lib/cobranca/sinal.handler";
 import { igAutomacaoHandler } from "@/lib/ig-automacoes/motor.handler";
+import { igInboundCommentHandler } from "@/lib/channels/instagram/inbound-comment.handler";
+import { igInboundMentionHandler } from "@/lib/channels/instagram/inbound-mention.handler";
+import { igInboundDmHandler } from "@/lib/channels/instagram/inbound-dm.handler";
+import { igDmOutboundHandler } from "@/lib/channels/instagram/send-dm.handler";
+import { igCommentReplyHandler } from "@/lib/channels/instagram/reply-comment.handler";
 import { registerHandler } from "@/lib/event-log/dispatcher";
 
 let _registered = false;
@@ -58,10 +63,28 @@ export function ensureHandlersRegistered(): void {
   registerHandler(lgpdExportHandler);
   registerHandler(lgpdRedactHandler);
   registerHandler(automationRulesHandler);
+  // Ingestão de comentário Instagram: converte evento bruto do webhook em linha
+  // de `ig_comment_events`. DEVE rodar ANTES do motor de automação, que lê
+  // dessa tabela — sem a linha o motor não encontra nada. Escrita curta no
+  // banco, sem rede de terceiro.
+  registerHandler(igInboundCommentHandler);
+  // Ingestão de menção Instagram: converte evento bruto do webhook em linha
+  // de `ig_comment_events` (com `field = 'mentions'`). Mesmo critério do
+  // handler de comentários: DEVE rodar ANTES do motor de automação. Escrita
+  // curta no banco, sem rede de terceiro.
+  registerHandler(igInboundMentionHandler);
+  // Ingestão de DM Instagram: cria/atualiza contato, conversa e mensagem no
+  // CRM. Escrita pura no banco, sem rede de terceiro.
+  registerHandler(igInboundDmHandler);
   // Motor de automação do Instagram (ManyChat próprio): avalia flows e emite
   // side-effects para event_log — nunca faz HTTP direto. Fica ao lado do motor
   // de automação de atendimento, que tem o mesmo perfil (só banco + event_log).
   registerHandler(igAutomacaoHandler);
+  // Workers do Instagram que SAEM por rede de terceiro (Graph API). Ficam
+  // depois do motor (que só escreve no banco + event_log) e antes dos handlers
+  // de follow-up, pelo critério padrão: quem faz HTTP fica no fim.
+  registerHandler(igDmOutboundHandler);
+  registerHandler(igCommentReplyHandler);
   registerHandler(followupGatilhoEtapaHandler);
   // Escrita curta no banco (um item na Central), vizinha do gatilho de etapa
   // que consome o mesmo evento.

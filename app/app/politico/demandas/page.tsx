@@ -9,9 +9,8 @@
 
 import { redirect } from "next/navigation";
 import Link from "next/link";
-import { createServerClient } from "@/lib/supabase/server";
-import { getUser } from "@/lib/auth/get-user";
-import { resolverOrganizacaoAtiva } from "@/lib/organizations/resolver";
+import { createClient } from "@/lib/supabase/server";
+import { requireAuth, resolveActiveOrg } from "@/lib/auth/server";
 
 // -- Tipos -------------------------------------------------------------------
 
@@ -89,7 +88,7 @@ function formatarData(data: string): string {
 // -- Data fetching -----------------------------------------------------------
 
 async function buscarDemandas(organizationId: string, pagina: number, filtroEstado?: string) {
-  const db = createServerClient();
+  const db = await createClient();
   const offset = (pagina - 1) * POR_PAGINA;
 
   let query = db
@@ -115,7 +114,7 @@ async function buscarDemandas(organizationId: string, pagina: number, filtroEsta
 }
 
 async function contarEstados(organizationId: string) {
-  const db = createServerClient();
+  const db = await createClient();
   const counts: Record<string, number> = {};
 
   const { count: totalCount } = await db
@@ -207,10 +206,9 @@ export default async function GabinetePage({
 }: {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
-  const user = await getUser();
-  if (!user) redirect("/login");
+  const user = await requireAuth();
 
-  const org = await resolverOrganizacaoAtiva(user.id);
+  const org = await resolveActiveOrg(user);
   if (!org) redirect("/app/onboarding");
 
   const params = await searchParams;
@@ -219,8 +217,8 @@ export default async function GabinetePage({
   const filtroEstado = typeof params.estado === "string" ? params.estado : undefined;
 
   const [{ demandas, total }, contagens] = await Promise.all([
-    buscarDemandas(org.id, pagina, filtroEstado),
-    contarEstados(org.id),
+    buscarDemandas(org.orgId, pagina, filtroEstado),
+    contarEstados(org.orgId),
   ]);
 
   const totalPaginas = Math.ceil(total / POR_PAGINA);
@@ -307,7 +305,7 @@ export default async function GabinetePage({
             />
             <KpiCard
               label="Resolvidas este mês"
-              value={contagens._resolvidas_mes}
+              value={contagens._resolvidas_mes ?? 0}
             />
             <KpiCard
               label="Com encaminhamento IA"
