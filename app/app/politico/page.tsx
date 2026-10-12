@@ -1,8 +1,12 @@
 /**
- * /app/politico — Hub politico (War Room 2.0)
+ * /app/politico — Hub War Room 2.0
  *
- * Ponto de entrada do modulo politico do DeskcommCRM.
- * Apresenta metricas e atalhos para: Leads Politicos, Territorios e Funil Politico.
+ * Central de comando do módulo político. Organizado em 5 seções:
+ * Inteligência, Execução, Território, Operação e Gabinete.
+ *
+ * Consolidação (out/2026): 16 sub-páginas → 5 seções temáticas.
+ * Páginas eliminadas: dashboard (redundante), projecao (→ raio-x),
+ * rankings (→ mapa), narrativas (→ adversários), territorios (→ mapa).
  *
  * Acesso: manager+
  */
@@ -15,22 +19,22 @@ import { resolverOrganizacaoAtiva } from "@/lib/organizations/resolver";
 
 // -- Tipos -------------------------------------------------------------------
 
-interface MetricasPoliticas {
+interface MetricasWarRoom {
   totalLeads: number;
   votosCertos: number;
-  territorios: number;
+  alertasAtivos: number;
   transicoesHoje: number;
 }
 
 // -- Data fetching -----------------------------------------------------------
 
-async function buscarMetricas(organizationId: string): Promise<MetricasPoliticas> {
+async function buscarMetricas(organizationId: string): Promise<MetricasWarRoom> {
   const db = createServerClient();
   const hoje = new Date();
   hoje.setHours(0, 0, 0, 0);
   const hojeISO = hoje.toISOString();
 
-  const [totalLeads, votosCertos, territorios, transicoesHoje] = await Promise.all([
+  const [totalLeads, votosCertos, alertasAtivos, transicoesHoje] = await Promise.all([
     db
       .from("pol_leads")
       .select("id", { count: "exact", head: true })
@@ -43,9 +47,10 @@ async function buscarMetricas(organizationId: string): Promise<MetricasPoliticas
       .eq("support_level", "voto_certo"),
 
     db
-      .from("pol_territories")
+      .from("pol_alerts")
       .select("id", { count: "exact", head: true })
-      .eq("organization_id", organizationId),
+      .eq("organization_id", organizationId)
+      .eq("status", "active"),
 
     db
       .from("pol_funnel_transitions")
@@ -57,14 +62,183 @@ async function buscarMetricas(organizationId: string): Promise<MetricasPoliticas
   return {
     totalLeads: totalLeads.count ?? 0,
     votosCertos: votosCertos.count ?? 0,
-    territorios: territorios.count ?? 0,
+    alertasAtivos: alertasAtivos.count ?? 0,
     transicoesHoje: transicoesHoje.count ?? 0,
   };
 }
 
+// -- Dados das seções --------------------------------------------------------
+
+interface ItemSecao {
+  href: string;
+  titulo: string;
+  descricao: string;
+  icone: string;
+  badge?: string | null;
+  novo?: boolean;
+}
+
+interface Secao {
+  titulo: string;
+  icone: string;
+  cor: string;
+  items: ItemSecao[];
+}
+
+function montarSecoes(m: MetricasWarRoom): Secao[] {
+  return [
+    {
+      titulo: "Inteligência",
+      icone: "🧠",
+      cor: "text-violet-500",
+      items: [
+        {
+          href: "/app/politico/social",
+          titulo: "Inteligência Social",
+          descricao: "Perfis monitorados, métricas e posts coletados das redes.",
+          icone: "📱",
+        },
+        {
+          href: "/app/politico/adversarios",
+          titulo: "Adversários",
+          descricao: "Dossiê de oponentes — risco, narrativa e sinais de alerta.",
+          icone: "🛡️",
+        },
+        {
+          href: "/app/politico/alertas",
+          titulo: "Alertas & Risco",
+          descricao: "Sentimento, crise, fake news e adversários.",
+          icone: "🔔",
+          badge: m.alertasAtivos > 0 ? `${m.alertasAtivos} ativo${m.alertasAtivos !== 1 ? "s" : ""}` : null,
+        },
+        {
+          href: "/app/politico/decisao",
+          titulo: "Decision Engine",
+          descricao: "Sinais estratégicos e ações recomendadas por IA.",
+          icone: "⚡",
+          novo: true,
+        },
+      ],
+    },
+    {
+      titulo: "Execução",
+      icone: "🚀",
+      cor: "text-orange-500",
+      items: [
+        {
+          href: "/app/politico/motor-viral",
+          titulo: "Motor Viral",
+          descricao: "Scripts, captions e roteiros com scoring de viralidade.",
+          icone: "✨",
+        },
+        {
+          href: "/app/politico/funil-invisivel",
+          titulo: "Funil Invisível",
+          descricao: "Nurturing automático com scoring de afinidade.",
+          icone: "👁️",
+        },
+      ],
+    },
+    {
+      titulo: "Território",
+      icone: "🗺️",
+      cor: "text-emerald-500",
+      items: [
+        {
+          href: "/app/politico/mapa-eleitoral",
+          titulo: "Mapa & Cidades",
+          descricao: "Territórios, oportunidades e rankings de cidades.",
+          icone: "📍",
+        },
+        {
+          href: "/app/politico/raio-x",
+          titulo: "Raio-X de Votos",
+          descricao: "Análise por seção eleitoral — TSE, evolução e ações.",
+          icone: "🔍",
+          novo: true,
+        },
+      ],
+    },
+    {
+      titulo: "Operação",
+      icone: "⚙️",
+      cor: "text-blue-500",
+      items: [
+        {
+          href: "/app/politico/leads",
+          titulo: "Base de Leads",
+          descricao: "Apoiadores, simpatizantes e militantes com scoring.",
+          icone: "👥",
+          badge: m.totalLeads > 0 ? `${m.totalLeads.toLocaleString("pt-BR")} leads` : null,
+        },
+        {
+          href: "/app/politico/funil",
+          titulo: "Funil Eleitoral",
+          descricao: "Kanban — de novo cadastro até voto certo.",
+          icone: "📊",
+          badge: m.transicoesHoje > 0 ? `${m.transicoesHoje} hoje` : null,
+        },
+        {
+          href: "/app/politico/ligacoes",
+          titulo: "Ligações",
+          descricao: "Fila de ligações com resultado e controle.",
+          icone: "📞",
+        },
+        {
+          href: "/app/politico/eventos",
+          titulo: "Eventos",
+          descricao: "Presença, participantes e dados institucionais.",
+          icone: "📅",
+        },
+        {
+          href: "/app/politico/pesquisas",
+          titulo: "Pesquisas",
+          descricao: "Formulários públicos com respostas geolocalizadas.",
+          icone: "📋",
+        },
+      ],
+    },
+    {
+      titulo: "Gabinete",
+      icone: "🏛️",
+      cor: "text-amber-500",
+      items: [
+        {
+          href: "/app/politico/demandas",
+          titulo: "Demandas",
+          descricao: "Solicitações com rascunho de encaminhamento por IA.",
+          icone: "📥",
+          novo: true,
+        },
+        {
+          href: "/app/politico/liderancas",
+          titulo: "Lideranças",
+          descricao: "Rede de lideranças com aniversários e WhatsApp.",
+          icone: "👑",
+          novo: true,
+        },
+        {
+          href: "/app/politico/projetos-lei",
+          titulo: "Projetos de Lei",
+          descricao: "Acompanhamento legislativo por tipo de mandato.",
+          icone: "📜",
+          novo: true,
+        },
+        {
+          href: "/app/politico/emendas",
+          titulo: "Emendas",
+          descricao: "Emendas parlamentares — valores, destino e status.",
+          icone: "💰",
+          novo: true,
+        },
+      ],
+    },
+  ];
+}
+
 // -- Componente --------------------------------------------------------------
 
-export default async function PoliticoHubPage() {
+export default async function WarRoomHubPage() {
   const user = await getUser();
   if (!user) redirect("/login");
 
@@ -72,202 +246,81 @@ export default async function PoliticoHubPage() {
   if (!org) redirect("/app/onboarding");
 
   const metricas = await buscarMetricas(org.id);
-
-  const secoes = [
-    {
-      href: "/app/politico/leads",
-      titulo: "Leads Politicos",
-      descricao:
-        "Gerencie sua base de apoiadores, simpatizantes e militantes com scoring politico e funil dedicado.",
-      icone: "\u{1F465}",
-      badge:
-        metricas.totalLeads > 0
-          ? `${metricas.totalLeads} lead${metricas.totalLeads !== 1 ? "s" : ""}`
-          : null,
-    },
-    {
-      href: "/app/politico/territorios",
-      titulo: "Territorios",
-      descricao:
-        "Mapeie estados, cidades, bairros e zonas eleitorais com dados do IBGE e TSE integrados.",
-      icone: "\u{1F5FA}️",
-      badge:
-        metricas.territorios > 0
-          ? `${metricas.territorios} territorio${metricas.territorios !== 1 ? "s" : ""}`
-          : null,
-    },
-    {
-      href: "/app/politico/funil",
-      titulo: "Funil Politico",
-      descricao:
-        "Acompanhe a jornada dos contatos pelo funil: de novo cadastro ate voto certo, com historico de transicoes.",
-      icone: "\u{1F4CA}",
-      badge:
-        metricas.transicoesHoje > 0
-          ? `${metricas.transicoesHoje} hoje`
-          : null,
-    },
-    {
-      href: "/app/politico/social",
-      titulo: "Social",
-      descricao:
-        "Monitore perfis sociais, acompanhe metricas e analise posts coletados das redes.",
-      icone: "\u{1F4F1}",
-      badge: null,
-    },
-    {
-      href: "/app/politico/adversarios",
-      titulo: "Adversarios",
-      descricao:
-        "Rastreie oponentes politicos com nivel de risco, ameaca e sinais de alerta.",
-      icone: "\u{1F6E1}️",
-      badge: null,
-    },
-    {
-      href: "/app/politico/narrativas",
-      titulo: "Narrativas",
-      descricao:
-        "Radar de narrativas ativas com sentimento, forca e status estrategico por plataforma.",
-      icone: "\u{1F4E1}",
-      badge: null,
-    },
-    {
-      href: "/app/politico/motor-viral",
-      titulo: "Motor Viral",
-      descricao:
-        "Gere conteudo por IA — scripts de video, captions, roteiros com scoring de viralidade.",
-      icone: "\u{26A1}",
-      badge: null,
-    },
-    {
-      href: "/app/politico/ligacoes",
-      titulo: "Ligacoes",
-      descricao:
-        "Fila de ligacoes com lock otimista, resultado politico e controle de tentativas.",
-      icone: "\u{1F4DE}",
-      badge: null,
-    },
-    {
-      href: "/app/politico/eventos",
-      titulo: "Eventos",
-      descricao:
-        "Eventos politicos com controle de presenca, participantes e dados institucionais.",
-      icone: "\u{1F4C5}",
-      badge: null,
-    },
-    {
-      href: "/app/politico/funil-invisivel",
-      titulo: "Funil Invisivel",
-      descricao:
-        "Nurturing automatico com scoring de afinidade e rastreamento de engajamento.",
-      icone: "\u{1F441}️",
-      badge: null,
-    },
-    {
-      href: "/app/politico/pesquisas",
-      titulo: "Pesquisas",
-      descricao:
-        "Pesquisas de campo com formularios publicos e respostas geolocalizadas.",
-      icone: "\u{1F4CB}",
-      badge: null,
-    },
-    {
-      href: "/app/politico/alertas",
-      titulo: "Alertas",
-      descricao:
-        "Sistema unificado de alertas — sentimento, crise, fake news e adversarios.",
-      icone: "\u{1F514}",
-      badge: null,
-    },
-    // Fase 4 — Dashboards & Views
-    {
-      href: "/app/politico/dashboard",
-      titulo: "Dashboard",
-      descricao:
-        "Painel central com KPIs consolidados, funil politico e fila de ligacoes.",
-      icone: "\u{1F4CA}",
-      badge: null,
-    },
-    {
-      href: "/app/politico/projecao",
-      titulo: "Projecao Eleitoral",
-      descricao:
-        "Estimativa de votos por territorio — dados TSE cruzados com leads atuais.",
-      icone: "\u{1F4C8}",
-      badge: null,
-    },
-    {
-      href: "/app/politico/rankings",
-      titulo: "Rankings",
-      descricao:
-        "Ranking de cidades por desempenho e liderancas por mobilizacao.",
-      icone: "\u{1F3C6}",
-      badge: null,
-    },
-    {
-      href: "/app/politico/mapa-eleitoral",
-      titulo: "Mapa Eleitoral",
-      descricao:
-        "Mapa interativo de territorios — oportunidades e prioridades estrategicas.",
-      icone: "\u{1F4CD}",
-      badge: null,
-    },
-  ];
+  const secoes = montarSecoes(metricas);
 
   return (
-    <div className="mx-auto max-w-4xl px-4 py-8 space-y-8">
-      {/* Cabecalho */}
+    <div className="mx-auto max-w-5xl px-4 py-8 space-y-8">
+      {/* Cabeçalho */}
       <div>
         <h1 className="text-2xl font-bold tracking-tight">War Room</h1>
         <p className="mt-1 text-sm text-muted-foreground">
-          Modulo politico — gerencie leads, territorios e o funil de apoio da sua campanha.
+          Central de comando — campanha política, gabinete e inteligência eleitoral.
         </p>
       </div>
 
-      {/* Metricas */}
+      {/* KPIs rápidos */}
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-        <MetricaCard label="Total de leads" valor={metricas.totalLeads} icone={"\u{1F465}"} />
-        <MetricaCard label="Votos certos" valor={metricas.votosCertos} icone={"✅"} />
-        <MetricaCard label="Territorios" valor={metricas.territorios} icone={"\u{1F5FA}️"} />
-        <MetricaCard label="Transicoes hoje" valor={metricas.transicoesHoje} icone={"\u{1F504}"} />
+        <KpiCard label="Base de leads" valor={metricas.totalLeads.toLocaleString("pt-BR")} cor="text-blue-500" />
+        <KpiCard label="Votos certos" valor={metricas.votosCertos.toLocaleString("pt-BR")} cor="text-emerald-500" />
+        <KpiCard label="Alertas ativos" valor={String(metricas.alertasAtivos)} cor={metricas.alertasAtivos > 0 ? "text-red-500" : "text-muted-foreground"} />
+        <KpiCard label="Transições hoje" valor={String(metricas.transicoesHoje)} cor="text-violet-500" />
       </div>
 
-      {/* Secoes */}
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+      {/* Seções */}
+      <div className="space-y-6">
         {secoes.map((secao) => (
-          <Link
-            key={secao.href}
-            href={secao.href}
-            className="group relative flex flex-col gap-3 rounded-xl border bg-card p-5 transition-colors hover:bg-accent/30"
-          >
-            <div className="flex items-center justify-between">
-              <span className="text-2xl">{secao.icone}</span>
-              {secao.badge && (
-                <span className="rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">
-                  {secao.badge}
-                </span>
-              )}
+          <section key={secao.titulo}>
+            <h2 className="flex items-center gap-2 text-sm font-semibold uppercase tracking-wider text-muted-foreground mb-3">
+              <span>{secao.icone}</span>
+              <span>{secao.titulo}</span>
+            </h2>
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              {secao.items.map((item) => (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  className="group relative flex items-start gap-3 rounded-xl border bg-card p-4 transition-colors hover:bg-accent/30"
+                >
+                  <span className="mt-0.5 text-xl shrink-0">{item.icone}</span>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-2">
+                      <h3 className="font-semibold text-sm group-hover:text-primary transition-colors">
+                        {item.titulo}
+                      </h3>
+                      {item.novo && (
+                        <span className="rounded-full bg-amber-500/15 px-1.5 py-0.5 text-[10px] font-bold uppercase text-amber-600 dark:text-amber-400">
+                          Novo
+                        </span>
+                      )}
+                      {item.badge && (
+                        <span className="rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-medium text-primary">
+                          {item.badge}
+                        </span>
+                      )}
+                    </div>
+                    <p className="mt-0.5 text-xs text-muted-foreground leading-snug">
+                      {item.descricao}
+                    </p>
+                  </div>
+                </Link>
+              ))}
             </div>
-            <div>
-              <h2 className="font-semibold group-hover:text-primary transition-colors">
-                {secao.titulo}
-              </h2>
-              <p className="mt-1 text-sm text-muted-foreground leading-snug">
-                {secao.descricao}
-              </p>
-            </div>
-          </Link>
+          </section>
         ))}
       </div>
 
-      {/* Instrucao quando vazio */}
+      {/* Instrução quando vazio */}
       {metricas.totalLeads === 0 && (
         <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-200">
-          <strong>Para comecar:</strong> cadastre seus primeiros leads politicos em{" "}
+          <strong>Para começar:</strong> cadastre seus primeiros leads em{" "}
           <Link href="/app/politico/leads" className="font-medium underline underline-offset-4">
-            Leads Politicos
+            Base de Leads
           </Link>{" "}
-          e mapeie seus territorios de atuacao.
+          e mapeie seus territórios no{" "}
+          <Link href="/app/politico/mapa-eleitoral" className="font-medium underline underline-offset-4">
+            Mapa & Cidades
+          </Link>
+          .
         </div>
       )}
     </div>
@@ -276,19 +329,18 @@ export default async function PoliticoHubPage() {
 
 // -- Sub-componentes ---------------------------------------------------------
 
-function MetricaCard({
+function KpiCard({
   label,
   valor,
-  icone,
+  cor,
 }: {
   label: string;
-  valor: number;
-  icone: string;
+  valor: string;
+  cor: string;
 }) {
   return (
     <div className="flex flex-col gap-1 rounded-lg border bg-card p-4">
-      <span className="text-lg">{icone}</span>
-      <span className="text-2xl font-bold tabular-nums">{valor}</span>
+      <span className={`text-2xl font-bold tabular-nums ${cor}`}>{valor}</span>
       <span className="text-xs text-muted-foreground">{label}</span>
     </div>
   );

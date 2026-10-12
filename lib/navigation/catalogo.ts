@@ -808,111 +808,85 @@ export const NAV_CATALOG = [
     sidebar: true,
   },
 
-  // ---- Político — War Room 2.0: funil político, territórios e mobilização ----
+  // ── MÓDULO POLÍTICO — WAR ROOM 2.0 ──────────────────────────────────
   //
   // Hub do módulo político (GIP War Room 2.0). Estende o CRM com funil político
   // (novo_cadastro → simpatizante → apoiador → militante → voto_certo), scoring
   // multidimensional, territórios hierárquicos e dados do TSE.
   //
+  // Consolidação de sidebar (out/2026): 16 sub-páginas reorganizadas em 5 seções
+  // temáticas. Páginas redundantes eliminadas:
+  //   - /dashboard → hub já cumpre esse papel
+  //   - /projecao  → absorvido pelo Raio-X de Votos
+  //   - /rankings  → absorvido pelo Mapa Eleitoral
+  //   - /narrativas → absorvido por Adversários (narrativas são sub-aba)
+  //   - /territorios → absorvido pelo Mapa Eleitoral
+  //
   // Grupo "crm" porque pol_leads é extensão de contacts — mesma jornada de quem
   // vende, mas o verbo é mobilizar em vez de fechar.
+
+  // ── Hub (sidebar: true) ────────────────────────────────────────────
   {
     href: "/app/politico",
-    label: "Político",
-    description: "Hub do War Room — funil político, leads, territórios e mobilização.",
+    label: "War Room",
+    description: "Central de comando — visão geral da campanha com KPIs, alertas e atalhos.",
     icon: "Flag",
     group: "crm",
-    section: "Campanha política",
+    section: "War Room",
     minRole: "manager",
     sidebar: true,
   },
-  {
-    href: "/app/politico/leads",
-    label: "Leads Políticos",
-    description: "Contatos com dados eleitorais, nível de apoio, temperatura e mobilizador responsável.",
-    icon: "UsersThree",
-    group: "crm",
-    section: "Campanha política",
-    minRole: "manager",
-    sidebar: false, // acessa pelo hub /app/politico
-  },
-  {
-    href: "/app/politico/territorios",
-    label: "Territórios",
-    description: "Mapa hierárquico: estado → cidade → bairro → zona → seção, com dados do IBGE e TSE.",
-    icon: "MapPin",
-    group: "crm",
-    section: "Campanha política",
-    minRole: "manager",
-    sidebar: false, // acessa pelo hub /app/politico
-  },
-  {
-    href: "/app/politico/funil",
-    label: "Funil Político",
-    description: "Visualize a jornada de apoio e as transições entre estágios do funil político.",
-    icon: "Funnel",
-    group: "crm",
-    section: "Campanha política",
-    minRole: "manager",
-    sidebar: false, // acessa pelo hub /app/politico
-  },
+
+  // ── Seção: Inteligência ────────────────────────────────────────────
   {
     href: "/app/politico/social",
-    label: "Social",
-    description: "Perfis monitorados, snapshots de métricas e posts coletados de redes sociais.",
+    label: "Inteligência Social",
+    description: "Perfis monitorados, snapshots de métricas e posts coletados das redes sociais.",
     icon: "share-2",
     group: "crm",
-    section: "Campanha política",
+    section: "Inteligência",
     minRole: "manager",
-    sidebar: false, // acessa pelo hub /app/politico
+    sidebar: false,
   },
   {
     href: "/app/politico/adversarios",
     label: "Adversários",
-    description: "Painel de oponentes políticos com nível de risco, ameaça e sinais de alerta.",
+    description: "Dossiê de oponentes — risco, ameaça, sinais de alerta e análise de narrativa.",
     icon: "shield-alert",
     group: "crm",
-    section: "Campanha política",
+    section: "Inteligência",
     minRole: "manager",
-    sidebar: false, // acessa pelo hub /app/politico
+    sidebar: false,
   },
   {
-    href: "/app/politico/narrativas",
-    label: "Narrativas",
-    description: "Radar de narrativas ativas com sentimento, força e status estratégico.",
-    icon: "radio",
+    href: "/app/politico/alertas",
+    label: "Alertas & Risco",
+    description: "Sistema unificado de alertas — sentimento, crise, fake news e adversários.",
+    icon: "bell",
     group: "crm",
-    section: "Campanha política",
+    section: "Inteligência",
     minRole: "manager",
-    sidebar: false, // acessa pelo hub /app/politico
+    sidebar: false,
   },
+  {
+    href: "/app/politico/decisao",
+    label: "Decision Engine",
+    description: "Motor de decisão com sinais estratégicos, oportunidades e ações recomendadas por IA.",
+    icon: "brain",
+    group: "crm",
+    section: "Inteligência",
+    minRole: "manager",
+    sidebar: false,
+  },
+
+  // ── Seção: Execução ────────────────────────────────────────────────
   {
     href: "/app/politico/motor-viral",
     label: "Motor Viral",
-    description: "Geração de conteúdo por IA — scripts, captions, roteiros com scoring viral.",
+    description: "Geração de conteúdo por IA — scripts de vídeo, captions e roteiros com scoring viral.",
     icon: "sparkles",
     group: "crm",
-    section: "Campanha política",
-    minRole: "manager",
-    sidebar: false, // acessa pelo hub /app/politico
-  },
-  {
-    href: "/app/politico/ligacoes",
-    label: "Ligações",
-    description: "Fila de ligações políticas com lock otimista, resultado e controle de tentativas.",
-    icon: "phone",
-    group: "crm",
-    section: "Campanha política",
-    minRole: "manager",
-    sidebar: false, // acessa pelo hub /app/politico
-  },
-  {
-    href: "/app/politico/eventos",
-    label: "Eventos",
-    description: "Eventos políticos com controle de presença, participantes e dados institucionais.",
-    icon: "calendar",
-    group: "crm",
-    section: "Campanha política",
+    section: "Execução",
     minRole: "manager",
     sidebar: false,
   },
@@ -922,7 +896,71 @@ export const NAV_CATALOG = [
     description: "Nurturing automático com scoring de afinidade e rastreamento de engajamento.",
     icon: "eye-off",
     group: "crm",
-    section: "Campanha política",
+    section: "Execução",
+    minRole: "manager",
+    sidebar: false,
+  },
+
+  // ── Seção: Território ──────────────────────────────────────────────
+  {
+    href: "/app/politico/mapa-eleitoral",
+    label: "Mapa & Cidades",
+    description: "Mapa interativo com territórios, oportunidades, rankings de cidades e prioridades.",
+    icon: "map-pin",
+    group: "crm",
+    section: "Território",
+    minRole: "manager",
+    sidebar: false,
+  },
+  {
+    href: "/app/politico/raio-x",
+    label: "Raio-X de Votos",
+    description: "Análise eleitoral por seção — consulta TSE, evolução histórica e ações territoriais.",
+    icon: "search",
+    group: "crm",
+    section: "Território",
+    minRole: "manager",
+    sidebar: false,
+  },
+
+  // ── Seção: Operação ────────────────────────────────────────────────
+  {
+    href: "/app/politico/leads",
+    label: "Base de Leads",
+    description: "Contatos com dados eleitorais, nível de apoio, temperatura e mobilizador responsável.",
+    icon: "UsersThree",
+    group: "crm",
+    section: "Operação",
+    minRole: "manager",
+    sidebar: false,
+  },
+  {
+    href: "/app/politico/funil",
+    label: "Funil Eleitoral",
+    description: "Kanban da jornada de apoio — de novo cadastro até voto certo, com histórico de transições.",
+    icon: "Funnel",
+    group: "crm",
+    section: "Operação",
+    minRole: "manager",
+    sidebar: false,
+  },
+  {
+    href: "/app/politico/ligacoes",
+    label: "Ligações",
+    description: "Fila de ligações políticas com lock otimista, resultado e controle de tentativas.",
+    icon: "phone",
+    group: "crm",
+    section: "Operação",
+    minRole: "manager",
+    sidebar: false,
+  },
+  {
+    href: "/app/politico/eventos",
+    label: "Eventos",
+    description: "Eventos políticos com controle de presença, participantes e dados institucionais.",
+    icon: "calendar",
+    group: "crm",
+    section: "Operação",
     minRole: "manager",
     sidebar: false,
   },
@@ -932,59 +970,49 @@ export const NAV_CATALOG = [
     description: "Pesquisas de campo com formulários públicos via token e respostas geolocalizadas.",
     icon: "clipboard-list",
     group: "crm",
-    section: "Campanha política",
-    minRole: "manager",
-    sidebar: false,
-  },
-  {
-    href: "/app/politico/alertas",
-    label: "Alertas",
-    description: "Sistema unificado de alertas — sentimento, crise, fake news, adversários e engajamento.",
-    icon: "bell",
-    group: "crm",
-    section: "Campanha política",
+    section: "Operação",
     minRole: "manager",
     sidebar: false,
   },
 
-  // ── Fase 4: Dashboards & Views ──────────────────────────────────────
+  // ── Seção: Gabinete ────────────────────────────────────────────────
   {
-    href: "/app/politico/dashboard",
-    label: "Dashboard",
-    description: "Painel central do War Room com KPIs consolidados, funil e fila de ligações.",
-    icon: "layout-dashboard",
+    href: "/app/politico/demandas",
+    label: "Demandas",
+    description: "Solicitações de cidadãos e lideranças com rascunho de encaminhamento por IA.",
+    icon: "inbox",
     group: "crm",
-    section: "Campanha política",
+    section: "Gabinete",
     minRole: "manager",
     sidebar: false,
   },
   {
-    href: "/app/politico/projecao",
-    label: "Projeção Eleitoral",
-    description: "Estimativa de votos por território cruzando dados TSE com a base de leads.",
-    icon: "trending-up",
+    href: "/app/politico/liderancas",
+    label: "Lideranças",
+    description: "Rede de lideranças com aniversários, WhatsApp e histórico de mobilização.",
+    icon: "crown",
     group: "crm",
-    section: "Campanha política",
+    section: "Gabinete",
     minRole: "manager",
     sidebar: false,
   },
   {
-    href: "/app/politico/rankings",
-    label: "Rankings",
-    description: "Ranking de cidades por desempenho e lideranças por mobilização.",
-    icon: "trophy",
+    href: "/app/politico/projetos-lei",
+    label: "Projetos de Lei",
+    description: "Acompanhamento legislativo configurável por tipo de mandato.",
+    icon: "file-text",
     group: "crm",
-    section: "Campanha política",
+    section: "Gabinete",
     minRole: "manager",
     sidebar: false,
   },
   {
-    href: "/app/politico/mapa-eleitoral",
-    label: "Mapa Eleitoral",
-    description: "Mapa interativo de territórios — oportunidades de conversão e prioridades estratégicas.",
-    icon: "map-pin",
+    href: "/app/politico/emendas",
+    label: "Emendas",
+    description: "Gestão de emendas parlamentares com valores, destino e status de execução.",
+    icon: "banknote",
     group: "crm",
-    section: "Campanha política",
+    section: "Gabinete",
     minRole: "manager",
     sidebar: false,
   },

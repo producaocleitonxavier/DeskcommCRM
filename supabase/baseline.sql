@@ -55250,3 +55250,170 @@ group by cq.organization_id, cq.assigned_to;
 
 comment on view public.pol_vw_call_supervisor is
   'Visão do supervisor — métricas por operador: ligações atribuídas, completadas, resultados políticos e taxas de conclusão/sucesso.';
+
+
+-- ╔══════════════════════════════════════════════════════════════════════════════╗
+-- ║  0641 — Módulo Gabinete: pol_liderancas, pol_projetos_lei, pol_emendas     ║
+-- ║  + extensão política da tabela demandas                                     ║
+-- ╚══════════════════════════════════════════════════════════════════════════════╝
+
+-- ── pol_liderancas ──────────────────────────────────────────────────
+create table if not exists public.pol_liderancas (
+  id uuid primary key default gen_random_uuid(),
+  organization_id uuid not null references public.organizations(id) on delete cascade,
+  contact_id uuid not null references public.contacts(id) on delete cascade,
+  pol_lead_id uuid references public.pol_leads(id) on delete set null,
+  nome text not null,
+  apelido text,
+  cargo text,
+  tipo text not null default 'cabo_eleitoral'
+    check (tipo in (
+      'cabo_eleitoral', 'coordenador_bairro', 'coordenador_cidade',
+      'lider_comunitario', 'vereador_aliado', 'presidente_associacao',
+      'lider_religioso', 'lider_sindical', 'assessor', 'outro'
+    )),
+  whatsapp text,
+  aniversario date,
+  territory_id uuid references public.pol_territories(id) on delete set null,
+  cidade text,
+  bairro text,
+  zona_eleitoral text,
+  leads_mobilizados int not null default 0,
+  eventos_organizados int not null default 0,
+  ultimo_contato_em timestamptz,
+  nivel_engajamento text not null default 'medio'
+    check (nivel_engajamento in ('baixo', 'medio', 'alto', 'critico')),
+  status text not null default 'ativo'
+    check (status in ('ativo', 'inativo', 'suspenso')),
+  observacoes text,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+create index if not exists idx_pol_liderancas_org on public.pol_liderancas(organization_id);
+create index if not exists idx_pol_liderancas_contact on public.pol_liderancas(organization_id, contact_id);
+create index if not exists idx_pol_liderancas_territory on public.pol_liderancas(organization_id, territory_id) where territory_id is not null;
+create index if not exists idx_pol_liderancas_aniversario on public.pol_liderancas(organization_id, aniversario) where aniversario is not null;
+create unique index if not exists uq_pol_liderancas_contact on public.pol_liderancas(organization_id, contact_id);
+alter table public.pol_liderancas enable row level security;
+drop policy if exists tenant_isolation_pol_liderancas_all on public.pol_liderancas;
+create policy tenant_isolation_pol_liderancas_all on public.pol_liderancas using (organization_id = any(public.fn_user_org_ids()));
+revoke all on public.pol_liderancas from anon;
+grant select, insert, update, delete on public.pol_liderancas to authenticated;
+
+-- ── pol_projetos_lei ────────────────────────────────────────────────
+create table if not exists public.pol_projetos_lei (
+  id uuid primary key default gen_random_uuid(),
+  organization_id uuid not null references public.organizations(id) on delete cascade,
+  numero text not null,
+  tipo text not null default 'projeto_de_lei'
+    check (tipo in (
+      'projeto_de_lei', 'projeto_de_resolucao', 'projeto_de_emenda',
+      'indicacao', 'mocao', 'requerimento', 'pedido_de_informacao',
+      'projeto_de_decreto', 'outro'
+    )),
+  esfera text not null default 'municipal'
+    check (esfera in ('municipal', 'estadual', 'federal')),
+  titulo text not null,
+  ementa text,
+  descricao text,
+  tema text,
+  url_oficial text,
+  autor_mandatario boolean not null default true,
+  coautores text[],
+  data_apresentacao date,
+  data_ultima_movimentacao date,
+  status text not null default 'em_tramitacao'
+    check (status in (
+      'rascunho', 'apresentado', 'em_tramitacao', 'em_comissao',
+      'aprovado_comissao', 'em_plenario', 'aprovado', 'vetado',
+      'promulgado', 'arquivado', 'retirado'
+    )),
+  comissao_atual text,
+  relator text,
+  prioridade text not null default 'normal'
+    check (prioridade in ('baixa', 'normal', 'alta', 'urgente')),
+  alinhamento_campanha boolean not null default false,
+  temas_campanha text[],
+  alertas_ativos boolean not null default true,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+create index if not exists idx_pol_projetos_lei_org on public.pol_projetos_lei(organization_id);
+create index if not exists idx_pol_projetos_lei_status on public.pol_projetos_lei(organization_id, status);
+create index if not exists idx_pol_projetos_lei_tipo on public.pol_projetos_lei(organization_id, tipo);
+create unique index if not exists uq_pol_projetos_lei_numero on public.pol_projetos_lei(organization_id, numero);
+alter table public.pol_projetos_lei enable row level security;
+drop policy if exists tenant_isolation_pol_projetos_lei_all on public.pol_projetos_lei;
+create policy tenant_isolation_pol_projetos_lei_all on public.pol_projetos_lei using (organization_id = any(public.fn_user_org_ids()));
+revoke all on public.pol_projetos_lei from anon;
+grant select, insert, update, delete on public.pol_projetos_lei to authenticated;
+
+-- ── pol_emendas ─────────────────────────────────────────────────────
+create table if not exists public.pol_emendas (
+  id uuid primary key default gen_random_uuid(),
+  organization_id uuid not null references public.organizations(id) on delete cascade,
+  numero text,
+  ano int not null,
+  tipo text not null default 'individual'
+    check (tipo in ('individual', 'bancada', 'comissao', 'relator', 'pix')),
+  esfera text not null default 'estadual'
+    check (esfera in ('municipal', 'estadual', 'federal')),
+  valor_indicado_cents bigint not null default 0,
+  valor_empenhado_cents bigint not null default 0,
+  valor_liquidado_cents bigint not null default 0,
+  valor_pago_cents bigint not null default 0,
+  currency text not null default 'BRL',
+  municipio text,
+  entidade_beneficiada text,
+  cnpj_entidade text,
+  territory_id uuid references public.pol_territories(id) on delete set null,
+  area_tematica text not null default 'saude'
+    check (area_tematica in (
+      'saude', 'educacao', 'seguranca', 'assistencia_social',
+      'infraestrutura', 'cultura', 'esporte', 'meio_ambiente',
+      'agricultura', 'tecnologia', 'outro'
+    )),
+  descricao text not null,
+  objeto text,
+  status text not null default 'indicada'
+    check (status in ('rascunho', 'indicada', 'empenhada', 'liquidada', 'paga', 'devolvida', 'cancelada')),
+  data_indicacao date,
+  data_empenho date,
+  data_liquidacao date,
+  data_pagamento date,
+  prazo_execucao date,
+  beneficiarios_estimados int,
+  lideranca_id uuid references public.pol_liderancas(id) on delete set null,
+  visibilidade text not null default 'publica'
+    check (visibilidade in ('publica', 'restrita')),
+  observacoes text,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+create index if not exists idx_pol_emendas_org on public.pol_emendas(organization_id);
+create index if not exists idx_pol_emendas_ano on public.pol_emendas(organization_id, ano);
+create index if not exists idx_pol_emendas_status on public.pol_emendas(organization_id, status);
+create index if not exists idx_pol_emendas_municipio on public.pol_emendas(organization_id, municipio) where municipio is not null;
+create index if not exists idx_pol_emendas_territory on public.pol_emendas(organization_id, territory_id) where territory_id is not null;
+alter table public.pol_emendas enable row level security;
+drop policy if exists tenant_isolation_pol_emendas_all on public.pol_emendas;
+create policy tenant_isolation_pol_emendas_all on public.pol_emendas using (organization_id = any(public.fn_user_org_ids()));
+revoke all on public.pol_emendas from anon;
+grant select, insert, update, delete on public.pol_emendas to authenticated;
+
+-- ── Extensão política da tabela demandas ────────────────────────────
+alter table public.demandas
+  add column if not exists pol_tipo text
+    check (pol_tipo in (
+      'servico_publico', 'infraestrutura', 'saude', 'educacao',
+      'seguranca', 'assistencia_social', 'meio_ambiente',
+      'documentacao', 'emprego', 'outro'
+    )),
+  add column if not exists pol_territory_id uuid
+    references public.pol_territories(id) on delete set null,
+  add column if not exists pol_lideranca_id uuid
+    references public.pol_liderancas(id) on delete set null,
+  add column if not exists pol_encaminhamento_ia text,
+  add column if not exists pol_orgao_destino text,
+  add column if not exists pol_prioridade text default 'normal'
+    check (pol_prioridade in ('baixa', 'normal', 'alta', 'urgente'));
