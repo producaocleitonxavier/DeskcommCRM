@@ -17,7 +17,18 @@ import type { CapacidadeDaOrganizacao } from "@/lib/organizacao/capacidades";
  * Doutrina: docs/doctrine/sistema-vivo.md — "por qual porta se chega até mim?"
  */
 
-export type NavGroupId = "atendimento" | "crm" | "ia" | "canais" | "analise" | "organizacao";
+export type NavGroupId =
+  | "comando"
+  | "monitoramento"
+  | "execucao"
+  | "territorio"
+  | "operacao"
+  | "gabinete"
+  | "atendimento"
+  | "ia"
+  | "canais"
+  | "analise"
+  | "organizacao";
 
 export interface NavGroup {
   id: NavGroupId;
@@ -67,28 +78,24 @@ export interface NavMetadata {
 }
 
 /**
- * Grupos por OBJETIVO, na ordem de uso: o que se abre toda hora primeiro, o que
- * se ajusta uma vez por mês por último.
+ * War Room v2 — sidebar unificado.
  *
- * "Análise" e não "Observabilidade": quem instala isto numa VPS é dono de PME,
- * não engenheiro. E configurar o sistema (grupo IA) é atividade diferente de
- * observar o sistema funcionando (grupo Análise) — por isso Evolução da IA mora
- * aqui, e não junto dos agentes.
+ * O War Room É o sistema: tudo que existia no CRM converge para dentro dele.
+ * Os grupos seguem a estrutura do War Room v1 (Comando → Organização), com os
+ * módulos operacionais (CRM, IA, Canais, Análise) integrados como seções do
+ * mesmo sidebar.
  *
- * Hub só onde o grupo passa de 4 telas. Abaixo disso ele cabe inteiro no
- * sidebar, e um hub de 3 itens seria só um clique a mais para chegar onde já
- * dava para chegar.
- *
- * O CRM cruzou essa linha com a tela de Tarefas (PR #546), e o hub dele é a
- * cobrança de uma promessa escrita: o comentário de densidade do `Sidebar.tsx`
- * dizia, desde a vez em que Produtos estourou a dobra por uma linha, que
- * "quando o quinto destino de CRM aparecer, é hub que se cria, não mais 4px que
- * se raspa". Tarefas foi o quinto. Raspar de novo devolveria 13px e adiaria a
- * mesma conversa para a sexta tela.
+ * Hub só onde o grupo passa de 4 telas. Grupos sem hub mostram todos os itens
+ * diretamente no sidebar quando `sidebar: true`.
  */
 export const NAV_GROUPS: NavGroup[] = [
+  { id: "comando", label: "Comando", hub: { href: "/app/politico", label: "War Room" } },
+  { id: "monitoramento", label: "Monitoramento" },
+  { id: "execucao", label: "Execução" },
+  { id: "territorio", label: "Território" },
+  { id: "operacao", label: "Operação", hub: { href: "/app/crm", label: "Ver tudo em Operação" } },
+  { id: "gabinete", label: "Gabinete" },
   { id: "atendimento", label: "Atendimento" },
-  { id: "crm", label: "CRM", hub: { href: "/app/crm", label: "Ver tudo em CRM" } },
   { id: "ia", label: "Agente de IA", hub: { href: "/app/ai", label: "Ver tudo em IA" } },
   { id: "canais", label: "Canais" },
   { id: "analise", label: "Análise", hub: { href: "/app/analise", label: "Ver tudo em Análise" } },
@@ -161,7 +168,7 @@ export const NAV_CATALOG = [
     label: "Prospecção",
     description: "Busque empresas e conduza abordagens graduais com IA.",
     icon: "Funnel",
-    group: "crm",
+    group: "operacao",
     minRole: "admin",
     section: "O dia a dia da venda",
   },
@@ -232,7 +239,7 @@ export const NAV_CATALOG = [
     label: "Funis",
     description: "Seus funis de venda — clique em um para abrir o quadro de clientes.",
     icon: "Kanban",
-    group: "crm",
+    group: "operacao",
     section: "O dia a dia da venda",
     sidebar: true,
   },
@@ -244,7 +251,7 @@ export const NAV_CATALOG = [
     label: "Campanhas",
     description: "Fale com uma lista de contatos que você escolhe, no ritmo do número.",
     icon: "Megaphone",
-    group: "crm",
+    group: "operacao",
     section: "O dia a dia da venda",
     // SÓ NO HUB, como as demais telas de preparação: o quinto item do sidebar do
     // CRM já fez o menu rolar 13px em 900px (e2e `navegacao.spec.ts`), e a
@@ -255,7 +262,7 @@ export const NAV_CATALOG = [
     label: "Contatos",
     description: "As pessoas do outro lado da conversa e seu histórico.",
     icon: "Users",
-    group: "crm",
+    group: "operacao",
     section: "O dia a dia da venda",
     sidebar: true,
   },
@@ -264,7 +271,7 @@ export const NAV_CATALOG = [
     label: "Empresas",
     description: "Cadastro B2B — razão social, CNPJ e decisores.",
     icon: "Buildings",
-    group: "crm",
+    group: "operacao",
     section: "O dia a dia da venda",
     // SEM sidebar: o CRM já tem Funis/Contatos/Tarefas no menu diário; este trio
     // mora no hub "Ver tudo em CRM" para não reabrir a corrida por pixel.
@@ -277,7 +284,7 @@ export const NAV_CATALOG = [
     label: "Pessoas",
     description: "Decisores e contatos ligados a empresas, com vários telefones.",
     icon: "UserCircle",
-    group: "crm",
+    group: "operacao",
     section: "O dia a dia da venda",
     minRole: "viewer",
     // Módulo opcional da instalação, desligado por padrão (doc 68, #1621).
@@ -293,7 +300,7 @@ export const NAV_CATALOG = [
     label: "Tarefas",
     description: "O que ficou combinado, com prazo — e o que já venceu sem ninguém fazer.",
     icon: "ListChecks",
-    group: "crm",
+    group: "operacao",
     section: "O dia a dia da venda",
     sidebar: true,
   },
@@ -308,7 +315,7 @@ export const NAV_CATALOG = [
     label: "Planos de tarefa",
     description: "Sequências reutilizáveis de tarefas — montar uma vez e aplicar a cada negócio.",
     icon: "FlowArrow",
-    group: "crm",
+    group: "operacao",
     section: "O dia a dia da venda",
   },
   {
@@ -340,7 +347,7 @@ export const NAV_CATALOG = [
     label: "Chamadas",
     description: "Histórico de ligações (voz por IA) com transcrição.",
     icon: "Phone",
-    group: "crm",
+    group: "operacao",
     section: "O dia a dia da venda",
     minRole: "manager",
   },
@@ -362,7 +369,7 @@ export const NAV_CATALOG = [
     label: "Produtos",
     description: "O catálogo da loja, com o preço que o atendente de IA responde.",
     icon: "Storefront",
-    group: "crm",
+    group: "operacao",
     section: "Preparar a venda",
     // SEM `sidebar`: mora atrás de "Ver tudo em CRM".
     //
@@ -377,7 +384,7 @@ export const NAV_CATALOG = [
     label: "Importações",
     description: "Lotes CSV/XLSX de empresas, pessoas e telefones.",
     icon: "FileText",
-    group: "crm",
+    group: "operacao",
     section: "Preparar a venda",
     minRole: "manager",
     // Módulo opcional da instalação, desligado por padrão (doc 68, #1621).
@@ -388,7 +395,7 @@ export const NAV_CATALOG = [
     label: "Propostas",
     description: "Rascunhe, revise e envie propostas comerciais — do orçamento ao aceite.",
     icon: "FileText",
-    group: "crm",
+    group: "operacao",
     section: "Fechar a venda",
     capacidade: "propostas",
   },
@@ -451,7 +458,7 @@ export const NAV_CATALOG = [
     label: "Comandas",
     description: "O que foi feito, por quem, e quanto o cliente paga.",
     icon: "Receipt",
-    group: "crm",
+    group: "operacao",
     section: "O dia a dia da venda",
     // ⚠️ FORA do sidebar, e isto foi MEDIDO, não escolhido por gosto. Com
     // `sidebar: true` o menu passou a rolar em 1280×900 e o e2e
@@ -503,7 +510,7 @@ export const NAV_CATALOG = [
     label: "Etapas do funil",
     description: "As colunas de cada funil, o vocabulário do negócio e os motivos de perda.",
     icon: "Funnel",
-    group: "crm",
+    group: "operacao",
     section: "Preparar a venda",
     minRole: "manager",
     // SEM `sidebar`: mora atrás de "Ver tudo em CRM".
@@ -822,199 +829,174 @@ export const NAV_CATALOG = [
   //   - /narrativas → absorvido por Adversários (narrativas são sub-aba)
   //   - /territorios → absorvido pelo Mapa Eleitoral
   //
-  // Grupo "crm" porque pol_leads é extensão de contacts — mesma jornada de quem
-  // vende, mas o verbo é mobilizar em vez de fechar.
+  // War Room v2 — pol_leads é extensão de contacts; o verbo é mobilizar.
+  // Cada seção política agora é seu próprio NavGroup no sidebar.
 
-  // ── Hub (sidebar: true) ────────────────────────────────────────────
+  // ── Comando — o hub do War Room ────────────────────────────────────
   {
     href: "/app/politico",
     label: "War Room",
     description: "Central de comando — visão geral da campanha com KPIs, alertas e atalhos.",
     icon: "Flag",
-    group: "crm",
-    section: "War Room",
+    group: "comando",
+    section: "Comando",
     minRole: "manager",
     sidebar: true,
   },
 
-  // ── Seção: Inteligência ────────────────────────────────────────────
+  // ── Monitoramento ──────────────────────────────────────────────────
   {
     href: "/app/politico/social",
     label: "Inteligência Social",
     description: "Perfis monitorados, snapshots de métricas e posts coletados das redes sociais.",
-    icon: "share-2",
-    group: "crm",
-    section: "Inteligência",
+    icon: "Users",
+    group: "monitoramento",
     minRole: "manager",
-    sidebar: false,
   },
   {
     href: "/app/politico/adversarios",
     label: "Adversários",
     description: "Dossiê de oponentes — risco, ameaça, sinais de alerta e análise de narrativa.",
-    icon: "shield-alert",
-    group: "crm",
-    section: "Inteligência",
+    icon: "ShieldCheck",
+    group: "monitoramento",
     minRole: "manager",
-    sidebar: false,
   },
   {
     href: "/app/politico/alertas",
     label: "Alertas & Risco",
     description: "Sistema unificado de alertas — sentimento, crise, fake news e adversários.",
-    icon: "bell",
-    group: "crm",
-    section: "Inteligência",
+    icon: "Bell",
+    group: "monitoramento",
     minRole: "manager",
-    sidebar: false,
+    sidebar: true,
   },
   {
     href: "/app/politico/decisao",
     label: "Decision Engine",
     description: "Motor de decisão com sinais estratégicos, oportunidades e ações recomendadas por IA.",
-    icon: "brain",
-    group: "crm",
-    section: "Inteligência",
+    icon: "Brain",
+    group: "monitoramento",
     minRole: "manager",
-    sidebar: false,
   },
 
-  // ── Seção: Execução ────────────────────────────────────────────────
+  // ── Execução ───────────────────────────────────────────────────────
   {
     href: "/app/politico/motor-viral",
     label: "Motor Viral",
     description: "Geração de conteúdo por IA — scripts de vídeo, captions e roteiros com scoring viral.",
-    icon: "sparkles",
-    group: "crm",
-    section: "Execução",
+    icon: "Lightbulb",
+    group: "execucao",
     minRole: "manager",
-    sidebar: false,
+    sidebar: true,
   },
   {
     href: "/app/politico/funil-invisivel",
     label: "Funil Invisível",
     description: "Nurturing automático com scoring de afinidade e rastreamento de engajamento.",
-    icon: "eye-off",
-    group: "crm",
-    section: "Execução",
+    icon: "Funnel",
+    group: "execucao",
     minRole: "manager",
-    sidebar: false,
   },
 
-  // ── Seção: Território ──────────────────────────────────────────────
+  // ── Território ─────────────────────────────────────────────────────
   {
     href: "/app/politico/mapa-eleitoral",
     label: "Mapa & Cidades",
     description: "Mapa interativo com territórios, oportunidades, rankings de cidades e prioridades.",
-    icon: "map-pin",
-    group: "crm",
-    section: "Território",
+    icon: "Signpost",
+    group: "territorio",
     minRole: "manager",
-    sidebar: false,
+    sidebar: true,
   },
   {
     href: "/app/politico/raio-x",
     label: "Raio-X de Votos",
     description: "Análise eleitoral por seção — consulta TSE, evolução histórica e ações territoriais.",
-    icon: "search",
-    group: "crm",
-    section: "Território",
+    icon: "ChartBar",
+    group: "territorio",
     minRole: "manager",
-    sidebar: false,
   },
 
-  // ── Seção: Operação ────────────────────────────────────────────────
+  // ── Operação (pol) ─────────────────────────────────────────────────
   {
     href: "/app/politico/leads",
     label: "Base de Leads",
     description: "Contatos com dados eleitorais, nível de apoio, temperatura e mobilizador responsável.",
     icon: "UsersThree",
-    group: "crm",
-    section: "Operação",
+    group: "operacao",
+    section: "Campanha",
     minRole: "manager",
-    sidebar: false,
   },
   {
     href: "/app/politico/funil",
     label: "Funil Eleitoral",
     description: "Kanban da jornada de apoio — de novo cadastro até voto certo, com histórico de transições.",
     icon: "Funnel",
-    group: "crm",
-    section: "Operação",
+    group: "operacao",
+    section: "Campanha",
     minRole: "manager",
-    sidebar: false,
   },
   {
     href: "/app/politico/ligacoes",
     label: "Ligações",
     description: "Fila de ligações políticas com lock otimista, resultado e controle de tentativas.",
-    icon: "phone",
-    group: "crm",
-    section: "Operação",
+    icon: "Phone",
+    group: "operacao",
+    section: "Campanha",
     minRole: "manager",
-    sidebar: false,
   },
   {
     href: "/app/politico/eventos",
     label: "Eventos",
     description: "Eventos políticos com controle de presença, participantes e dados institucionais.",
-    icon: "calendar",
-    group: "crm",
-    section: "Operação",
+    icon: "CalendarBlank",
+    group: "operacao",
+    section: "Campanha",
     minRole: "manager",
-    sidebar: false,
   },
   {
     href: "/app/politico/pesquisas",
     label: "Pesquisas",
     description: "Pesquisas de campo com formulários públicos via token e respostas geolocalizadas.",
-    icon: "clipboard-list",
-    group: "crm",
-    section: "Operação",
+    icon: "ClipboardText",
+    group: "operacao",
+    section: "Campanha",
     minRole: "manager",
-    sidebar: false,
   },
 
-  // ── Seção: Gabinete ────────────────────────────────────────────────
+  // ── Gabinete ───────────────────────────────────────────────────────
   {
     href: "/app/politico/demandas",
     label: "Demandas",
     description: "Solicitações de cidadãos e lideranças com rascunho de encaminhamento por IA.",
-    icon: "inbox",
-    group: "crm",
-    section: "Gabinete",
+    icon: "Inbox",
+    group: "gabinete",
     minRole: "manager",
-    sidebar: false,
+    sidebar: true,
   },
   {
     href: "/app/politico/liderancas",
     label: "Lideranças",
     description: "Rede de lideranças com aniversários, WhatsApp e histórico de mobilização.",
-    icon: "crown",
-    group: "crm",
-    section: "Gabinete",
+    icon: "UsersThree",
+    group: "gabinete",
     minRole: "manager",
-    sidebar: false,
   },
   {
     href: "/app/politico/projetos-lei",
     label: "Projetos de Lei",
     description: "Acompanhamento legislativo configurável por tipo de mandato.",
-    icon: "file-text",
-    group: "crm",
-    section: "Gabinete",
+    icon: "FileText",
+    group: "gabinete",
     minRole: "manager",
-    sidebar: false,
   },
   {
     href: "/app/politico/emendas",
     label: "Emendas",
     description: "Gestão de emendas parlamentares com valores, destino e status de execução.",
-    icon: "banknote",
-    group: "crm",
-    section: "Gabinete",
+    icon: "Receipt",
+    group: "gabinete",
     minRole: "manager",
-    sidebar: false,
   },
 
   // ---- Análise — olhar o sistema funcionando ----

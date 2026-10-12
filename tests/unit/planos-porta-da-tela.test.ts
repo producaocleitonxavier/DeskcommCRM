@@ -93,7 +93,7 @@ describe("a tela Tarefas › Planos aparece no menu", () => {
       "sem a entrada em lib/navigation/catalogo.ts o registry deriva nada",
     ).toContain(HREF);
 
-    const secoes = hubSections("crm", false, "manager");
+    const secoes = hubSections("operacao", false, "manager");
     const destino = secoes.flatMap((s) => s.items).find((d) => d.href === HREF);
     expect(destino, "destino ausente do hub do CRM").toBeDefined();
     expect(destino!.section).toBe("O dia a dia da venda");

@@ -132,7 +132,7 @@ export function NavHub({
         </section>
       ))}
 
-      {group === "crm" && (extensionGuides.length > 0 || extensionsUnavailable) ? (
+      {group === "operacao" && (extensionGuides.length > 0 || extensionsUnavailable) ? (
         <section aria-labelledby="hub-crm-orientacoes-instaladas" className="space-y-3">
           <div className="flex flex-wrap items-end justify-between gap-2">
             <div>

@@ -1286,8 +1286,13 @@ export const DICIONARIO: Traducoes = {
   // chamava `t(group.label)`, então o espanhol recebia os cabeçalhos em
   // português e nada ficava vermelho — `traduzir()` devolve a chave ausente
   // como está. Achado pelo cruzamento novo entre DICIONARIO e NAV_GROUPS.
+  Comando: { es: "Comando" },
+  Monitoramento: { es: "Monitoreo" },
+  Execução: { es: "Ejecución" },
+  Território: { es: "Territorio" },
+  Operação: { es: "Operación" },
+  Gabinete: { es: "Gabinete" },
   Atendimento: { es: "Atención" },
-  CRM: { es: "CRM" },
   "Agente de IA": { es: "Agente de IA" },
   Canais: { es: "Canales" },
   Análise: { es: "Análisis" },

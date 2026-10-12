@@ -57,7 +57,7 @@ export default async function CrmHubPage() {
 
   return (
     <NavHub
-      group="crm"
+      group="operacao"
       capacidadesLigadas={capacidadesLigadas}
       isPlatformAdmin={user.is_platform_admin && !user.support}
       role={activeOrg?.role ?? null}

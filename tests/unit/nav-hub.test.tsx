@@ -146,14 +146,14 @@ describe("NavHub", () => {
 
   it("a porta de Propostas no hub do CRM some com a capacidade desligada e volta ligada", () => {
     render(
-      <NavHub group="crm" isPlatformAdmin={false} role="admin" title="CRM" subtitle="" modulosLigados={[]} capacidadesLigadas={[]} />,
+      <NavHub group="operacao" isPlatformAdmin={false} role="admin" title="CRM" subtitle="" modulosLigados={[]} capacidadesLigadas={[]} />,
     );
     expect(screen.queryByRole("link", { name: /Propostas/ })).toBeNull();
     cleanup();
 
     render(
       <NavHub
-        group="crm"
+        group="operacao"
         isPlatformAdmin={false}
         role="admin"
         title="CRM"
@@ -209,7 +209,7 @@ describe("NavHub", () => {
   it("integra contribuições tipadas no CRM sem aceitar destino vindo do pacote", () => {
     render(
       <NavHub modulosLigados={[]}
-        group="crm"
+        group="operacao"
         isPlatformAdmin={false}
         role="viewer"
         title="CRM"
@@ -231,7 +231,7 @@ describe("NavHub", () => {
   it("expõe falha de leitura das contribuições sem derrubar o hub do CRM", () => {
     render(
       <NavHub modulosLigados={[]}
-        group="crm"
+        group="operacao"
         isPlatformAdmin={false}
         role="viewer"
         title="CRM"

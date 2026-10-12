@@ -89,59 +89,27 @@ describe("sidebarGroups", () => {
     expect(hrefs).toContain("/app/ai/agents");
   });
 
-  it("Etapas do funil é CRM, não Configurações — o achado que originou esta mudança", () => {
-    // ⚠️ ESTA ASSERÇÃO MUDOU DE SUPERFÍCIE, e a propriedade guardada é a mesma.
-    // Ela cobrava presença no SIDEBAR, que era só o jeito de a tela deixar de
-    // ser "um card perdido em Configurações". Com o hub do CRM (`/app/crm`),
-    // ela mora atrás de "Ver tudo em CRM" — continua sendo CRM, continua fora
-    // de Configurações, e o caminho tem um clique a mais porque desenhar as
-    // colunas do funil é trabalho de montagem, não de todo dia.
-    //
-    // O que NÃO pode voltar é o destino trocar de grupo: é isso que a primeira
-    // asserção prende, e ela não depende de onde o item é desenhado.
-    expect(dest("/app/settings/tenant/pipelines").group).toBe("crm");
-    const hub = hubSections("crm", true, null).flatMap((s) => s.items.map((i) => i.href));
+  it("Etapas do funil é Operação, não Configurações — o achado que originou esta mudança", () => {
+    // War Room v2: o antigo grupo "crm" foi renomeado para "operacao".
+    // O destino continua fora de Configurações; o caminho é via hub de Operação.
+    expect(dest("/app/settings/tenant/pipelines").group).toBe("operacao");
+    const hub = hubSections("operacao", true, null).flatMap((s) => s.items.map((i) => i.href));
     expect(hub).toContain("/app/settings/tenant/pipelines");
   });
 
-  it("o CRM tem hub, e o sidebar dele fica só com o uso diário", () => {
-    // A decisão que devolveu a dobra em 900px (e2e `navegacao.spec.ts`): quando
-    // Tarefas virou o quinto destino de CRM, o menu passou a rolar por 13px.
-    // O conserto foi o hub — o desenho que o grupo IA já usava —, não mais
-    // densidade raspada do `Sidebar.tsx`.
-    //
-    // A lista é EXATA de propósito. `toContain` deixaria um sexto item entrar
-    // calado no sidebar e reabrir a mesma corrida por pixel.
-    //
-    // Comandas NÃO entra: ela chegou pedindo a quarta linha, e o e2e mediu o
-    // menu rolando em 1280×900 — a mesma corrida por pixel que o hub existe
-    // para encerrar. Ela mora dentro do hub, em "O dia a dia da venda", que é
-    // onde o grupo com hub recebe tela nova (ver o comentário no destino, em
-    // lib/navigation/catalogo.ts).
-
-    // `/app/prospecting` NÃO está aqui, e a ausência é decisão, não esquecimento:
-    // a tela existe e é alcançável pelo hub e pelo ⌘K, mas o menu já está no
-    // limite — com ela seriam 20 portas e o e2e reprova por scroll em 900px. A
-    // razão e a condição que encerram a exceção estão ao lado do item, em
-    // `lib/navigation/catalogo.ts`.
-    const crm = sidebarGroups(true, null).find((g) => g.group.id === "crm");
-    expect(crm?.items.map((i) => i.href)).toEqual([
+  it("Operação tem hub, e o sidebar dele fica só com o uso diário", () => {
+    // War Room v2: "crm" → "operacao". A mesma decisão de dobra em 900px se aplica.
+    const operacao = sidebarGroups(true, null).find((g) => g.group.id === "operacao");
+    expect(operacao?.items.map((i) => i.href)).toEqual([
       "/app/kanban",
       "/app/contacts",
       "/app/tasks",
-      // "/app/calls" (telefonia por SIP) NÃO entra aqui, e a ausência é a
-      // decisão: o módulo é OPCIONAL e nasce desligado (doc 27), então a porta
-      // no sidebar custaria um item a TODA instalação — e o vigésimo item é o
-      // que faz o menu rolar em 900px, que é a corrida por pixel que este
-      // teste existe para vigiar. A tela vive no hub do grupo e no ⌘K. Volta
-      // para cá no dia em que o app souber que o módulo está ligado (hoje isso
-      // é profile do compose, não estado que o aplicativo conheça).
     ]);
     // E continua alcançável: o hub é a porta dela.
     expect(
-      hubSections("crm", true, null).flatMap((s) => s.items.map((i) => i.href)),
+      hubSections("operacao", true, null).flatMap((s) => s.items.map((i) => i.href)),
     ).toContain("/app/comandas");
-    expect(NAV_GROUPS.find((g) => g.id === "crm")?.hub?.href).toBe("/app/crm");
+    expect(NAV_GROUPS.find((g) => g.id === "operacao")?.hub?.href).toBe("/app/crm");
   });
 
   it("omite o grupo inteiro quando o papel não vê nenhum item dele", () => {
@@ -168,12 +136,11 @@ describe("sidebarGroups", () => {
 });
 
 describe("hubSections", () => {
-  it("o hub do CRM é inventário: as telas do grupo, nas duas seções", () => {
-    // As seções são a régua do sidebar escrita por extenso — o que se abre todo
-    // dia contra o que se define uma vez. Lista EXATA: `toContain` deixaria uma
-    // tela nova entrar sem que ninguém decidisse de que lado dela ela cai.
-    const secoes = hubSections("crm", true, null);
-    expect(secoes.map((s) => s.section)).toEqual(["O dia a dia da venda", "Preparar a venda", "Fechar a venda"]);
+  it("o hub de Operação é inventário: as telas do grupo, nas seções", () => {
+    // War Room v2: "crm" → "operacao". As seções CRM originais + as entradas
+    // políticas de campanha convivem no mesmo grupo.
+    const secoes = hubSections("operacao", true, null);
+    expect(secoes.map((s) => s.section)).toEqual(["O dia a dia da venda", "Preparar a venda", "Fechar a venda", "Campanha"]);
     expect(secoes.flatMap((s) => s.items.map((i) => i.href))).toEqual([
       "/app/prospecting",
       "/app/kanban",
@@ -182,9 +149,6 @@ describe("hubSections", () => {
       "/app/companies",
       "/app/people",
       "/app/tasks",
-      // #1752: os planos caem embaixo de Tarefas, NA MESMA seção — um plano é
-      // rotina do dia, não preparação nem fechamento. `sidebar: false` deixa o
-      // menu do dia a dia com os 20 itens de sempre; a porta é o hub e o ⌘K.
       "/app/tasks/planos",
       "/app/calls",
       "/app/comandas",
@@ -192,13 +156,18 @@ describe("hubSections", () => {
       "/app/imports",
       "/app/settings/tenant/pipelines",
       "/app/proposals",
+      "/app/politico/leads",
+      "/app/politico/funil",
+      "/app/politico/ligacoes",
+      "/app/politico/eventos",
+      "/app/politico/pesquisas",
     ]);
   });
 
   it("empresas, pessoas e importação só existem com o módulo crm_b2b ligado (doc 68)", () => {
     const B2B = ["/app/companies", "/app/people", "/app/imports"];
     const hrefs = (modulos: readonly ModuloOpcional[]) =>
-      hubSections("crm", true, null, undefined, modulos).flatMap((s) => s.items.map((i) => i.href));
+      hubSections("operacao", true, null, undefined, modulos).flatMap((s) => s.items.map((i) => i.href));
     expect(hrefs([]).filter((h) => B2B.includes(h))).toEqual([]);
     expect(hrefs(["crm_b2b"]).filter((h) => B2B.includes(h))).toEqual(B2B);
   });

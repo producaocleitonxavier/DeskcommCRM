@@ -40,11 +40,11 @@ describe("interface por vínculo é apresentação", () => {
   it("granular hub-only tem porta, home e busca úteis, sem grupos vazios", () => {
     const settings = interfaceSettingsSchema.parse(granular);
     expect(sidebarGroups(false, "admin", settings).map((g) => g.group.id)).toEqual([
-      "crm",
+      "operacao",
       "organizacao",
     ]);
     expect(
-      hubSections("crm", false, "admin", settings)
+      hubSections("operacao", false, "admin", settings)
         .flatMap((s) => s.items)
         .map((d) => d.href),
     ).toEqual(["/app/products"]);
