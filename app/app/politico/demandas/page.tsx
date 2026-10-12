@@ -1,7 +1,7 @@
 /**
- * /app/politico/demandas — Gabinete Digital: Demandas
+ * /app/politico/demandas — Gabinete (War Room 2.0)
  *
- * Solicitações do cidadão com rascunho de encaminhamento por IA.
+ * Demandas, lideranças e projetos de lei do mandato.
  * Tabela: demandas (com extensões pol_*).
  *
  * Acesso: manager+
@@ -30,179 +30,508 @@ interface Demanda {
   desfecho: string | null;
 }
 
-const ESTADO_LABELS: Record<string, string> = {
-  aberta: "Aberta",
-  em_atendimento: "Em atendimento",
-  aguardando_cliente: "Aguardando",
-  resolvida: "Resolvida",
-  encerrada: "Encerrada",
-};
+// -- Helpers -----------------------------------------------------------------
 
-const ESTADO_COLORS: Record<string, string> = {
-  aberta: "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200",
-  em_atendimento: "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200",
-  aguardando_cliente: "bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200",
-  resolvida: "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200",
-  encerrada: "bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200",
-};
+const POR_PAGINA = 25;
 
-const PRIORIDADE_COLORS: Record<string, string> = {
-  baixa: "text-muted-foreground",
-  normal: "text-blue-600 dark:text-blue-400",
-  alta: "text-orange-600 dark:text-orange-400",
-  urgente: "text-red-600 dark:text-red-400",
-};
+function estadoLabel(estado: string): string {
+  const mapa: Record<string, string> = {
+    aberta: "Nova",
+    em_atendimento: "Em atendimento",
+    aguardando_cliente: "Aguardando",
+    resolvida: "Resolvida",
+    encerrada: "Encerrada",
+  };
+  return mapa[estado] ?? estado;
+}
+
+function estadoEstilo(estado: string): { bg: string; color: string } {
+  const mapa: Record<string, { bg: string; color: string }> = {
+    aberta: { bg: "#F0F0EB", color: "#4A4F59" },
+    em_atendimento: { bg: "#E4E7F8", color: "#2F3DA8" },
+    aguardando_cliente: { bg: "#FCF1DC", color: "#8A5A10" },
+    resolvida: { bg: "#E2F5EC", color: "#17784F" },
+    encerrada: { bg: "#F0F0EB", color: "#5B606B" },
+  };
+  return mapa[estado] ?? { bg: "#F0F0EB", color: "#4A4F59" };
+}
+
+function prioridadeLabel(prioridade: string | null): string | null {
+  if (!prioridade || prioridade === "normal") return null;
+  const mapa: Record<string, string> = {
+    baixa: "Baixa",
+    alta: "Alta",
+    urgente: "Urgente",
+  };
+  return mapa[prioridade] ?? prioridade;
+}
+
+function prioridadeEstilo(prioridade: string | null): { bg: string; color: string } | null {
+  if (!prioridade || prioridade === "normal" || prioridade === "baixa") return null;
+  const mapa: Record<string, { bg: string; color: string }> = {
+    alta: { bg: "#FCF1DC", color: "#8A5A10" },
+    urgente: { bg: "#FBE4E2", color: "#A3302A" },
+  };
+  return mapa[prioridade] ?? null;
+}
+
+function diasParaPrazo(prazo: string | null): number | null {
+  if (!prazo) return null;
+  const agora = new Date();
+  const prazoDt = new Date(prazo);
+  return Math.ceil((prazoDt.getTime() - agora.getTime()) / 86400000);
+}
+
+function formatarData(data: string): string {
+  return new Date(data).toLocaleDateString("pt-BR", { day: "2-digit", month: "short" });
+}
 
 // -- Data fetching -----------------------------------------------------------
 
-async function buscarDemandas(organizationId: string): Promise<Demanda[]> {
+async function buscarDemandas(organizationId: string, pagina: number, filtroEstado?: string) {
   const db = createServerClient();
-  const { data } = await db
+  const offset = (pagina - 1) * POR_PAGINA;
+
+  let query = db
     .from("demandas")
-    .select("id, assunto, estado, origem, pol_tipo, pol_prioridade, pol_orgao_destino, pol_encaminhamento_ia, dono_kind, aberta_em, prazo_em, desfecho")
+    .select(
+      "id, assunto, estado, origem, pol_tipo, pol_prioridade, pol_orgao_destino, pol_encaminhamento_ia, dono_kind, aberta_em, prazo_em, desfecho",
+      { count: "exact" },
+    )
     .eq("organization_id", organizationId)
     .order("aberta_em", { ascending: false })
-    .limit(100);
+    .range(offset, offset + POR_PAGINA - 1);
 
-  return (data ?? []) as Demanda[];
+  if (filtroEstado) {
+    query = query.eq("estado", filtroEstado);
+  }
+
+  const { data, count } = await query;
+
+  return {
+    demandas: (data ?? []) as Demanda[],
+    total: count ?? 0,
+  };
 }
 
-// -- Componente --------------------------------------------------------------
+async function contarEstados(organizationId: string) {
+  const db = createServerClient();
+  const counts: Record<string, number> = {};
 
-export default async function DemandasPage() {
+  const { count: totalCount } = await db
+    .from("demandas")
+    .select("id", { count: "exact", head: true })
+    .eq("organization_id", organizationId);
+  counts._total = totalCount ?? 0;
+
+  // Abertas (não resolvida/encerrada)
+  const { count: abertasCount } = await db
+    .from("demandas")
+    .select("id", { count: "exact", head: true })
+    .eq("organization_id", organizationId)
+    .not("estado", "in", "(resolvida,encerrada)");
+  counts._abertas = abertasCount ?? 0;
+
+  // Resolvidas este mês
+  const inicioMes = new Date();
+  inicioMes.setDate(1);
+  inicioMes.setHours(0, 0, 0, 0);
+  const { count: resolvidasMes } = await db
+    .from("demandas")
+    .select("id", { count: "exact", head: true })
+    .eq("organization_id", organizationId)
+    .eq("estado", "resolvida")
+    .gte("aberta_em", inicioMes.toISOString());
+  counts._resolvidas_mes = resolvidasMes ?? 0;
+
+  return counts;
+}
+
+// -- Sub-componentes ---------------------------------------------------------
+
+function StatusPill({ estado }: { estado: string }) {
+  const s = estadoEstilo(estado);
+  return (
+    <span
+      className="inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold whitespace-nowrap"
+      style={{ background: s.bg, color: s.color }}
+    >
+      {estadoLabel(estado)}
+    </span>
+  );
+}
+
+function KpiCard({
+  label,
+  value,
+  sub,
+  bg,
+  accent,
+}: {
+  label: string;
+  value: string | number;
+  sub?: string;
+  bg?: string;
+  accent?: string;
+}) {
+  return (
+    <div
+      className="flex-1 min-w-[140px] rounded-[20px] p-4"
+      style={{
+        background: bg ?? "#FFFFFF",
+        boxShadow: "var(--wr-card-shadow)",
+      }}
+    >
+      <div className="text-[13px] font-medium" style={{ color: accent ?? "#4A4F59" }}>
+        {label}
+      </div>
+      <div
+        className="font-heading text-[28px] font-bold mt-0.5 tabular-nums"
+        style={{ color: accent ?? "var(--color-text)" }}
+      >
+        {typeof value === "number" ? value.toLocaleString("pt-BR") : value}
+      </div>
+      {sub && (
+        <div className="text-[12px] mt-0.5" style={{ color: accent ?? "#5B606B" }}>
+          {sub}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// -- Componente principal ----------------------------------------------------
+
+export default async function GabinetePage({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
   const user = await getUser();
   if (!user) redirect("/login");
 
   const org = await resolverOrganizacaoAtiva(user.id);
   if (!org) redirect("/app/onboarding");
 
-  const demandas = await buscarDemandas(org.id);
+  const params = await searchParams;
+  const pagina = Math.max(1, Number(params.pagina) || 1);
+  const aba = typeof params.aba === "string" ? params.aba : "demandas";
+  const filtroEstado = typeof params.estado === "string" ? params.estado : undefined;
 
-  const abertas = demandas.filter((d) => !["resolvida", "encerrada"].includes(d.estado));
-  const resolvidas = demandas.filter((d) => ["resolvida", "encerrada"].includes(d.estado));
+  const [{ demandas, total }, contagens] = await Promise.all([
+    buscarDemandas(org.id, pagina, filtroEstado),
+    contarEstados(org.id),
+  ]);
+
+  const totalPaginas = Math.ceil(total / POR_PAGINA);
+
+  // Contar demandas vencendo esta semana
+  const vencendoSemana = demandas.filter((d) => {
+    const dias = diasParaPrazo(d.prazo_em);
+    return dias !== null && dias >= 0 && dias <= 7 && !["resolvida", "encerrada"].includes(d.estado);
+  }).length;
+
+  function montarQuery(overrides: Record<string, string | undefined>) {
+    const q = new URLSearchParams();
+    const merged = { aba, estado: filtroEstado, ...overrides };
+    for (const [k, v] of Object.entries(merged)) {
+      if (v) q.set(k, v);
+    }
+    const s = q.toString();
+    return s ? `?${s}` : "";
+  }
+
+  const tabs = [
+    { value: "demandas", label: "Demandas" },
+    { value: "liderancas", label: "Lideranças" },
+    { value: "projetos", label: "Projetos de Lei" },
+    { value: "emendas", label: "Emendas" },
+  ];
 
   return (
-    <div className="mx-auto max-w-5xl px-4 py-8 space-y-6">
-      {/* Cabeçalho */}
-      <div className="flex items-center justify-between">
+    <div className="mx-auto max-w-[1140px] px-4 py-7 space-y-[18px]">
+      {/* ── Header card ─────────────────────────────────────────── */}
+      <header className="wr-card p-6 sm:p-7 flex flex-wrap items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">Demandas</h1>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Solicitações do cidadão — encaminhamento com rascunho por IA.
+          <h1 className="font-heading text-[36px] font-bold leading-tight">Gabinete</h1>
+          <p className="mt-1.5 text-base" style={{ color: "#4A4F59" }}>
+            Demandas, lideranças e projetos de lei do mandato.
           </p>
         </div>
-        <Link
-          href="/app/politico"
-          className="text-sm text-muted-foreground hover:text-foreground transition-colors"
-        >
-          ← War Room
-        </Link>
-      </div>
-
-      {/* KPIs */}
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-        <KpiCard label="Abertas" valor={String(abertas.length)} cor="text-blue-500" />
-        <KpiCard
-          label="Urgentes"
-          valor={String(demandas.filter((d) => d.pol_prioridade === "urgente" && !["resolvida", "encerrada"].includes(d.estado)).length)}
-          cor="text-red-500"
-        />
-        <KpiCard
-          label="Com IA"
-          valor={String(demandas.filter((d) => d.pol_encaminhamento_ia).length)}
-          cor="text-violet-500"
-        />
-        <KpiCard label="Resolvidas" valor={String(resolvidas.length)} cor="text-emerald-500" />
-      </div>
-
-      {/* Lista de demandas abertas */}
-      <section>
-        <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground mb-3">
-          Demandas ativas ({abertas.length})
-        </h2>
-        {abertas.length === 0 ? (
-          <p className="text-sm text-muted-foreground">Nenhuma demanda ativa no momento.</p>
-        ) : (
-          <div className="space-y-2">
-            {abertas.map((d) => (
-              <DemandaCard key={d.id} demanda={d} />
-            ))}
+        <div className="flex flex-wrap gap-2 items-center">
+          {/* Tab bar */}
+          <div role="tablist" aria-label="Seções do gabinete" className="flex gap-1">
+            {tabs.map((tab) => {
+              const active = aba === tab.value;
+              return (
+                <Link
+                  key={tab.value}
+                  href={`/app/politico/demandas${montarQuery({ aba: tab.value, estado: undefined, pagina: "1" })}`}
+                  role="tab"
+                  aria-selected={active}
+                  className="inline-flex items-center h-10 px-4 rounded-full font-semibold text-sm transition-colors"
+                  style={
+                    active
+                      ? { background: "#16181D", color: "#FFFFFF" }
+                      : { background: "#FFFFFF", color: "#4A4F59", border: "1px solid #DCDCD5" }
+                  }
+                >
+                  {tab.label}
+                </Link>
+              );
+            })}
           </div>
-        )}
-      </section>
+          <Link
+            href="/app/politico/demandas/nova"
+            className="wr-btn-dark"
+          >
+            + Nova demanda
+          </Link>
+        </div>
+      </header>
 
-      {/* Resolvidas (colapsável) */}
-      {resolvidas.length > 0 && (
-        <section>
-          <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground mb-3">
-            Resolvidas / Encerradas ({resolvidas.length})
-          </h2>
-          <div className="space-y-2 opacity-70">
-            {resolvidas.slice(0, 10).map((d) => (
-              <DemandaCard key={d.id} demanda={d} />
-            ))}
-            {resolvidas.length > 10 && (
-              <p className="text-xs text-muted-foreground pl-4">
-                +{resolvidas.length - 10} demandas anteriores
-              </p>
+      {/* ── Aba: Demandas ───────────────────────────────────────── */}
+      {aba === "demandas" && (
+        <>
+          {/* KPI cards */}
+          <section aria-label="Resumo de demandas" className="flex flex-wrap gap-3">
+            <KpiCard
+              label="Demandas abertas"
+              value={`${contagens._abertas} de ${contagens._total}`}
+            />
+            <KpiCard
+              label="Vencendo esta semana"
+              value={vencendoSemana}
+              bg={vencendoSemana > 0 ? "#FBE4E2" : undefined}
+              accent={vencendoSemana > 0 ? "#A3302A" : undefined}
+            />
+            <KpiCard
+              label="Resolvidas este mês"
+              value={contagens._resolvidas_mes}
+            />
+            <KpiCard
+              label="Com encaminhamento IA"
+              value={demandas.filter((d) => d.pol_encaminhamento_ia).length}
+            />
+          </section>
+
+          {/* Demandas table */}
+          <section aria-label="Lista de demandas" className="wr-card pt-2 pb-0 px-0">
+            {/* Filters */}
+            <div className="flex flex-wrap gap-2.5 px-4 py-3.5">
+              <Link
+                href={`/app/politico/demandas${montarQuery({ estado: undefined, pagina: "1" })}`}
+                className="inline-flex items-center h-9 px-3.5 rounded-full text-sm font-medium transition-colors"
+                style={
+                  !filtroEstado
+                    ? { background: "#16181D", color: "#FFFFFF" }
+                    : { background: "#F6F6F2", color: "#4A4F59" }
+                }
+              >
+                Todas
+              </Link>
+              {["aberta", "em_atendimento", "aguardando_cliente", "resolvida"].map((est) => (
+                <Link
+                  key={est}
+                  href={`/app/politico/demandas${montarQuery({ estado: est, pagina: "1" })}`}
+                  className="inline-flex items-center h-9 px-3.5 rounded-full text-sm font-medium transition-colors"
+                  style={
+                    filtroEstado === est
+                      ? { background: "#16181D", color: "#FFFFFF" }
+                      : { background: "#F6F6F2", color: "#4A4F59" }
+                  }
+                >
+                  {estadoLabel(est)}
+                </Link>
+              ))}
+            </div>
+
+            {demandas.length === 0 ? (
+              <div className="p-12 text-center">
+                <p className="text-sm" style={{ color: "#5B606B" }}>
+                  Nenhuma demanda encontrada. Cadastre a primeira demanda para iniciar o acompanhamento.
+                </p>
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm border-collapse">
+                  <thead>
+                    <tr>
+                      {["Demanda", "Tipo", "Órgão destino", "Status", "Prazo", "Prioridade"].map((col) => (
+                        <th
+                          key={col}
+                          className="text-left font-medium text-[13px] px-4 py-3 whitespace-nowrap border-b"
+                          style={{ color: "#5B606B", borderColor: "#ECECE7" }}
+                        >
+                          {col}
+                        </th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {demandas.map((d) => {
+                      const diasPrazo = diasParaPrazo(d.prazo_em);
+                      const atrasada = diasPrazo !== null && diasPrazo < 0 && !["resolvida", "encerrada"].includes(d.estado);
+                      const urgente = d.pol_prioridade === "urgente";
+                      const pLabel = prioridadeLabel(d.pol_prioridade);
+                      const pEstilo = prioridadeEstilo(d.pol_prioridade);
+                      const temIA = !!d.pol_encaminhamento_ia;
+
+                      return (
+                        <tr
+                          key={d.id}
+                          className="group transition-colors hover:bg-[#F6F6F2]"
+                          style={{
+                            borderBottom: "1px solid #F0F0EB",
+                            ...((atrasada || urgente) ? { background: "#FEF6F5" } : {}),
+                          }}
+                        >
+                          <td className="px-4 py-3.5 max-w-[280px]">
+                            <div className="flex items-center gap-2">
+                              <span className="font-semibold truncate" style={{ color: "#16181D" }}>
+                                {d.assunto || "Sem assunto"}
+                              </span>
+                              {temIA && (
+                                <span
+                                  className="inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-bold"
+                                  style={{ background: "#D7F36A", color: "#2E3410" }}
+                                >
+                                  IA
+                                </span>
+                              )}
+                            </div>
+                          </td>
+                          <td className="px-4 py-3.5 whitespace-nowrap" style={{ color: "#4A4F59" }}>
+                            {d.pol_tipo ? d.pol_tipo.replace(/_/g, " ") : "—"}
+                          </td>
+                          <td className="px-4 py-3.5 whitespace-nowrap" style={{ color: "#4A4F59" }}>
+                            {d.pol_orgao_destino ?? "—"}
+                          </td>
+                          <td className="px-4 py-3.5 whitespace-nowrap">
+                            {atrasada ? (
+                              <span
+                                className="inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold"
+                                style={{ background: "#FBE4E2", color: "#A3302A" }}
+                              >
+                                Atrasada
+                              </span>
+                            ) : (
+                              <StatusPill estado={d.estado} />
+                            )}
+                          </td>
+                          <td className="px-4 py-3.5 whitespace-nowrap">
+                            {d.prazo_em ? (
+                              <span
+                                className="text-sm tabular-nums"
+                                style={{
+                                  color: atrasada ? "#A3302A" : diasPrazo !== null && diasPrazo <= 3 ? "#8A5A10" : "#4A4F59",
+                                  fontWeight: atrasada ? 600 : 400,
+                                }}
+                              >
+                                {formatarData(d.prazo_em)}
+                                {diasPrazo !== null && !["resolvida", "encerrada"].includes(d.estado) && (
+                                  <span className="ml-1 text-xs">
+                                    {atrasada
+                                      ? `(${Math.abs(diasPrazo)}d atrás)`
+                                      : diasPrazo === 0
+                                        ? "(hoje)"
+                                        : `(${diasPrazo}d)`}
+                                  </span>
+                                )}
+                              </span>
+                            ) : (
+                              <span style={{ color: "#9A9D8F" }}>—</span>
+                            )}
+                          </td>
+                          <td className="px-4 py-3.5 whitespace-nowrap">
+                            {pLabel && pEstilo ? (
+                              <span
+                                className="inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold"
+                                style={{ background: pEstilo.bg, color: pEstilo.color }}
+                              >
+                                {pLabel}
+                              </span>
+                            ) : (
+                              <span style={{ color: "#9A9D8F" }}>Normal</span>
+                            )}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
             )}
-          </div>
+
+            {/* Pagination */}
+            <div
+              className="flex flex-wrap justify-between items-center gap-3 px-4 py-3.5 text-[13px]"
+              style={{ color: "#5B606B", borderTop: "1px solid #F0F0EB" }}
+            >
+              <span>
+                Mostrando {demandas.length} de {total.toLocaleString("pt-BR")}
+              </span>
+              <div className="flex gap-2">
+                {pagina > 1 && (
+                  <Link
+                    href={`/app/politico/demandas${montarQuery({ pagina: String(pagina - 1) })}`}
+                    className="wr-btn text-sm"
+                  >
+                    Anterior
+                  </Link>
+                )}
+                {pagina < totalPaginas && (
+                  <Link
+                    href={`/app/politico/demandas${montarQuery({ pagina: String(pagina + 1) })}`}
+                    className="wr-btn text-sm"
+                  >
+                    Próxima
+                  </Link>
+                )}
+              </div>
+            </div>
+          </section>
+        </>
+      )}
+
+      {/* ── Aba: Lideranças (placeholder) ───────────────────────── */}
+      {aba === "liderancas" && (
+        <section className="wr-card p-12 text-center">
+          <p className="font-heading text-lg font-semibold" style={{ color: "#16181D" }}>
+            Lideranças
+          </p>
+          <p className="mt-2 text-sm" style={{ color: "#5B606B" }}>
+            Cadastro de líderes comunitários, aniversários e comunicação por WhatsApp.
+            Em breve.
+          </p>
         </section>
       )}
 
-      {demandas.length === 0 && (
-        <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-200">
-          <strong>Gabinete Digital:</strong> cadastre a primeira demanda para iniciar o
-          acompanhamento com encaminhamento assistido por IA.
-        </div>
+      {/* ── Aba: Projetos de Lei (placeholder) ──────────────────── */}
+      {aba === "projetos" && (
+        <section className="wr-card p-12 text-center">
+          <p className="font-heading text-lg font-semibold" style={{ color: "#16181D" }}>
+            Projetos de Lei
+          </p>
+          <p className="mt-2 text-sm" style={{ color: "#5B606B" }}>
+            Acompanhamento de proposições legislativas, configurável por tipo de mandato.
+            Em breve.
+          </p>
+        </section>
       )}
-    </div>
-  );
-}
 
-// -- Sub-componentes ---------------------------------------------------------
-
-function DemandaCard({ demanda }: { demanda: Demanda }) {
-  const estadoCor = ESTADO_COLORS[demanda.estado] ?? ESTADO_COLORS.aberta;
-  const prioridadeCor = PRIORIDADE_COLORS[demanda.pol_prioridade ?? "normal"] ?? "";
-  const temIA = !!demanda.pol_encaminhamento_ia;
-
-  return (
-    <div className="flex items-start gap-3 rounded-lg border bg-card p-4">
-      <div className="min-w-0 flex-1">
-        <div className="flex items-center gap-2 flex-wrap">
-          <h3 className="font-semibold text-sm truncate">
-            {demanda.assunto || "Sem assunto"}
-          </h3>
-          <span className={`rounded-full px-2 py-0.5 text-[10px] font-medium ${estadoCor}`}>
-            {ESTADO_LABELS[demanda.estado] ?? demanda.estado}
-          </span>
-          {demanda.pol_prioridade && demanda.pol_prioridade !== "normal" && (
-            <span className={`text-[10px] font-bold uppercase ${prioridadeCor}`}>
-              {demanda.pol_prioridade}
-            </span>
-          )}
-          {temIA && (
-            <span className="rounded-full bg-violet-100 px-1.5 py-0.5 text-[10px] font-medium text-violet-700 dark:bg-violet-900 dark:text-violet-300">
-              IA
-            </span>
-          )}
-        </div>
-        <div className="mt-1 flex items-center gap-3 text-xs text-muted-foreground">
-          {demanda.pol_tipo && <span>{demanda.pol_tipo.replace(/_/g, " ")}</span>}
-          {demanda.pol_orgao_destino && <span>→ {demanda.pol_orgao_destino}</span>}
-          <span>{new Date(demanda.aberta_em).toLocaleDateString("pt-BR")}</span>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function KpiCard({ label, valor, cor }: { label: string; valor: string; cor: string }) {
-  return (
-    <div className="flex flex-col gap-1 rounded-lg border bg-card p-4">
-      <span className={`text-2xl font-bold tabular-nums ${cor}`}>{valor}</span>
-      <span className="text-xs text-muted-foreground">{label}</span>
+      {/* ── Aba: Emendas (placeholder) ──────────────────────────── */}
+      {aba === "emendas" && (
+        <section className="wr-card p-12 text-center">
+          <p className="font-heading text-lg font-semibold" style={{ color: "#16181D" }}>
+            Emendas
+          </p>
+          <p className="mt-2 text-sm" style={{ color: "#5B606B" }}>
+            Gestão de emendas parlamentares (Deputado/Prefeito).
+            Em breve.
+          </p>
+        </section>
+      )}
     </div>
   );
 }

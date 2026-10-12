@@ -127,6 +127,10 @@ export function SidebarContent({
 
   return (
     <>
+      {/* ── War Room 2.0 — Logo block ──────────────────────────────────
+          Marca própria (org ou instalação) → mostra logo/nome dela como antes.
+          Sem marca própria (marcaDoProduto) → logo WR: bloco escuro + texto lime.
+       */}
       <div
         className={cn(
           "flex h-14 items-center border-b px-4",
@@ -134,18 +138,12 @@ export function SidebarContent({
         )}
       >
         {(logo || logoEscuro) && !collapsed ? (
-          // Sem arte própria para o escuro, preserva a proteção de contraste.
           <div
             className={cn(
               "rounded-md",
               !logoEscuro && "dark:bg-white dark:px-2 dark:py-1 dark:shadow-sm",
             )}
           >
-            {/* <img> em vez de next/image de propósito: a URL vem de quem hospeda
-              (banco ou .env), e next/image exige allowlist de domínios fechada em
-              build — a imagem pré-buildada rejeitaria o domínio do self-hoster.
-              Altura fixa e largura livre porque a arte enviada tem proporção
-              desconhecida; forçar as duas distorceria o logo de quem configurou. */}
             {/* eslint-disable-next-line @next/next/no-img-element */}
             {logo ? (
               <img
@@ -169,22 +167,21 @@ export function SidebarContent({
             ) : null}
           </div>
         ) : marcaDoProduto ? (
-          // O desenho do produto, inline (ver `components/branding/MarcaDoProduto.tsx`):
-          // logotipo com a barra aberta, só o símbolo com ela recolhida.
+          // War Room 2.0 logo: bloco escuro (#16181D) + texto lime (#D7F36A)
           collapsed ? (
-            <SimboloDoProduto nome={nome} className="h-8 w-8" />
+            <div className="flex h-8 w-8 items-center justify-center rounded-lg" style={{ background: "var(--wr-btn-dark-bg)" }}>
+              <span className="text-sm font-bold" style={{ color: "#D7F36A" }}>WR</span>
+            </div>
           ) : (
-            <LogotipoDoProduto nome={nome} className="h-8 w-auto" />
+            <div className="flex h-8 items-center gap-2 rounded-lg px-3" style={{ background: "var(--wr-btn-dark-bg)" }}>
+              <span className="text-sm font-bold tracking-tight" style={{ color: "#D7F36A" }}>WAR ROOM</span>
+            </div>
           )
         ) : (
           <span className={cn("font-semibold tracking-tight", collapsed && "sr-only")}>{nome}</span>
         )}
         {collapsed && !marcaDoProduto && (
           <span aria-hidden className="text-lg font-bold text-primary">
-            {/* Spread e não `[0]`: nome começando com emoji ou acento composto
-                quebraria no meio do code point. Mesma regra de `resolveBranding`
-                — a inicial precisa acompanhar o nome que a barra mostra, senão
-                recolher o menu troca a marca. */}
             {[...nome][0]?.toUpperCase() ?? brand.initial}
           </span>
         )}
@@ -244,7 +241,9 @@ export function SidebarContent({
             <div key={group.id} className="space-y-1">
               {/* Colapsado, o sidebar tem 64px: seis rótulos ali seriam ilegíveis.
                   Vira um filete separador, que preserva o agrupamento sem texto. */}
-              {collapsed ? (
+              {/* War Room 2.0 — section labels com estilo .wr-section-label.
+                  Grupo "comando" (Hoje + Pessoas) não mostra header — ficam soltos no topo. */}
+              {group.id === "comando" ? null : collapsed ? (
                 <div aria-hidden className="mx-2 border-t first:hidden" />
               ) : (
                 <h2 id={tituloId}>
@@ -252,14 +251,14 @@ export function SidebarContent({
                     type="button"
                     onClick={() => toggleGrupo(group.id)}
                     aria-expanded={aberto}
-                    className="flex w-full items-center justify-between rounded-md px-3 py-1 text-xs font-medium text-muted-foreground transition-colors hover:bg-accent/40 hover:text-foreground"
+                    className="wr-section-label flex w-full items-center justify-between"
                   >
                     {t(group.label)}
                     <CaretDown
-                      size={12}
+                      size={10}
                       weight="bold"
                       className={cn(
-                        "shrink-0 text-text-subtle transition-transform",
+                        "shrink-0 opacity-40 transition-transform",
                         !aberto && "-rotate-90",
                       )}
                       aria-hidden
@@ -284,9 +283,11 @@ export function SidebarContent({
                           aria-current={isActive ? "page" : undefined}
                           onClick={onNavigate}
                           className={cn(
-                            "relative flex items-center gap-3 rounded-md px-3 py-1 text-sm transition-colors",
+                            "relative flex items-center gap-3 px-3 py-1.5 text-sm transition-colors",
+                            // War Room 2.0: pill shape (999px), lime active bg
+                            "rounded-[--wr-nav-item-radius]",
                             isActive
-                              ? "bg-accent text-accent-foreground"
+                              ? "bg-[--color-accent] font-semibold text-[--color-accent-fg]"
                               : "text-muted-foreground hover:bg-accent/50 hover:text-foreground",
                             collapsed && "justify-center px-2",
                           )}
@@ -312,9 +313,9 @@ export function SidebarContent({
                         aria-current={pathname === group.hub.href ? "page" : undefined}
                         onClick={onNavigate}
                         className={cn(
-                          "flex items-center gap-3 rounded-md px-3 py-1 text-sm transition-colors",
+                          "flex items-center gap-3 rounded-[--wr-nav-item-radius] px-3 py-1.5 text-sm transition-colors",
                           pathname === group.hub.href
-                            ? "bg-accent text-accent-foreground"
+                            ? "bg-[--color-accent] font-semibold text-[--color-accent-fg]"
                             : "text-muted-foreground hover:bg-accent/50 hover:text-foreground",
                           collapsed && "justify-center px-2",
                         )}
@@ -338,9 +339,9 @@ export function SidebarContent({
             aria-current={pathname.startsWith(rodape.href) ? "page" : undefined}
             onClick={onNavigate}
             className={cn(
-              "mb-1 flex items-center gap-3 rounded-md px-3 py-1 text-sm transition-colors",
+              "mb-1 flex items-center gap-3 rounded-[--wr-nav-item-radius] px-3 py-1.5 text-sm transition-colors",
               pathname.startsWith(rodape.href)
-                ? "bg-accent text-accent-foreground"
+                ? "bg-[--color-accent] font-semibold text-[--color-accent-fg]"
                 : "text-muted-foreground hover:bg-accent/50 hover:text-foreground",
               collapsed && "justify-center px-2",
             )}
@@ -408,7 +409,8 @@ export function Sidebar({ collapsed }: { collapsed: boolean }) {
         // `duration-base` em vez do `duration-200` literal: 200ms é o mesmo
         // número, mas vindo de `--duration-base`. A Lei de movimento fecha a
         // tabela de durações, e número solto é o que a faz apodrecer.
-        "sticky top-0 z-30 flex h-dvh shrink-0 flex-col border-r bg-card transition-[width] duration-base",
+        // War Room 2.0: bg-surface (branco), borda suave, transição de largura
+        "sticky top-0 z-30 flex h-dvh shrink-0 flex-col border-r border-[--color-border] bg-[--color-surface] transition-[width] duration-base",
         collapsed ? "w-16" : "w-60",
       )}
     >

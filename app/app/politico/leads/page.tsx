@@ -1,8 +1,9 @@
 /**
- * /app/politico/leads — Lista de leads politicos
+ * /app/politico/leads — Pessoas (War Room 2.0)
  *
- * Tabela paginada de pol_leads com join em contacts (nome, telefone).
- * Filtros por support_level e temperature. Link para detalhe individual.
+ * Tabela paginada de pol_leads com join em contacts (nome, telefone, origem).
+ * Funil de etapas com contadores, busca, filtros por cidade/origem.
+ * Link para ficha individual.
  *
  * Acesso: manager+
  */
@@ -17,36 +18,60 @@ import { resolverOrganizacaoAtiva } from "@/lib/organizations/resolver";
 
 const POR_PAGINA = 25;
 
-const SUPPORT_LEVELS = [
-  { value: "novo_cadastro", label: "Novo cadastro", cor: "bg-zinc-100 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300" },
-  { value: "simpatizante", label: "Simpatizante", cor: "bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300" },
-  { value: "apoiador", label: "Apoiador", cor: "bg-emerald-100 text-emerald-700 dark:bg-emerald-900 dark:text-emerald-300" },
-  { value: "militante", label: "Militante", cor: "bg-amber-100 text-amber-700 dark:bg-amber-900 dark:text-amber-300" },
-  { value: "voto_certo", label: "Voto certo", cor: "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300" },
-] as const;
-
-const TEMPERATURES = [
-  { value: "frio", label: "Frio", cor: "bg-sky-100 text-sky-700 dark:bg-sky-900 dark:text-sky-300" },
-  { value: "morno", label: "Morno", cor: "bg-orange-100 text-orange-700 dark:bg-orange-900 dark:text-orange-300" },
-  { value: "quente", label: "Quente", cor: "bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300" },
+const ETAPAS_FUNIL = [
+  { value: "novo_cadastro", label: "Novo contato", cor: "var(--wr-funnel-1)", pillClass: "f1" },
+  { value: "simpatizante", label: "Simpatizante", cor: "var(--wr-funnel-2)", pillClass: "f2" },
+  { value: "apoiador", label: "Apoiador", cor: "var(--wr-funnel-3)", pillClass: "f3" },
+  { value: "militante", label: "Multiplicador", cor: "var(--wr-funnel-4)", pillClass: "f4" },
+  { value: "voto_certo", label: "Voto certo", cor: "var(--wr-funnel-5)", pillClass: "f5" },
 ] as const;
 
 // -- Helpers -----------------------------------------------------------------
 
-function corDoSupportLevel(value: string): string {
-  return SUPPORT_LEVELS.find((s) => s.value === value)?.cor ?? "bg-zinc-100 text-zinc-700";
+function labelDaEtapa(value: string): string {
+  return ETAPAS_FUNIL.find((e) => e.value === value)?.label ?? value;
 }
 
-function labelDoSupportLevel(value: string): string {
-  return SUPPORT_LEVELS.find((s) => s.value === value)?.label ?? value;
+function pillClassDaEtapa(value: string): string {
+  return ETAPAS_FUNIL.find((e) => e.value === value)?.pillClass ?? "f1";
 }
 
-function corDaTemperature(value: string): string {
-  return TEMPERATURES.find((t) => t.value === value)?.cor ?? "bg-zinc-100 text-zinc-700";
+function corDaEtapa(value: string): string {
+  return ETAPAS_FUNIL.find((e) => e.value === value)?.cor ?? "var(--wr-funnel-1)";
 }
 
-function labelDaTemperature(value: string): string {
-  return TEMPERATURES.find((t) => t.value === value)?.label ?? value;
+function labelDaOrigem(value: string): string {
+  const mapa: Record<string, string> = {
+    manual: "Manual",
+    import: "Importação",
+    whatsapp: "WhatsApp",
+    instagram: "Instagram",
+    form: "Formulário",
+    abaixo_assinado: "Abaixo-assinado",
+    palestra: "Palestra",
+    campo: "Campo",
+    pesquisa: "Pesquisa",
+    ebook: "E-book",
+  };
+  return mapa[value] ?? value;
+}
+
+function tempoRelativo(data: string | null): string {
+  if (!data) return "—";
+  const agora = Date.now();
+  const ts = new Date(data).getTime();
+  const diffMs = agora - ts;
+  const diffMin = Math.floor(diffMs / 60000);
+  const diffH = Math.floor(diffMin / 60);
+  const diffD = Math.floor(diffH / 24);
+
+  if (diffMin < 1) return "agora";
+  if (diffMin < 60) return `há ${diffMin} min`;
+  if (diffH < 24) return `há ${diffH}h`;
+  if (diffD === 0) return "hoje";
+  if (diffD === 1) return "ontem";
+  if (diffD < 30) return `há ${diffD} dias`;
+  return `há ${Math.floor(diffD / 30)} meses`;
 }
 
 // -- Tipos -------------------------------------------------------------------
@@ -57,9 +82,12 @@ interface LeadRow {
   temperature: string;
   political_score: number;
   territory_id: string | null;
+  created_at: string;
   contacts: {
     name: string | null;
-    phone: string | null;
+    phone_number: string | null;
+    source: string | null;
+    last_activity_at: string | null;
   } | null;
   pol_territories: {
     name: string;
@@ -71,8 +99,8 @@ interface LeadRow {
 async function buscarLeads(
   organizationId: string,
   pagina: number,
-  supportLevel?: string,
-  temperature?: string,
+  etapa?: string,
+  busca?: string,
 ) {
   const db = createServerClient();
   const offset = (pagina - 1) * POR_PAGINA;
@@ -80,18 +108,19 @@ async function buscarLeads(
   let query = db
     .from("pol_leads")
     .select(
-      "id, support_level, temperature, political_score, territory_id, contacts(name, phone), pol_territories(name)",
+      "id, support_level, temperature, political_score, territory_id, created_at, contacts(name, phone_number, source, last_activity_at), pol_territories(name)",
       { count: "exact" },
     )
     .eq("organization_id", organizationId)
     .order("created_at", { ascending: false })
     .range(offset, offset + POR_PAGINA - 1);
 
-  if (supportLevel) {
-    query = query.eq("support_level", supportLevel);
+  if (etapa) {
+    query = query.eq("support_level", etapa);
   }
-  if (temperature) {
-    query = query.eq("temperature", temperature);
+
+  if (busca) {
+    query = query.ilike("contacts.name", `%${busca}%`);
   }
 
   const { data, count } = await query;
@@ -102,9 +131,99 @@ async function buscarLeads(
   };
 }
 
-// -- Componente --------------------------------------------------------------
+async function contarPorEtapa(organizationId: string) {
+  const db = createServerClient();
+  const counts: Record<string, number> = {};
 
-export default async function LeadsPoliticosPage({
+  // Total
+  const { count: totalCount } = await db
+    .from("pol_leads")
+    .select("id", { count: "exact", head: true })
+    .eq("organization_id", organizationId);
+  counts._total = totalCount ?? 0;
+
+  // Por etapa
+  for (const etapa of ETAPAS_FUNIL) {
+    const { count } = await db
+      .from("pol_leads")
+      .select("id", { count: "exact", head: true })
+      .eq("organization_id", organizationId)
+      .eq("support_level", etapa.value);
+    counts[etapa.value] = count ?? 0;
+  }
+
+  return counts;
+}
+
+// -- Sub-componentes ---------------------------------------------------------
+
+function EtapaCard({
+  label,
+  count,
+  cor,
+  active,
+  href,
+}: {
+  label: string;
+  count: number;
+  cor?: string;
+  active: boolean;
+  href: string;
+}) {
+  return (
+    <Link
+      href={href}
+      className="flex-1 min-w-[140px] text-left rounded-[20px] p-4 transition-colors"
+      style={{
+        background: active ? "#D7F36A" : "#FFFFFF",
+        boxShadow: "var(--wr-card-shadow)",
+      }}
+    >
+      <div className="flex items-center gap-2 text-[13px]" style={{ color: active ? "#2E3410" : "#4A4F59" }}>
+        {cor && (
+          <span
+            aria-hidden="true"
+            className="inline-block h-2.5 w-2.5 rounded-full"
+            style={{ background: cor }}
+          />
+        )}
+        {label}
+      </div>
+      <div
+        className="font-heading text-[28px] font-bold mt-0.5 tabular-nums"
+        style={{ color: active ? "#2E3410" : "var(--color-text)" }}
+      >
+        {count.toLocaleString("pt-BR")}
+      </div>
+    </Link>
+  );
+}
+
+function EtapaPill({ value }: { value: string }) {
+  const cls = pillClassDaEtapa(value);
+  // Map pill classes to inline styles to match design
+  const pillStyles: Record<string, { bg: string; color: string }> = {
+    f1: { bg: "#EEF0FB", color: "#3B4280" },
+    f2: { bg: "#DDE1F7", color: "#2F3DA8" },
+    f3: { bg: "#B4BCF0", color: "#1E2A80" },
+    f4: { bg: "#4352C4", color: "#FFFFFF" },
+    f5: { bg: "#26318F", color: "#FFFFFF" },
+  };
+  const s = pillStyles[cls] ?? pillStyles.f1;
+
+  return (
+    <span
+      className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold whitespace-nowrap"
+      style={{ background: s.bg, color: s.color }}
+    >
+      {labelDaEtapa(value)}
+    </span>
+  );
+}
+
+// -- Componente principal ----------------------------------------------------
+
+export default async function PessoasPage({
   searchParams,
 }: {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
@@ -117,16 +236,19 @@ export default async function LeadsPoliticosPage({
 
   const params = await searchParams;
   const pagina = Math.max(1, Number(params.pagina) || 1);
-  const supportLevel = typeof params.nivel === "string" ? params.nivel : undefined;
-  const temperature = typeof params.temperatura === "string" ? params.temperatura : undefined;
+  const etapa = typeof params.etapa === "string" ? params.etapa : undefined;
+  const busca = typeof params.busca === "string" ? params.busca : undefined;
 
-  const { leads, total } = await buscarLeads(org.id, pagina, supportLevel, temperature);
+  const [{ leads, total }, contagens] = await Promise.all([
+    buscarLeads(org.id, pagina, etapa, busca),
+    contarPorEtapa(org.id),
+  ]);
+
   const totalPaginas = Math.ceil(total / POR_PAGINA);
 
-  // Montar query string base para paginacao e filtros
   function montarQuery(overrides: Record<string, string | undefined>) {
     const q = new URLSearchParams();
-    const merged = { nivel: supportLevel, temperatura: temperature, ...overrides };
+    const merged = { etapa, busca, ...overrides };
     for (const [k, v] of Object.entries(merged)) {
       if (v) q.set(k, v);
     }
@@ -135,177 +257,196 @@ export default async function LeadsPoliticosPage({
   }
 
   return (
-    <div className="mx-auto max-w-5xl px-4 py-8 space-y-6">
-      {/* Cabecalho */}
-      <div className="flex items-center justify-between gap-4">
+    <div className="mx-auto max-w-[1140px] px-4 py-7 space-y-[18px]">
+      {/* ── Header card ─────────────────────────────────────────── */}
+      <header className="wr-card p-6 sm:p-7 flex flex-wrap items-center justify-between gap-4">
         <div>
-          <div className="flex items-center gap-2">
-            <Link
-              href="/app/politico"
-              className="text-sm text-muted-foreground hover:text-foreground transition-colors"
-            >
-              War Room
-            </Link>
-            <span className="text-sm text-muted-foreground">/</span>
-            <h1 className="text-2xl font-bold tracking-tight">Leads Politicos</h1>
-          </div>
-          <p className="mt-1 text-sm text-muted-foreground">
-            {total} lead{total !== 1 ? "s" : ""} cadastrado{total !== 1 ? "s" : ""}
+          <h1 className="font-heading text-[36px] font-bold leading-tight">Pessoas</h1>
+          <p className="mt-1.5 text-base" style={{ color: "#4A4F59" }}>
+            Toda a base em um lugar. Clique numa etapa para filtrar, num nome para abrir a ficha.
           </p>
         </div>
-        <Link
-          href="/app/politico/leads/novo"
-          className="inline-flex items-center gap-1.5 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors"
-        >
-          + Novo Lead
-        </Link>
-      </div>
-
-      {/* Filtros */}
-      <div className="flex flex-wrap gap-3">
-        {/* Filtro por nivel */}
-        <div className="flex items-center gap-2">
-          <span className="text-xs text-muted-foreground">Nivel:</span>
-          <div className="flex gap-1">
-            <Link
-              href={`/app/politico/leads${montarQuery({ nivel: undefined, pagina: "1" })}`}
-              className={`rounded-full px-2.5 py-0.5 text-xs font-medium transition-colors ${
-                !supportLevel
-                  ? "bg-primary text-primary-foreground"
-                  : "bg-muted text-muted-foreground hover:bg-accent"
-              }`}
+        <div className="flex flex-wrap gap-2.5 items-center">
+          {/* View toggles */}
+          <div role="group" aria-label="Visualização" className="flex gap-1">
+            <button
+              type="button"
+              aria-pressed="true"
+              aria-label="Tabela"
+              className="inline-flex items-center gap-1.5 h-10 px-3.5 rounded-full border font-semibold text-sm"
+              style={{ background: "#16181D", color: "#FFFFFF", borderColor: "#16181D" }}
             >
-              Todos
-            </Link>
-            {SUPPORT_LEVELS.map((s) => (
-              <Link
-                key={s.value}
-                href={`/app/politico/leads${montarQuery({ nivel: s.value, pagina: "1" })}`}
-                className={`rounded-full px-2.5 py-0.5 text-xs font-medium transition-colors ${
-                  supportLevel === s.value
-                    ? "bg-primary text-primary-foreground"
-                    : "bg-muted text-muted-foreground hover:bg-accent"
-                }`}
-              >
-                {s.label}
-              </Link>
-            ))}
-          </div>
-        </div>
-
-        {/* Filtro por temperatura */}
-        <div className="flex items-center gap-2">
-          <span className="text-xs text-muted-foreground">Temperatura:</span>
-          <div className="flex gap-1">
-            <Link
-              href={`/app/politico/leads${montarQuery({ temperatura: undefined, pagina: "1" })}`}
-              className={`rounded-full px-2.5 py-0.5 text-xs font-medium transition-colors ${
-                !temperature
-                  ? "bg-primary text-primary-foreground"
-                  : "bg-muted text-muted-foreground hover:bg-accent"
-              }`}
+              <svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                <path d="M3 3h18v18H3zM3 9h18M3 15h18M9 3v18M15 3v18" />
+              </svg>
+            </button>
+            <button
+              type="button"
+              aria-pressed="false"
+              aria-label="Kanban"
+              className="inline-flex items-center gap-1.5 h-10 px-3.5 rounded-full border font-semibold text-sm"
+              style={{ background: "#FFFFFF", color: "#4A4F59", borderColor: "#DCDCD5" }}
             >
-              Todas
-            </Link>
-            {TEMPERATURES.map((t) => (
-              <Link
-                key={t.value}
-                href={`/app/politico/leads${montarQuery({ temperatura: t.value, pagina: "1" })}`}
-                className={`rounded-full px-2.5 py-0.5 text-xs font-medium transition-colors ${
-                  temperature === t.value
-                    ? "bg-primary text-primary-foreground"
-                    : "bg-muted text-muted-foreground hover:bg-accent"
-                }`}
-              >
-                {t.label}
-              </Link>
-            ))}
+              <svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                <rect x="3" y="3" width="5" height="18" rx="1" />
+                <rect x="10" y="3" width="5" height="12" rx="1" />
+                <rect x="17" y="3" width="5" height="15" rx="1" />
+              </svg>
+            </button>
           </div>
+          <button type="button" className="wr-btn">Importar</button>
+          <button type="button" className="wr-btn">Exportar</button>
+          <Link href="/app/politico/leads/novo" className="wr-btn-dark">
+            + Novo cadastro
+          </Link>
         </div>
-      </div>
+      </header>
 
-      {/* Tabela */}
-      {leads.length === 0 ? (
-        <div className="rounded-xl border bg-card p-12 text-center">
-          <p className="text-sm text-muted-foreground">
-            Nenhum lead politico encontrado.
-          </p>
+      {/* ── Funnel stage cards ──────────────────────────────────── */}
+      <section aria-label="Etapas do funil" className="flex flex-wrap gap-3">
+        <EtapaCard
+          label="Todas"
+          count={contagens._total}
+          active={!etapa}
+          href={`/app/politico/leads${montarQuery({ etapa: undefined, pagina: "1" })}`}
+        />
+        {ETAPAS_FUNIL.map((e) => (
+          <EtapaCard
+            key={e.value}
+            label={e.label}
+            count={contagens[e.value] ?? 0}
+            cor={e.cor}
+            active={etapa === e.value}
+            href={`/app/politico/leads${montarQuery({ etapa: e.value, pagina: "1" })}`}
+          />
+        ))}
+      </section>
+
+      {/* ── Data table card ─────────────────────────────────────── */}
+      <section aria-label="Lista de pessoas" className="wr-card pt-2 pb-0 px-0">
+        {/* Search + filters */}
+        <div className="flex flex-wrap gap-2.5 px-4 py-3.5">
+          <form className="flex-1 basis-[280px]" action="/app/politico/leads" method="get">
+            {etapa && <input type="hidden" name="etapa" value={etapa} />}
+            <label className="flex items-center gap-2.5 min-h-[44px] h-11 px-4 rounded-full" style={{ background: "#F6F6F2" }}>
+              <svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#5B606B" strokeWidth="2" strokeLinecap="round">
+                <circle cx="11" cy="11" r="7" />
+                <path d="m20 20-3.5-3.5" />
+              </svg>
+              <input
+                type="search"
+                name="busca"
+                placeholder="Nome, telefone ou bairro"
+                defaultValue={busca ?? ""}
+                className="flex-1 min-w-0 bg-transparent border-0 text-sm outline-none placeholder:text-[#9A9D8F]"
+                style={{ color: "#16181D" }}
+              />
+            </label>
+          </form>
         </div>
-      ) : (
-        <div className="rounded-xl border bg-card overflow-hidden">
+
+        {/* Table */}
+        {leads.length === 0 ? (
+          <div className="p-12 text-center">
+            <p className="text-sm" style={{ color: "#5B606B" }}>
+              Nenhuma pessoa encontrada.
+            </p>
+          </div>
+        ) : (
           <div className="overflow-x-auto">
-            <table className="w-full text-sm">
+            <table className="w-full text-sm border-collapse">
               <thead>
-                <tr className="border-b bg-muted/50">
-                  <th className="px-4 py-3 text-left font-medium text-muted-foreground">
-                    Contato
+                <tr>
+                  <th className="text-left font-medium text-[13px] px-4 py-3 whitespace-nowrap border-b" style={{ color: "#5B606B", borderColor: "#ECECE7" }}>
+                    Nome
                   </th>
-                  <th className="px-4 py-3 text-left font-medium text-muted-foreground">
-                    Nivel de apoio
+                  <th className="text-left font-medium text-[13px] px-4 py-3 whitespace-nowrap border-b" style={{ color: "#5B606B", borderColor: "#ECECE7" }}>
+                    Território
                   </th>
-                  <th className="px-4 py-3 text-left font-medium text-muted-foreground">
-                    Temperatura
+                  <th className="text-left font-medium text-[13px] px-4 py-3 whitespace-nowrap border-b" style={{ color: "#5B606B", borderColor: "#ECECE7" }}>
+                    Etapa
                   </th>
-                  <th className="px-4 py-3 text-left font-medium text-muted-foreground">
-                    Territorio
+                  <th className="text-right font-medium text-[13px] px-4 py-3 whitespace-nowrap border-b" style={{ color: "#5B606B", borderColor: "#ECECE7" }}>
+                    Engaj.
                   </th>
-                  <th className="px-4 py-3 text-right font-medium text-muted-foreground">
-                    Score
+                  <th className="text-left font-medium text-[13px] px-4 py-3 whitespace-nowrap border-b" style={{ color: "#5B606B", borderColor: "#ECECE7" }}>
+                    Última interação
+                  </th>
+                  <th className="text-left font-medium text-[13px] px-4 py-3 whitespace-nowrap border-b" style={{ color: "#5B606B", borderColor: "#ECECE7" }}>
+                    Origem
                   </th>
                 </tr>
               </thead>
               <tbody>
-                {leads.map((lead) => (
-                  <tr key={lead.id} className="border-b last:border-0 hover:bg-muted/30 transition-colors">
-                    <td className="px-4 py-3">
-                      <Link
-                        href={`/app/politico/leads/${lead.id}`}
-                        className="font-medium hover:text-primary transition-colors"
-                      >
-                        {lead.contacts?.name ?? "Sem nome"}
-                      </Link>
-                      {lead.contacts?.phone && (
-                        <p className="text-xs text-muted-foreground mt-0.5">
-                          {lead.contacts.phone}
-                        </p>
-                      )}
-                    </td>
-                    <td className="px-4 py-3">
-                      <span className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${corDoSupportLevel(lead.support_level)}`}>
-                        {labelDoSupportLevel(lead.support_level)}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3">
-                      <span className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${corDaTemperature(lead.temperature)}`}>
-                        {labelDaTemperature(lead.temperature)}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3 text-muted-foreground">
-                      {lead.pol_territories?.name ?? "—"}
-                    </td>
-                    <td className="px-4 py-3 text-right tabular-nums font-medium">
-                      {lead.political_score}
-                    </td>
-                  </tr>
-                ))}
+                {leads.map((lead) => {
+                  const lastActivity = lead.contacts?.last_activity_at;
+                  const daysSinceActivity = lastActivity
+                    ? Math.floor((Date.now() - new Date(lastActivity).getTime()) / 86400000)
+                    : null;
+                  const stale = daysSinceActivity !== null && daysSinceActivity >= 7;
+
+                  return (
+                    <tr
+                      key={lead.id}
+                      className="group transition-colors hover:bg-[#F6F6F2]"
+                      style={{
+                        borderBottom: "1px solid #F0F0EB",
+                        ...(lead.political_score >= 70 ? { background: "#FAFDEB" } : {}),
+                      }}
+                    >
+                      <td className="px-4 py-3.5 whitespace-nowrap">
+                        <Link
+                          href={`/app/politico/leads/${lead.id}`}
+                          className="font-semibold hover:underline"
+                          style={{ color: "#16181D" }}
+                        >
+                          {lead.contacts?.name ?? "Sem nome"}
+                        </Link>
+                      </td>
+                      <td className="px-4 py-3.5 whitespace-nowrap" style={{ color: "#4A4F59" }}>
+                        {lead.pol_territories?.name ?? "—"}
+                      </td>
+                      <td className="px-4 py-3.5 whitespace-nowrap">
+                        <EtapaPill value={lead.support_level} />
+                      </td>
+                      <td className="px-4 py-3.5 whitespace-nowrap text-right tabular-nums font-bold font-heading">
+                        {lead.political_score}
+                      </td>
+                      <td className="px-4 py-3.5 whitespace-nowrap">
+                        {stale ? (
+                          <span
+                            className="inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold"
+                            style={{ background: "#FCF1DC", color: "#8A5A10" }}
+                          >
+                            Sem contato há {daysSinceActivity} dias
+                          </span>
+                        ) : (
+                          <span style={{ color: "#4A4F59" }}>
+                            {tempoRelativo(lastActivity)}
+                          </span>
+                        )}
+                      </td>
+                      <td className="px-4 py-3.5 whitespace-nowrap" style={{ color: "#4A4F59" }}>
+                        {labelDaOrigem(lead.contacts?.source ?? "manual")}
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
-        </div>
-      )}
+        )}
 
-      {/* Paginacao */}
-      {totalPaginas > 1 && (
-        <div className="flex items-center justify-between pt-2">
-          <p className="text-xs text-muted-foreground">
-            Pagina <span className="tabular-nums">{pagina}</span> de{" "}
-            <span className="tabular-nums">{totalPaginas}</span>
-          </p>
+        {/* Pagination */}
+        <div className="flex flex-wrap justify-between items-center gap-3 px-4 py-3.5 text-[13px]" style={{ color: "#5B606B" }}>
+          <span>
+            Mostrando {leads.length} de {total.toLocaleString("pt-BR")}
+          </span>
           <div className="flex gap-2">
             {pagina > 1 && (
               <Link
                 href={`/app/politico/leads${montarQuery({ pagina: String(pagina - 1) })}`}
-                className="rounded-lg border bg-card px-3 py-1.5 text-xs font-medium hover:bg-accent transition-colors"
+                className="wr-btn text-sm"
               >
                 Anterior
               </Link>
@@ -313,14 +454,14 @@ export default async function LeadsPoliticosPage({
             {pagina < totalPaginas && (
               <Link
                 href={`/app/politico/leads${montarQuery({ pagina: String(pagina + 1) })}`}
-                className="rounded-lg border bg-card px-3 py-1.5 text-xs font-medium hover:bg-accent transition-colors"
+                className="wr-btn text-sm"
               >
-                Proxima
+                Próxima
               </Link>
             )}
           </div>
         </div>
-      )}
+      </section>
     </div>
   );
 }

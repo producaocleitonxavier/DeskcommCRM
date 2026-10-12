@@ -49,6 +49,21 @@ const atkinson = localFont({
   variable: "--font-atkinson",
 });
 
+// War Room 2.0 — Urbanist (headings, pesos 500-800) + Figtree (body, pesos 400-600)
+const urbanist = localFont({
+  src: [{ path: "./fonts/urbanist-400-800-latin.woff2", style: "normal" }],
+  display: "swap",
+  variable: "--font-urbanist",
+  weight: "400 800",
+});
+
+const figtree = localFont({
+  src: [{ path: "./fonts/figtree-400-600-latin.woff2", style: "normal" }],
+  display: "swap",
+  variable: "--font-figtree",
+  weight: "400 600",
+});
+
 const plexMono = localFont({
   src: [
     { path: "./fonts/ibm-plex-mono-400-latin-latin-ext.woff2", weight: "400", style: "normal" },
@@ -327,7 +342,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
       lang="pt-BR"
       data-theme="light"
       suppressHydrationWarning
-      className={`${atkinson.variable} ${plexMono.variable}`}
+      className={`${atkinson.variable} ${plexMono.variable} ${urbanist.variable} ${figtree.variable}`}
     >
       <head>
         {/* Primeiro de tudo: a cor da instalação, antes do CSS e do script de tema. */}

@@ -1,7 +1,7 @@
 /**
- * /app/politico/mapa-eleitoral — Mapa Eleitoral (War Room 2.0 Fase 4)
+ * /app/politico/mapa-eleitoral — Território (War Room 2.0)
  *
- * Mapa interativo com duas camadas: oportunidades e prioridade territorial.
+ * Mapa territorial com zonas, votos, contatos e cobertura.
  * Views: pol_vw_mapa_oportunidades + pol_vw_mapa_prioridade.
  *
  * Acesso: manager+
@@ -48,18 +48,48 @@ interface PrioridadeRow {
   priority_score: number;
 }
 
-const CLASSIFICACAO_LABELS: Record<string, string> = {
-  alta_oportunidade: "Alta oportunidade",
-  oportunidade: "Oportunidade",
-  consolidado: "Consolidado",
-};
+// -- Helpers -----------------------------------------------------------------
 
-const STATUS_LABELS: Record<string, string> = {
-  critico: "Critico",
-  prioritario: "Prioritario",
-  oportunidade: "Oportunidade",
-  normal: "Normal",
-};
+/** Classificação → label de situação no design WR2 */
+function situacaoLabel(classificacao: string): string {
+  const mapa: Record<string, string> = {
+    consolidado: "Defender",
+    oportunidade: "Expandir",
+    alta_oportunidade: "Recuperar",
+  };
+  return mapa[classificacao] ?? classificacao;
+}
+
+/** Classificação → estilo de pill semáforo WR2 */
+function situacaoEstilo(classificacao: string): { bg: string; color: string } {
+  const mapa: Record<string, { bg: string; color: string }> = {
+    consolidado: { bg: "#E2F5EC", color: "#17784F" },
+    oportunidade: { bg: "#FCF1DC", color: "#8A5A10" },
+    alta_oportunidade: { bg: "#FBE4E2", color: "#A3302A" },
+  };
+  return mapa[classificacao] ?? { bg: "#F0F0EB", color: "#4A4F59" };
+}
+
+/** Status estratégico → label + estilo */
+function statusLabel(status: string): string {
+  const mapa: Record<string, string> = {
+    critico: "Crítico",
+    prioritario: "Prioritário",
+    oportunidade: "Oportunidade",
+    normal: "Normal",
+  };
+  return mapa[status] ?? status;
+}
+
+function statusEstilo(status: string): { bg: string; color: string } {
+  const mapa: Record<string, { bg: string; color: string }> = {
+    critico: { bg: "#FBE4E2", color: "#A3302A" },
+    prioritario: { bg: "#FCF1DC", color: "#8A5A10" },
+    oportunidade: { bg: "#E4E7F8", color: "#2F3DA8" },
+    normal: { bg: "#F0F0EB", color: "#4A4F59" },
+  };
+  return mapa[status] ?? { bg: "#F0F0EB", color: "#4A4F59" };
+}
 
 // -- Data fetching -----------------------------------------------------------
 
@@ -99,9 +129,97 @@ async function buscarPrioridades(organizationId: string): Promise<PrioridadeRow[
   return (data ?? []) as unknown as PrioridadeRow[];
 }
 
-// -- Componente --------------------------------------------------------------
+// -- Sub-componentes ---------------------------------------------------------
 
-export default async function MapaEleitoralPage({
+function SituacaoPill({ classificacao }: { classificacao: string }) {
+  const s = situacaoEstilo(classificacao);
+  return (
+    <span
+      className="inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold whitespace-nowrap"
+      style={{ background: s.bg, color: s.color }}
+    >
+      {situacaoLabel(classificacao)}
+    </span>
+  );
+}
+
+function StatusPill({ status }: { status: string }) {
+  const s = statusEstilo(status);
+  return (
+    <span
+      className="inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold whitespace-nowrap"
+      style={{ background: s.bg, color: s.color }}
+    >
+      {statusLabel(status)}
+    </span>
+  );
+}
+
+function CoberturaBar({ pct }: { pct: number }) {
+  const clampedPct = Math.min(100, Math.max(0, pct));
+  return (
+    <div className="flex items-center gap-2">
+      <div
+        className="w-[96px] h-2 rounded"
+        style={{ background: "#F0F0EB" }}
+      >
+        <div
+          className="h-2 rounded"
+          style={{
+            background: "#16181D",
+            width: `${clampedPct}%`,
+          }}
+        />
+      </div>
+      <span className="text-xs tabular-nums font-medium" style={{ color: "#4A4F59" }}>
+        {pct.toFixed(0)}%
+      </span>
+    </div>
+  );
+}
+
+function KpiCard({
+  label,
+  value,
+  sub,
+  bg,
+  accent,
+}: {
+  label: string;
+  value: string | number;
+  sub?: string;
+  bg?: string;
+  accent?: string;
+}) {
+  return (
+    <div
+      className="flex-1 min-w-[140px] rounded-[20px] p-4"
+      style={{
+        background: bg ?? "#FFFFFF",
+        boxShadow: "var(--wr-card-shadow)",
+      }}
+    >
+      <div className="text-[13px] font-medium" style={{ color: accent ?? "#4A4F59" }}>
+        {label}
+      </div>
+      <div
+        className="font-heading text-[28px] font-bold mt-0.5 tabular-nums"
+        style={{ color: accent ?? "var(--color-text)" }}
+      >
+        {typeof value === "number" ? value.toLocaleString("pt-BR") : value}
+      </div>
+      {sub && (
+        <div className="text-[12px] mt-0.5" style={{ color: accent ?? "#5B606B" }}>
+          {sub}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// -- Componente principal ----------------------------------------------------
+
+export default async function TerritorioPage({
   searchParams,
 }: {
   searchParams: Promise<{ camada?: string }>;
@@ -120,288 +238,305 @@ export default async function MapaEleitoralPage({
     camada === "prioridade" ? buscarPrioridades(org.id) : Promise.resolve([]),
   ]);
 
+  // -- Stats para a camada oportunidades --
+  const totalVotos = oportunidades.reduce((acc, o) => acc + (o.electorate ?? 0), 0);
+  const totalContatos = oportunidades.reduce((acc, o) => acc + o.total_leads, 0);
+  const zonasConsolidadas = oportunidades.filter((o) => o.classificacao === "consolidado").length;
+  const zonasBaixaCobertura = oportunidades.filter((o) => o.penetracao_pct < 5).length;
+  const totalZonas = oportunidades.length;
+
+  // -- Stats para a camada prioridade --
+  const zonasCriticas = prioridades.filter((p) => p.strategic_status === "critico").length;
+  const zonasPrioritarias = prioridades.filter((p) => p.strategic_status === "prioritario").length;
+  const zonasOportunidade = prioridades.filter((p) => p.strategic_status === "oportunidade").length;
+  const zonasNormais = prioridades.filter((p) => p.strategic_status === "normal").length;
+
+  const tabs = [
+    { value: "oportunidades", label: "Zonas", href: "/app/politico/mapa-eleitoral" },
+    { value: "prioridade", label: "Prioridade", href: "/app/politico/mapa-eleitoral?camada=prioridade" },
+  ];
+
   return (
-    <div className="mx-auto max-w-6xl px-4 py-8 space-y-6">
-      {/* Voltar */}
-      <Link
-        href="/app/politico"
-        className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors"
-      >
-        &larr; War Room
-      </Link>
+    <div className="mx-auto max-w-[1140px] px-4 py-7 space-y-[18px]">
+      {/* ── Header card ─────────────────────────────────────────── */}
+      <header className="wr-card p-6 sm:p-7 flex flex-wrap items-center justify-between gap-4">
+        <div>
+          <h1 className="font-heading text-[36px] font-bold leading-tight">Território</h1>
+          <p className="mt-1.5 text-base" style={{ color: "#4A4F59" }}>
+            Onde estão os votos e onde falta gente cadastrada.
+          </p>
+        </div>
+        <div className="flex gap-2 items-center">
+          {/* Tab bar */}
+          <div role="tablist" aria-label="Camadas do território" className="flex gap-1">
+            {tabs.map((tab) => {
+              const active = camada === tab.value;
+              return (
+                <Link
+                  key={tab.value}
+                  href={tab.href}
+                  role="tab"
+                  aria-selected={active}
+                  className="inline-flex items-center h-10 px-4 rounded-full font-semibold text-sm transition-colors"
+                  style={
+                    active
+                      ? { background: "#16181D", color: "#FFFFFF" }
+                      : { background: "#FFFFFF", color: "#4A4F59", border: "1px solid #DCDCD5" }
+                  }
+                >
+                  {tab.label}
+                </Link>
+              );
+            })}
+          </div>
+        </div>
+      </header>
 
-      {/* Cabecalho */}
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight">Mapa Eleitoral</h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Mapa interativo de territorios — oportunidades de conversao e prioridades estrategicas.
-        </p>
-      </div>
-
-      {/* Tabs de camada */}
-      <div className="flex gap-2">
-        <FilterLink href="/app/politico/mapa-eleitoral" label="Oportunidades" active={camada === "oportunidades"} />
-        <FilterLink href="/app/politico/mapa-eleitoral?camada=prioridade" label="Prioridade" active={camada === "prioridade"} />
-      </div>
-
-      {/* Camada: Oportunidades */}
+      {/* ── Camada: Oportunidades ───────────────────────────────── */}
       {camada === "oportunidades" && (
         <>
           {oportunidades.length === 0 ? (
-            <div className="rounded-xl border bg-card p-8 text-center text-sm text-muted-foreground">
-              Nenhum territorio com coordenadas. Cadastre territorios com latitude e longitude.
+            <div className="wr-card p-12 text-center">
+              <p className="text-sm" style={{ color: "#5B606B" }}>
+                Nenhum território cadastrado. Cadastre territórios com latitude e longitude.
+              </p>
             </div>
           ) : (
             <>
-              {/* Resumo por classificacao */}
-              <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-                <ClassificacaoCard
-                  label="Alta oportunidade"
-                  count={oportunidades.filter((o) => o.classificacao === "alta_oportunidade").length}
-                  cor="text-red-600 dark:text-red-400"
-                  descricao="Baixa penetracao + leads novos"
+              {/* KPI cards */}
+              <section aria-label="Resumo territorial" className="flex flex-wrap gap-3">
+                <KpiCard
+                  label="Eleitores cadastrados"
+                  value={totalVotos}
+                  sub={`${totalZonas} zonas`}
                 />
-                <ClassificacaoCard
-                  label="Oportunidade"
-                  count={oportunidades.filter((o) => o.classificacao === "oportunidade").length}
-                  cor="text-yellow-600 dark:text-yellow-400"
-                  descricao="Penetracao media"
+                <KpiCard
+                  label="Contatos na base"
+                  value={totalContatos}
                 />
-                <ClassificacaoCard
-                  label="Consolidado"
-                  count={oportunidades.filter((o) => o.classificacao === "consolidado").length}
-                  cor="text-green-600 dark:text-green-400"
-                  descricao="Penetracao alta"
+                <KpiCard
+                  label="Zonas para defender"
+                  value={zonasConsolidadas}
                 />
-              </div>
+                <KpiCard
+                  label="Zonas com pouca gente"
+                  value={zonasBaixaCobertura}
+                  sub="cobertura abaixo de 5%"
+                  bg="#D7F36A"
+                  accent="#2E3410"
+                />
+              </section>
 
-              {/* Lista de territorios */}
-              <div className="rounded-xl border bg-card overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="border-b text-left text-xs text-muted-foreground">
-                      <th className="px-4 py-3 font-medium">Territorio</th>
-                      <th className="px-4 py-3 font-medium">UF</th>
-                      <th className="px-4 py-3 font-medium text-right">Leads</th>
-                      <th className="px-4 py-3 font-medium text-right">Novos</th>
-                      <th className="px-4 py-3 font-medium text-right">Simpatizantes</th>
-                      <th className="px-4 py-3 font-medium text-right">Potencial</th>
-                      <th className="px-4 py-3 font-medium text-right">Penetracao</th>
-                      <th className="px-4 py-3 font-medium">Classificacao</th>
-                      <th className="px-4 py-3 font-medium text-right">Lat/Lng</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {oportunidades.map((o) => (
-                      <tr key={o.territory_id} className="border-b last:border-b-0 hover:bg-accent/30 transition-colors">
-                        <td className="px-4 py-3 font-medium">{o.name}</td>
-                        <td className="px-4 py-3 text-muted-foreground">{o.state_code ?? "—"}</td>
-                        <td className="px-4 py-3 text-right tabular-nums">{o.total_leads.toLocaleString("pt-BR")}</td>
-                        <td className="px-4 py-3 text-right tabular-nums">{o.novos_cadastros.toLocaleString("pt-BR")}</td>
-                        <td className="px-4 py-3 text-right tabular-nums">{o.simpatizantes.toLocaleString("pt-BR")}</td>
-                        <td className="px-4 py-3 text-right tabular-nums font-medium">{o.potencial_conversao.toLocaleString("pt-BR")}</td>
-                        <td className="px-4 py-3 text-right">
-                          <PenetracaoBadge pct={o.penetracao_pct} />
-                        </td>
-                        <td className="px-4 py-3">
-                          <ClassificacaoBadge classificacao={o.classificacao} />
-                        </td>
-                        <td className="px-4 py-3 text-right tabular-nums text-xs text-muted-foreground">
-                          {o.latitude.toFixed(4)}, {o.longitude.toFixed(4)}
-                        </td>
+              {/* Table */}
+              <section aria-label="Zonas por força eleitoral" className="wr-card pt-2 pb-0 px-0">
+                <div className="px-5 pt-3 pb-2">
+                  <h2 className="font-heading text-base font-semibold" style={{ color: "#16181D" }}>
+                    Zonas por força eleitoral
+                  </h2>
+                </div>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm border-collapse">
+                    <thead>
+                      <tr>
+                        {["Zona", "UF", "Leads", "Novos", "Pot. conversão", "Cobertura", "Situação"].map((col) => (
+                          <th
+                            key={col}
+                            className={`font-medium text-[13px] px-4 py-3 whitespace-nowrap border-b ${
+                              ["Leads", "Novos", "Pot. conversão"].includes(col) ? "text-right" : "text-left"
+                            }`}
+                            style={{ color: "#5B606B", borderColor: "#ECECE7" }}
+                          >
+                            {col}
+                          </th>
+                        ))}
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+                    </thead>
+                    <tbody>
+                      {oportunidades.map((o) => {
+                        const highlighted = o.classificacao === "consolidado" || o.penetracao_pct >= 15;
+                        return (
+                          <tr
+                            key={o.territory_id}
+                            className="group transition-colors hover:bg-[#F6F6F2]"
+                            style={{
+                              borderBottom: "1px solid #F0F0EB",
+                              ...(highlighted ? { background: "#FAFDEB" } : {}),
+                            }}
+                          >
+                            <td className="px-4 py-3.5 whitespace-nowrap">
+                              <span className="font-semibold" style={{ color: "#16181D" }}>
+                                {o.name}
+                              </span>
+                            </td>
+                            <td className="px-4 py-3.5 whitespace-nowrap" style={{ color: "#4A4F59" }}>
+                              {o.state_code ?? "—"}
+                            </td>
+                            <td className="px-4 py-3.5 whitespace-nowrap text-right tabular-nums" style={{ color: "#16181D" }}>
+                              {o.total_leads.toLocaleString("pt-BR")}
+                            </td>
+                            <td className="px-4 py-3.5 whitespace-nowrap text-right tabular-nums" style={{ color: "#4A4F59" }}>
+                              {o.novos_cadastros.toLocaleString("pt-BR")}
+                            </td>
+                            <td className="px-4 py-3.5 whitespace-nowrap text-right tabular-nums font-bold">
+                              {o.potencial_conversao.toLocaleString("pt-BR")}
+                            </td>
+                            <td className="px-4 py-3.5 whitespace-nowrap">
+                              <CoberturaBar pct={o.penetracao_pct} />
+                            </td>
+                            <td className="px-4 py-3.5 whitespace-nowrap">
+                              <SituacaoPill classificacao={o.classificacao} />
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+
+                {/* Footer */}
+                <div
+                  className="px-4 py-3 text-[12px]"
+                  style={{ color: "#9A9D8F", borderTop: "1px solid #F0F0EB" }}
+                >
+                  Cobertura = contatos ÷ eleitores cadastrados na zona
+                </div>
+              </section>
             </>
           )}
         </>
       )}
 
-      {/* Camada: Prioridade */}
+      {/* ── Camada: Prioridade ──────────────────────────────────── */}
       {camada === "prioridade" && (
         <>
           {prioridades.length === 0 ? (
-            <div className="rounded-xl border bg-card p-8 text-center text-sm text-muted-foreground">
-              Nenhum territorio com coordenadas. Cadastre territorios com latitude e longitude.
+            <div className="wr-card p-12 text-center">
+              <p className="text-sm" style={{ color: "#5B606B" }}>
+                Nenhum território cadastrado. Cadastre territórios com latitude e longitude.
+              </p>
             </div>
           ) : (
             <>
-              {/* Resumo por status */}
-              <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-                <ClassificacaoCard
-                  label="Critico"
-                  count={prioridades.filter((p) => p.strategic_status === "critico").length}
-                  cor="text-red-600 dark:text-red-400"
-                  descricao="Acao imediata"
+              {/* KPI cards */}
+              <section aria-label="Resumo de prioridade" className="flex flex-wrap gap-3">
+                <KpiCard
+                  label="Crítico"
+                  value={zonasCriticas}
+                  sub="Ação imediata"
+                  bg="#FBE4E2"
+                  accent="#A3302A"
                 />
-                <ClassificacaoCard
-                  label="Prioritario"
-                  count={prioridades.filter((p) => p.strategic_status === "prioritario").length}
-                  cor="text-orange-600 dark:text-orange-400"
-                  descricao="Acao planejada"
+                <KpiCard
+                  label="Prioritário"
+                  value={zonasPrioritarias}
+                  sub="Ação planejada"
+                  bg="#FCF1DC"
+                  accent="#8A5A10"
                 />
-                <ClassificacaoCard
+                <KpiCard
                   label="Oportunidade"
-                  count={prioridades.filter((p) => p.strategic_status === "oportunidade").length}
-                  cor="text-blue-600 dark:text-blue-400"
-                  descricao="Potencial"
+                  value={zonasOportunidade}
+                  sub="Potencial"
                 />
-                <ClassificacaoCard
+                <KpiCard
                   label="Normal"
-                  count={prioridades.filter((p) => p.strategic_status === "normal").length}
-                  cor="text-gray-600 dark:text-gray-400"
-                  descricao="Operacao regular"
+                  value={zonasNormais}
+                  sub="Operação regular"
                 />
-              </div>
+              </section>
 
-              {/* Lista de territorios */}
-              <div className="rounded-xl border bg-card overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="border-b text-left text-xs text-muted-foreground">
-                      <th className="px-4 py-3 font-medium">Territorio</th>
-                      <th className="px-4 py-3 font-medium">UF</th>
-                      <th className="px-4 py-3 font-medium">Status</th>
-                      <th className="px-4 py-3 font-medium text-right">Score</th>
-                      <th className="px-4 py-3 font-medium text-right">Influencia</th>
-                      <th className="px-4 py-3 font-medium text-right">Flags ativas</th>
-                      <th className="px-4 py-3 font-medium text-right">Flags criticas</th>
-                      <th className="px-4 py-3 font-medium text-right">Lat/Lng</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {prioridades.map((p) => (
-                      <tr key={p.territory_id} className="border-b last:border-b-0 hover:bg-accent/30 transition-colors">
-                        <td className="px-4 py-3 font-medium">{p.name}</td>
-                        <td className="px-4 py-3 text-muted-foreground">{p.state_code ?? "—"}</td>
-                        <td className="px-4 py-3">
-                          <StatusBadge status={p.strategic_status} />
-                        </td>
-                        <td className="px-4 py-3 text-right tabular-nums font-bold">{p.priority_score}</td>
-                        <td className="px-4 py-3 text-right tabular-nums text-muted-foreground">{p.influence_score}</td>
-                        <td className="px-4 py-3 text-right tabular-nums">
-                          {p.flags_ativas > 0 ? (
-                            <span className="font-medium text-amber-600 dark:text-amber-400">{p.flags_ativas}</span>
-                          ) : (
-                            <span className="text-muted-foreground">0</span>
-                          )}
-                        </td>
-                        <td className="px-4 py-3 text-right tabular-nums">
-                          {p.flags_criticas > 0 ? (
-                            <span className="font-medium text-red-600 dark:text-red-400">{p.flags_criticas}</span>
-                          ) : (
-                            <span className="text-muted-foreground">0</span>
-                          )}
-                        </td>
-                        <td className="px-4 py-3 text-right tabular-nums text-xs text-muted-foreground">
-                          {p.latitude.toFixed(4)}, {p.longitude.toFixed(4)}
-                        </td>
+              {/* Table */}
+              <section aria-label="Territórios por prioridade" className="wr-card pt-2 pb-0 px-0">
+                <div className="px-5 pt-3 pb-2">
+                  <h2 className="font-heading text-base font-semibold" style={{ color: "#16181D" }}>
+                    Territórios por prioridade estratégica
+                  </h2>
+                </div>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm border-collapse">
+                    <thead>
+                      <tr>
+                        {["Território", "UF", "Status", "Score", "Influência", "Flags", "Flags críticas"].map((col) => (
+                          <th
+                            key={col}
+                            className={`font-medium text-[13px] px-4 py-3 whitespace-nowrap border-b ${
+                              ["Score", "Influência", "Flags", "Flags críticas"].includes(col) ? "text-right" : "text-left"
+                            }`}
+                            style={{ color: "#5B606B", borderColor: "#ECECE7" }}
+                          >
+                            {col}
+                          </th>
+                        ))}
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+                    </thead>
+                    <tbody>
+                      {prioridades.map((p) => {
+                        const isCritico = p.strategic_status === "critico";
+                        return (
+                          <tr
+                            key={p.territory_id}
+                            className="group transition-colors hover:bg-[#F6F6F2]"
+                            style={{
+                              borderBottom: "1px solid #F0F0EB",
+                              ...(isCritico ? { background: "#FEF6F5" } : {}),
+                            }}
+                          >
+                            <td className="px-4 py-3.5 whitespace-nowrap">
+                              <span className="font-semibold" style={{ color: "#16181D" }}>
+                                {p.name}
+                              </span>
+                            </td>
+                            <td className="px-4 py-3.5 whitespace-nowrap" style={{ color: "#4A4F59" }}>
+                              {p.state_code ?? "—"}
+                            </td>
+                            <td className="px-4 py-3.5 whitespace-nowrap">
+                              <StatusPill status={p.strategic_status} />
+                            </td>
+                            <td className="px-4 py-3.5 whitespace-nowrap text-right tabular-nums font-bold font-heading">
+                              {p.priority_score}
+                            </td>
+                            <td className="px-4 py-3.5 whitespace-nowrap text-right tabular-nums" style={{ color: "#4A4F59" }}>
+                              {p.influence_score}
+                            </td>
+                            <td className="px-4 py-3.5 whitespace-nowrap text-right tabular-nums">
+                              {p.flags_ativas > 0 ? (
+                                <span className="font-medium" style={{ color: "#8A5A10" }}>
+                                  {p.flags_ativas}
+                                </span>
+                              ) : (
+                                <span style={{ color: "#9A9D8F" }}>0</span>
+                              )}
+                            </td>
+                            <td className="px-4 py-3.5 whitespace-nowrap text-right tabular-nums">
+                              {p.flags_criticas > 0 ? (
+                                <span className="font-medium" style={{ color: "#A3302A" }}>
+                                  {p.flags_criticas}
+                                </span>
+                              ) : (
+                                <span style={{ color: "#9A9D8F" }}>0</span>
+                              )}
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+
+                {/* Footer */}
+                <div
+                  className="flex justify-between items-center px-4 py-3 text-[13px]"
+                  style={{ color: "#5B606B", borderTop: "1px solid #F0F0EB" }}
+                >
+                  <span>
+                    {prioridades.length} territórios
+                  </span>
+                </div>
+              </section>
             </>
           )}
         </>
       )}
     </div>
-  );
-}
-
-// -- Sub-componentes ---------------------------------------------------------
-
-function FilterLink({
-  href,
-  label,
-  active,
-}: {
-  href: string;
-  label: string;
-  active: boolean;
-}) {
-  return (
-    <Link
-      href={href}
-      className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${
-        active
-          ? "bg-primary text-primary-foreground"
-          : "bg-secondary text-secondary-foreground hover:bg-secondary/80"
-      }`}
-    >
-      {label}
-    </Link>
-  );
-}
-
-function ClassificacaoCard({
-  label,
-  count,
-  cor,
-  descricao,
-}: {
-  label: string;
-  count: number;
-  cor: string;
-  descricao: string;
-}) {
-  return (
-    <div className="flex flex-col gap-1 rounded-lg border bg-card p-4">
-      <span className={`text-2xl font-bold tabular-nums ${cor}`}>{count}</span>
-      <span className="text-sm font-medium">{label}</span>
-      <span className="text-xs text-muted-foreground">{descricao}</span>
-    </div>
-  );
-}
-
-function ClassificacaoBadge({ classificacao }: { classificacao: string }) {
-  const label = CLASSIFICACAO_LABELS[classificacao] ?? classificacao;
-
-  const colorMap: Record<string, string> = {
-    alta_oportunidade: "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200",
-    oportunidade: "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200",
-    consolidado: "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200",
-  };
-
-  const color = colorMap[classificacao] ?? "bg-primary/10 text-primary";
-
-  return (
-    <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${color}`}>
-      {label}
-    </span>
-  );
-}
-
-function PenetracaoBadge({ pct }: { pct: number }) {
-  let color = "bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200";
-  if (pct >= 15) color = "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200";
-  else if (pct >= 5) color = "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200";
-  else if (pct > 0) color = "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200";
-
-  return (
-    <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${color}`}>
-      {pct}%
-    </span>
-  );
-}
-
-function StatusBadge({ status }: { status: string }) {
-  const label = STATUS_LABELS[status] ?? status;
-
-  const colorMap: Record<string, string> = {
-    critico: "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200",
-    prioritario: "bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200",
-    oportunidade: "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200",
-    normal: "bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200",
-  };
-
-  const color = colorMap[status] ?? "bg-primary/10 text-primary";
-
-  return (
-    <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${color}`}>
-      {label}
-    </span>
   );
 }

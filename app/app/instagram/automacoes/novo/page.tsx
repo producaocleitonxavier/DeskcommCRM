@@ -1,5 +1,5 @@
 /**
- * /app/instagram/automacoes/novo — Criação de novo flow de automação Instagram
+ * /app/instagram/automacoes/novo — Criação de novo flow de automação Instagram (War Room 2.0)
  *
  * Formulário completo para criar um flow de automação: trigger + lista de ações.
  * Arquitetura ManyChat: trigger dispara, ações executam em ordem, first-match wins.
@@ -61,11 +61,25 @@ const ACAO_OPTIONS: { value: AcaoTipo; label: string; descricao: string }[] = [
 
 const NIVEIS_FUNIL = ["Simpatizante", "Apoiador", "Embaixador"];
 
+// ── Estilos WR2 para inputs ────────────────────────────────────────────────────
+
+const inputStyle: React.CSSProperties = {
+  borderColor: "#DCDCD5",
+  background: "#FFFFFF",
+};
+
+const sectionLabelStyle: React.CSSProperties = {
+  fontSize: "11px",
+  fontWeight: 600,
+  color: "#9A9D8F",
+  letterSpacing: ".08em",
+  textTransform: "uppercase" as const,
+};
+
 // ── Componente de ação ─────────────────────────────────────────────────────────
 
 function AcaoEditor({
   acao,
-  index,
   onChange,
   onRemove,
 }: {
@@ -77,12 +91,16 @@ function AcaoEditor({
   const info = ACAO_OPTIONS.find((o) => o.value === acao.tipo);
 
   return (
-    <div className="rounded-lg border bg-card p-3 space-y-2">
+    <div
+      className="rounded-[16px] p-4 space-y-3"
+      style={{ background: "#F6F6F2", border: "1px solid #F0F0EB" }}
+    >
       <div className="flex items-center justify-between gap-2">
         <select
           value={acao.tipo}
           onChange={(e) => onChange({ tipo: e.target.value as AcaoTipo })}
-          className="flex-1 rounded-md border bg-background px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+          className="flex-1 rounded-full border px-3 py-2 text-sm focus:outline-none focus:ring-2"
+          style={inputStyle}
         >
           {ACAO_OPTIONS.map((opt) => (
             <option key={opt.value} value={opt.value}>
@@ -92,14 +110,21 @@ function AcaoEditor({
         </select>
         <button
           onClick={onRemove}
-          className="rounded-md px-2 py-1.5 text-xs text-destructive border border-destructive/20 hover:bg-destructive/10 transition-colors shrink-0"
+          className="inline-flex items-center h-9 px-3.5 rounded-full text-xs font-semibold transition-colors shrink-0"
+          style={{
+            border: "1px solid #FBE4E2",
+            background: "#FFFFFF",
+            color: "#A3302A",
+          }}
         >
           Remover
         </button>
       </div>
 
       {info && (
-        <p className="text-xs text-muted-foreground">{info.descricao}</p>
+        <p className="text-xs" style={{ color: "#5B606B" }}>
+          {info.descricao}
+        </p>
       )}
 
       {(acao.tipo === "enviar_dm" || acao.tipo === "responder_comentario") && (
@@ -108,7 +133,8 @@ function AcaoEditor({
           onChange={(e) => onChange({ ...acao, texto: e.target.value })}
           placeholder="Texto da mensagem (use {{username}} e {{comentario}})"
           rows={3}
-          className="w-full rounded-md border bg-background px-2 py-1.5 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-primary"
+          className="w-full rounded-[12px] border px-3 py-2 text-sm resize-none focus:outline-none focus:ring-2"
+          style={inputStyle}
         />
       )}
 
@@ -118,7 +144,8 @@ function AcaoEditor({
           value={acao.etiqueta ?? ""}
           onChange={(e) => onChange({ ...acao, etiqueta: e.target.value })}
           placeholder="Nome da etiqueta (ex: Lead Quente)"
-          className="w-full rounded-md border bg-background px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+          className="w-full rounded-full border px-3 py-2 text-sm focus:outline-none focus:ring-2"
+          style={inputStyle}
         />
       )}
 
@@ -128,7 +155,8 @@ function AcaoEditor({
           value={acao.mensagem ?? ""}
           onChange={(e) => onChange({ ...acao, mensagem: e.target.value })}
           placeholder="Mensagem para a equipe (use {{username}} e {{comentario}})"
-          className="w-full rounded-md border bg-background px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+          className="w-full rounded-full border px-3 py-2 text-sm focus:outline-none focus:ring-2"
+          style={inputStyle}
         />
       )}
 
@@ -136,10 +164,13 @@ function AcaoEditor({
         <select
           value={acao.nivel ?? "Simpatizante"}
           onChange={(e) => onChange({ ...acao, nivel: e.target.value })}
-          className="w-full rounded-md border bg-background px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+          className="w-full rounded-full border px-3 py-2 text-sm focus:outline-none focus:ring-2"
+          style={inputStyle}
         >
           {NIVEIS_FUNIL.map((n) => (
-            <option key={n} value={n}>{n}</option>
+            <option key={n} value={n}>
+              {n}
+            </option>
           ))}
         </select>
       )}
@@ -179,11 +210,17 @@ export default function NovoFlowPage() {
   function buildTriggerConfig() {
     const cfg: Record<string, unknown> = {};
     if (triggerTipo === "comment_keyword" || triggerTipo === "dm_keyword") {
-      cfg.keywords = keywords.split(",").map((k) => k.trim()).filter(Boolean);
+      cfg.keywords = keywords
+        .split(",")
+        .map((k) => k.trim())
+        .filter(Boolean);
       cfg.case_sensitive = caseSensitive;
     }
     if (triggerTipo === "comment_no_post") {
-      cfg.post_ids = postIds.split(",").map((p) => p.trim()).filter(Boolean);
+      cfg.post_ids = postIds
+        .split(",")
+        .map((p) => p.trim())
+        .filter(Boolean);
     }
     return cfg;
   }
@@ -192,8 +229,14 @@ export default function NovoFlowPage() {
     e.preventDefault();
     setErro(null);
 
-    if (!nome.trim()) { setErro("Nome é obrigatório."); return; }
-    if (acoes.length === 0) { setErro("Adicione pelo menos uma ação."); return; }
+    if (!nome.trim()) {
+      setErro("Nome é obrigatório.");
+      return;
+    }
+    if (acoes.length === 0) {
+      setErro("Adicione pelo menos uma ação.");
+      return;
+    }
 
     const body = {
       nome: nome.trim(),
@@ -223,76 +266,111 @@ export default function NovoFlowPage() {
   }
 
   return (
-    <div className="mx-auto max-w-2xl px-4 py-8">
-      {/* Cabeçalho */}
-      <div className="mb-6">
-        <div className="flex items-center gap-2 text-sm text-muted-foreground mb-1">
-          <Link href="/app/instagram" className="hover:text-foreground transition-colors">Instagram</Link>
-          <span>/</span>
-          <Link href="/app/instagram/automacoes" className="hover:text-foreground transition-colors">Automações</Link>
-          <span>/</span>
-          <span>Novo flow</span>
+    <div className="mx-auto max-w-[720px] px-4 py-7 space-y-[18px]">
+      {/* ── Header card ─────────────────────────────────────────── */}
+      <header className="wr-card p-6 sm:p-7">
+        <div className="flex items-center gap-2 text-sm mb-1" style={{ color: "#5B606B" }}>
+          <Link
+            href="/app/instagram"
+            className="hover:opacity-70 transition-colors font-medium"
+          >
+            Instagram
+          </Link>
+          <span style={{ color: "#9A9D8F" }}>/</span>
+          <Link
+            href="/app/instagram/automacoes"
+            className="hover:opacity-70 transition-colors font-medium"
+          >
+            Automações
+          </Link>
+          <span style={{ color: "#9A9D8F" }}>/</span>
+          <span className="font-medium">Novo flow</span>
         </div>
-        <h1 className="text-2xl font-bold tracking-tight">Novo flow</h1>
-        <p className="mt-1 text-sm text-muted-foreground">
+        <h1 className="font-heading text-[36px] font-bold leading-tight">Novo flow</h1>
+        <p className="mt-1.5 text-base" style={{ color: "#4A4F59" }}>
           Defina o gatilho e as ações. O primeiro flow que bater executa — os demais são ignorados.
         </p>
-      </div>
+      </header>
 
-      <form onSubmit={salvar} className="space-y-6">
-        {/* Dados básicos */}
-        <div className="space-y-3">
-          <h2 className="font-semibold text-sm uppercase tracking-wide text-muted-foreground">Identificação</h2>
-          <div>
-            <label className="block text-sm font-medium mb-1">Nome do flow *</label>
-            <input
-              type="text"
-              value={nome}
-              onChange={(e) => setNome(e.target.value)}
-              placeholder='Ex: "Responde palavra INFO"'
-              required
-              className="w-full rounded-lg border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium mb-1">Descrição (opcional)</label>
-            <input
-              type="text"
-              value={descricao}
-              onChange={(e) => setDescricao(e.target.value)}
-              placeholder="Explique brevemente o que este flow faz"
-              className="w-full rounded-lg border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
-            />
+      <form onSubmit={salvar} className="space-y-[18px]">
+        {/* ── Identificação ────────────────────────────────────── */}
+        <div className="wr-card p-5 space-y-4">
+          <p style={sectionLabelStyle}>Identificação</p>
+          <div className="space-y-3">
+            <div>
+              <label
+                className="block text-sm font-medium mb-1.5"
+                style={{ color: "#16181D" }}
+              >
+                Nome do flow *
+              </label>
+              <input
+                type="text"
+                value={nome}
+                onChange={(e) => setNome(e.target.value)}
+                placeholder='Ex: "Responde palavra INFO"'
+                required
+                className="w-full rounded-full border px-4 py-2.5 text-sm focus:outline-none focus:ring-2"
+                style={inputStyle}
+              />
+            </div>
+            <div>
+              <label
+                className="block text-sm font-medium mb-1.5"
+                style={{ color: "#16181D" }}
+              >
+                Descrição (opcional)
+              </label>
+              <input
+                type="text"
+                value={descricao}
+                onChange={(e) => setDescricao(e.target.value)}
+                placeholder="Explique brevemente o que este flow faz"
+                className="w-full rounded-full border px-4 py-2.5 text-sm focus:outline-none focus:ring-2"
+                style={inputStyle}
+              />
+            </div>
           </div>
         </div>
 
-        {/* Trigger */}
-        <div className="space-y-3">
-          <h2 className="font-semibold text-sm uppercase tracking-wide text-muted-foreground">Gatilho</h2>
+        {/* ── Gatilho ──────────────────────────────────────────── */}
+        <div className="wr-card p-5 space-y-4">
+          <p style={sectionLabelStyle}>Gatilho</p>
           <select
             value={triggerTipo}
             onChange={(e) => setTriggerTipo(e.target.value as TriggerTipo)}
-            className="w-full rounded-lg border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+            className="w-full rounded-full border px-4 py-2.5 text-sm focus:outline-none focus:ring-2"
+            style={inputStyle}
           >
             {TRIGGER_OPTIONS.map((opt) => (
-              <option key={opt.value} value={opt.value}>{opt.label}</option>
+              <option key={opt.value} value={opt.value}>
+                {opt.label}
+              </option>
             ))}
           </select>
 
           {triggerInfo && (
-            <p className="text-xs text-muted-foreground">{triggerInfo.descricao}</p>
+            <p className="text-xs" style={{ color: "#5B606B" }}>
+              {triggerInfo.descricao}
+            </p>
           )}
 
           {(triggerTipo === "comment_keyword" || triggerTipo === "dm_keyword") && (
-            <div className="space-y-2">
+            <div className="space-y-3">
               <div>
-                <label className="block text-sm font-medium mb-1">Palavras-chave (separadas por vírgula)</label>
+                <label
+                  className="block text-sm font-medium mb-1.5"
+                  style={{ color: "#16181D" }}
+                >
+                  Palavras-chave (separadas por vírgula)
+                </label>
                 <input
                   type="text"
                   value={keywords}
                   onChange={(e) => setKeywords(e.target.value)}
                   placeholder="INFO, quero saber, saiba mais"
-                  className="w-full rounded-lg border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+                  className="w-full rounded-full border px-4 py-2.5 text-sm focus:outline-none focus:ring-2"
+                  style={inputStyle}
                 />
               </div>
               <label className="flex items-center gap-2 cursor-pointer">
@@ -302,48 +380,63 @@ export default function NovoFlowPage() {
                   onChange={(e) => setCaseSensitive(e.target.checked)}
                   className="rounded"
                 />
-                <span className="text-sm">Case sensitive (diferencia maiúsculas)</span>
+                <span className="text-sm" style={{ color: "#4A4F59" }}>
+                  Case sensitive (diferencia maiúsculas)
+                </span>
               </label>
             </div>
           )}
 
           {triggerTipo === "comment_no_post" && (
             <div>
-              <label className="block text-sm font-medium mb-1">IDs dos posts (separados por vírgula)</label>
+              <label
+                className="block text-sm font-medium mb-1.5"
+                style={{ color: "#16181D" }}
+              >
+                IDs dos posts (separados por vírgula)
+              </label>
               <input
                 type="text"
                 value={postIds}
                 onChange={(e) => setPostIds(e.target.value)}
                 placeholder="17891234567, 17898765432 (deixe vazio para qualquer post)"
-                className="w-full rounded-lg border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+                className="w-full rounded-full border px-4 py-2.5 text-sm focus:outline-none focus:ring-2"
+                style={inputStyle}
               />
-              <p className="mt-1 text-xs text-muted-foreground">
+              <p className="mt-1.5 text-xs" style={{ color: "#9A9D8F" }}>
                 Deixe em branco para disparar em qualquer comentário em qualquer post.
               </p>
             </div>
           )}
         </div>
 
-        {/* Ações */}
-        <div className="space-y-3">
+        {/* ── Ações ────────────────────────────────────────────── */}
+        <div className="wr-card p-5 space-y-4">
           <div className="flex items-center justify-between">
-            <h2 className="font-semibold text-sm uppercase tracking-wide text-muted-foreground">Ações</h2>
+            <p style={sectionLabelStyle}>Ações</p>
             <button
               type="button"
               onClick={addAcao}
-              className="text-xs font-medium text-primary hover:underline"
+              className="text-xs font-semibold"
+              style={{ color: "#4352C4" }}
             >
               + Adicionar ação
             </button>
           </div>
 
           {acoes.length === 0 && (
-            <div className="rounded-lg border border-dashed py-6 text-center text-sm text-muted-foreground">
+            <div
+              className="rounded-[16px] py-8 text-center text-sm"
+              style={{
+                border: "2px dashed #DCDCD5",
+                color: "#5B606B",
+              }}
+            >
               Nenhuma ação. Adicione pelo menos uma.
             </div>
           )}
 
-          <div className="space-y-2">
+          <div className="space-y-3">
             {acoes.map((acao, i) => (
               <AcaoEditor
                 key={i}
@@ -355,30 +448,37 @@ export default function NovoFlowPage() {
             ))}
           </div>
 
-          <p className="text-xs text-muted-foreground">
+          <p className="text-xs" style={{ color: "#9A9D8F" }}>
             As ações executam em ordem. Todas são executadas (best-effort), mesmo que uma falhe.
           </p>
         </div>
 
-        {/* Erro */}
+        {/* ── Erro ─────────────────────────────────────────────── */}
         {erro && (
-          <div className="rounded-lg border border-destructive/20 bg-destructive/10 px-4 py-3 text-sm text-destructive">
-            {erro}
+          <div className="wr-card p-5" style={{ background: "#FBE4E2" }}>
+            <p className="text-sm font-semibold" style={{ color: "#A3302A" }}>
+              {erro}
+            </p>
           </div>
         )}
 
-        {/* Botões */}
-        <div className="flex items-center gap-3 pt-2">
+        {/* ── Botões ───────────────────────────────────────────── */}
+        <div className="flex items-center gap-3">
           <button
             type="submit"
             disabled={salvando}
-            className="rounded-lg bg-primary px-5 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors disabled:opacity-50"
+            className="wr-btn-dark disabled:opacity-50"
           >
             {salvando ? "Salvando…" : "Criar flow"}
           </button>
           <Link
             href="/app/instagram/automacoes"
-            className="rounded-lg border px-5 py-2 text-sm font-medium hover:bg-accent transition-colors"
+            className="inline-flex items-center h-[44px] px-5 rounded-full text-sm font-semibold transition-colors"
+            style={{
+              border: "1px solid #DCDCD5",
+              background: "#FFFFFF",
+              color: "#4A4F59",
+            }}
           >
             Cancelar
           </Link>

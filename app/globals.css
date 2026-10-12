@@ -25,70 +25,93 @@
 @custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
 
 /* ─────────────────────────────────────────────────────────────────────────
-   DeskcommCRM — Design System tokens (Sage palette · density Aerada)
-   Source of truth: /app/design/lib/tokens.ts (PALETTES.sage)
+   DeskcommCRM — Design System tokens (War Room 2.0 · density Aerada)
+   Fonts: Urbanist (headings, 500-800) + Figtree (body, 400-600)
+   Palette: Stone background, dark text, lime accent (focus/highlight only)
    Light + dark drawn separately (NOT inverted).
    ───────────────────────────────────────────────────────────────────────── */
 
 :root {
-  /* Surfaces (light) */
-  --color-bg: #faf9f6;
-  --color-surface: #ffffff;
-  --color-surface-elevated: #f5f3ee;
-  --color-overlay: rgba(28, 26, 22, 0.42);
+  /* Surfaces (light — War Room 2.0 stone) */
+  --color-bg: #ECECE7;
+  --color-surface: #FFFFFF;
+  --color-surface-elevated: #F5F4F0;
+  --color-overlay: rgba(22, 24, 29, 0.42);
 
-  /* Text (light) */
-  --color-text: #1c1a16;
-  --color-text-muted: #5d594f;
-  --color-text-subtle: #7d786c;
+  /* Text (light — War Room 2.0) */
+  --color-text: #16181D;
+  --color-text-muted: #4A4F59;
+  --color-text-subtle: #5B606B;
 
-  /* Borders (light) */
-  --color-border: #e7e3da;
-  --color-border-strong: #d2cdbf;
+  /* Borders (light — War Room 2.0) */
+  --color-border: #DCDCD5;
+  --color-border-strong: #C8C8BF;
 
-  /* Accent — Sage (11 stops) */
-  --color-accent-50: #f3f6f1;
-  --color-accent-100: #e4ebe0;
-  --color-accent-200: #c8d6c1;
-  --color-accent-300: #a4ba9a;
-  --color-accent-400: #82a077;
-  --color-accent-500: #67885d;
-  --color-accent-600: #506d48;
-  --color-accent-700: #41573b;
-  --color-accent-800: #374731;
-  --color-accent-900: #2f3c2b;
-  --color-accent-950: #171f15;
-  --color-accent: var(--color-accent-600);
-  --color-accent-fg: #ffffff;
+  /* Accent — Lime (War Room 2.0: ONLY for focus/highlight, NEVER status) */
+  --color-accent-50: #F8FDE6;
+  --color-accent-100: #F0FBCC;
+  --color-accent-200: #E5F89E;
+  --color-accent-300: #D7F36A;
+  --color-accent-400: #C4E64A;
+  --color-accent-500: #A8CC2E;
+  --color-accent-600: #8AB31E;
+  --color-accent-700: #6E9316;
+  --color-accent-800: #577510;
+  --color-accent-900: #43590D;
+  --color-accent-950: #2A3808;
+  --color-accent: var(--color-accent-300);
+  --color-accent-fg: #16181D;
   --color-accent-soft: var(--color-accent-100);
-  --color-accent-hover: var(--color-accent-700);
+  --color-accent-hover: var(--color-accent-400);
 
-  /* Neutrals — greige (11 stops, light) */
-  --color-neutral-50: #faf9f6;
-  --color-neutral-100: #f3f1ec;
-  --color-neutral-200: #e7e3da;
-  --color-neutral-300: #d2cdbf;
-  --color-neutral-400: #a9a395;
-  --color-neutral-500: #7d786c;
-  --color-neutral-600: #5d594f;
-  --color-neutral-700: #46433b;
-  --color-neutral-800: #2e2c26;
-  --color-neutral-900: #1c1a16;
-  --color-neutral-950: #0e0d0a;
+  /* Neutrals — stone-grey (11 stops, light) */
+  --color-neutral-50: #F5F5F2;
+  --color-neutral-100: #ECECE7;
+  --color-neutral-200: #DCDCD5;
+  --color-neutral-300: #C8C8BF;
+  --color-neutral-400: #9A9D8F;
+  --color-neutral-500: #7A7D72;
+  --color-neutral-600: #5B606B;
+  --color-neutral-700: #4A4F59;
+  --color-neutral-800: #2E3038;
+  --color-neutral-900: #16181D;
+  --color-neutral-950: #0B0C0F;
 
-  /* States (light) */
-  --color-success: #5a8a5f;
-  --color-success-bg: rgba(90, 138, 95, 0.12);
-  --color-success-fg: #41673f;
-  --color-warning: #b07a2b;
-  --color-warning-bg: rgba(176, 122, 43, 0.12);
-  --color-warning-fg: #875a1a;
-  --color-error: #a94a3c;
-  --color-error-bg: rgba(169, 74, 60, 0.12);
-  --color-error-fg: #8a3a2e;
-  --color-info: #4a7a93;
+  /* States — War Room 2.0 semaphore (light) */
+  --color-success: #17784F;
+  --color-success-bg: #E2F5EC;
+  --color-success-fg: #17784F;
+  --color-warning: #8A5A10;
+  --color-warning-bg: #FCF1DC;
+  --color-warning-fg: #8A5A10;
+  --color-error: #A3302A;
+  --color-error-bg: #FBE4E2;
+  --color-error-fg: #A3302A;
+  --color-info: #4A7A93;
   --color-info-bg: rgba(74, 122, 147, 0.12);
   --color-info-fg: #355d72;
+
+  /* War Room 2.0 — Funnel blues (5 stops) */
+  --wr-funnel-1: #C9CEF3;
+  --wr-funnel-2: #9AA5EA;
+  --wr-funnel-3: #6B79DD;
+  --wr-funnel-4: #4352C4;
+  --wr-funnel-5: #26318F;
+
+  /* War Room 2.0 — Nav/button tokens */
+  --wr-nav-bg: #16181D;
+  --wr-nav-fg: #FFFFFF;
+  --wr-nav-active: #D7F36A;
+  --wr-btn-dark-bg: #16181D;
+  --wr-btn-dark-fg: #FFFFFF;
+  --wr-section-label: #9A9D8F;
+
+  /* War Room 2.0 — Card tokens */
+  --wr-card-radius: 22px;
+  --wr-card-shadow: 0 1px 2px rgba(22, 24, 29, 0.05);
+  --wr-btn-radius: 999px;
+  --wr-btn-min-h: 44px;
+  --wr-nav-item-radius: 999px;
 
   /* Spacing (4-base) */
   --space-0: 0px;
@@ -263,40 +286,40 @@
    (lib/branding/css.ts), que só ganha consumidor com a tela de marca.
    ───────────────────────────────────────────────────────────────────────── */
 [data-theme="light"] {
-  --color-bg: #faf9f6;
-  --color-surface: #ffffff;
-  --color-surface-elevated: #f5f3ee;
-  --color-overlay: rgba(28, 26, 22, 0.42);
-  --color-text: #1c1a16;
-  --color-text-muted: #5d594f;
-  --color-text-subtle: #7d786c;
-  --color-border: #e7e3da;
-  --color-border-strong: #d2cdbf;
-  --color-accent: var(--color-accent-600);
-  --color-accent-fg: #ffffff;
+  --color-bg: #ECECE7;
+  --color-surface: #FFFFFF;
+  --color-surface-elevated: #F5F4F0;
+  --color-overlay: rgba(22, 24, 29, 0.42);
+  --color-text: #16181D;
+  --color-text-muted: #4A4F59;
+  --color-text-subtle: #5B606B;
+  --color-border: #DCDCD5;
+  --color-border-strong: #C8C8BF;
+  --color-accent: var(--color-accent-300);
+  --color-accent-fg: #16181D;
   --color-accent-soft: var(--color-accent-100);
-  --color-accent-hover: var(--color-accent-700);
-  --color-neutral-50: #faf9f6;
-  --color-neutral-100: #f3f1ec;
-  --color-neutral-200: #e7e3da;
-  --color-neutral-300: #d2cdbf;
-  --color-neutral-400: #a9a395;
-  --color-neutral-500: #7d786c;
-  --color-neutral-600: #5d594f;
-  --color-neutral-700: #46433b;
-  --color-neutral-800: #2e2c26;
-  --color-neutral-900: #1c1a16;
-  --color-neutral-950: #0e0d0a;
-  --color-success: #5a8a5f;
-  --color-success-bg: rgba(90, 138, 95, 0.12);
-  --color-success-fg: #41673f;
-  --color-warning: #b07a2b;
-  --color-warning-bg: rgba(176, 122, 43, 0.12);
-  --color-warning-fg: #875a1a;
-  --color-error: #a94a3c;
-  --color-error-bg: rgba(169, 74, 60, 0.12);
-  --color-error-fg: #8a3a2e;
-  --color-info: #4a7a93;
+  --color-accent-hover: var(--color-accent-400);
+  --color-neutral-50: #F5F5F2;
+  --color-neutral-100: #ECECE7;
+  --color-neutral-200: #DCDCD5;
+  --color-neutral-300: #C8C8BF;
+  --color-neutral-400: #9A9D8F;
+  --color-neutral-500: #7A7D72;
+  --color-neutral-600: #5B606B;
+  --color-neutral-700: #4A4F59;
+  --color-neutral-800: #2E3038;
+  --color-neutral-900: #16181D;
+  --color-neutral-950: #0B0C0F;
+  --color-success: #17784F;
+  --color-success-bg: #E2F5EC;
+  --color-success-fg: #17784F;
+  --color-warning: #8A5A10;
+  --color-warning-bg: #FCF1DC;
+  --color-warning-fg: #8A5A10;
+  --color-error: #A3302A;
+  --color-error-bg: #FBE4E2;
+  --color-error-fg: #A3302A;
+  --color-info: #4A7A93;
   --color-info-bg: rgba(74, 122, 147, 0.12);
   --color-info-fg: #355d72;
   --shadow-xs: 0 1px 2px 0 rgba(20, 18, 14, 0.04);
@@ -340,64 +363,64 @@
 }
 
 [data-theme="dark"] {
-  /* Surfaces (dark — drawn) */
-  --color-bg: #161510;
-  --color-surface: #1d1c17;
-  --color-surface-elevated: #272620;
+  /* Surfaces (dark — War Room 2.0) */
+  --color-bg: #0F1014;
+  --color-surface: #16181D;
+  --color-surface-elevated: #1E2028;
   --color-overlay: rgba(0, 0, 0, 0.55);
 
   /* Text (dark) */
-  --color-text: #f5f4ef;
-  --color-text-muted: #8e8b7f;
-  --color-text-subtle: #605e54;
+  --color-text: #F0F0EC;
+  --color-text-muted: #9A9D8F;
+  --color-text-subtle: #6B6E63;
 
   /* Borders (dark) */
-  --color-border: #33312a;
-  --color-border-strong: #444239;
+  --color-border: #2A2C34;
+  --color-border-strong: #3A3C44;
 
-  /* Accent stays same hex stops; default shifts up for dark contrast */
-  --color-accent-50: #f3f6f1;
-  --color-accent-100: #e4ebe0;
-  --color-accent-200: #c8d6c1;
-  --color-accent-300: #a4ba9a;
-  --color-accent-400: #82a077;
-  --color-accent-500: #67885d;
-  --color-accent-600: #506d48;
-  --color-accent-700: #41573b;
-  --color-accent-800: #374731;
-  --color-accent-900: #2f3c2b;
-  --color-accent-950: #171f15;
-  --color-accent: var(--color-accent-400);
-  --color-accent-fg: #161510;
-  --color-accent-soft: rgba(130, 160, 119, 0.16);
-  --color-accent-hover: var(--color-accent-300);
+  /* Accent — Lime (dark: shifts for contrast) */
+  --color-accent-50: #F8FDE6;
+  --color-accent-100: #F0FBCC;
+  --color-accent-200: #E5F89E;
+  --color-accent-300: #D7F36A;
+  --color-accent-400: #C4E64A;
+  --color-accent-500: #A8CC2E;
+  --color-accent-600: #8AB31E;
+  --color-accent-700: #6E9316;
+  --color-accent-800: #577510;
+  --color-accent-900: #43590D;
+  --color-accent-950: #2A3808;
+  --color-accent: var(--color-accent-300);
+  --color-accent-fg: #0F1014;
+  --color-accent-soft: rgba(215, 243, 106, 0.14);
+  --color-accent-hover: var(--color-accent-200);
 
-  /* Neutrals — greige (11 stops, dark) */
-  --color-neutral-50: #f5f4ef;
-  --color-neutral-100: #e6e4dc;
-  --color-neutral-200: #bbb8ac;
-  --color-neutral-300: #8e8b7f;
-  --color-neutral-400: #605e54;
-  --color-neutral-500: #444239;
-  --color-neutral-600: #33312a;
-  --color-neutral-700: #272620;
-  --color-neutral-800: #1d1c17;
-  --color-neutral-900: #161510;
-  --color-neutral-950: #0c0b08;
+  /* Neutrals — dark stone (11 stops, dark) */
+  --color-neutral-50: #F0F0EC;
+  --color-neutral-100: #D5D5CE;
+  --color-neutral-200: #ABABAA;
+  --color-neutral-300: #9A9D8F;
+  --color-neutral-400: #6B6E63;
+  --color-neutral-500: #3A3C44;
+  --color-neutral-600: #2A2C34;
+  --color-neutral-700: #1E2028;
+  --color-neutral-800: #16181D;
+  --color-neutral-900: #0F1014;
+  --color-neutral-950: #080809;
 
-  /* States (dark) */
-  --color-success: #82a077;
-  --color-success-bg: rgba(130, 160, 119, 0.18);
-  --color-success-fg: #a4ba9a;
-  --color-warning: #d09455;
-  --color-warning-bg: rgba(208, 148, 85, 0.18);
-  --color-warning-fg: #e0ad77;
-  --color-error: #c87263;
-  --color-error-bg: rgba(200, 114, 99, 0.18);
-  --color-error-fg: #d99182;
-  --color-info: #7da9bf;
+  /* States (dark — War Room 2.0) */
+  --color-success: #5EC394;
+  --color-success-bg: rgba(94, 195, 148, 0.16);
+  --color-success-fg: #7AD4AB;
+  --color-warning: #D9A44B;
+  --color-warning-bg: rgba(217, 164, 75, 0.16);
+  --color-warning-fg: #E4B96E;
+  --color-error: #D26A63;
+  --color-error-bg: rgba(210, 106, 99, 0.16);
+  --color-error-fg: #E08A84;
+  --color-info: #7DA9BF;
   --color-info-bg: rgba(125, 169, 191, 0.18);
-  --color-info-fg: #9bbfd2;
+  --color-info-fg: #9BBFD2;
 
   /* Shadows — heavier in dark */
   --shadow-xs: 0 1px 2px 0 rgba(0, 0, 0, 0.3);
@@ -405,6 +428,11 @@
   --shadow-md: 0 4px 12px -2px rgba(0, 0, 0, 0.45), 0 2px 4px -1px rgba(0, 0, 0, 0.3);
   --shadow-lg: 0 12px 32px -6px rgba(0, 0, 0, 0.55), 0 4px 12px -2px rgba(0, 0, 0, 0.4);
   --shadow-xl: 0 24px 48px -12px rgba(0, 0, 0, 0.65), 0 8px 16px -4px rgba(0, 0, 0, 0.5);
+
+  /* War Room 2.0 — dark mode overrides */
+  --wr-nav-bg: #0F1014;
+  --wr-nav-fg: #F0F0EC;
+  --wr-card-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
 
   /* shadcn-compat aliases */
   --background: var(--color-bg);
@@ -476,7 +504,7 @@
   --color-text-muted: var(--color-text-muted);
   --color-text-subtle: var(--color-text-subtle);
 
-  /* Accent — Sage */
+  /* Accent — Lime (War Room 2.0) */
   --color-accent: var(--color-accent);
   --color-accent-foreground: var(--color-accent-fg);
   --color-accent-soft: var(--color-accent-soft);
@@ -493,7 +521,7 @@
   --color-accent-900: var(--color-accent-900);
   --color-accent-950: var(--color-accent-950);
 
-  /* Neutrals — greige */
+  /* Neutrals — stone-grey (War Room 2.0) */
   --color-neutral-50: var(--color-neutral-50);
   --color-neutral-100: var(--color-neutral-100);
   --color-neutral-200: var(--color-neutral-200);
@@ -544,9 +572,11 @@
   --color-card: var(--color-surface);
   --color-card-foreground: var(--color-text);
 
-  /* Tipografia */
+  /* Tipografia — War Room 2.0: Figtree (body) + Urbanist (headings) */
   --font-sans:
-    var(--font-atkinson), ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    var(--font-figtree), var(--font-atkinson), ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-heading:
+    var(--font-urbanist), var(--font-figtree), ui-sans-serif, system-ui, sans-serif;
   --font-mono: var(--font-mono), ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
 
   /* Espaçamento. Os valores são px LITERAIS (`--space-6` = 24px), não rem — e
@@ -592,6 +622,17 @@
   --ease-in-out: var(--ease-in-out);
   --ease-out-slow: var(--ease-out-slow);
   --ease-spring: var(--ease-spring);
+
+  /* War Room 2.0 — tokens para Tailwind */
+  --color-wr-funnel-1: var(--wr-funnel-1);
+  --color-wr-funnel-2: var(--wr-funnel-2);
+  --color-wr-funnel-3: var(--wr-funnel-3);
+  --color-wr-funnel-4: var(--wr-funnel-4);
+  --color-wr-funnel-5: var(--wr-funnel-5);
+  --color-wr-nav-bg: var(--wr-nav-bg);
+  --color-wr-nav-fg: var(--wr-nav-fg);
+  --color-wr-nav-active: var(--wr-nav-active);
+  --color-wr-section-label: var(--wr-section-label);
 }
 
 /* `duration-*` não tem espaço de tema no v4 (o `transitionDuration` do v3 não
@@ -607,6 +648,52 @@
 }
 @utility duration-spring {
   transition-duration: var(--duration-spring);
+}
+
+/* ---- War Room 2.0 — utilitários de componente ------------------------------ */
+@utility wr-card {
+  background: var(--color-surface);
+  border-radius: var(--wr-card-radius);
+  box-shadow: var(--wr-card-shadow);
+}
+@utility wr-btn {
+  min-height: var(--wr-btn-min-h);
+  border-radius: var(--wr-btn-radius);
+  border: 1px solid var(--color-border);
+  font-family: var(--font-sans);
+  font-weight: 600;
+  font-size: 14px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 16px;
+}
+@utility wr-btn-dark {
+  min-height: var(--wr-btn-min-h);
+  border-radius: var(--wr-btn-radius);
+  background: var(--wr-btn-dark-bg);
+  color: var(--wr-btn-dark-fg);
+  border: none;
+  font-family: var(--font-sans);
+  font-weight: 600;
+  font-size: 14px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 20px;
+}
+@utility wr-section-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--wr-section-label);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 18px 14px 6px;
+}
+@utility font-heading {
+  font-family: var(--font-heading);
 }
 
 /* ---- Área segura do rodapé (notch e indicador de home) --------------------
@@ -679,6 +766,11 @@
 }
 
 @layer base {
+  /* ---- War Room 2.0 — headings usam Urbanist ----------------------------- */
+  h1, h2, h3, h4, h5, h6 {
+    font-family: var(--font-heading);
+  }
+
   /* O preflight do v4 não pinta mais borda por padrão (`border: 0 solid`, cor
      = `currentColor`), então os ~300 `class="border"` sem cor desta base
      dependem inteiramente desta regra. Ela já existia no v3 pelo mesmo motivo;

@@ -89,9 +89,9 @@ export interface NavMetadata {
  * diretamente no sidebar quando `sidebar: true`.
  */
 export const NAV_GROUPS: NavGroup[] = [
-  { id: "comando", label: "Comando", hub: { href: "/app/politico", label: "War Room" } },
-  { id: "monitoramento", label: "Monitoramento" },
-  { id: "execucao", label: "Execução" },
+  { id: "comando", label: "Comando" },
+  { id: "monitoramento", label: "Estratégia" },
+  { id: "execucao", label: "Estratégia" },
   { id: "territorio", label: "Território" },
   { id: "operacao", label: "Operação", hub: { href: "/app/crm", label: "Ver tudo em Operação" } },
   { id: "gabinete", label: "Gabinete" },
@@ -832,11 +832,38 @@ export const NAV_CATALOG = [
   // War Room v2 — pol_leads é extensão de contacts; o verbo é mobilizar.
   // Cada seção política agora é seu próprio NavGroup no sidebar.
 
-  // ── Comando — o hub do War Room ────────────────────────────────────
+  // ═══════════════════════════════════════════════════════════════════
+  // War Room 2.0 — sidebar unificado (~10 itens visíveis)
+  //
+  // Sidebar (design):
+  //   • Hoje (hub)
+  //   • Pessoas
+  //   • ── ESTRATÉGIA ──
+  //   • Alertas
+  //   • Adversários
+  //   • Motor Viral
+  //   • ── TERRITÓRIO ──
+  //   • Mapa Eleitoral
+  //   • ── GABINETE ──
+  //   • Demandas
+  //   • Lideranças
+  //   • ── footer ──
+  //   • Configurações
+  //
+  // Items SEM `sidebar: true` vivem em sub-tabs das telas visíveis:
+  //   - Funil Eleitoral → tab em Pessoas
+  //   - Raio-X de Votos → tab em Mapa Eleitoral
+  //   - Projetos de Lei + Emendas → tabs em Gabinete (Demandas)
+  //   - Ligações/Eventos/Pesquisas → tabs em Pessoas/Ficha
+  //   - Decision Engine → alimenta Prioridades na Home
+  //   - Funil Invisível → lógica interna
+  // ═══════════════════════════════════════════════════════════════════
+
+  // ── Comando — Hoje ────────────────────────────────────────────────
   {
     href: "/app/politico",
-    label: "War Room",
-    description: "Central de comando — visão geral da campanha com KPIs, alertas e atalhos.",
+    label: "Hoje",
+    description: "Central de comando — prioridades, KPIs, funil e ativação semanal.",
     icon: "Flag",
     group: "comando",
     section: "Comando",
@@ -844,88 +871,16 @@ export const NAV_CATALOG = [
     sidebar: true,
   },
 
-  // ── Monitoramento ──────────────────────────────────────────────────
-  {
-    href: "/app/politico/social",
-    label: "Inteligência Social",
-    description: "Perfis monitorados, snapshots de métricas e posts coletados das redes sociais.",
-    icon: "Users",
-    group: "monitoramento",
-    minRole: "manager",
-  },
-  {
-    href: "/app/politico/adversarios",
-    label: "Adversários",
-    description: "Dossiê de oponentes — risco, ameaça, sinais de alerta e análise de narrativa.",
-    icon: "ShieldCheck",
-    group: "monitoramento",
-    minRole: "manager",
-  },
-  {
-    href: "/app/politico/alertas",
-    label: "Alertas & Risco",
-    description: "Sistema unificado de alertas — sentimento, crise, fake news e adversários.",
-    icon: "Bell",
-    group: "monitoramento",
-    minRole: "manager",
-    sidebar: true,
-  },
-  {
-    href: "/app/politico/decisao",
-    label: "Decision Engine",
-    description: "Motor de decisão com sinais estratégicos, oportunidades e ações recomendadas por IA.",
-    icon: "Brain",
-    group: "monitoramento",
-    minRole: "manager",
-  },
-
-  // ── Execução ───────────────────────────────────────────────────────
-  {
-    href: "/app/politico/motor-viral",
-    label: "Motor Viral",
-    description: "Geração de conteúdo por IA — scripts de vídeo, captions e roteiros com scoring viral.",
-    icon: "Lightbulb",
-    group: "execucao",
-    minRole: "manager",
-    sidebar: true,
-  },
-  {
-    href: "/app/politico/funil-invisivel",
-    label: "Funil Invisível",
-    description: "Nurturing automático com scoring de afinidade e rastreamento de engajamento.",
-    icon: "Funnel",
-    group: "execucao",
-    minRole: "manager",
-  },
-
-  // ── Território ─────────────────────────────────────────────────────
-  {
-    href: "/app/politico/mapa-eleitoral",
-    label: "Mapa & Cidades",
-    description: "Mapa interativo com territórios, oportunidades, rankings de cidades e prioridades.",
-    icon: "Signpost",
-    group: "territorio",
-    minRole: "manager",
-    sidebar: true,
-  },
-  {
-    href: "/app/politico/raio-x",
-    label: "Raio-X de Votos",
-    description: "Análise eleitoral por seção — consulta TSE, evolução histórica e ações territoriais.",
-    icon: "ChartBar",
-    group: "territorio",
-    minRole: "manager",
-  },
-
-  // ── Operação (pol) ─────────────────────────────────────────────────
+  // ── Comando — Pessoas (sidebar, junto com Hoje no topo sem header) ──
   {
     href: "/app/politico/leads",
-    label: "Base de Leads",
-    description: "Contatos com dados eleitorais, nível de apoio, temperatura e mobilizador responsável.",
+    label: "Pessoas",
+    description: "Base de apoiadores com dados eleitorais, kanban/tabela, funil eleitoral e filtros.",
     icon: "UsersThree",
-    group: "operacao",
-    section: "Campanha",
+    group: "comando",
+    section: "Comando",
     minRole: "manager",
+    sidebar: true,
   },
   {
     href: "/app/politico/funil",
@@ -935,6 +890,7 @@ export const NAV_CATALOG = [
     group: "operacao",
     section: "Campanha",
     minRole: "manager",
+    // Sub-tab de Pessoas, NÃO no sidebar
   },
   {
     href: "/app/politico/ligacoes",
@@ -964,7 +920,87 @@ export const NAV_CATALOG = [
     minRole: "manager",
   },
 
-  // ── Gabinete ───────────────────────────────────────────────────────
+  // ── Estratégia — Monitoramento (3 no sidebar) ─────────────────────
+  {
+    href: "/app/politico/alertas",
+    label: "Alertas",
+    description: "Sistema unificado de alertas — sentimento, crise, fake news e adversários.",
+    icon: "Bell",
+    group: "monitoramento",
+    minRole: "manager",
+    sidebar: true,
+  },
+  {
+    href: "/app/politico/adversarios",
+    label: "Adversários",
+    description: "Dossiê de oponentes — risco, ameaça, sinais de alerta e análise de narrativa.",
+    icon: "ShieldCheck",
+    group: "monitoramento",
+    minRole: "manager",
+    sidebar: true,
+  },
+  {
+    href: "/app/politico/social",
+    label: "Inteligência Social",
+    description: "Perfis monitorados, snapshots de métricas e posts coletados das redes sociais.",
+    icon: "Users",
+    group: "monitoramento",
+    minRole: "manager",
+    // Acessível via hub, não no sidebar direto
+  },
+  {
+    href: "/app/politico/decisao",
+    label: "Decision Engine",
+    description: "Motor de decisão com sinais estratégicos, oportunidades e ações recomendadas por IA.",
+    icon: "Brain",
+    group: "monitoramento",
+    minRole: "manager",
+    // Alimenta Prioridades na tela Hoje — sem UI própria no sidebar
+  },
+
+  // ── Estratégia — Motor Viral (sidebar, junto com Alertas e Adversários) ──
+  {
+    href: "/app/politico/motor-viral",
+    label: "Motor Viral",
+    description: "Geração de conteúdo por IA — scripts de vídeo, captions e roteiros com scoring viral.",
+    icon: "Lightbulb",
+    group: "monitoramento",
+    minRole: "manager",
+    sidebar: true,
+  },
+
+  // ── Execução (itens internos, sem sidebar) ─────────────────────────
+  {
+    href: "/app/politico/funil-invisivel",
+    label: "Funil Invisível",
+    description: "Nurturing automático com scoring de afinidade e rastreamento de engajamento.",
+    icon: "Funnel",
+    group: "execucao",
+    minRole: "manager",
+    // Lógica interna, sem tela no sidebar
+  },
+
+  // ── Território — Mapa Eleitoral (sidebar) ─────────────────────────
+  {
+    href: "/app/politico/mapa-eleitoral",
+    label: "Mapa Eleitoral",
+    description: "Mapa interativo com territórios, rankings, evolução e ações territoriais.",
+    icon: "Signpost",
+    group: "territorio",
+    minRole: "manager",
+    sidebar: true,
+  },
+  {
+    href: "/app/politico/raio-x",
+    label: "Raio-X de Votos",
+    description: "Análise eleitoral por seção — consulta TSE, evolução histórica e ações territoriais.",
+    icon: "ChartBar",
+    group: "territorio",
+    minRole: "manager",
+    // Sub-tab do Mapa Eleitoral
+  },
+
+  // ── Gabinete — Demandas + Lideranças (sidebar) ────────────────────
   {
     href: "/app/politico/demandas",
     label: "Demandas",
@@ -981,6 +1017,7 @@ export const NAV_CATALOG = [
     icon: "UsersThree",
     group: "gabinete",
     minRole: "manager",
+    sidebar: true,
   },
   {
     href: "/app/politico/projetos-lei",
@@ -989,6 +1026,7 @@ export const NAV_CATALOG = [
     icon: "FileText",
     group: "gabinete",
     minRole: "manager",
+    // Sub-tab do Gabinete
   },
   {
     href: "/app/politico/emendas",
@@ -997,6 +1035,7 @@ export const NAV_CATALOG = [
     icon: "Receipt",
     group: "gabinete",
     minRole: "manager",
+    // Sub-tab do Gabinete
   },
 
   // ---- Análise — olhar o sistema funcionando ----

@@ -1,5 +1,5 @@
 /**
- * /app/instagram — Hub do canal Instagram
+ * /app/instagram — Hub do canal Instagram (War Room 2.0)
  *
  * Ponto de entrada do motor ManyChat próprio do GIP War Room 2.0.
  * Apresenta atalhos para: Automações, Tokens de Webhook, Etiquetas e
@@ -14,7 +14,7 @@ import { createServerClient } from "@/lib/supabase/server";
 import { getUser } from "@/lib/auth/get-user";
 import { resolverOrganizacaoAtiva } from "@/lib/organizations/resolver";
 
-// ── Tipos ──────────────────────────────────────────────────────────────────────
+// ── Tipos ────────────────────────────────────────────────────────────────────
 
 interface MetricasCanal {
   flowsAtivos: number;
@@ -23,7 +23,7 @@ interface MetricasCanal {
   tokensAtivos: number;
 }
 
-// ── Data fetching ──────────────────────────────────────────────────────────────
+// ── Data fetching ────────────────────────────────────────────────────────────
 
 async function buscarMetricas(organizationId: string): Promise<MetricasCanal> {
   const db = createServerClient();
@@ -66,7 +66,84 @@ async function buscarMetricas(organizationId: string): Promise<MetricasCanal> {
   };
 }
 
-// ── Componente ─────────────────────────────────────────────────────────────────
+// ── Sub-componentes ──────────────────────────────────────────────────────────
+
+function KpiCard({
+  label,
+  value,
+  accent,
+}: {
+  label: string;
+  value: number;
+  accent?: { bg: string; color: string };
+}) {
+  return (
+    <div
+      className="flex-1 min-w-[120px] rounded-[20px] p-4"
+      style={{
+        background: accent?.bg ?? "#FFFFFF",
+        boxShadow: "var(--wr-card-shadow)",
+      }}
+    >
+      <div className="text-[13px] font-medium" style={{ color: accent?.color ?? "#4A4F59" }}>
+        {label}
+      </div>
+      <div
+        className="font-heading text-[28px] font-bold mt-0.5 tabular-nums"
+        style={{ color: accent?.color ?? "var(--color-text)" }}
+      >
+        {value.toLocaleString("pt-BR")}
+      </div>
+    </div>
+  );
+}
+
+function SecaoCard({
+  href,
+  titulo,
+  descricao,
+  badge,
+}: {
+  href: string;
+  titulo: string;
+  descricao: string;
+  badge: string | null;
+}) {
+  return (
+    <Link
+      href={href}
+      className="group wr-card p-5 flex flex-col gap-3 transition-all hover:shadow-md"
+    >
+      <div className="flex items-center justify-between">
+        <h2
+          className="font-heading text-[18px] font-bold transition-colors"
+          style={{ color: "#16181D" }}
+        >
+          {titulo}
+        </h2>
+        {badge && (
+          <span
+            className="rounded-full px-2.5 py-0.5 text-xs font-semibold"
+            style={{ background: "#D7F36A", color: "#2E3410" }}
+          >
+            {badge}
+          </span>
+        )}
+      </div>
+      <p className="text-sm leading-snug" style={{ color: "#5B606B" }}>
+        {descricao}
+      </p>
+      <span
+        className="text-sm font-semibold mt-auto group-hover:translate-x-0.5 transition-transform"
+        style={{ color: "#4352C4" }}
+      >
+        Acessar →
+      </span>
+    </Link>
+  );
+}
+
+// ── Componente principal ─────────────────────────────────────────────────────
 
 export default async function InstagramHubPage() {
   const user = await getUser();
@@ -83,119 +160,93 @@ export default async function InstagramHubPage() {
       titulo: "Automações",
       descricao:
         "Crie flows para responder comentários e enviar DMs automaticamente — como o ManyChat, mas seu.",
-      icone: "⚡",
-      badge: metricas.flowsAtivos > 0 ? `${metricas.flowsAtivos} ativo${metricas.flowsAtivos !== 1 ? "s" : ""}` : null,
+      badge:
+        metricas.flowsAtivos > 0
+          ? `${metricas.flowsAtivos} ativo${metricas.flowsAtivos !== 1 ? "s" : ""}`
+          : null,
     },
     {
       href: "/app/instagram/webhooks",
       titulo: "Tokens de Webhook",
       descricao:
         "Gere e gerencie os tokens de URL que conectam seu Instagram Business ao sistema via Graph API.",
-      icone: "🔗",
-      badge: metricas.tokensAtivos > 0 ? `${metricas.tokensAtivos} token${metricas.tokensAtivos !== 1 ? "s" : ""}` : null,
+      badge:
+        metricas.tokensAtivos > 0
+          ? `${metricas.tokensAtivos} token${metricas.tokensAtivos !== 1 ? "s" : ""}`
+          : null,
     },
     {
       href: "/app/instagram/etiquetas",
       titulo: "Etiquetas",
       descricao:
         "Gerencie as etiquetas que as automações aplicam automaticamente nos contatos ao comentar.",
-      icone: "🏷️",
       badge: null,
     },
   ];
 
   return (
-    <div className="mx-auto max-w-4xl px-4 py-8 space-y-8">
-      {/* Cabeçalho */}
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight">Instagram</h1>
-        <p className="mt-1 text-sm text-muted-foreground">
+    <div className="mx-auto max-w-[1140px] px-4 py-7 space-y-[18px]">
+      {/* ── Header card ─────────────────────────────────────────── */}
+      <header className="wr-card p-6 sm:p-7">
+        <h1 className="font-heading text-[36px] font-bold leading-tight">Instagram</h1>
+        <p className="mt-1.5 text-base" style={{ color: "#4A4F59" }}>
           Motor ManyChat próprio — responda comentários e envie DMs automaticamente.
         </p>
-      </div>
+      </header>
 
-      {/* Métricas do dia */}
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-        <MetricaCard
-          label="Flows ativos"
-          valor={metricas.flowsAtivos}
-          icone="⚡"
-        />
-        <MetricaCard
+      {/* ── KPI cards ───────────────────────────────────────────── */}
+      <section aria-label="Métricas do dia" className="flex flex-wrap gap-3">
+        <KpiCard label="Flows ativos" value={metricas.flowsAtivos} />
+        <KpiCard
           label="Comentários hoje"
-          valor={metricas.comentariosHoje}
-          icone="💬"
+          value={metricas.comentariosHoje}
+          accent={metricas.comentariosHoje > 0 ? { bg: "#E2F5EC", color: "#17784F" } : undefined}
         />
-        <MetricaCard
+        <KpiCard
           label="DMs enviadas hoje"
-          valor={metricas.dmsEnviadasHoje}
-          icone="📨"
+          value={metricas.dmsEnviadasHoje}
+          accent={metricas.dmsEnviadasHoje > 0 ? { bg: "#E4E7F8", color: "#2F3DA8" } : undefined}
         />
-        <MetricaCard
-          label="Tokens ativos"
-          valor={metricas.tokensAtivos}
-          icone="🔗"
-        />
-      </div>
+        <KpiCard label="Tokens ativos" value={metricas.tokensAtivos} />
+      </section>
 
-      {/* Seções */}
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+      {/* ── Seções ──────────────────────────────────────────────── */}
+      <section aria-label="Módulos" className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {secoes.map((secao) => (
-          <Link
-            key={secao.href}
-            href={secao.href}
-            className="group relative flex flex-col gap-3 rounded-xl border bg-card p-5 transition-colors hover:bg-accent/30"
-          >
-            <div className="flex items-center justify-between">
-              <span className="text-2xl">{secao.icone}</span>
-              {secao.badge && (
-                <span className="rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">
-                  {secao.badge}
-                </span>
-              )}
-            </div>
-            <div>
-              <h2 className="font-semibold group-hover:text-primary transition-colors">
-                {secao.titulo}
-              </h2>
-              <p className="mt-1 text-sm text-muted-foreground leading-snug">
-                {secao.descricao}
-              </p>
-            </div>
-          </Link>
+          <SecaoCard key={secao.href} {...secao} />
         ))}
-      </div>
+      </section>
 
-      {/* Instrução de configuração — aparece quando não há tokens */}
+      {/* ── Instrução de setup ──────────────────────────────────── */}
       {metricas.tokensAtivos === 0 && (
-        <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-200">
-          <strong>Para começar:</strong> gere um token de webhook em{" "}
-          <Link href="/app/instagram/webhooks" className="font-medium underline underline-offset-4">
-            Tokens de Webhook
-          </Link>{" "}
-          e configure-o no seu App Meta (Instagram Business).
+        <div
+          className="wr-card p-5 flex flex-wrap items-start gap-3"
+          style={{ background: "#FCF1DC" }}
+        >
+          <span
+            className="inline-flex items-center justify-center w-7 h-7 rounded-full text-sm font-bold shrink-0"
+            style={{ background: "#8A5A10", color: "#FFFFFF" }}
+          >
+            !
+          </span>
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-semibold" style={{ color: "#8A5A10" }}>
+              Para começar
+            </p>
+            <p className="text-sm mt-0.5" style={{ color: "#6B4A10" }}>
+              Gere um token de webhook em{" "}
+              <Link
+                href="/app/instagram/webhooks"
+                className="font-semibold underline underline-offset-4"
+                style={{ color: "#8A5A10" }}
+              >
+                Tokens de Webhook
+              </Link>{" "}
+              e configure-o no seu App Meta (Instagram Business).
+            </p>
+          </div>
         </div>
       )}
-    </div>
-  );
-}
-
-// ── Sub-componentes ────────────────────────────────────────────────────────────
-
-function MetricaCard({
-  label,
-  valor,
-  icone,
-}: {
-  label: string;
-  valor: number;
-  icone: string;
-}) {
-  return (
-    <div className="flex flex-col gap-1 rounded-lg border bg-card p-4">
-      <span className="text-lg">{icone}</span>
-      <span className="text-2xl font-bold tabular-nums">{valor}</span>
-      <span className="text-xs text-muted-foreground">{label}</span>
     </div>
   );
 }
