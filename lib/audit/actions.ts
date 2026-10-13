@@ -1123,6 +1123,17 @@ export const AUDIT_ACTIONS = [
   "ig_automation_flows.create",
   "ig_automation_flows.update",
   "ig_automation_flows.delete",
+
+  // Gabinete Digital — Lideranças, Projetos de Lei, Emendas (migration 0641, fase H do War Room).
+  "pol_liderancas.create",
+  "pol_liderancas.update",
+  "pol_liderancas.delete",
+  "pol_projetos_lei.create",
+  "pol_projetos_lei.update",
+  "pol_projetos_lei.delete",
+  "pol_emendas.create",
+  "pol_emendas.update",
+  "pol_emendas.delete",
 ] as const;
 
 /** Um código de auditoria. Derivado de `AUDIT_ACTIONS` — não redigite a lista. */
