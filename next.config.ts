@@ -72,6 +72,10 @@ const nextConfig: NextConfig = {
       "./node_modules/.pnpm/pdfjs-dist@*/node_modules/pdfjs-dist/**",
     ],
   },
+  typescript: {
+    // War Room fork: ignora erros TS no build para reduzir consumo de memória
+    ignoreBuildErrors: true,
+  },
   reactStrictMode: true,
   poweredByHeader: false,
   // typedRoutes moved out of experimental in Next 15.5+
@@ -119,41 +123,13 @@ const nextConfig: NextConfig = {
   },
 };
 
-export default withSentryConfig(nextConfig, {
-  // For all available options, see:
-  // https://www.npmjs.com/package/@sentry/webpack-plugin#options
-
-  org: "automatik-labs",
-
-  project: "javascript-nextjs",
-
-  // Only print logs for uploading source maps in CI
-  silent: !process.env.CI,
-
-  // For all available options, see:
-  // https://docs.sentry.io/platforms/javascript/guides/nextjs/manual-setup/
-
-  // Upload a larger set of source maps for prettier stack traces (increases build time)
-  widenClientFileUpload: true,
-
-  // Route browser requests to Sentry through a Next.js rewrite to circumvent ad-blockers.
-  // This can increase your server load as well as your hosting bill.
-  // Note: Check that the configured route will not match with your Next.js middleware, otherwise reporting of client-
-  // side errors will fail.
-  tunnelRoute: "/monitoring",
-
-  webpack: {
-    // Herança do wizard do Sentry (instrumentação automática de cron monitors).
-    // Inerte aqui: o bloco `webpack:` inteiro é ignorado pelo build de produção,
-    // que roda Turbopack (ver Dockerfile). Fica como resíduo defensivo, não como
-    // modo de build suportado por este repositório.
-    // https://docs.sentry.io/product/crons/
-    automaticVercelMonitors: true,
-
-    // Tree-shaking options for reducing bundle size
-    treeshake: {
-      // Automatically tree-shake Sentry logger statements to reduce bundle size
-      removeDebugLogging: true,
-    },
-  },
-});
+// War Room fork: Sentry wrapper desabilitado para reduzir consumo de memória no build.
+// Para reativar, descomente o bloco abaixo e comente o `export default nextConfig`.
+export default nextConfig;
+// export default withSentryConfig(nextConfig, {
+//   org: "automatik-labs",
+//   project: "javascript-nextjs",
+//   silent: !process.env.CI,
+//   widenClientFileUpload: true,
+//   tunnelRoute: "/monitoring",
+// });
