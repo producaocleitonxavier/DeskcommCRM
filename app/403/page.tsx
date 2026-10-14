@@ -6,6 +6,8 @@ import { IdiomaProvider } from "@/lib/i18n/IdiomaProvider";
 import { normalizarIdioma } from "@/lib/i18n/idiomas";
 import { traduzir } from "@/lib/i18n/dicionario";
 
+export const dynamic = "force-dynamic";
+
 export default async function ForbiddenPage() {
   // Rota fora da árvore de `app/app/layout.tsx` — sem o `IdiomaProvider` de lá, então
   // resolve o idioma direto, como `admin/forbidden/page.tsx`. Pode chegar aqui

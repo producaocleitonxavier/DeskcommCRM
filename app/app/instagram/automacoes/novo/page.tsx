@@ -13,6 +13,8 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 
+export const dynamic = "force-dynamic";
+
 // ── Tipos ──────────────────────────────────────────────────────────────────────
 
 type TriggerTipo =

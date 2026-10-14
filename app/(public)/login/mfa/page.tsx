@@ -5,6 +5,8 @@ import { MfaForm } from "@/components/auth/MfaForm";
 import { idiomaDoVisitante } from "@/lib/i18n/idiomaAnonimo";
 import { traduzir } from "@/lib/i18n/dicionario";
 
+export const dynamic = "force-dynamic";
+
 export const metadata = { title: "Verificação em duas etapas" };
 
 export default async function MfaChallengePage({

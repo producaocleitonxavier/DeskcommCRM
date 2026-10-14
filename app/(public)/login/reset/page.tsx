@@ -3,6 +3,8 @@ import { createClient } from "@/lib/supabase/server";
 import { idiomaDoVisitante } from "@/lib/i18n/idiomaAnonimo";
 import { traduzir } from "@/lib/i18n/dicionario";
 
+export const dynamic = "force-dynamic";
+
 export const metadata = { title: "Nova senha" };
 
 export default async function ResetPasswordPage() {

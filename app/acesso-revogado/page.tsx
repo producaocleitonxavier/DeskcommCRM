@@ -6,6 +6,8 @@ import { normalizarIdioma } from "@/lib/i18n/idiomas";
 import { traduzir } from "@/lib/i18n/dicionario";
 import { signOut } from "@/app/actions/auth/signOut";
 
+export const dynamic = "force-dynamic";
+
 export const metadata = { title: "Acesso revogado" };
 
 /**

@@ -12,6 +12,8 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { requireAuth, resolveActiveOrg } from "@/lib/auth/server";
 
+export const dynamic = "force-dynamic";
+
 // -- Tipos -------------------------------------------------------------------
 
 interface Demanda {

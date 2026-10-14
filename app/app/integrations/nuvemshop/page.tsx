@@ -23,6 +23,8 @@ import { tagDeIdioma } from "@/lib/i18n/datas";
 import { normalizarIdioma } from "@/lib/i18n/idiomas";
 import { traduzir } from "@/lib/i18n/dicionario";
 
+export const dynamic = "force-dynamic";
+
 interface IntegrationRow {
   id: string;
   status: string;

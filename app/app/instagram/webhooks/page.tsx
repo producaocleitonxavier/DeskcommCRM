@@ -15,6 +15,8 @@
 import { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
 
+export const dynamic = "force-dynamic";
+
 // ── Tipos ──────────────────────────────────────────────────────────────────────
 
 interface WebhookToken {

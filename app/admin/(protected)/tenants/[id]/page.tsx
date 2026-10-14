@@ -10,6 +10,8 @@ import { createAdminClient } from "@/lib/supabase/admin";
 
 import { TenantOverviewClient } from "./_client";
 
+export const dynamic = "force-dynamic";
+
 interface TenantDetailPageProps {
   params: Promise<{ id: string }>;
 }

@@ -6,6 +6,8 @@ import { IdiomaProvider } from "@/lib/i18n/IdiomaProvider";
 import { normalizarIdioma } from "@/lib/i18n/idiomas";
 import { traduzir } from "@/lib/i18n/dicionario";
 
+export const dynamic = "force-dynamic";
+
 /**
  * `/500` — irmã de `/403` e `/503`, e faltava.
  *
