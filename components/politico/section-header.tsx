@@ -13,10 +13,12 @@ export interface SectionHeaderProps {
   title: string;
   subtitle?: string;
   action?: { label: string; href: string };
+  /** "accent" = pill lime (#D7F36A, texto dark); "default" = wr-btn com borda. */
+  actionTone?: "default" | "accent";
   className?: string;
 }
 
-export function SectionHeader({ title, subtitle, action, className }: SectionHeaderProps) {
+export function SectionHeader({ title, subtitle, action, actionTone = "default", className }: SectionHeaderProps) {
   return (
     <div className={cn("flex flex-wrap items-end justify-between gap-3", className)}>
       <div className="min-w-0">
@@ -24,11 +26,20 @@ export function SectionHeader({ title, subtitle, action, className }: SectionHea
         {subtitle && <p className="mt-0.5 text-sm text-muted-foreground">{subtitle}</p>}
       </div>
 
-      {action && (
-        <Link href={action.href} className="wr-btn shrink-0">
-          {action.label}
-        </Link>
-      )}
+      {action &&
+        (actionTone === "accent" ? (
+          <Link
+            href={action.href}
+            className="inline-flex min-h-[44px] shrink-0 items-center gap-1.5 rounded-full px-5 text-sm font-semibold"
+            style={{ background: "#D7F36A", color: "#16181D" }}
+          >
+            {action.label}
+          </Link>
+        ) : (
+          <Link href={action.href} className="wr-btn shrink-0">
+            {action.label}
+          </Link>
+        ))}
     </div>
   );
 }
