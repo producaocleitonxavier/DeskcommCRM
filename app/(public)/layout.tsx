@@ -48,11 +48,17 @@ export default async function PublicLayout({ children }: { children: React.React
   // parcial já criada (primeiro fator verificado, segundo pendente). Onde há
   // sessão, o idioma salvo no perfil vale; sem ela, `IdiomaProvider` já cai no
   // padrão pt-BR sozinho (ver o cabeçalho do provider) — nunca lança.
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  const locale = (user?.user_metadata?.locale as string | undefined) ?? null;
+  let locale: string | null = null;
+  try {
+    const supabase = await createClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    locale = (user?.user_metadata?.locale as string | undefined) ?? null;
+  } catch {
+    // Falha de rede ou Supabase fora do ar não pode derrubar a única tela
+    // por onde se entra — segue com o idioma padrão.
+  }
 
   return (
     <IdiomaProvider locale={locale}>

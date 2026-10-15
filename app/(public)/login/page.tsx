@@ -21,13 +21,17 @@ export default async function LoginPage({
   // servidor (o cliente já tem o seu, montado em `app/(public)/layout.tsx`).
   // Quase nunca há sessão aqui (é a própria tela de entrar), mas resolve do
   // mesmo jeito por segurança — `user` opcional.
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  const idioma = await idiomaDoVisitante(
-    (user?.user_metadata?.locale as string | undefined) ?? null,
-  );
+  let userLocale: string | null = null;
+  try {
+    const supabase = await createClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    userLocale = (user?.user_metadata?.locale as string | undefined) ?? null;
+  } catch {
+    // Falha de rede ou Supabase fora do ar não pode derrubar a tela de login.
+  }
+  const idioma = await idiomaDoVisitante(userLocale);
   const t = (texto: string) => traduzir(texto, idioma);
   const marca = await marcaDaSaida(null);
 
