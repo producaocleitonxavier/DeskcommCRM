@@ -18,24 +18,38 @@ export interface KpiCardProps {
   variacao?: number;
   /** Cor opcional do número (default: cor de texto padrão). */
   cor?: string;
+  /**
+   * "dark" = card com gradiente azul escuro e texto branco (para destacar um KPI,
+   * ex.: Votos Certos). "default" = card branco padrão.
+   */
+  variant?: "default" | "dark";
   className?: string;
 }
 
-export function KpiCard({ label, valor, icone: Icone, variacao, cor, className }: KpiCardProps) {
+export function KpiCard({ label, valor, icone: Icone, variacao, cor, variant = "default", className }: KpiCardProps) {
   const temVariacao = typeof variacao === "number" && Number.isFinite(variacao);
   const subiu = (variacao ?? 0) >= 0;
+  const escuro = variant === "dark";
 
   return (
-    <div className={cn("wr-card p-6", className)}>
+    <div
+      className={cn("wr-card p-6", className)}
+      style={escuro ? { background: "linear-gradient(135deg, #4352C4 0%, #26318F 100%)" } : undefined}
+    >
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <div
             className="font-heading text-3xl font-bold tabular-nums leading-none"
-            style={cor ? { color: cor } : undefined}
+            style={{ color: cor ?? (escuro ? "#FFFFFF" : undefined) }}
           >
             {valor.toLocaleString("pt-BR")}
           </div>
-          <div className="mt-2 text-sm text-muted-foreground">{label}</div>
+          <div
+            className={cn("mt-2 text-sm", !escuro && "text-muted-foreground")}
+            style={escuro ? { color: "rgba(255,255,255,0.78)" } : undefined}
+          >
+            {label}
+          </div>
 
           {temVariacao && (
             <span
@@ -54,10 +68,10 @@ export function KpiCard({ label, valor, icone: Icone, variacao, cor, className }
 
         <span
           className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full"
-          style={{ background: "var(--color-accent-50)" }}
+          style={{ background: escuro ? "rgba(255,255,255,0.15)" : "var(--color-accent-50)" }}
           aria-hidden
         >
-          <Icone className="h-5 w-5" style={{ color: "var(--color-accent-700)" }} />
+          <Icone className="h-5 w-5" style={{ color: escuro ? "#FFFFFF" : "var(--color-accent-700)" }} />
         </span>
       </div>
     </div>
