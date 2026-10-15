@@ -107,13 +107,16 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         .eq("id", activeOrg.orgId)
         .maybeSingle(),
       listarConexoesCaidas(admin, activeOrg.orgId),
-      isMfaEnrolled(),
+      // Falha aberta: MFA não cadastrado é o padrão seguro — instalação fresca
+      // não tem fator nenhum, e um throw aqui (sessão malformada, Supabase fora)
+      // derrubava o layout inteiro sem aparecer em log nenhum.
+      isMfaEnrolled().catch(() => false),
       requiresMfa(
         activeOrg.role,
         user.is_platform_admin,
         user.id,
         activeOrg.orgId,
-      ),
+      ).catch(() => false),
       // Da INSTALAÇÃO: decide se a porta de um módulo opcional entra no menu.
       modulosLigados(admin),
     ]);
@@ -249,8 +252,8 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     }
   } else {
     const [isEnrolled, mfaRequired] = await Promise.all([
-      isMfaEnrolled(),
-      requiresMfa(undefined, user.is_platform_admin, user.id, undefined),
+      isMfaEnrolled().catch(() => false),
+      requiresMfa(undefined, user.is_platform_admin, user.id, undefined).catch(() => false),
     ]);
     enrolled = isEnrolled;
     needsMfaGate = mfaRequired;
