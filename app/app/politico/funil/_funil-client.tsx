@@ -7,7 +7,7 @@
 
 import { ArrowRight, Clock, Target, TrendingUp } from "lucide-react";
 
-import { FunnelHero } from "@/components/politico/funnel-hero";
+import { FunnelBoard } from "@/components/politico/funnel-board";
 import { KpiCard } from "@/components/politico/kpi-card";
 import { SectionHeader } from "@/components/politico/section-header";
 import type { TransicaoRow } from "./page";
@@ -76,7 +76,7 @@ export default function FunilClient({
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-[2fr_1fr]">
         <section className="wr-card p-6 sm:p-7">
           <h2 className="mb-5 font-heading text-base font-bold">Distribuição por estágio</h2>
-          <FunnelHero data={heroData} />
+          <FunnelBoard data={heroData} showConversion={false} />
         </section>
 
         <section className="wr-card p-6 sm:p-7">
