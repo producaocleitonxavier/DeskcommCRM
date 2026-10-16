@@ -42,7 +42,7 @@ const TIPO_LABELS: Record<string, string> = {
 const STATUS_CFG: Record<string, { label: string; bg: string; fg: string }> = {
   ativo: { label: "Ativo", bg: "#E2F5EC", fg: "#17784F" },
   inativo: { label: "Inativo", bg: "#F0F0EB", fg: "#5B606B" },
-  em_negociacao: { label: "Em negociação", bg: "#FCF1DC", fg: "#8A5A10" },
+  suspenso: { label: "Suspenso", bg: "#FCF1DC", fg: "#8A5A10" },
 };
 
 const ENGAJAMENTO_CFG: Record<string, { label: string; bg: string; fg: string }> = {
