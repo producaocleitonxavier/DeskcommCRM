@@ -18,6 +18,8 @@ export interface KpiCardProps {
   variacao?: number;
   /** Cor opcional do número (default: cor de texto padrão). */
   cor?: string;
+  /** Sufixo pequeno após o número (ex.: "%", "dias"). */
+  sufixo?: string;
   /**
    * "dark" = card com gradiente azul escuro e texto branco (para destacar um KPI,
    * ex.: Votos Certos). "default" = card branco padrão.
@@ -26,7 +28,7 @@ export interface KpiCardProps {
   className?: string;
 }
 
-export function KpiCard({ label, valor, icone: Icone, variacao, cor, variant = "default", className }: KpiCardProps) {
+export function KpiCard({ label, valor, icone: Icone, variacao, cor, sufixo, variant = "default", className }: KpiCardProps) {
   const temVariacao = typeof variacao === "number" && Number.isFinite(variacao);
   const subiu = (variacao ?? 0) >= 0;
   const escuro = variant === "dark";
@@ -43,6 +45,7 @@ export function KpiCard({ label, valor, icone: Icone, variacao, cor, variant = "
             style={{ color: cor ?? (escuro ? "#FFFFFF" : undefined) }}
           >
             {valor.toLocaleString("pt-BR")}
+            {sufixo && <span className="ml-0.5 text-lg font-semibold">{sufixo}</span>}
           </div>
           <div
             className={cn("mt-2 text-sm", !escuro && "text-muted-foreground")}
