@@ -2,7 +2,9 @@
 
 /**
  * Mapa de calor de contatos por cidade (War Room 2.0). Bubble map sobre Leaflet
- * com tiles escuros gratuitos (CartoDB dark — sem API key, não quebra self-host).
+ * com tiles escuros Esri "World Dark Gray" — gratuitos, SEM API key e sem
+ * watermark (não quebra self-host). (A Carto passou a exigir chave e estampa
+ * "API KEY REQUIRED"; a Stadia exige key fora de localhost — por isso Esri.)
  *
  * - TAMANHO da bolha ∝ alcance (nº de contatos na cidade).
  * - COR da bolha = força (engajamento ponderado por nível de apoio), em escala
@@ -65,7 +67,12 @@ export default function MapaLeaflet({ pontos }: MapaLeafletProps) {
         attributionControl={false}
         style={{ height: "100%", width: "100%", background: "#0A0C10" }}
       >
-        <TileLayer url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png" />
+        {/* Base escura Esri (sem chave) + camada de rótulos sutil por cima. */}
+        <TileLayer url="https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}" />
+        <TileLayer
+          url="https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Reference/MapServer/tile/{z}/{y}/{x}"
+          opacity={0.55}
+        />
         {ordenados.map((p) => {
           const intensidade = lnMax > 0 ? Math.log(p.forca + 1) / lnMax : 0;
           const c = corForca(intensidade);
@@ -114,7 +121,7 @@ export default function MapaLeaflet({ pontos }: MapaLeafletProps) {
           </span>
         ))}
         <span className="mt-1 pt-1 text-[10px] opacity-70" style={{ borderTop: "1px solid rgba(255,255,255,0.1)" }}>
-          tamanho = nº de contatos
+          tamanho = nº de contatos · tiles © Esri
         </span>
       </div>
     </div>
