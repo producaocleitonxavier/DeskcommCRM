@@ -140,7 +140,10 @@ describe("hubSections", () => {
     // War Room v2: "crm" → "operacao". As seções CRM originais + as entradas
     // políticas de campanha convivem no mesmo grupo.
     const secoes = hubSections("operacao", true, null);
-    expect(secoes.map((s) => s.section)).toEqual(["O dia a dia da venda", "Preparar a venda", "Fechar a venda", "Campanha"]);
+    // War Room v2 (Prompt 6): a seção "Campanha" saiu de Operação — Funil,
+    // Ligações, Eventos e Pesquisas foram para os grupos políticos próprios
+    // (Comando/Engajamento) com `sidebar: true`.
+    expect(secoes.map((s) => s.section)).toEqual(["O dia a dia da venda", "Preparar a venda", "Fechar a venda"]);
     expect(secoes.flatMap((s) => s.items.map((i) => i.href))).toEqual([
       "/app/prospecting",
       "/app/kanban",

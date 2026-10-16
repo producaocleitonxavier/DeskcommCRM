@@ -42,6 +42,18 @@ import {
   UsersThree,
   InstagramLogo,
   WebhooksLogo,
+  // Módulo político — War Room 2.0 (Prompt 6)
+  GitBranch,
+  ShareNetwork,
+  Globe,
+  ChatsCircle,
+  Eye,
+  MapPin,
+  MagnifyingGlass,
+  Trophy,
+  Stack,
+  Crown,
+  CurrencyDollar,
 } from "@/lib/ui/icons";
 
 import {
@@ -99,6 +111,18 @@ const ICONS = {
   Users,
   UsersThree,
   WebhooksLogo,
+  // Módulo político — War Room 2.0 (Prompt 6)
+  GitBranch,
+  ShareNetwork,
+  Globe,
+  ChatsCircle,
+  Eye,
+  MapPin,
+  MagnifyingGlass,
+  Trophy,
+  Stack,
+  Crown,
+  CurrencyDollar,
 };
 export interface NavDestination extends Omit<NavMetadata, "icon"> {
   icon: PhosphorIcon;

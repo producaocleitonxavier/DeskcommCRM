@@ -153,4 +153,9 @@ export {
   ArrowsOutSimple,
   // /admin/modulos: módulo opcional com tabela própria (ADR-0002)
   Stack,
+  // Módulo político (War Room 2.0): Motor Viral, Rankings, Lideranças, Emendas.
+  ShareNetwork,
+  Trophy,
+  Crown,
+  CurrencyDollar,
 } from "@phosphor-icons/react/dist/ssr";

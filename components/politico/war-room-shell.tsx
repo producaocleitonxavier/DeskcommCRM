@@ -1,16 +1,20 @@
 /**
- * WarRoomShell — wrapper que aplica o tema escuro War Room 2.0
+ * WarRoomShell — escopa o tema "Sala de Guerra" (dark tático) ao módulo político.
  *
- * Funciona via classe CSS `.war-room` que sobrescreve TODAS as variáveis
- * de design token diretamente, sem depender de `data-theme` no `<html>`.
+ * As CORES vêm dos overrides da classe `.war-room` no globals.css, que redefine
+ * DIRETAMENTE os tokens que o Tailwind/shadcn lê (--background, --card, --border,
+ * --muted-foreground, …) e os primitivos (--color-*) com valores dark fixos — à
+ * prova do `@theme inline` e sem depender da cascata de `data-theme`.
  *
- * Isso contorna a limitação do Tailwind 4 onde `@theme inline` registra
- * variáveis no `:root` e `[data-theme="dark"]` num `<div>` filho não
- * consegue vencer a cascade.
+ * `data-theme="dark"` fica no PRÓPRIO wrapper (não no <html>, que pertence ao
+ * theme provider do app) só para ativar os utilitários `dark:` das páginas
+ * antigas; como é no div, não conflita com o provider nem afeta o resto do app.
+ * Puramente SSR: sem useEffect, sem flash.
  */
-export function WarRoomShell({ children }: { children: React.ReactNode }) {
+
+export default function WarRoomShell({ children }: { children: React.ReactNode }) {
   return (
-    <div className="war-room min-h-dvh">
+    <div className="war-room min-h-dvh" data-theme="dark">
       {children}
     </div>
   );

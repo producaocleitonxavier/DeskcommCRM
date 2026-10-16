@@ -11,6 +11,7 @@ import { redirect } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { requireAuth, resolveActiveOrg } from "@/lib/auth/server";
+import { SectionHeader } from "@/components/politico/section-header";
 
 export const dynamic = "force-dynamic";
 
@@ -116,38 +117,24 @@ export default async function RankingsPage({
   const { cidades, liderancas } = await buscarRankings(org.orgId, tab);
 
   return (
-    <div className="mx-auto max-w-6xl px-4 py-8 space-y-6">
-      {/* Voltar */}
-      <Link
-        href="/app/politico"
-        className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors"
-      >
-        &larr; War Room
-      </Link>
-
-      {/* Cabecalho */}
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight">Rankings</h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Ranking de cidades por desempenho e liderancas por mobilizacao.
-        </p>
-      </div>
+    <div className="mx-auto max-w-[1140px] px-4 py-7 space-y-6" style={{ background: "var(--color-bg)" }}>
+      <SectionHeader title="Rankings" subtitle="Cidades por desempenho e lideranças por mobilização." />
 
       {/* Tabs */}
       <div className="flex gap-2">
         <FilterLink href="/app/politico/rankings" label="Cidades" active={tab === "cidades"} />
-        <FilterLink href="/app/politico/rankings?tab=liderancas" label="Liderancas" active={tab === "liderancas"} />
+        <FilterLink href="/app/politico/rankings?tab=liderancas" label="Lideranças" active={tab === "liderancas"} />
       </div>
 
       {/* Tab: Cidades */}
       {tab === "cidades" && (
         <>
           {cidades.length === 0 ? (
-            <div className="rounded-xl border bg-card p-8 text-center text-sm text-muted-foreground">
+            <div className="wr-card p-8 text-center text-sm text-muted-foreground">
               Nenhuma cidade no ranking. Cadastre territorios do tipo cidade.
             </div>
           ) : (
-            <div className="rounded-xl border bg-card overflow-x-auto">
+            <div className="wr-card overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b text-left text-xs text-muted-foreground">
@@ -195,11 +182,11 @@ export default async function RankingsPage({
       {tab === "liderancas" && (
         <>
           {liderancas.length === 0 ? (
-            <div className="rounded-xl border bg-card p-8 text-center text-sm text-muted-foreground">
+            <div className="wr-card p-8 text-center text-sm text-muted-foreground">
               Nenhuma lideranca encontrada. Marque leads como lider potencial ou atribua papel comunitario.
             </div>
           ) : (
-            <div className="rounded-xl border bg-card overflow-x-auto">
+            <div className="wr-card overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b text-left text-xs text-muted-foreground">
@@ -260,11 +247,12 @@ function FilterLink({
   return (
     <Link
       href={href}
-      className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${
+      className="inline-flex items-center rounded-full border px-4 py-2 text-sm font-semibold transition-colors"
+      style={
         active
-          ? "bg-primary text-primary-foreground"
-          : "bg-secondary text-secondary-foreground hover:bg-secondary/80"
-      }`}
+          ? { background: "#16181D", color: "#FFFFFF", borderColor: "#16181D" }
+          : { background: "var(--color-surface)", color: "var(--color-text-muted)", borderColor: "var(--color-border)" }
+      }
     >
       {label}
     </Link>

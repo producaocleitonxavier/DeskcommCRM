@@ -363,20 +363,20 @@
 }
 
 [data-theme="dark"] {
-  /* Surfaces (dark — War Room 2.0) */
-  --color-bg: #0F1014;
-  --color-surface: #16181D;
-  --color-surface-elevated: #1E2028;
-  --color-overlay: rgba(0, 0, 0, 0.55);
+  /* Surfaces (dark — Sala de Guerra: preto profundo tático, Prompt 11) */
+  --color-bg: #0A0C10;
+  --color-surface: #12141A;
+  --color-surface-elevated: #1A1D25;
+  --color-overlay: rgba(0, 0, 0, 0.6);
 
   /* Text (dark) */
-  --color-text: #F0F0EC;
-  --color-text-muted: #9A9D8F;
-  --color-text-subtle: #6B6E63;
+  --color-text: #E8E8E4;
+  --color-text-muted: #9A9DA8;
+  --color-text-subtle: #6B7080;
 
   /* Borders (dark) */
-  --color-border: #2A2C34;
-  --color-border-strong: #3A3C44;
+  --color-border: #2A2D38;
+  --color-border-strong: #3A3E4A;
 
   /* Accent — Lime (dark: shifts for contrast) */
   --color-accent-50: #F8FDE6;
@@ -704,6 +704,264 @@
     color: #9A9D8F;
   }
 }
+@utility wr-textarea {
+  width: 100%;
+  border-radius: 12px;
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+  color: var(--color-text);
+  font-family: var(--font-sans);
+  font-size: 14px;
+  padding: 12px 16px;
+  outline: none;
+  resize: vertical;
+  transition: border-color 0.15s;
+  &:focus {
+    border-color: #26318F;
+    box-shadow: 0 0 0 2px rgba(38, 49, 143, 0.15);
+  }
+  &::placeholder {
+    color: #9A9D8F;
+  }
+}
+
+/* ---- Micro-interações War Room 2.0 (Prompt 10) --------------------------- */
+.wr-btn,
+.wr-btn-dark {
+  transition: transform 0.15s ease, filter 0.15s ease, background 0.15s ease, box-shadow 0.15s ease;
+}
+.wr-btn:hover,
+.wr-btn-dark:hover {
+  transform: scale(1.02);
+  filter: brightness(1.05);
+}
+.wr-hover {
+  transition: box-shadow 0.2s ease;
+}
+.wr-hover:hover {
+  box-shadow: 0 6px 20px rgba(22, 24, 29, 0.1);
+}
+.wr-skeleton {
+  background: var(--color-surface-elevated);
+  border-radius: 12px;
+  animation: wr-pulse 1.5s ease-in-out infinite;
+}
+.wr-dot-pulse {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  background: #ef4444;
+  animation: wr-pulse 1.2s ease-in-out infinite;
+}
+@keyframes wr-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.45; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .wr-btn:hover,
+  .wr-btn-dark:hover {
+    transform: none;
+  }
+  .wr-skeleton,
+  .wr-dot-pulse {
+    animation: none;
+  }
+}
+
+/* ---- Sala de Guerra — identidade tática dark (Prompt 11) ----------------- */
+/* .war-room sobrescreve DIRETAMENTE os tokens que o Tailwind/shadcn lê, com
+   valores dark fixos. Não depende da cascata de `data-theme` (o wrapper AINDA
+   carrega data-theme="dark" para os utilitários `dark:` das páginas antigas,
+   mas as cores do módulo valem por estes overrides, à prova de @theme inline).
+   Mesmo formato do :root (hex via var → aqui, hex direto). */
+.war-room {
+  color-scheme: dark;
+  --wr-glow: 0 0 30px rgba(215, 243, 106, 0.05);
+
+  /* Surfaces */
+  --color-bg: #0a0c10;
+  --color-surface: #12141a;
+  --color-surface-elevated: #1a1d25;
+  --color-overlay: rgba(0, 0, 0, 0.55);
+
+  /* Text */
+  --color-text: #e8e8e4;
+  --color-text-muted: #9a9da8;
+  --color-text-subtle: #6b7080;
+
+  /* Borders */
+  --color-border: #2a2d38;
+  --color-border-strong: #3a3e4a;
+
+  /* Accent — Lime (escala completa) */
+  --color-accent-50: #F8FDE6;
+  --color-accent-100: #F0FBCC;
+  --color-accent-200: #E5F89E;
+  --color-accent-300: #D7F36A;
+  --color-accent-400: #C4E64A;
+  --color-accent-500: #A8CC2E;
+  --color-accent-600: #8AB31E;
+  --color-accent-700: #6E9316;
+  --color-accent-800: #577510;
+  --color-accent-900: #43590D;
+  --color-accent-950: #2A3808;
+  --color-accent: #d7f36a;
+  --color-accent-fg: #0a0c10;
+  --color-accent-soft: rgba(215, 243, 106, 0.14);
+  --color-accent-hover: var(--color-accent-200);
+
+  /* Neutrals — dark stone */
+  --color-neutral-50: #e8e8e4;
+  --color-neutral-100: #D5D5CE;
+  --color-neutral-200: #ABABAA;
+  --color-neutral-300: #9a9da8;
+  --color-neutral-400: #6b7080;
+  --color-neutral-500: #3a3e4a;
+  --color-neutral-600: #2a2d38;
+  --color-neutral-700: #1a1d25;
+  --color-neutral-800: #12141a;
+  --color-neutral-900: #0a0c10;
+  --color-neutral-950: #060709;
+
+  /* States */
+  --color-success: #5EC394;
+  --color-success-bg: rgba(94, 195, 148, 0.16);
+  --color-success-fg: #7AD4AB;
+  --color-warning: #D9A44B;
+  --color-warning-bg: rgba(217, 164, 75, 0.16);
+  --color-warning-fg: #E4B96E;
+  --color-error: #D26A63;
+  --color-error-bg: rgba(210, 106, 99, 0.16);
+  --color-error-fg: #E08A84;
+  --color-info: #7DA9BF;
+  --color-info-bg: rgba(125, 169, 191, 0.18);
+  --color-info-fg: #9BBFD2;
+
+  /* Shadows */
+  --shadow-xs: 0 1px 2px 0 rgba(0, 0, 0, 0.3);
+  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.4), 0 1px 1px 0 rgba(0, 0, 0, 0.2);
+  --shadow-md: 0 4px 12px -2px rgba(0, 0, 0, 0.45), 0 2px 4px -1px rgba(0, 0, 0, 0.3);
+  --shadow-lg: 0 12px 32px -6px rgba(0, 0, 0, 0.55), 0 4px 12px -2px rgba(0, 0, 0, 0.4);
+  --shadow-xl: 0 24px 48px -12px rgba(0, 0, 0, 0.65), 0 8px 16px -4px rgba(0, 0, 0, 0.5);
+
+  /* War Room nav */
+  --wr-nav-bg: #0a0c10;
+  --wr-nav-fg: #e8e8e4;
+  --wr-card-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+
+  /* shadcn-compat aliases (TODOS — componentes shadcn leem estas) */
+  --background: #0a0c10;
+  --foreground: #e8e8e4;
+  --card: #12141a;
+  --card-foreground: #e8e8e4;
+  --popover: #12141a;
+  --popover-foreground: #e8e8e4;
+  --primary: #d7f36a;
+  --primary-foreground: #0a0c10;
+  --secondary: #1a1d25;
+  --secondary-foreground: #e8e8e4;
+  --muted: #1a1d25;
+  --muted-foreground: #9a9da8;
+  --accent: #1a1d25;
+  --accent-foreground: #e8e8e4;
+  --border: rgba(255, 255, 255, 0.08);
+  --input: rgba(255, 255, 255, 0.1);
+  --ring: #d7f36a;
+  --destructive: #ef4444;
+  --destructive-foreground: #ffffff;
+
+  /* Agenda */
+  --agenda-pessoa-1: #f89080;
+  --agenda-pessoa-2: #ca8931;
+  --agenda-pessoa-3: #d1bf55;
+  --agenda-pessoa-4: #0cafa8;
+  --agenda-pessoa-5: #4ccffb;
+  --agenda-pessoa-6: #6c97e7;
+  --agenda-pessoa-7: #be9ef6;
+  --agenda-pessoa-8: #cc77b1;
+
+  /* Fundo aplicado diretamente ao wrapper */
+  background-color: #0a0c10;
+  color: #e8e8e4;
+}
+.wr-card-dark {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--wr-card-radius);
+  box-shadow: var(--wr-glow, 0 0 30px rgba(215, 243, 106, 0.05));
+  transition: background 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+}
+.wr-card-dark:hover {
+  background: var(--color-surface-elevated);
+  border-color: rgba(215, 243, 106, 0.3);
+  box-shadow: 0 0 40px rgba(215, 243, 106, 0.08);
+}
+.wr-card-accent {
+  background: linear-gradient(135deg, #1a1d25, #12141a);
+  border: 1px solid rgba(215, 243, 106, 0.3);
+  border-radius: var(--wr-card-radius);
+  box-shadow: 0 0 60px rgba(215, 243, 106, 0.06);
+}
+.wr-kpi-value {
+  color: var(--color-accent);
+  font-family: var(--font-heading);
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  text-shadow: 0 0 20px rgba(215, 243, 106, 0.2);
+}
+.wr-btn-tactical {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  background: var(--color-accent);
+  color: #0a0c10;
+  font-weight: 700;
+  font-size: 14px;
+  border: none;
+  border-radius: 999px;
+  min-height: 44px;
+  padding: 0 24px;
+  cursor: pointer;
+  transition: background 0.2s, box-shadow 0.2s, transform 0.2s;
+}
+.wr-btn-tactical:hover {
+  background: #c5e454;
+  box-shadow: 0 0 20px rgba(215, 243, 106, 0.3);
+  transform: scale(1.02);
+}
+.wr-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: rgba(215, 243, 106, 0.1);
+  color: var(--color-accent);
+  border: 1px solid rgba(215, 243, 106, 0.2);
+  border-radius: 999px;
+  padding: 2px 12px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+.wr-section-tactical {
+  color: var(--color-accent);
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+}
+.wr-divider {
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--color-border), transparent);
+}
+@media (prefers-reduced-motion: reduce) {
+  .wr-btn-tactical:hover {
+    transform: none;
+  }
+}
+
 @utility wr-section-label {
   font-size: 11px;
   font-weight: 600;
@@ -1616,124 +1874,4 @@
   }
 }
 
-/* ─────────────────────────────────────────────────────────────────────────
-   War Room 2.0 — escopo por classe CSS (não depende de data-theme)
-
-   O theme provider do DeskcommCRM controla `data-theme` no `<html>`, e o
-   `@theme inline` do Tailwind 4 registra variáveis no `:root`. Por isso
-   `[data-theme="dark"]` num `<div>` filho NÃO funciona — a cascade do
-   `:root` vence.
-
-   A solução: `.war-room` sobrescreve TODAS as variáveis diretamente,
-   sem depender de `data-theme`. Como os utilitários Tailwind são `inline`
-   (`var(--color-bg)` etc.), eles resolvem no ponto da árvore DOM onde o
-   `.war-room` está — e pegam os valores escuros.
-   ───────────────────────────────────────────────────────────────────────── */
-.war-room {
-  color-scheme: dark;
-
-  /* Surfaces */
-  --color-bg: #0F1014;
-  --color-surface: #16181D;
-  --color-surface-elevated: #1E2028;
-  --color-overlay: rgba(0, 0, 0, 0.55);
-
-  /* Text */
-  --color-text: #F0F0EC;
-  --color-text-muted: #9A9D8F;
-  --color-text-subtle: #6B6E63;
-
-  /* Borders */
-  --color-border: #2A2C34;
-  --color-border-strong: #3A3C44;
-
-  /* Accent — Lime */
-  --color-accent-50: #F8FDE6;
-  --color-accent-100: #F0FBCC;
-  --color-accent-200: #E5F89E;
-  --color-accent-300: #D7F36A;
-  --color-accent-400: #C4E64A;
-  --color-accent-500: #A8CC2E;
-  --color-accent-600: #8AB31E;
-  --color-accent-700: #6E9316;
-  --color-accent-800: #577510;
-  --color-accent-900: #43590D;
-  --color-accent-950: #2A3808;
-  --color-accent: var(--color-accent-300);
-  --color-accent-fg: #0F1014;
-  --color-accent-soft: rgba(215, 243, 106, 0.14);
-  --color-accent-hover: var(--color-accent-200);
-
-  /* Neutrals — dark stone */
-  --color-neutral-50: #F0F0EC;
-  --color-neutral-100: #D5D5CE;
-  --color-neutral-200: #ABABAA;
-  --color-neutral-300: #9A9D8F;
-  --color-neutral-400: #6B6E63;
-  --color-neutral-500: #3A3C44;
-  --color-neutral-600: #2A2C34;
-  --color-neutral-700: #1E2028;
-  --color-neutral-800: #16181D;
-  --color-neutral-900: #0F1014;
-  --color-neutral-950: #080809;
-
-  /* States */
-  --color-success: #5EC394;
-  --color-success-bg: rgba(94, 195, 148, 0.16);
-  --color-success-fg: #7AD4AB;
-  --color-warning: #D9A44B;
-  --color-warning-bg: rgba(217, 164, 75, 0.16);
-  --color-warning-fg: #E4B96E;
-  --color-error: #D26A63;
-  --color-error-bg: rgba(210, 106, 99, 0.16);
-  --color-error-fg: #E08A84;
-  --color-info: #7DA9BF;
-  --color-info-bg: rgba(125, 169, 191, 0.18);
-  --color-info-fg: #9BBFD2;
-
-  /* Shadows */
-  --shadow-xs: 0 1px 2px 0 rgba(0, 0, 0, 0.3);
-  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.4), 0 1px 1px 0 rgba(0, 0, 0, 0.2);
-  --shadow-md: 0 4px 12px -2px rgba(0, 0, 0, 0.45), 0 2px 4px -1px rgba(0, 0, 0, 0.3);
-  --shadow-lg: 0 12px 32px -6px rgba(0, 0, 0, 0.55), 0 4px 12px -2px rgba(0, 0, 0, 0.4);
-  --shadow-xl: 0 24px 48px -12px rgba(0, 0, 0, 0.65), 0 8px 16px -4px rgba(0, 0, 0, 0.5);
-
-  /* War Room nav */
-  --wr-nav-bg: #0F1014;
-  --wr-nav-fg: #F0F0EC;
-  --wr-card-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
-
-  /* shadcn-compat aliases (OBRIGATÓRIO — componentes shadcn leem estas) */
-  --background: var(--color-bg);
-  --foreground: var(--color-text);
-  --card: var(--color-surface);
-  --card-foreground: var(--color-text);
-  --popover: var(--color-surface);
-  --popover-foreground: var(--color-text);
-  --primary: var(--color-accent);
-  --primary-foreground: var(--color-accent-fg);
-  --secondary: var(--color-surface-elevated);
-  --secondary-foreground: var(--color-text);
-  --muted: var(--color-surface-elevated);
-  --muted-foreground: var(--color-text-muted);
-  --accent-foreground: var(--color-accent-fg);
-  --destructive: var(--color-error);
-  --destructive-foreground: #ffffff;
-  --border: var(--color-border);
-  --input: var(--color-border);
-  --ring: var(--color-accent-400);
-
-  /* Agenda */
-  --agenda-pessoa-1: #f89080;
-  --agenda-pessoa-2: #ca8931;
-  --agenda-pessoa-3: #d1bf55;
-  --agenda-pessoa-4: #0cafa8;
-  --agenda-pessoa-5: #4ccffb;
-  --agenda-pessoa-6: #6c97e7;
-  --agenda-pessoa-7: #be9ef6;
-  --agenda-pessoa-8: #cc77b1;
-
-  /* Fundo aplicado ao elemento — garante escuro mesmo sem data-theme */
-  background-color: #0F1014;
-  color: #F0F0EC;
-}
+/* (bloco .war-room consolidado na linha ~778, junto com os componentes wr-*) */

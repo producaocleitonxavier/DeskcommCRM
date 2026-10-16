@@ -9,6 +9,7 @@
 
 import { redirect, notFound } from "next/navigation";
 import Link from "next/link";
+import { ArrowUpRight, GitBranch, MessageCircle, Pencil, Phone } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { requireAuth, resolveActiveOrg } from "@/lib/auth/server";
 
@@ -113,18 +114,18 @@ function tempEstilo(temp: string): { bg: string; color: string } {
     morno: { bg: "#FCF1DC", color: "#8A5A10" },
     quente: { bg: "#FBE4E2", color: "#A3302A" },
   };
-  return m[temp] ?? { bg: "#F0F0EB", color: "#4A4F59" };
+  return m[temp] ?? { bg: "#F0F0EB", color: "var(--color-text-muted)" };
 }
 
 function estadoDemandaEstilo(estado: string): { bg: string; color: string } {
   const m: Record<string, { bg: string; color: string }> = {
-    aberta: { bg: "#F0F0EB", color: "#4A4F59" },
+    aberta: { bg: "#F0F0EB", color: "var(--color-text-muted)" },
     em_atendimento: { bg: "#E4E7F8", color: "#2F3DA8" },
     aguardando_cliente: { bg: "#FCF1DC", color: "#8A5A10" },
     resolvida: { bg: "#E2F5EC", color: "#17784F" },
-    encerrada: { bg: "#F0F0EB", color: "#5B606B" },
+    encerrada: { bg: "#F0F0EB", color: "var(--color-text-subtle)" },
   };
-  return m[estado] ?? { bg: "#F0F0EB", color: "#4A4F59" };
+  return m[estado] ?? { bg: "#F0F0EB", color: "var(--color-text-muted)" };
 }
 
 function estadoDemandaLabel(estado: string): string {
@@ -279,10 +280,10 @@ function FunilProgresso({ current }: { current: string }) {
 
 function InfoCard({ titulo, children }: { titulo: string; children: React.ReactNode }) {
   return (
-    <div className="wr-card p-5" style={{ minHeight: 120 }}>
+    <div className="wr-card wr-hover p-5">
       <h3
         className="text-[11px] font-semibold uppercase tracking-[.08em] mb-3"
-        style={{ color: "#9A9D8F" }}
+        style={{ color: "var(--color-text-subtle)" }}
       >
         {titulo}
       </h3>
@@ -294,9 +295,9 @@ function InfoCard({ titulo, children }: { titulo: string; children: React.ReactN
 function InfoRow({ label, value }: { label: string; value: React.ReactNode }) {
   return (
     <div className="flex justify-between items-start py-1.5 text-sm">
-      <span style={{ color: "#5B606B" }}>{label}</span>
-      <span className="text-right font-medium" style={{ color: "#16181D" }}>
-        {value || <span style={{ color: "#9A9D8F" }}>—</span>}
+      <span style={{ color: "var(--color-text-subtle)" }}>{label}</span>
+      <span className="text-right font-medium" style={{ color: "var(--color-text)" }}>
+        {value || <span style={{ color: "var(--color-text-subtle)" }}>—</span>}
       </span>
     </div>
   );
@@ -322,6 +323,8 @@ export default async function FichaPage({
   const { lead, contact, transitions, demandas, mobilizadorNome } = dados;
 
   const tempS = tempEstilo(lead.temperature);
+  const telefone = contact.phone_number ?? "";
+  const whatsDigits = telefone.replace(/\D/g, "");
 
   return (
     <div className="mx-auto max-w-[1140px] px-4 py-7 space-y-[18px]">
@@ -329,7 +332,7 @@ export default async function FichaPage({
       <Link
         href="/app/politico/leads"
         className="inline-flex items-center gap-1.5 text-sm font-medium transition-colors hover:opacity-70"
-        style={{ color: "#5B606B" }}
+        style={{ color: "var(--color-text-subtle)" }}
       >
         ← Pessoas
       </Link>
@@ -371,7 +374,7 @@ export default async function FichaPage({
                   Líder
                 </span>
               )}
-              <span className="text-xs tabular-nums" style={{ color: "#5B606B" }}>
+              <span className="text-xs tabular-nums" style={{ color: "var(--color-text-subtle)" }}>
                 Score: {lead.political_score}
               </span>
             </div>
@@ -380,182 +383,189 @@ export default async function FichaPage({
           {/* Funil progresso */}
           <div className="hidden sm:block">
             <FunilProgresso current={lead.support_level} />
-            <div className="text-[11px] text-center mt-1.5" style={{ color: "#9A9D8F" }}>
+            <div className="text-[11px] text-center mt-1.5" style={{ color: "var(--color-text-subtle)" }}>
               Etapa {etapaIdx(lead.support_level) + 1} de {ETAPAS_FUNIL.length}
             </div>
           </div>
         </div>
       </header>
 
-      {/* ── Grid de cards ───────────────────────────────────────── */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {/* Contato */}
-        <InfoCard titulo="Contato">
-          <InfoRow label="Telefone" value={contact.phone_number} />
-          <InfoRow label="Email" value={contact.email} />
-          <InfoRow
-            label="Nascimento"
-            value={contact.birthdate ? formatarData(contact.birthdate) : null}
-          />
-          <InfoRow label="Origem" value={sourceLabel(contact.source)} />
-          {contact.social_identity && (
-            <InfoRow label="Social" value={contact.social_identity} />
-          )}
-        </InfoCard>
+      {/* ── Layout 2 colunas ────────────────────────────────────── */}
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+        {/* Coluna esquerda (2/3): dados, timeline, demandas */}
+        <div className="space-y-4 lg:col-span-2">
+          <InfoCard titulo="Contato">
+            <InfoRow label="Telefone" value={contact.phone_number} />
+            <InfoRow label="Email" value={contact.email} />
+            <InfoRow label="Nascimento" value={contact.birthdate ? formatarData(contact.birthdate) : null} />
+            <InfoRow label="Origem" value={sourceLabel(contact.source)} />
+            {contact.social_identity && <InfoRow label="Social" value={contact.social_identity} />}
+          </InfoCard>
 
-        {/* Território */}
-        <InfoCard titulo="Território eleitoral">
-          <InfoRow label="Zona" value={lead.zona_eleitoral} />
-          <InfoRow label="Seção" value={lead.secao_eleitoral} />
-          <InfoRow label="Papel comunitário" value={lead.community_role} />
-          <InfoRow label="Mobilizador" value={mobilizadorNome} />
-        </InfoCard>
+          <InfoCard titulo="Território eleitoral">
+            <InfoRow label="Zona" value={lead.zona_eleitoral} />
+            <InfoRow label="Seção" value={lead.secao_eleitoral} />
+            <InfoRow label="Papel comunitário" value={lead.community_role} />
+            <InfoRow label="Mobilizador" value={mobilizadorNome} />
+          </InfoCard>
 
-        {/* Engajamento */}
-        <InfoCard titulo="Engajamento">
-          <InfoRow label="Temperatura" value={
-            <span
-              className="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold"
-              style={{ background: tempS.bg, color: tempS.color }}
-            >
-              {tempLabel(lead.temperature)}
-            </span>
-          } />
-          <InfoRow label="Score político" value={lead.political_score} />
-          <InfoRow
-            label="Última atividade"
-            value={contact.last_activity_at ? formatarData(contact.last_activity_at) : null}
-          />
-          <InfoRow label="Cadastrado em" value={formatarData(lead.created_at)} />
-          {contact.tags && contact.tags.length > 0 && (
-            <div className="mt-2 flex flex-wrap gap-1.5">
-              {contact.tags.map((tag) => (
-                <span
-                  key={tag}
-                  className="inline-flex items-center rounded-full px-2.5 py-0.5 text-[11px] font-medium"
-                  style={{ background: "#F0F0EB", color: "#4A4F59" }}
-                >
-                  {tag}
-                </span>
-              ))}
-            </div>
-          )}
-        </InfoCard>
-
-        {/* Linha do tempo (transições de funil) */}
-        <InfoCard titulo="Linha do tempo">
-          {transitions.length === 0 ? (
-            <p className="text-sm" style={{ color: "#9A9D8F" }}>
-              Nenhuma transição registrada.
-            </p>
-          ) : (
-            <div className="space-y-3 max-h-[240px] overflow-y-auto pr-1">
-              {transitions.map((t) => (
-                <div key={t.id} className="flex items-start gap-3">
-                  <div
-                    className="w-2 h-2 rounded-full mt-1.5 shrink-0"
-                    style={{ background: etapaCor(t.to_level) }}
-                  />
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 text-sm">
-                      {t.from_level && (
-                        <>
-                          <span className="font-medium" style={{ color: "#5B606B" }}>
-                            {etapaLabel(t.from_level)}
-                          </span>
-                          <span style={{ color: "#9A9D8F" }}>→</span>
-                        </>
-                      )}
-                      <span className="font-semibold" style={{ color: "#16181D" }}>
-                        {etapaLabel(t.to_level)}
-                      </span>
-                    </div>
-                    <div className="text-xs mt-0.5" style={{ color: "#9A9D8F" }}>
-                      {formatarDataCurta(t.changed_at)}
-                      {t.reason && ` · ${t.reason}`}
+          <InfoCard titulo="Linha do tempo">
+            {transitions.length === 0 ? (
+              <p className="text-sm" style={{ color: "var(--color-text-subtle)" }}>Nenhuma transição registrada.</p>
+            ) : (
+              <div className="space-y-3">
+                {transitions.map((t) => (
+                  <div key={t.id} className="flex items-start gap-3">
+                    <span
+                      className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full"
+                      style={{ background: etapaCor(t.to_level), color: etapaIdx(t.to_level) >= 3 ? "#FFFFFF" : "#1E2A80" }}
+                      aria-hidden
+                    >
+                      <ArrowUpRight style={{ width: 15, height: 15 }} />
+                    </span>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-2 text-sm">
+                        {t.from_level && (
+                          <>
+                            <span className="font-medium" style={{ color: "var(--color-text-subtle)" }}>{etapaLabel(t.from_level)}</span>
+                            <span style={{ color: "var(--color-text-subtle)" }}>→</span>
+                          </>
+                        )}
+                        <span className="font-semibold" style={{ color: "var(--color-text)" }}>{etapaLabel(t.to_level)}</span>
+                      </div>
+                      <div className="mt-0.5 text-xs" style={{ color: "var(--color-text-subtle)" }}>
+                        {formatarDataCurta(t.changed_at)}
+                        {t.reason && ` · ${t.reason}`}
+                      </div>
                     </div>
                   </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </InfoCard>
-      </div>
+                ))}
+              </div>
+            )}
+          </InfoCard>
 
-      {/* ── Demandas vinculadas ─────────────────────────────────── */}
-      <section className="wr-card pt-4 pb-0 px-0">
-        <div className="flex items-center justify-between px-5 pb-3">
-          <h3
-            className="text-[11px] font-semibold uppercase tracking-[.08em]"
-            style={{ color: "#9A9D8F" }}
-          >
-            Demandas recentes
-          </h3>
-          <Link
-            href="/app/politico/demandas"
-            className="text-xs font-medium hover:opacity-70 transition-colors"
-            style={{ color: "#4352C4" }}
-          >
-            Ver todas →
-          </Link>
+          {/* Demandas recentes */}
+          <section className="wr-card wr-hover pt-4 pb-0 px-0">
+            <div className="flex items-center justify-between px-5 pb-3">
+              <h3 className="text-[11px] font-semibold uppercase tracking-[.08em]" style={{ color: "var(--color-text-subtle)" }}>
+                Demandas recentes
+              </h3>
+              <Link href="/app/politico/demandas" className="text-xs font-medium hover:opacity-70 transition-colors" style={{ color: "#4352C4" }}>
+                Ver todas →
+              </Link>
+            </div>
+            {demandas.length === 0 ? (
+              <div className="px-5 pb-5">
+                <p className="text-sm" style={{ color: "var(--color-text-subtle)" }}>Nenhuma demanda registrada.</p>
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm border-collapse">
+                  <thead>
+                    <tr>
+                      {["Demanda", "Status", "Prioridade", "Prazo"].map((col) => (
+                        <th key={col} className="text-left font-medium text-[13px] px-5 py-2.5 whitespace-nowrap border-b" style={{ color: "var(--color-text-subtle)", borderColor: "var(--color-border)" }}>
+                          {col}
+                        </th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {demandas.map((d) => {
+                      const sE = estadoDemandaEstilo(d.estado);
+                      return (
+                        <tr key={d.id} className="hover:bg-[var(--color-surface-elevated)] transition-colors" style={{ borderBottom: "1px solid var(--color-border)" }}>
+                          <td className="px-5 py-3 font-medium max-w-[260px] truncate" style={{ color: "var(--color-text)" }}>{d.assunto || "Sem assunto"}</td>
+                          <td className="px-5 py-3 whitespace-nowrap">
+                            <span className="inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold" style={{ background: sE.bg, color: sE.color }}>
+                              {estadoDemandaLabel(d.estado)}
+                            </span>
+                          </td>
+                          <td className="px-5 py-3 whitespace-nowrap" style={{ color: "var(--color-text-muted)" }}>{d.pol_prioridade ?? "Normal"}</td>
+                          <td className="px-5 py-3 whitespace-nowrap tabular-nums" style={{ color: "var(--color-text-muted)" }}>{d.prazo_em ? formatarDataCurta(d.prazo_em) : "—"}</td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </section>
         </div>
 
-        {demandas.length === 0 ? (
-          <div className="px-5 pb-5">
-            <p className="text-sm" style={{ color: "#9A9D8F" }}>
-              Nenhuma demanda registrada.
-            </p>
+        {/* Coluna direita (1/3): ações, KPIs, funil, tags */}
+        <div className="space-y-4">
+          {/* Ações rápidas */}
+          <div className="wr-card p-5">
+            <h3 className="text-[11px] font-semibold uppercase tracking-[.08em] mb-3" style={{ color: "var(--color-text-subtle)" }}>Ações rápidas</h3>
+            <div className="flex flex-col gap-2.5">
+              {telefone && (
+                <a href={`tel:${telefone}`} className="wr-btn-dark w-full justify-center">
+                  <Phone style={{ width: 16, height: 16 }} /> Ligar
+                </a>
+              )}
+              {whatsDigits && (
+                <a href={`https://wa.me/${whatsDigits}`} target="_blank" rel="noopener noreferrer" className="wr-btn w-full justify-center">
+                  <MessageCircle style={{ width: 16, height: 16 }} /> Enviar WhatsApp
+                </a>
+              )}
+              <Link href={`/app/politico/leads/${lead.id}/editar`} className="wr-btn w-full justify-center">
+                <Pencil style={{ width: 16, height: 16 }} /> Editar
+              </Link>
+              <Link href="/app/politico/funil" className="wr-btn w-full justify-center">
+                <GitBranch style={{ width: 16, height: 16 }} /> Mover no funil
+              </Link>
+            </div>
           </div>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm border-collapse">
-              <thead>
-                <tr>
-                  {["Demanda", "Status", "Prioridade", "Prazo"].map((col) => (
-                    <th
-                      key={col}
-                      className="text-left font-medium text-[13px] px-5 py-2.5 whitespace-nowrap border-b"
-                      style={{ color: "#5B606B", borderColor: "#ECECE7" }}
-                    >
-                      {col}
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {demandas.map((d) => {
-                  const sE = estadoDemandaEstilo(d.estado);
-                  return (
-                    <tr
-                      key={d.id}
-                      className="hover:bg-[#F6F6F2] transition-colors"
-                      style={{ borderBottom: "1px solid #F0F0EB" }}
-                    >
-                      <td className="px-5 py-3 font-medium max-w-[260px] truncate" style={{ color: "#16181D" }}>
-                        {d.assunto || "Sem assunto"}
-                      </td>
-                      <td className="px-5 py-3 whitespace-nowrap">
-                        <span
-                          className="inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold"
-                          style={{ background: sE.bg, color: sE.color }}
-                        >
-                          {estadoDemandaLabel(d.estado)}
-                        </span>
-                      </td>
-                      <td className="px-5 py-3 whitespace-nowrap" style={{ color: "#4A4F59" }}>
-                        {d.pol_prioridade ?? "Normal"}
-                      </td>
-                      <td className="px-5 py-3 whitespace-nowrap tabular-nums" style={{ color: "#4A4F59" }}>
-                        {d.prazo_em ? formatarDataCurta(d.prazo_em) : "—"}
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
+
+          {/* KPIs do contato */}
+          <div className="wr-card wr-hover p-5">
+            <h3 className="text-[11px] font-semibold uppercase tracking-[.08em] mb-3" style={{ color: "var(--color-text-subtle)" }}>Indicadores</h3>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <div className="font-heading text-2xl font-bold tabular-nums leading-none">{lead.political_score}</div>
+                <div className="mt-1 text-xs text-muted-foreground">Score político</div>
+              </div>
+              <div>
+                <span className="inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold" style={{ background: tempS.bg, color: tempS.color }}>
+                  {tempLabel(lead.temperature)}
+                </span>
+                <div className="mt-1.5 text-xs text-muted-foreground">Temperatura</div>
+              </div>
+            </div>
+            <div className="mt-3 border-t pt-3 text-sm" style={{ borderColor: "var(--color-border)" }}>
+              <InfoRow label="Última atividade" value={contact.last_activity_at ? formatarData(contact.last_activity_at) : null} />
+              <InfoRow label="Cadastrado em" value={formatarData(lead.created_at)} />
+            </div>
           </div>
-        )}
-      </section>
+
+          {/* Funil visual */}
+          <div className="wr-card wr-hover p-5">
+            <h3 className="text-[11px] font-semibold uppercase tracking-[.08em] mb-3" style={{ color: "var(--color-text-subtle)" }}>Nível no funil</h3>
+            <div className="flex items-center justify-between">
+              <EtapaPill value={lead.support_level} />
+              <span className="text-[11px]" style={{ color: "var(--color-text-subtle)" }}>Etapa {etapaIdx(lead.support_level) + 1} de {ETAPAS_FUNIL.length}</span>
+            </div>
+            <div className="mt-3">
+              <FunilProgresso current={lead.support_level} />
+            </div>
+          </div>
+
+          {/* Tags */}
+          {contact.tags && contact.tags.length > 0 && (
+            <div className="wr-card wr-hover p-5">
+              <h3 className="text-[11px] font-semibold uppercase tracking-[.08em] mb-3" style={{ color: "var(--color-text-subtle)" }}>Tags</h3>
+              <div className="flex flex-wrap gap-1.5">
+                {contact.tags.map((tag) => (
+                  <span key={tag} className="inline-flex items-center rounded-full px-2.5 py-0.5 text-[11px] font-medium" style={{ background: "var(--color-surface-elevated)", color: "var(--color-text-muted)" }}>
+                    {tag}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
     </div>
   );
 }

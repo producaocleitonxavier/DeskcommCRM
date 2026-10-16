@@ -167,14 +167,14 @@ export function SidebarContent({
             ) : null}
           </div>
         ) : marcaDoProduto ? (
-          // War Room 2.0 logo: bloco escuro (#16181D) + texto lime (#D7F36A)
+          // War Room 2.0 logo: bloco escuro (token wr-btn-dark-bg) + texto lime (token wr-nav-active)
           collapsed ? (
             <div className="flex h-8 w-8 items-center justify-center rounded-lg" style={{ background: "var(--wr-btn-dark-bg)" }}>
-              <span className="text-sm font-bold" style={{ color: "#D7F36A" }}>WR</span>
+              <span className="text-sm font-bold" style={{ color: "var(--wr-nav-active)" }}>WR</span>
             </div>
           ) : (
             <div className="flex h-8 items-center gap-2 rounded-lg px-3" style={{ background: "var(--wr-btn-dark-bg)" }}>
-              <span className="text-sm font-bold tracking-tight" style={{ color: "#D7F36A" }}>WAR ROOM</span>
+              <span className="text-sm font-bold tracking-tight" style={{ color: "var(--wr-nav-active)" }}>WAR ROOM</span>
             </div>
           )
         ) : (
@@ -232,13 +232,15 @@ export function SidebarContent({
         trocar N destinos do menu por um único link de hub devolve (N-1)×32px.
       */}
       <nav className="flex-1 space-y-2 overflow-y-auto p-2" aria-label={t("Navegação principal")}>
-        {grupos.map(({ group, items }) => {
+        {grupos.map(({ group, items }, grupoIdx) => {
           const tituloId = `nav-grupo-${group.id}`;
           // Recolhido o sidebar inteiro (rail de 64px), o grupo sempre mostra
           // seus itens — não há onde desenhar cabeçalho nem seta para fechá-lo.
           const aberto = collapsed || !gruposFechados.has(group.id);
           return (
             <div key={group.id} className="space-y-1">
+              {/* Divisor tático entre grupos (expandido, exceto o primeiro). */}
+              {grupoIdx > 0 && !collapsed && <div className="wr-divider mb-2" aria-hidden />}
               {/* Colapsado, o sidebar tem 64px: seis rótulos ali seriam ilegíveis.
                   Vira um filete separador, que preserva o agrupamento sem texto. */}
               {/* War Room 2.0 — section labels com estilo .wr-section-label.
@@ -251,7 +253,7 @@ export function SidebarContent({
                     type="button"
                     onClick={() => toggleGrupo(group.id)}
                     aria-expanded={aberto}
-                    className="wr-section-label flex w-full items-center justify-between"
+                    className="wr-section-tactical flex w-full items-center justify-between"
                   >
                     {t(group.label)}
                     <CaretDown
@@ -284,13 +286,19 @@ export function SidebarContent({
                           onClick={onNavigate}
                           className={cn(
                             "relative flex items-center gap-3 px-3 py-1.5 text-sm transition-colors",
-                            // War Room 2.0: pill shape (999px), lime active bg
+                            // War Room 2.0 tático: tint lime + borda esquerda no ativo
                             "rounded-[--wr-nav-item-radius]",
                             isActive
-                              ? "bg-[--color-accent] font-semibold text-[--color-accent-fg]"
-                              : "text-muted-foreground hover:bg-accent/50 hover:text-foreground",
+                              ? "font-semibold text-[--color-accent]"
+                              : "text-muted-foreground hover:bg-[rgba(255,255,255,0.03)] hover:text-foreground",
                             collapsed && "justify-center px-2",
                           )}
+                          style={{
+                            borderLeft: isActive
+                              ? "3px solid var(--wr-nav-active)"
+                              : "3px solid transparent",
+                            background: isActive ? "rgba(215,243,106,0.1)" : undefined,
+                          }}
                         >
                           <Icon size={18} weight={isActive ? "fill" : "regular"} aria-hidden />
                           {!collapsed && <span className="truncate">{t(item.label)}</span>}
@@ -315,10 +323,17 @@ export function SidebarContent({
                         className={cn(
                           "flex items-center gap-3 rounded-[--wr-nav-item-radius] px-3 py-1.5 text-sm transition-colors",
                           pathname === group.hub.href
-                            ? "bg-[--color-accent] font-semibold text-[--color-accent-fg]"
-                            : "text-muted-foreground hover:bg-accent/50 hover:text-foreground",
+                            ? "font-semibold text-[--color-accent]"
+                            : "text-muted-foreground hover:bg-[rgba(255,255,255,0.03)] hover:text-foreground",
                           collapsed && "justify-center px-2",
                         )}
+                        style={{
+                          borderLeft:
+                            pathname === group.hub.href
+                              ? "3px solid var(--wr-nav-active)"
+                              : "3px solid transparent",
+                          background: pathname === group.hub.href ? "rgba(215,243,106,0.1)" : undefined,
+                        }}
                       >
                         <ArrowRight size={18} aria-hidden />
                         {!collapsed && <span className="truncate">{t(group.hub.label)}</span>}

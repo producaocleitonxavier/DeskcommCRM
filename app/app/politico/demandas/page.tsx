@@ -11,8 +11,17 @@ import { redirect } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { requireAuth, resolveActiveOrg } from "@/lib/auth/server";
+import DemandasCharts from "./_demandas-charts";
 
 export const dynamic = "force-dynamic";
+
+const ESTADO_COR: Record<string, string> = {
+  aberta: "#F59E0B",
+  em_atendimento: "#3B82F6",
+  aguardando_cliente: "#FCD34D",
+  resolvida: "#22C55E",
+  encerrada: "#9CA3AF",
+};
 
 // -- Tipos -------------------------------------------------------------------
 
@@ -48,13 +57,13 @@ function estadoLabel(estado: string): string {
 
 function estadoEstilo(estado: string): { bg: string; color: string } {
   const mapa: Record<string, { bg: string; color: string }> = {
-    aberta: { bg: "#F0F0EB", color: "#4A4F59" },
+    aberta: { bg: "#F0F0EB", color: "var(--color-text-muted)" },
     em_atendimento: { bg: "#E4E7F8", color: "#2F3DA8" },
     aguardando_cliente: { bg: "#FCF1DC", color: "#8A5A10" },
     resolvida: { bg: "#E2F5EC", color: "#17784F" },
-    encerrada: { bg: "#F0F0EB", color: "#5B606B" },
+    encerrada: { bg: "#F0F0EB", color: "var(--color-text-subtle)" },
   };
-  return mapa[estado] ?? { bg: "#F0F0EB", color: "#4A4F59" };
+  return mapa[estado] ?? { bg: "#F0F0EB", color: "var(--color-text-muted)" };
 }
 
 function prioridadeLabel(prioridade: string | null): string | null {
@@ -162,45 +171,6 @@ function StatusPill({ estado }: { estado: string }) {
   );
 }
 
-function KpiCard({
-  label,
-  value,
-  sub,
-  bg,
-  accent,
-}: {
-  label: string;
-  value: string | number;
-  sub?: string;
-  bg?: string;
-  accent?: string;
-}) {
-  return (
-    <div
-      className="flex-1 min-w-[140px] rounded-[20px] p-4"
-      style={{
-        background: bg ?? "#FFFFFF",
-        boxShadow: "var(--wr-card-shadow)",
-      }}
-    >
-      <div className="text-[13px] font-medium" style={{ color: accent ?? "#4A4F59" }}>
-        {label}
-      </div>
-      <div
-        className="font-heading text-[28px] font-bold mt-0.5 tabular-nums"
-        style={{ color: accent ?? "var(--color-text)" }}
-      >
-        {typeof value === "number" ? value.toLocaleString("pt-BR") : value}
-      </div>
-      {sub && (
-        <div className="text-[12px] mt-0.5" style={{ color: accent ?? "#5B606B" }}>
-          {sub}
-        </div>
-      )}
-    </div>
-  );
-}
-
 // -- Componente principal ----------------------------------------------------
 
 export default async function GabinetePage({
@@ -225,11 +195,31 @@ export default async function GabinetePage({
 
   const totalPaginas = Math.ceil(total / POR_PAGINA);
 
-  // Contar demandas vencendo esta semana
-  const vencendoSemana = demandas.filter((d) => {
-    const dias = diasParaPrazo(d.prazo_em);
-    return dias !== null && dias >= 0 && dias <= 7 && !["resolvida", "encerrada"].includes(d.estado);
-  }).length;
+  // Distribuição por status + tempo médio de resolução (para os gráficos).
+  const dbCharts = await createClient();
+  const ESTADOS_PIE = ["aberta", "em_atendimento", "aguardando_cliente", "resolvida", "encerrada"];
+  const [distRes, resolvidasRes] = await Promise.all([
+    Promise.all(
+      ESTADOS_PIE.map((e) =>
+        dbCharts.from("demandas").select("id", { count: "exact", head: true }).eq("organization_id", org.orgId).eq("estado", e),
+      ),
+    ),
+    dbCharts.from("demandas").select("aberta_em, fechada_em").eq("organization_id", org.orgId).not("fechada_em", "is", null).limit(500),
+  ]);
+  const statusPie = ESTADOS_PIE.map((e, i) => ({
+    name: estadoLabel(e),
+    value: distRes[i]?.count ?? 0,
+    fill: ESTADO_COR[e] ?? "#9CA3AF",
+  })).filter((x) => x.value > 0);
+  const fechadas = (resolvidasRes.data ?? []) as { aberta_em: string; fechada_em: string }[];
+  const tempoMedioDias =
+    fechadas.length > 0
+      ? Math.round(
+          (fechadas.reduce((s, d) => s + (new Date(d.fechada_em).getTime() - new Date(d.aberta_em).getTime()), 0) /
+            fechadas.length /
+            86_400_000) * 10,
+        ) / 10
+      : null;
 
   function montarQuery(overrides: Record<string, string | undefined>) {
     const q = new URLSearchParams();
@@ -254,7 +244,7 @@ export default async function GabinetePage({
       <header className="wr-card p-6 sm:p-7 flex flex-wrap items-center justify-between gap-4">
         <div>
           <h1 className="font-heading text-[36px] font-bold leading-tight">Gabinete</h1>
-          <p className="mt-1.5 text-base" style={{ color: "#4A4F59" }}>
+          <p className="mt-1.5 text-base" style={{ color: "var(--color-text-muted)" }}>
             Demandas, lideranças e projetos de lei do mandato.
           </p>
         </div>
@@ -273,7 +263,7 @@ export default async function GabinetePage({
                   style={
                     active
                       ? { background: "#16181D", color: "#FFFFFF" }
-                      : { background: "#FFFFFF", color: "#4A4F59", border: "1px solid #DCDCD5" }
+                      : { background: "var(--color-surface)", color: "var(--color-text-muted)", border: "1px solid var(--color-border)" }
                   }
                 >
                   {tab.label}
@@ -293,27 +283,16 @@ export default async function GabinetePage({
       {/* ── Aba: Demandas ───────────────────────────────────────── */}
       {aba === "demandas" && (
         <>
-          {/* KPI cards */}
-          <section aria-label="Resumo de demandas" className="flex flex-wrap gap-3">
-            <KpiCard
-              label="Demandas abertas"
-              value={`${contagens._abertas} de ${contagens._total}`}
-            />
-            <KpiCard
-              label="Vencendo esta semana"
-              value={vencendoSemana}
-              bg={vencendoSemana > 0 ? "#FBE4E2" : undefined}
-              accent={vencendoSemana > 0 ? "#A3302A" : undefined}
-            />
-            <KpiCard
-              label="Resolvidas este mês"
-              value={contagens._resolvidas_mes ?? 0}
-            />
-            <KpiCard
-              label="Com encaminhamento IA"
-              value={demandas.filter((d) => d.pol_encaminhamento_ia).length}
-            />
-          </section>
+          {/* KPIs + distribuição por status */}
+          <DemandasCharts
+            kpis={{
+              total: contagens._total ?? 0,
+              abertas: contagens._abertas ?? 0,
+              resolvidasMes: contagens._resolvidas_mes ?? 0,
+              tempoMedioDias,
+            }}
+            statusPie={statusPie}
+          />
 
           {/* Demandas table */}
           <section aria-label="Lista de demandas" className="wr-card pt-2 pb-0 px-0">
@@ -325,7 +304,7 @@ export default async function GabinetePage({
                 style={
                   !filtroEstado
                     ? { background: "#16181D", color: "#FFFFFF" }
-                    : { background: "#F6F6F2", color: "#4A4F59" }
+                    : { background: "var(--color-surface-elevated)", color: "var(--color-text-muted)" }
                 }
               >
                 Todas
@@ -338,7 +317,7 @@ export default async function GabinetePage({
                   style={
                     filtroEstado === est
                       ? { background: "#16181D", color: "#FFFFFF" }
-                      : { background: "#F6F6F2", color: "#4A4F59" }
+                      : { background: "var(--color-surface-elevated)", color: "var(--color-text-muted)" }
                   }
                 >
                   {estadoLabel(est)}
@@ -348,7 +327,7 @@ export default async function GabinetePage({
 
             {demandas.length === 0 ? (
               <div className="p-12 text-center">
-                <p className="text-sm" style={{ color: "#5B606B" }}>
+                <p className="text-sm" style={{ color: "var(--color-text-subtle)" }}>
                   Nenhuma demanda encontrada. Cadastre a primeira demanda para iniciar o acompanhamento.
                 </p>
               </div>
@@ -361,7 +340,7 @@ export default async function GabinetePage({
                         <th
                           key={col}
                           className="text-left font-medium text-[13px] px-4 py-3 whitespace-nowrap border-b"
-                          style={{ color: "#5B606B", borderColor: "#ECECE7" }}
+                          style={{ color: "var(--color-text-subtle)", borderColor: "var(--color-border)" }}
                         >
                           {col}
                         </th>
@@ -380,15 +359,15 @@ export default async function GabinetePage({
                       return (
                         <tr
                           key={d.id}
-                          className="group transition-colors hover:bg-[#F6F6F2]"
+                          className="group transition-colors hover:bg-[var(--color-surface-elevated)]"
                           style={{
-                            borderBottom: "1px solid #F0F0EB",
+                            borderBottom: "1px solid var(--color-border)",
                             ...((atrasada || urgente) ? { background: "#FEF6F5" } : {}),
                           }}
                         >
                           <td className="px-4 py-3.5 max-w-[280px]">
                             <div className="flex items-center gap-2">
-                              <span className="font-semibold truncate" style={{ color: "#16181D" }}>
+                              <span className="font-semibold truncate" style={{ color: "var(--color-text)" }}>
                                 {d.assunto || "Sem assunto"}
                               </span>
                               {temIA && (
@@ -401,10 +380,10 @@ export default async function GabinetePage({
                               )}
                             </div>
                           </td>
-                          <td className="px-4 py-3.5 whitespace-nowrap" style={{ color: "#4A4F59" }}>
+                          <td className="px-4 py-3.5 whitespace-nowrap" style={{ color: "var(--color-text-muted)" }}>
                             {d.pol_tipo ? d.pol_tipo.replace(/_/g, " ") : "—"}
                           </td>
-                          <td className="px-4 py-3.5 whitespace-nowrap" style={{ color: "#4A4F59" }}>
+                          <td className="px-4 py-3.5 whitespace-nowrap" style={{ color: "var(--color-text-muted)" }}>
                             {d.pol_orgao_destino ?? "—"}
                           </td>
                           <td className="px-4 py-3.5 whitespace-nowrap">
@@ -440,7 +419,7 @@ export default async function GabinetePage({
                                 )}
                               </span>
                             ) : (
-                              <span style={{ color: "#9A9D8F" }}>—</span>
+                              <span style={{ color: "var(--color-text-subtle)" }}>—</span>
                             )}
                           </td>
                           <td className="px-4 py-3.5 whitespace-nowrap">
@@ -452,7 +431,7 @@ export default async function GabinetePage({
                                 {pLabel}
                               </span>
                             ) : (
-                              <span style={{ color: "#9A9D8F" }}>Normal</span>
+                              <span style={{ color: "var(--color-text-subtle)" }}>Normal</span>
                             )}
                           </td>
                         </tr>
@@ -466,7 +445,7 @@ export default async function GabinetePage({
             {/* Pagination */}
             <div
               className="flex flex-wrap justify-between items-center gap-3 px-4 py-3.5 text-[13px]"
-              style={{ color: "#5B606B", borderTop: "1px solid #F0F0EB" }}
+              style={{ color: "var(--color-text-subtle)", borderTop: "1px solid var(--color-border)" }}
             >
               <span>
                 Mostrando {demandas.length} de {total.toLocaleString("pt-BR")}
@@ -497,10 +476,10 @@ export default async function GabinetePage({
       {/* ── Aba: Lideranças (placeholder) ───────────────────────── */}
       {aba === "liderancas" && (
         <section className="wr-card p-12 text-center">
-          <p className="font-heading text-lg font-semibold" style={{ color: "#16181D" }}>
+          <p className="font-heading text-lg font-semibold" style={{ color: "var(--color-text)" }}>
             Lideranças
           </p>
-          <p className="mt-2 text-sm" style={{ color: "#5B606B" }}>
+          <p className="mt-2 text-sm" style={{ color: "var(--color-text-subtle)" }}>
             Cadastro de líderes comunitários, aniversários e comunicação por WhatsApp.
             Em breve.
           </p>
@@ -510,10 +489,10 @@ export default async function GabinetePage({
       {/* ── Aba: Projetos de Lei (placeholder) ──────────────────── */}
       {aba === "projetos" && (
         <section className="wr-card p-12 text-center">
-          <p className="font-heading text-lg font-semibold" style={{ color: "#16181D" }}>
+          <p className="font-heading text-lg font-semibold" style={{ color: "var(--color-text)" }}>
             Projetos de Lei
           </p>
-          <p className="mt-2 text-sm" style={{ color: "#5B606B" }}>
+          <p className="mt-2 text-sm" style={{ color: "var(--color-text-subtle)" }}>
             Acompanhamento de proposições legislativas, configurável por tipo de mandato.
             Em breve.
           </p>
@@ -523,10 +502,10 @@ export default async function GabinetePage({
       {/* ── Aba: Emendas (placeholder) ──────────────────────────── */}
       {aba === "emendas" && (
         <section className="wr-card p-12 text-center">
-          <p className="font-heading text-lg font-semibold" style={{ color: "#16181D" }}>
+          <p className="font-heading text-lg font-semibold" style={{ color: "var(--color-text)" }}>
             Emendas
           </p>
-          <p className="mt-2 text-sm" style={{ color: "#5B606B" }}>
+          <p className="mt-2 text-sm" style={{ color: "var(--color-text-subtle)" }}>
             Gestão de emendas parlamentares (Deputado/Prefeito).
             Em breve.
           </p>
