@@ -1615,3 +1615,125 @@
     animation-iteration-count: infinite !important;
   }
 }
+
+/* ─────────────────────────────────────────────────────────────────────────
+   War Room 2.0 — escopo por classe CSS (não depende de data-theme)
+
+   O theme provider do DeskcommCRM controla `data-theme` no `<html>`, e o
+   `@theme inline` do Tailwind 4 registra variáveis no `:root`. Por isso
+   `[data-theme="dark"]` num `<div>` filho NÃO funciona — a cascade do
+   `:root` vence.
+
+   A solução: `.war-room` sobrescreve TODAS as variáveis diretamente,
+   sem depender de `data-theme`. Como os utilitários Tailwind são `inline`
+   (`var(--color-bg)` etc.), eles resolvem no ponto da árvore DOM onde o
+   `.war-room` está — e pegam os valores escuros.
+   ───────────────────────────────────────────────────────────────────────── */
+.war-room {
+  color-scheme: dark;
+
+  /* Surfaces */
+  --color-bg: #0F1014;
+  --color-surface: #16181D;
+  --color-surface-elevated: #1E2028;
+  --color-overlay: rgba(0, 0, 0, 0.55);
+
+  /* Text */
+  --color-text: #F0F0EC;
+  --color-text-muted: #9A9D8F;
+  --color-text-subtle: #6B6E63;
+
+  /* Borders */
+  --color-border: #2A2C34;
+  --color-border-strong: #3A3C44;
+
+  /* Accent — Lime */
+  --color-accent-50: #F8FDE6;
+  --color-accent-100: #F0FBCC;
+  --color-accent-200: #E5F89E;
+  --color-accent-300: #D7F36A;
+  --color-accent-400: #C4E64A;
+  --color-accent-500: #A8CC2E;
+  --color-accent-600: #8AB31E;
+  --color-accent-700: #6E9316;
+  --color-accent-800: #577510;
+  --color-accent-900: #43590D;
+  --color-accent-950: #2A3808;
+  --color-accent: var(--color-accent-300);
+  --color-accent-fg: #0F1014;
+  --color-accent-soft: rgba(215, 243, 106, 0.14);
+  --color-accent-hover: var(--color-accent-200);
+
+  /* Neutrals — dark stone */
+  --color-neutral-50: #F0F0EC;
+  --color-neutral-100: #D5D5CE;
+  --color-neutral-200: #ABABAA;
+  --color-neutral-300: #9A9D8F;
+  --color-neutral-400: #6B6E63;
+  --color-neutral-500: #3A3C44;
+  --color-neutral-600: #2A2C34;
+  --color-neutral-700: #1E2028;
+  --color-neutral-800: #16181D;
+  --color-neutral-900: #0F1014;
+  --color-neutral-950: #080809;
+
+  /* States */
+  --color-success: #5EC394;
+  --color-success-bg: rgba(94, 195, 148, 0.16);
+  --color-success-fg: #7AD4AB;
+  --color-warning: #D9A44B;
+  --color-warning-bg: rgba(217, 164, 75, 0.16);
+  --color-warning-fg: #E4B96E;
+  --color-error: #D26A63;
+  --color-error-bg: rgba(210, 106, 99, 0.16);
+  --color-error-fg: #E08A84;
+  --color-info: #7DA9BF;
+  --color-info-bg: rgba(125, 169, 191, 0.18);
+  --color-info-fg: #9BBFD2;
+
+  /* Shadows */
+  --shadow-xs: 0 1px 2px 0 rgba(0, 0, 0, 0.3);
+  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.4), 0 1px 1px 0 rgba(0, 0, 0, 0.2);
+  --shadow-md: 0 4px 12px -2px rgba(0, 0, 0, 0.45), 0 2px 4px -1px rgba(0, 0, 0, 0.3);
+  --shadow-lg: 0 12px 32px -6px rgba(0, 0, 0, 0.55), 0 4px 12px -2px rgba(0, 0, 0, 0.4);
+  --shadow-xl: 0 24px 48px -12px rgba(0, 0, 0, 0.65), 0 8px 16px -4px rgba(0, 0, 0, 0.5);
+
+  /* War Room nav */
+  --wr-nav-bg: #0F1014;
+  --wr-nav-fg: #F0F0EC;
+  --wr-card-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+
+  /* shadcn-compat aliases (OBRIGATÓRIO — componentes shadcn leem estas) */
+  --background: var(--color-bg);
+  --foreground: var(--color-text);
+  --card: var(--color-surface);
+  --card-foreground: var(--color-text);
+  --popover: var(--color-surface);
+  --popover-foreground: var(--color-text);
+  --primary: var(--color-accent);
+  --primary-foreground: var(--color-accent-fg);
+  --secondary: var(--color-surface-elevated);
+  --secondary-foreground: var(--color-text);
+  --muted: var(--color-surface-elevated);
+  --muted-foreground: var(--color-text-muted);
+  --accent-foreground: var(--color-accent-fg);
+  --destructive: var(--color-error);
+  --destructive-foreground: #ffffff;
+  --border: var(--color-border);
+  --input: var(--color-border);
+  --ring: var(--color-accent-400);
+
+  /* Agenda */
+  --agenda-pessoa-1: #f89080;
+  --agenda-pessoa-2: #ca8931;
+  --agenda-pessoa-3: #d1bf55;
+  --agenda-pessoa-4: #0cafa8;
+  --agenda-pessoa-5: #4ccffb;
+  --agenda-pessoa-6: #6c97e7;
+  --agenda-pessoa-7: #be9ef6;
+  --agenda-pessoa-8: #cc77b1;
+
+  /* Fundo aplicado ao elemento — garante escuro mesmo sem data-theme */
+  background-color: #0F1014;
+  color: #F0F0EC;
+}
