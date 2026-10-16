@@ -185,7 +185,6 @@ export default async function GabinetePage({
 
   const params = await searchParams;
   const pagina = Math.max(1, Number(params.pagina) || 1);
-  const aba = typeof params.aba === "string" ? params.aba : "demandas";
   const filtroEstado = typeof params.estado === "string" ? params.estado : undefined;
 
   const [{ demandas, total }, contagens] = await Promise.all([
@@ -223,20 +222,13 @@ export default async function GabinetePage({
 
   function montarQuery(overrides: Record<string, string | undefined>) {
     const q = new URLSearchParams();
-    const merged = { aba, estado: filtroEstado, ...overrides };
+    const merged = { estado: filtroEstado, ...overrides };
     for (const [k, v] of Object.entries(merged)) {
       if (v) q.set(k, v);
     }
     const s = q.toString();
     return s ? `?${s}` : "";
   }
-
-  const tabs = [
-    { value: "demandas", label: "Demandas" },
-    { value: "liderancas", label: "Lideranças" },
-    { value: "projetos", label: "Projetos de Lei" },
-    { value: "emendas", label: "Emendas" },
-  ];
 
   return (
     <div className="mx-auto max-w-[1140px] px-4 py-7 space-y-[18px]">
@@ -248,41 +240,13 @@ export default async function GabinetePage({
             Demandas, lideranças e projetos de lei do mandato.
           </p>
         </div>
-        <div className="flex flex-wrap gap-2 items-center">
-          {/* Tab bar */}
-          <div role="tablist" aria-label="Seções do gabinete" className="flex gap-1">
-            {tabs.map((tab) => {
-              const active = aba === tab.value;
-              return (
-                <Link
-                  key={tab.value}
-                  href={`/app/politico/demandas${montarQuery({ aba: tab.value, estado: undefined, pagina: "1" })}`}
-                  role="tab"
-                  aria-selected={active}
-                  className="inline-flex items-center h-10 px-4 rounded-full font-semibold text-sm transition-colors"
-                  style={
-                    active
-                      ? { background: "#16181D", color: "#FFFFFF" }
-                      : { background: "var(--color-surface)", color: "var(--color-text-muted)", border: "1px solid var(--color-border)" }
-                  }
-                >
-                  {tab.label}
-                </Link>
-              );
-            })}
-          </div>
-          <Link
-            href="/app/politico/demandas/nova"
-            className="wr-btn-dark"
-          >
-            + Nova demanda
-          </Link>
-        </div>
+        <Link href="/app/politico/demandas/nova" className="wr-btn-dark">
+          + Nova demanda
+        </Link>
       </header>
 
-      {/* ── Aba: Demandas ───────────────────────────────────────── */}
-      {aba === "demandas" && (
-        <>
+      {/* ── Demandas ────────────────────────────────────────────── */}
+      <>
           {/* KPIs + distribuição por status */}
           <DemandasCharts
             kpis={{
@@ -471,46 +435,6 @@ export default async function GabinetePage({
             </div>
           </section>
         </>
-      )}
-
-      {/* ── Aba: Lideranças (placeholder) ───────────────────────── */}
-      {aba === "liderancas" && (
-        <section className="wr-card p-12 text-center">
-          <p className="font-heading text-lg font-semibold" style={{ color: "var(--color-text)" }}>
-            Lideranças
-          </p>
-          <p className="mt-2 text-sm" style={{ color: "var(--color-text-subtle)" }}>
-            Cadastro de líderes comunitários, aniversários e comunicação por WhatsApp.
-            Em breve.
-          </p>
-        </section>
-      )}
-
-      {/* ── Aba: Projetos de Lei (placeholder) ──────────────────── */}
-      {aba === "projetos" && (
-        <section className="wr-card p-12 text-center">
-          <p className="font-heading text-lg font-semibold" style={{ color: "var(--color-text)" }}>
-            Projetos de Lei
-          </p>
-          <p className="mt-2 text-sm" style={{ color: "var(--color-text-subtle)" }}>
-            Acompanhamento de proposições legislativas, configurável por tipo de mandato.
-            Em breve.
-          </p>
-        </section>
-      )}
-
-      {/* ── Aba: Emendas (placeholder) ──────────────────────────── */}
-      {aba === "emendas" && (
-        <section className="wr-card p-12 text-center">
-          <p className="font-heading text-lg font-semibold" style={{ color: "var(--color-text)" }}>
-            Emendas
-          </p>
-          <p className="mt-2 text-sm" style={{ color: "var(--color-text-subtle)" }}>
-            Gestão de emendas parlamentares (Deputado/Prefeito).
-            Em breve.
-          </p>
-        </section>
-      )}
     </div>
   );
 }
