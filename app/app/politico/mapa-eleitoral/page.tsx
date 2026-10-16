@@ -12,6 +12,7 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { requireAuth, resolveActiveOrg } from "@/lib/auth/server";
 import MapaCharts from "./_mapa-charts";
+import MapaEleitoralHero from "@/components/politico/mapa-eleitoral-hero";
 
 export const dynamic = "force-dynamic";
 
@@ -103,7 +104,7 @@ async function buscarOportunidades(organizationId: string): Promise<Oportunidade
     .select("*")
     .eq("organization_id", organizationId)
     .order("potencial_conversao", { ascending: false })
-    .limit(200);
+    .limit(500);
 
   if (error) {
     console.error("Erro ao buscar oportunidades:", error.message);
@@ -323,6 +324,22 @@ export default async function TerritorioPage({
             </div>
           ) : (
             <>
+              {/* Mapa de calor (bubble map sobre Leaflet) */}
+              <MapaEleitoralHero
+                pontos={oportunidades
+                  .filter((o) => o.latitude != null && o.longitude != null)
+                  .map((o) => ({
+                    id: o.territory_id,
+                    name: o.name,
+                    lat: Number(o.latitude),
+                    lng: Number(o.longitude),
+                    total: o.total_leads,
+                    novos: o.novos_cadastros,
+                    apoiadores: o.apoiadores,
+                    uf: o.state_code,
+                  }))}
+              />
+
               {/* KPIs + gráficos (ranking de cidades e distribuição por região) */}
               <MapaCharts ranking={rankingCidades} regioes={regioes} kpis={kpisMapa} />
 
