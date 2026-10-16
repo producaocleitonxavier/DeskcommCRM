@@ -12,7 +12,8 @@ import { cn } from "@/lib/utils";
 
 export interface KpiCardProps {
   label: string;
-  valor: number;
+  /** Número (formatado pt-BR) ou texto curto (ex.: nome de cidade). */
+  valor: number | string;
   icone: LucideIcon;
   /** Variação percentual: positivo = seta verde pra cima, negativo = vermelha pra baixo. */
   variacao?: number;
@@ -44,7 +45,7 @@ export function KpiCard({ label, valor, icone: Icone, variacao, cor, sufixo, var
             className="font-heading text-3xl font-bold tabular-nums leading-none"
             style={{ color: cor ?? (escuro ? "#FFFFFF" : undefined) }}
           >
-            {valor.toLocaleString("pt-BR")}
+            {typeof valor === "number" ? valor.toLocaleString("pt-BR") : valor}
             {sufixo && <span className="ml-0.5 text-lg font-semibold">{sufixo}</span>}
           </div>
           <div

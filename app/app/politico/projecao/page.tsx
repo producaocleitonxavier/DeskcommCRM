@@ -12,6 +12,7 @@ import { redirect } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { requireAuth, resolveActiveOrg } from "@/lib/auth/server";
+import ProjecaoCharts from "./_projecao-charts";
 
 export const dynamic = "force-dynamic";
 
@@ -114,6 +115,16 @@ export default async function ProjecaoPage({
   const totalProjecao = projecoes.reduce((s, r) => s + r.projecao_otimista, 0);
   const totalLeads = projecoes.reduce((s, r) => s + r.total_leads, 0);
 
+  // Gráficos: top 8 territórios por projeção otimista.
+  const topProjecao = [...projecoes].sort((a, b) => b.projecao_otimista - a.projecao_otimista).slice(0, 8);
+  const serieProjecao = topProjecao.map((r) => ({ name: r.territory_name, value: r.projecao_otimista }));
+  const serieBase = topProjecao.map((r) => ({ name: r.territory_name, value: r.base_segura }));
+  const kpisProjecao = {
+    projetados: totalProjecao,
+    base: totalBaseSegura,
+    margem: totalProjecao > 0 ? Math.round((totalBaseSegura / totalProjecao) * 100) : 0,
+  };
+
   return (
     <div className="mx-auto max-w-6xl px-4 py-8 space-y-6">
       {/* Voltar */}
@@ -156,6 +167,11 @@ export default async function ProjecaoPage({
             <span className="text-xs text-muted-foreground">Territorios</span>
           </div>
         </div>
+      )}
+
+      {/* Gráficos de projeção */}
+      {projecoes.length > 0 && (
+        <ProjecaoCharts serieProjecao={serieProjecao} serieBase={serieBase} kpis={kpisProjecao} />
       )}
 
       {/* Filtros */}

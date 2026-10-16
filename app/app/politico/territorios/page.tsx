@@ -1,8 +1,8 @@
 /**
- * /app/politico/territorios — Lista de territorios
+ * /app/politico/territorios — Lista de territórios (War Room 2.0)
  *
- * Cards/tabela de pol_territories com filtro por tipo.
- * Exibe nome, tipo (badge), populacao, eleitorado e contagem de filhos.
+ * Cards de pol_territories com filtro por tipo, status de cobertura derivado
+ * e KPIs do território. Server component (sem gráficos → sem client boundary).
  *
  * Acesso: manager+
  */
@@ -11,18 +11,17 @@ import { redirect } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { requireAuth, resolveActiveOrg } from "@/lib/auth/server";
+import { SectionHeader } from "@/components/politico/section-header";
 
 export const dynamic = "force-dynamic";
-
-// -- Constantes --------------------------------------------------------------
 
 const TIPOS_TERRITORIO = [
   { value: "estado", label: "Estado" },
   { value: "cidade", label: "Cidade" },
   { value: "bairro", label: "Bairro" },
   { value: "zona_eleitoral", label: "Zona eleitoral" },
-  { value: "secao", label: "Secao" },
-  { value: "regiao", label: "Regiao" },
+  { value: "secao", label: "Seção" },
+  { value: "regiao", label: "Região" },
   { value: "distrito", label: "Distrito" },
 ] as const;
 
@@ -30,20 +29,14 @@ function labelDoTipo(value: string): string {
   return TIPOS_TERRITORIO.find((t) => t.value === value)?.label ?? value;
 }
 
-function corDoTipo(value: string): string {
-  const mapa: Record<string, string> = {
-    estado: "bg-purple-100 text-purple-700 dark:bg-purple-900 dark:text-purple-300",
-    cidade: "bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300",
-    bairro: "bg-emerald-100 text-emerald-700 dark:bg-emerald-900 dark:text-emerald-300",
-    zona_eleitoral: "bg-amber-100 text-amber-700 dark:bg-amber-900 dark:text-amber-300",
-    secao: "bg-zinc-100 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300",
-    regiao: "bg-cyan-100 text-cyan-700 dark:bg-cyan-900 dark:text-cyan-300",
-    distrito: "bg-rose-100 text-rose-700 dark:bg-rose-900 dark:text-rose-300",
-  };
-  return mapa[value] ?? "bg-zinc-100 text-zinc-700";
+/** Status de cobertura derivado dos dados do território. */
+function coberturaDe(t: TerritorioRow, filhos: number): { label: string; bg: string; fg: string } {
+  const temPop = t.population != null && t.population > 0;
+  const temEleitorado = t.electorate != null && t.electorate > 0;
+  if (temPop && temEleitorado) return { label: "Coberto", bg: "#E2F5EC", fg: "#17784F" };
+  if (temPop || temEleitorado || filhos > 0) return { label: "Em progresso", bg: "#FCF1DC", fg: "#8A5A10" };
+  return { label: "Descoberto", bg: "#F0F0EB", fg: "#5B606B" };
 }
-
-// -- Tipos -------------------------------------------------------------------
 
 interface TerritorioRow {
   id: string;
@@ -54,44 +47,40 @@ interface TerritorioRow {
   parent_id: string | null;
 }
 
-// -- Data fetching -----------------------------------------------------------
-
 async function buscarTerritorios(organizationId: string, tipo?: string) {
   const db = await createClient();
-
   let query = db
     .from("pol_territories")
     .select("id, name, type, population, electorate, parent_id")
     .eq("organization_id", organizationId)
     .order("name", { ascending: true });
-
-  if (tipo) {
-    query = query.eq("type", tipo);
-  }
-
+  if (tipo) query = query.eq("type", tipo);
   const { data } = await query;
   return (data as TerritorioRow[]) ?? [];
 }
 
 async function contarFilhos(organizationId: string): Promise<Record<string, number>> {
   const db = await createClient();
-
   const { data } = await db
     .from("pol_territories")
     .select("parent_id")
     .eq("organization_id", organizationId)
     .not("parent_id", "is", null);
-
   const contagem: Record<string, number> = {};
   for (const row of data ?? []) {
-    if (row.parent_id) {
-      contagem[row.parent_id] = (contagem[row.parent_id] ?? 0) + 1;
-    }
+    if (row.parent_id) contagem[row.parent_id] = (contagem[row.parent_id] ?? 0) + 1;
   }
   return contagem;
 }
 
-// -- Componente --------------------------------------------------------------
+function Stat({ valor, label }: { valor: string; label: string }) {
+  return (
+    <div className="text-center">
+      <span className="block font-heading text-lg font-bold tabular-nums leading-none">{valor}</span>
+      <span className="mt-0.5 block text-[10px] uppercase tracking-wider text-muted-foreground">{label}</span>
+    </div>
+  );
+}
 
 export default async function TerritoriosPage({
   searchParams,
@@ -111,113 +100,89 @@ export default async function TerritoriosPage({
     contarFilhos(org.orgId),
   ]);
 
+  const cobertos = territorios.filter((t) => t.population && t.electorate).length;
+  const eleitoradoTotal = territorios.reduce((s, t) => s + (t.electorate ?? 0), 0);
+
   return (
-    <div className="mx-auto max-w-5xl px-4 py-8 space-y-6">
-      {/* Cabecalho */}
-      <div>
-        <div className="flex items-center gap-2">
-          <Link
-            href="/app/politico"
-            className="text-sm text-muted-foreground hover:text-foreground transition-colors"
-          >
-            War Room
-          </Link>
-          <span className="text-sm text-muted-foreground">/</span>
-          <h1 className="text-2xl font-bold tracking-tight">Territorios</h1>
+    <div className="mx-auto max-w-[1140px] px-4 py-7 space-y-6" style={{ background: "var(--color-bg)" }}>
+      <SectionHeader title="Territórios" subtitle={`${territorios.length} território(s) gerenciado(s)`} />
+
+      {/* Resumo */}
+      <section className="grid grid-cols-3 gap-4">
+        <div className="wr-card p-5">
+          <div className="font-heading text-2xl font-bold tabular-nums">{territorios.length.toLocaleString("pt-BR")}</div>
+          <div className="mt-1 text-sm text-muted-foreground">Territórios</div>
         </div>
-        <p className="mt-1 text-sm text-muted-foreground">
-          {territorios.length} territorio{territorios.length !== 1 ? "s" : ""}
-        </p>
-      </div>
+        <div className="wr-card p-5">
+          <div className="font-heading text-2xl font-bold tabular-nums">{cobertos.toLocaleString("pt-BR")}</div>
+          <div className="mt-1 text-sm text-muted-foreground">Cobertos</div>
+        </div>
+        <div className="wr-card p-5">
+          <div className="font-heading text-2xl font-bold tabular-nums">{eleitoradoTotal.toLocaleString("pt-BR")}</div>
+          <div className="mt-1 text-sm text-muted-foreground">Eleitorado total</div>
+        </div>
+      </section>
 
       {/* Filtro por tipo */}
-      <div className="flex items-center gap-2 flex-wrap">
-        <span className="text-xs text-muted-foreground">Tipo:</span>
-        <div className="flex gap-1 flex-wrap">
-          <Link
-            href="/app/politico/territorios"
-            className={`rounded-full px-2.5 py-0.5 text-xs font-medium transition-colors ${
-              !tipo
-                ? "bg-primary text-primary-foreground"
-                : "bg-muted text-muted-foreground hover:bg-accent"
-            }`}
-          >
-            Todos
-          </Link>
-          {TIPOS_TERRITORIO.map((t) => (
+      <div className="flex flex-wrap items-center gap-2">
+        <span className="mr-1 text-xs font-medium" style={{ color: "var(--color-text-subtle)" }}>Tipo:</span>
+        {[{ value: "", label: "Todos" }, ...TIPOS_TERRITORIO].map((t) => {
+          const ativo = (tipo ?? "") === t.value;
+          const href = t.value ? `/app/politico/territorios?tipo=${t.value}` : "/app/politico/territorios";
+          return (
             <Link
-              key={t.value}
-              href={`/app/politico/territorios?tipo=${t.value}`}
-              className={`rounded-full px-2.5 py-0.5 text-xs font-medium transition-colors ${
-                tipo === t.value
-                  ? "bg-primary text-primary-foreground"
-                  : "bg-muted text-muted-foreground hover:bg-accent"
-              }`}
+              key={t.value || "todos"}
+              href={href}
+              className="inline-flex items-center rounded-full border px-3 py-1.5 text-xs font-semibold transition-colors"
+              style={
+                ativo
+                  ? { background: "#16181D", color: "#FFFFFF", borderColor: "#16181D" }
+                  : { background: "#FFFFFF", color: "var(--color-text-muted)", borderColor: "var(--color-border)" }
+              }
             >
               {t.label}
             </Link>
-          ))}
-        </div>
+          );
+        })}
       </div>
 
       {/* Cards */}
       {territorios.length === 0 ? (
-        <div className="rounded-xl border bg-card p-12 text-center">
-          <p className="text-sm text-muted-foreground">
-            Nenhum territorio encontrado.
-          </p>
+        <div className="wr-card p-12 text-center text-sm text-muted-foreground">
+          Nenhum território encontrado.
         </div>
       ) : (
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          {territorios.map((territorio) => (
-            <Link
-              key={territorio.id}
-              href={`/app/politico/territorios/${territorio.id}`}
-              className="group flex flex-col gap-3 rounded-xl border bg-card p-5 transition-colors hover:bg-accent/30"
-            >
-              <div className="flex items-start justify-between gap-2">
-                <h2 className="font-semibold group-hover:text-primary transition-colors leading-snug">
-                  {territorio.name}
-                </h2>
-                <span
-                  className={`shrink-0 rounded-full px-2 py-0.5 text-xs font-medium ${corDoTipo(territorio.type)}`}
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {territorios.map((t) => {
+            const filhos = filhosMap[t.id] ?? 0;
+            const cob = coberturaDe(t, filhos);
+            return (
+              <Link
+                key={t.id}
+                href={`/app/politico/territorios/${t.id}`}
+                className="wr-card flex flex-col gap-3 p-5 transition-shadow duration-200 hover:shadow-md"
+              >
+                <div className="flex items-start justify-between gap-2">
+                  <h2 className="font-semibold leading-snug">{t.name}</h2>
+                  <span
+                    className="shrink-0 rounded-full px-2 py-0.5 text-[11px] font-semibold"
+                    style={{ background: cob.bg, color: cob.fg }}
+                  >
+                    {cob.label}
+                  </span>
+                </div>
+                <span className="text-xs text-muted-foreground">{labelDoTipo(t.type)}</span>
+                <div
+                  className="grid grid-cols-3 gap-2 border-t pt-3"
+                  style={{ borderColor: "var(--color-border)" }}
                 >
-                  {labelDoTipo(territorio.type)}
-                </span>
-              </div>
-
-              <div className="grid grid-cols-3 gap-2 text-center">
-                <div>
-                  <span className="block text-lg font-bold tabular-nums">
-                    {territorio.population != null
-                      ? territorio.population.toLocaleString("pt-BR")
-                      : "—"}
-                  </span>
-                  <span className="text-[10px] text-muted-foreground uppercase tracking-wider">
-                    Populacao
-                  </span>
+                  <Stat valor={t.population != null ? t.population.toLocaleString("pt-BR") : "—"} label="População" />
+                  <Stat valor={t.electorate != null ? t.electorate.toLocaleString("pt-BR") : "—"} label="Eleitorado" />
+                  <Stat valor={String(filhos)} label="Sub-regiões" />
                 </div>
-                <div>
-                  <span className="block text-lg font-bold tabular-nums">
-                    {territorio.electorate != null
-                      ? territorio.electorate.toLocaleString("pt-BR")
-                      : "—"}
-                  </span>
-                  <span className="text-[10px] text-muted-foreground uppercase tracking-wider">
-                    Eleitorado
-                  </span>
-                </div>
-                <div>
-                  <span className="block text-lg font-bold tabular-nums">
-                    {filhosMap[territorio.id] ?? 0}
-                  </span>
-                  <span className="text-[10px] text-muted-foreground uppercase tracking-wider">
-                    Sub-regioes
-                  </span>
-                </div>
-              </div>
-            </Link>
-          ))}
+              </Link>
+            );
+          })}
         </div>
       )}
     </div>
