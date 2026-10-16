@@ -331,9 +331,13 @@ export default async function GabinetePage({
                         >
                           <td className="px-4 py-3.5 max-w-[280px]">
                             <div className="flex items-center gap-2">
-                              <span className="font-semibold truncate" style={{ color: "var(--color-text)" }}>
+                              <Link
+                                href={`/app/politico/demandas/${d.id}`}
+                                className="font-semibold truncate transition-colors hover:underline"
+                                style={{ color: "var(--color-text)" }}
+                              >
                                 {d.assunto || "Sem assunto"}
-                              </span>
+                              </Link>
                               {temIA && (
                                 <span
                                   className="inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-bold"
