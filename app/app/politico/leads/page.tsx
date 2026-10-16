@@ -48,7 +48,9 @@ async function buscarLeads(
   let query = db
     .from("pol_leads")
     .select(
-      "id, support_level, temperature, political_score, territory_id, created_at, contacts(name, phone_number, source, last_activity_at), pol_territories(name)",
+      // contacts!contact_id: pol_leads tem 2 FKs para contacts (contact_id e
+      // mobilizer_id); sem o hint o embed fica ambiguo (PGRST201) e a lista volta vazia.
+      "id, support_level, temperature, political_score, territory_id, created_at, contacts!contact_id(name, phone_number, source, last_activity_at), pol_territories(name)",
       { count: "exact" },
     )
     .eq("organization_id", organizationId)

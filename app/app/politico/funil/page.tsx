@@ -28,17 +28,21 @@ export interface TransicaoRow {
 
 async function buscarContagemPorEstagio(organizationId: string): Promise<Record<string, number>> {
   const db = await createClient();
-  const { data } = await db
-    .from("pol_leads")
-    .select("support_level")
-    .eq("organization_id", organizationId);
-
   const contagem: Record<string, number> = {};
   for (const e of ESTAGIOS) contagem[e] = 0;
-  for (const row of data ?? []) {
-    const lvl = (row as { support_level: string }).support_level;
-    contagem[lvl] = (contagem[lvl] ?? 0) + 1;
-  }
+
+  // Uma contagem exata (head) por estágio — evita o cap de 1000 linhas do
+  // PostgREST que acontecia ao buscar as linhas e contar no cliente.
+  await Promise.all(
+    ESTAGIOS.map(async (e) => {
+      const { count } = await db
+        .from("pol_leads")
+        .select("id", { count: "exact", head: true })
+        .eq("organization_id", organizationId)
+        .eq("support_level", e);
+      contagem[e] = count ?? 0;
+    }),
+  );
   return contagem;
 }
 
