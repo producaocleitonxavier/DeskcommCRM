@@ -1,29 +1,23 @@
-"use client";
-
 /**
- * WarRoomShell — ativa o tema "Sala de Guerra" (dark tático) enquanto montado.
+ * WarRoomShell — escopa o tema "Sala de Guerra" (dark tático) ao módulo político.
  *
- * Aplica `data-theme="dark"` no <html> ao montar e restaura o valor anterior ao
- * desmontar (restaura, não apaga — respeita um theme provider externo, se houver).
- * Escopo: envolve o módulo político via app/app/politico/layout.tsx, então o
- * resto do DeskcommCRM NÃO é afetado.
+ * O DeskcommCRM já tem um sistema de tema próprio (lib/theme + THEME_INIT_SCRIPT)
+ * que é o DONO do `data-theme` no <html>. Setar `data-theme="dark"` no <html>
+ * daqui era sobrescrito por esse provider (o "toggle" global), então o dark
+ * tático não pegava.
  *
- * Os tokens dark do globals.css (`[data-theme="dark"]`) passam a valer, e a
- * classe `war-room` fornece o glow lime (`--wr-glow`) para `wr-card-dark`.
+ * Solução: aplicar `data-theme="dark"` no PRÓPRIO wrapper. O globals.css define
+ * os tokens em `[data-theme="dark"] { ... }` (não `:root`-restrito) e o
+ * `@custom-variant dark` casa `[data-theme="dark"] *` — então as variáveis
+ * (--color-bg, --color-surface, --color-text, --color-accent, …) e os utilitários
+ * `dark:` cascateiam para tudo dentro do wrapper, sem tocar o <html> nem o resto
+ * do app. Puramente SSR: sem useEffect, sem flash, sem conflito.
  */
 
-import { useEffect } from "react";
-
 export default function WarRoomShell({ children }: { children: React.ReactNode }) {
-  useEffect(() => {
-    const el = document.documentElement;
-    const anterior = el.getAttribute("data-theme");
-    el.setAttribute("data-theme", "dark");
-    return () => {
-      if (anterior === null) el.removeAttribute("data-theme");
-      else el.setAttribute("data-theme", anterior);
-    };
-  }, []);
-
-  return <div className="war-room">{children}</div>;
+  return (
+    <div className="war-room" data-theme="dark">
+      {children}
+    </div>
+  );
 }

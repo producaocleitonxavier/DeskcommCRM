@@ -772,6 +772,11 @@
 /* ---- Sala de Guerra — identidade tática dark (Prompt 11) ----------------- */
 .war-room {
   --wr-glow: 0 0 30px rgba(215, 243, 106, 0.05);
+  /* O wrapper carrega data-theme="dark"; pinta a região política inteira com os
+     tokens dark, cobrindo a área ao redor da coluna centrada. */
+  min-height: 100%;
+  background: var(--color-bg);
+  color: var(--color-text);
 }
 .wr-card-dark {
   background: var(--color-surface);
