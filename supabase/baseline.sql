@@ -53019,7 +53019,7 @@ drop policy if exists tenant_isolation_ig_automation_flows_all on public.ig_auto
 create policy tenant_isolation_ig_automation_flows_all
   on public.ig_automation_flows
   for all
-  using (organization_id = any(public.fn_user_org_ids()));
+  using (organization_id in (select public.fn_user_org_ids()));
 
 -- ig_comment_events ---------------------------------------------------------
 create table if not exists public.ig_comment_events (
@@ -53076,7 +53076,7 @@ drop policy if exists tenant_isolation_ig_comment_events_all on public.ig_commen
 create policy tenant_isolation_ig_comment_events_all
   on public.ig_comment_events
   for all
-  using (organization_id = any(public.fn_user_org_ids()));
+  using (organization_id in (select public.fn_user_org_ids()));
 
 -- ig_webhook_tokens ---------------------------------------------------------
 create table if not exists public.ig_webhook_tokens (
@@ -53107,7 +53107,7 @@ drop policy if exists tenant_isolation_ig_webhook_tokens_all on public.ig_webhoo
 create policy tenant_isolation_ig_webhook_tokens_all
   on public.ig_webhook_tokens
   for all
-  using (organization_id = any(public.fn_user_org_ids()));
+  using (organization_id in (select public.fn_user_org_ids()));
 
 -- fn_ig_webhook_token_por_path ----------------------------------------------
 -- Resolve organization_id + channel_session_id a partir de um path_token.
@@ -53182,8 +53182,8 @@ alter table public.pol_leads enable row level security;
 drop policy if exists tenant_isolation_pol_leads_all on public.pol_leads;
 create policy tenant_isolation_pol_leads_all
   on public.pol_leads for all
-  using (organization_id = any(public.fn_user_org_ids()))
-  with check (organization_id = any(public.fn_user_org_ids()));
+  using (organization_id in (select public.fn_user_org_ids()))
+  with check (organization_id in (select public.fn_user_org_ids()));
 
 -- pol_lead_scores_history — histórico de scoring multidimensional
 create table if not exists public.pol_lead_scores_history (
@@ -53212,8 +53212,8 @@ alter table public.pol_lead_scores_history enable row level security;
 drop policy if exists tenant_isolation_pol_lead_scores_history_all on public.pol_lead_scores_history;
 create policy tenant_isolation_pol_lead_scores_history_all
   on public.pol_lead_scores_history for all
-  using (organization_id = any(public.fn_user_org_ids()))
-  with check (organization_id = any(public.fn_user_org_ids()));
+  using (organization_id in (select public.fn_user_org_ids()))
+  with check (organization_id in (select public.fn_user_org_ids()));
 
 -- pol_funnel_transitions — transições do funil político
 create table if not exists public.pol_funnel_transitions (
@@ -53238,8 +53238,8 @@ alter table public.pol_funnel_transitions enable row level security;
 drop policy if exists tenant_isolation_pol_funnel_transitions_all on public.pol_funnel_transitions;
 create policy tenant_isolation_pol_funnel_transitions_all
   on public.pol_funnel_transitions for all
-  using (organization_id = any(public.fn_user_org_ids()))
-  with check (organization_id = any(public.fn_user_org_ids()));
+  using (organization_id in (select public.fn_user_org_ids()))
+  with check (organization_id in (select public.fn_user_org_ids()));
 
 -- ---- pol_territories, pol_territory_metrics, pol_tse_data, pol_territory_flags (migration 0631) ----
 
@@ -53281,8 +53281,8 @@ alter table public.pol_territories enable row level security;
 drop policy if exists tenant_isolation_pol_territories_all on public.pol_territories;
 create policy tenant_isolation_pol_territories_all
   on public.pol_territories for all
-  using (organization_id = any(public.fn_user_org_ids()))
-  with check (organization_id = any(public.fn_user_org_ids()));
+  using (organization_id in (select public.fn_user_org_ids()))
+  with check (organization_id in (select public.fn_user_org_ids()));
 
 -- FK de pol_leads.territory_id → pol_territories
 do $$
@@ -53327,8 +53327,8 @@ alter table public.pol_territory_metrics enable row level security;
 drop policy if exists tenant_isolation_pol_territory_metrics_all on public.pol_territory_metrics;
 create policy tenant_isolation_pol_territory_metrics_all
   on public.pol_territory_metrics for all
-  using (organization_id = any(public.fn_user_org_ids()))
-  with check (organization_id = any(public.fn_user_org_ids()));
+  using (organization_id in (select public.fn_user_org_ids()))
+  with check (organization_id in (select public.fn_user_org_ids()));
 
 -- pol_tse_data — dados eleitorais do TSE por território
 create table if not exists public.pol_tse_data (
@@ -53360,8 +53360,8 @@ alter table public.pol_tse_data enable row level security;
 drop policy if exists tenant_isolation_pol_tse_data_all on public.pol_tse_data;
 create policy tenant_isolation_pol_tse_data_all
   on public.pol_tse_data for all
-  using (organization_id = any(public.fn_user_org_ids()))
-  with check (organization_id = any(public.fn_user_org_ids()));
+  using (organization_id in (select public.fn_user_org_ids()))
+  with check (organization_id in (select public.fn_user_org_ids()));
 
 -- pol_territory_flags — alertas e flags por território
 create table if not exists public.pol_territory_flags (
@@ -53387,8 +53387,8 @@ alter table public.pol_territory_flags enable row level security;
 drop policy if exists tenant_isolation_pol_territory_flags_all on public.pol_territory_flags;
 create policy tenant_isolation_pol_territory_flags_all
   on public.pol_territory_flags for all
-  using (organization_id = any(public.fn_user_org_ids()))
-  with check (organization_id = any(public.fn_user_org_ids()));
+  using (organization_id in (select public.fn_user_org_ids()))
+  with check (organization_id in (select public.fn_user_org_ids()));
 
 -- ---- pol_social_profiles, pol_social_snapshots, pol_social_posts, pol_social_intelligence (migration 0632) ----
 
@@ -53432,8 +53432,8 @@ alter table public.pol_social_profiles enable row level security;
 drop policy if exists tenant_isolation_pol_social_profiles_all on public.pol_social_profiles;
 create policy tenant_isolation_pol_social_profiles_all
   on public.pol_social_profiles for all
-  using (organization_id = any(public.fn_user_org_ids()))
-  with check (organization_id = any(public.fn_user_org_ids()));
+  using (organization_id in (select public.fn_user_org_ids()))
+  with check (organization_id in (select public.fn_user_org_ids()));
 
 create table if not exists public.pol_social_snapshots (
   id                      uuid         primary key default gen_random_uuid(),
@@ -53459,8 +53459,8 @@ alter table public.pol_social_snapshots enable row level security;
 drop policy if exists tenant_isolation_pol_social_snapshots_all on public.pol_social_snapshots;
 create policy tenant_isolation_pol_social_snapshots_all
   on public.pol_social_snapshots for all
-  using (organization_id = any(public.fn_user_org_ids()))
-  with check (organization_id = any(public.fn_user_org_ids()));
+  using (organization_id in (select public.fn_user_org_ids()))
+  with check (organization_id in (select public.fn_user_org_ids()));
 
 create table if not exists public.pol_social_posts (
   id                      uuid         primary key default gen_random_uuid(),
@@ -53509,8 +53509,8 @@ alter table public.pol_social_posts enable row level security;
 drop policy if exists tenant_isolation_pol_social_posts_all on public.pol_social_posts;
 create policy tenant_isolation_pol_social_posts_all
   on public.pol_social_posts for all
-  using (organization_id = any(public.fn_user_org_ids()))
-  with check (organization_id = any(public.fn_user_org_ids()));
+  using (organization_id in (select public.fn_user_org_ids()))
+  with check (organization_id in (select public.fn_user_org_ids()));
 
 create table if not exists public.pol_social_intelligence (
   id                      uuid         primary key default gen_random_uuid(),
@@ -53538,8 +53538,8 @@ alter table public.pol_social_intelligence enable row level security;
 drop policy if exists tenant_isolation_pol_social_intelligence_all on public.pol_social_intelligence;
 create policy tenant_isolation_pol_social_intelligence_all
   on public.pol_social_intelligence for all
-  using (organization_id = any(public.fn_user_org_ids()))
-  with check (organization_id = any(public.fn_user_org_ids()));
+  using (organization_id in (select public.fn_user_org_ids()))
+  with check (organization_id in (select public.fn_user_org_ids()));
 
 -- ---- pol_opponents, pol_opponent_snapshots, pol_opponent_posts, pol_opponent_signals (migration 0633) ----
 
@@ -53582,8 +53582,8 @@ alter table public.pol_opponents enable row level security;
 drop policy if exists tenant_isolation_pol_opponents_all on public.pol_opponents;
 create policy tenant_isolation_pol_opponents_all
   on public.pol_opponents for all
-  using (organization_id = any(public.fn_user_org_ids()))
-  with check (organization_id = any(public.fn_user_org_ids()));
+  using (organization_id in (select public.fn_user_org_ids()))
+  with check (organization_id in (select public.fn_user_org_ids()));
 
 create table if not exists public.pol_opponent_snapshots (
   id                      uuid         primary key default gen_random_uuid(),
@@ -53608,8 +53608,8 @@ alter table public.pol_opponent_snapshots enable row level security;
 drop policy if exists tenant_isolation_pol_opponent_snapshots_all on public.pol_opponent_snapshots;
 create policy tenant_isolation_pol_opponent_snapshots_all
   on public.pol_opponent_snapshots for all
-  using (organization_id = any(public.fn_user_org_ids()))
-  with check (organization_id = any(public.fn_user_org_ids()));
+  using (organization_id in (select public.fn_user_org_ids()))
+  with check (organization_id in (select public.fn_user_org_ids()));
 
 create table if not exists public.pol_opponent_posts (
   id                      uuid         primary key default gen_random_uuid(),
@@ -53641,8 +53641,8 @@ alter table public.pol_opponent_posts enable row level security;
 drop policy if exists tenant_isolation_pol_opponent_posts_all on public.pol_opponent_posts;
 create policy tenant_isolation_pol_opponent_posts_all
   on public.pol_opponent_posts for all
-  using (organization_id = any(public.fn_user_org_ids()))
-  with check (organization_id = any(public.fn_user_org_ids()));
+  using (organization_id in (select public.fn_user_org_ids()))
+  with check (organization_id in (select public.fn_user_org_ids()));
 
 create table if not exists public.pol_opponent_signals (
   id                      uuid         primary key default gen_random_uuid(),
@@ -53673,8 +53673,8 @@ alter table public.pol_opponent_signals enable row level security;
 drop policy if exists tenant_isolation_pol_opponent_signals_all on public.pol_opponent_signals;
 create policy tenant_isolation_pol_opponent_signals_all
   on public.pol_opponent_signals for all
-  using (organization_id = any(public.fn_user_org_ids()))
-  with check (organization_id = any(public.fn_user_org_ids()));
+  using (organization_id in (select public.fn_user_org_ids()))
+  with check (organization_id in (select public.fn_user_org_ids()));
 
 -- ---- pol_narratives, pol_narrative_signals, pol_generated_content, pol_video_analyses (migration 0634) ----
 
@@ -53724,8 +53724,8 @@ alter table public.pol_narratives enable row level security;
 drop policy if exists tenant_isolation_pol_narratives_all on public.pol_narratives;
 create policy tenant_isolation_pol_narratives_all
   on public.pol_narratives for all
-  using (organization_id = any(public.fn_user_org_ids()))
-  with check (organization_id = any(public.fn_user_org_ids()));
+  using (organization_id in (select public.fn_user_org_ids()))
+  with check (organization_id in (select public.fn_user_org_ids()));
 
 create table if not exists public.pol_narrative_signals (
   id                      uuid         primary key default gen_random_uuid(),
@@ -53758,8 +53758,8 @@ alter table public.pol_narrative_signals enable row level security;
 drop policy if exists tenant_isolation_pol_narrative_signals_all on public.pol_narrative_signals;
 create policy tenant_isolation_pol_narrative_signals_all
   on public.pol_narrative_signals for all
-  using (organization_id = any(public.fn_user_org_ids()))
-  with check (organization_id = any(public.fn_user_org_ids()));
+  using (organization_id in (select public.fn_user_org_ids()))
+  with check (organization_id in (select public.fn_user_org_ids()));
 
 create table if not exists public.pol_generated_content (
   id                      uuid         primary key default gen_random_uuid(),
@@ -53808,8 +53808,8 @@ alter table public.pol_generated_content enable row level security;
 drop policy if exists tenant_isolation_pol_generated_content_all on public.pol_generated_content;
 create policy tenant_isolation_pol_generated_content_all
   on public.pol_generated_content for all
-  using (organization_id = any(public.fn_user_org_ids()))
-  with check (organization_id = any(public.fn_user_org_ids()));
+  using (organization_id in (select public.fn_user_org_ids()))
+  with check (organization_id in (select public.fn_user_org_ids()));
 
 create table if not exists public.pol_video_analyses (
   id                      uuid         primary key default gen_random_uuid(),
@@ -53834,8 +53834,8 @@ alter table public.pol_video_analyses enable row level security;
 drop policy if exists tenant_isolation_pol_video_analyses_all on public.pol_video_analyses;
 create policy tenant_isolation_pol_video_analyses_all
   on public.pol_video_analyses for all
-  using (organization_id = any(public.fn_user_org_ids()))
-  with check (organization_id = any(public.fn_user_org_ids()));
+  using (organization_id in (select public.fn_user_org_ids()))
+  with check (organization_id in (select public.fn_user_org_ids()));
 
 -- ---- pol_call_queue (migration 0635) ----
 
@@ -53896,8 +53896,8 @@ alter table public.pol_call_queue enable row level security;
 drop policy if exists tenant_isolation_pol_call_queue_all on public.pol_call_queue;
 create policy tenant_isolation_pol_call_queue_all
   on public.pol_call_queue for all
-  using (organization_id = any(public.fn_user_org_ids()))
-  with check (organization_id = any(public.fn_user_org_ids()));
+  using (organization_id in (select public.fn_user_org_ids()))
+  with check (organization_id in (select public.fn_user_org_ids()));
 
 -- ---- pol_events (migration 0636) ----
 
@@ -53956,8 +53956,8 @@ alter table public.pol_events enable row level security;
 drop policy if exists tenant_isolation_pol_events_all on public.pol_events;
 create policy tenant_isolation_pol_events_all
   on public.pol_events for all
-  using (organization_id = any(public.fn_user_org_ids()))
-  with check (organization_id = any(public.fn_user_org_ids()));
+  using (organization_id in (select public.fn_user_org_ids()))
+  with check (organization_id in (select public.fn_user_org_ids()));
 
 -- ---- pol_event_attendance (migration 0636) ----
 
@@ -53992,8 +53992,8 @@ alter table public.pol_event_attendance enable row level security;
 drop policy if exists tenant_isolation_pol_event_attendance_all on public.pol_event_attendance;
 create policy tenant_isolation_pol_event_attendance_all
   on public.pol_event_attendance for all
-  using (organization_id = any(public.fn_user_org_ids()))
-  with check (organization_id = any(public.fn_user_org_ids()));
+  using (organization_id in (select public.fn_user_org_ids()))
+  with check (organization_id in (select public.fn_user_org_ids()));
 
 -- ---- pol_event_participants (migration 0636) ----
 
@@ -54038,8 +54038,8 @@ alter table public.pol_event_participants enable row level security;
 drop policy if exists tenant_isolation_pol_event_participants_all on public.pol_event_participants;
 create policy tenant_isolation_pol_event_participants_all
   on public.pol_event_participants for all
-  using (organization_id = any(public.fn_user_org_ids()))
-  with check (organization_id = any(public.fn_user_org_ids()));
+  using (organization_id in (select public.fn_user_org_ids()))
+  with check (organization_id in (select public.fn_user_org_ids()));
 
 -- ---- pol_invisible_funnel (migration 0637) ----
 
@@ -54090,8 +54090,8 @@ alter table public.pol_invisible_funnel enable row level security;
 drop policy if exists tenant_isolation_pol_invisible_funnel_all on public.pol_invisible_funnel;
 create policy tenant_isolation_pol_invisible_funnel_all
   on public.pol_invisible_funnel for all
-  using (organization_id = any(public.fn_user_org_ids()))
-  with check (organization_id = any(public.fn_user_org_ids()));
+  using (organization_id in (select public.fn_user_org_ids()))
+  with check (organization_id in (select public.fn_user_org_ids()));
 
 -- ---- pol_invisible_funnel_content (migration 0637) ----
 
@@ -54145,8 +54145,8 @@ alter table public.pol_invisible_funnel_content enable row level security;
 drop policy if exists tenant_isolation_pol_invisible_funnel_content_all on public.pol_invisible_funnel_content;
 create policy tenant_isolation_pol_invisible_funnel_content_all
   on public.pol_invisible_funnel_content for all
-  using (organization_id = any(public.fn_user_org_ids()))
-  with check (organization_id = any(public.fn_user_org_ids()));
+  using (organization_id in (select public.fn_user_org_ids()))
+  with check (organization_id in (select public.fn_user_org_ids()));
 
 -- ---- pol_invisible_funnel_events (migration 0637) ----
 
@@ -54183,8 +54183,8 @@ alter table public.pol_invisible_funnel_events enable row level security;
 drop policy if exists tenant_isolation_pol_invisible_funnel_events_all on public.pol_invisible_funnel_events;
 create policy tenant_isolation_pol_invisible_funnel_events_all
   on public.pol_invisible_funnel_events for all
-  using (organization_id = any(public.fn_user_org_ids()))
-  with check (organization_id = any(public.fn_user_org_ids()));
+  using (organization_id in (select public.fn_user_org_ids()))
+  with check (organization_id in (select public.fn_user_org_ids()));
 
 -- ---- pol_surveys (migration 0638) ----
 
@@ -54230,8 +54230,8 @@ alter table public.pol_surveys enable row level security;
 drop policy if exists tenant_isolation_pol_surveys_all on public.pol_surveys;
 create policy tenant_isolation_pol_surveys_all
   on public.pol_surveys for all
-  using (organization_id = any(public.fn_user_org_ids()))
-  with check (organization_id = any(public.fn_user_org_ids()));
+  using (organization_id in (select public.fn_user_org_ids()))
+  with check (organization_id in (select public.fn_user_org_ids()));
 
 -- ---- pol_survey_questions (migration 0638) ----
 
@@ -54268,8 +54268,8 @@ alter table public.pol_survey_questions enable row level security;
 drop policy if exists tenant_isolation_pol_survey_questions_all on public.pol_survey_questions;
 create policy tenant_isolation_pol_survey_questions_all
   on public.pol_survey_questions for all
-  using (organization_id = any(public.fn_user_org_ids()))
-  with check (organization_id = any(public.fn_user_org_ids()));
+  using (organization_id in (select public.fn_user_org_ids()))
+  with check (organization_id in (select public.fn_user_org_ids()));
 
 -- ---- pol_survey_responses (migration 0638) ----
 
@@ -54315,8 +54315,8 @@ alter table public.pol_survey_responses enable row level security;
 drop policy if exists tenant_isolation_pol_survey_responses_all on public.pol_survey_responses;
 create policy tenant_isolation_pol_survey_responses_all
   on public.pol_survey_responses for all
-  using (organization_id = any(public.fn_user_org_ids()))
-  with check (organization_id = any(public.fn_user_org_ids()));
+  using (organization_id in (select public.fn_user_org_ids()))
+  with check (organization_id in (select public.fn_user_org_ids()));
 
 -- ---- pol_decision_signals (migration 0639) ----
 
@@ -54364,8 +54364,8 @@ alter table public.pol_decision_signals enable row level security;
 drop policy if exists tenant_isolation_pol_decision_signals_all on public.pol_decision_signals;
 create policy tenant_isolation_pol_decision_signals_all
   on public.pol_decision_signals for all
-  using (organization_id = any(public.fn_user_org_ids()))
-  with check (organization_id = any(public.fn_user_org_ids()));
+  using (organization_id in (select public.fn_user_org_ids()))
+  with check (organization_id in (select public.fn_user_org_ids()));
 
 -- ---- pol_alerts (migration 0639) ----
 
@@ -54426,8 +54426,8 @@ alter table public.pol_alerts enable row level security;
 drop policy if exists tenant_isolation_pol_alerts_all on public.pol_alerts;
 create policy tenant_isolation_pol_alerts_all
   on public.pol_alerts for all
-  using (organization_id = any(public.fn_user_org_ids()))
-  with check (organization_id = any(public.fn_user_org_ids()));
+  using (organization_id in (select public.fn_user_org_ids()))
+  with check (organization_id in (select public.fn_user_org_ids()));
 
 -- ---- pol_crisis_predictions (migration 0639) ----
 
@@ -54475,8 +54475,8 @@ alter table public.pol_crisis_predictions enable row level security;
 drop policy if exists tenant_isolation_pol_crisis_predictions_all on public.pol_crisis_predictions;
 create policy tenant_isolation_pol_crisis_predictions_all
   on public.pol_crisis_predictions for all
-  using (organization_id = any(public.fn_user_org_ids()))
-  with check (organization_id = any(public.fn_user_org_ids()));
+  using (organization_id in (select public.fn_user_org_ids()))
+  with check (organization_id in (select public.fn_user_org_ids()));
 
 -- ---- pol_fake_news (migration 0639) ----
 
@@ -54528,8 +54528,8 @@ alter table public.pol_fake_news enable row level security;
 drop policy if exists tenant_isolation_pol_fake_news_all on public.pol_fake_news;
 create policy tenant_isolation_pol_fake_news_all
   on public.pol_fake_news for all
-  using (organization_id = any(public.fn_user_org_ids()))
-  with check (organization_id = any(public.fn_user_org_ids()));
+  using (organization_id in (select public.fn_user_org_ids()))
+  with check (organization_id in (select public.fn_user_org_ids()));
 
 -- ---- pol_engagement_weights (migration 0639) ----
 
@@ -54555,8 +54555,8 @@ alter table public.pol_engagement_weights enable row level security;
 drop policy if exists tenant_isolation_pol_engagement_weights_all on public.pol_engagement_weights;
 create policy tenant_isolation_pol_engagement_weights_all
   on public.pol_engagement_weights for all
-  using (organization_id = any(public.fn_user_org_ids()))
-  with check (organization_id = any(public.fn_user_org_ids()));
+  using (organization_id in (select public.fn_user_org_ids()))
+  with check (organization_id in (select public.fn_user_org_ids()));
 
 -- ---- Fase 4 views de dashboards (migration 0640) ----
 
@@ -55296,7 +55296,7 @@ create index if not exists idx_pol_liderancas_aniversario on public.pol_lideranc
 create unique index if not exists uq_pol_liderancas_contact on public.pol_liderancas(organization_id, contact_id);
 alter table public.pol_liderancas enable row level security;
 drop policy if exists tenant_isolation_pol_liderancas_all on public.pol_liderancas;
-create policy tenant_isolation_pol_liderancas_all on public.pol_liderancas using (organization_id = any(public.fn_user_org_ids()));
+create policy tenant_isolation_pol_liderancas_all on public.pol_liderancas using (organization_id in (select public.fn_user_org_ids()));
 revoke all on public.pol_liderancas from anon;
 grant select, insert, update, delete on public.pol_liderancas to authenticated;
 
@@ -55344,7 +55344,7 @@ create index if not exists idx_pol_projetos_lei_tipo on public.pol_projetos_lei(
 create unique index if not exists uq_pol_projetos_lei_numero on public.pol_projetos_lei(organization_id, numero);
 alter table public.pol_projetos_lei enable row level security;
 drop policy if exists tenant_isolation_pol_projetos_lei_all on public.pol_projetos_lei;
-create policy tenant_isolation_pol_projetos_lei_all on public.pol_projetos_lei using (organization_id = any(public.fn_user_org_ids()));
+create policy tenant_isolation_pol_projetos_lei_all on public.pol_projetos_lei using (organization_id in (select public.fn_user_org_ids()));
 revoke all on public.pol_projetos_lei from anon;
 grant select, insert, update, delete on public.pol_projetos_lei to authenticated;
 
@@ -55397,7 +55397,7 @@ create index if not exists idx_pol_emendas_municipio on public.pol_emendas(organ
 create index if not exists idx_pol_emendas_territory on public.pol_emendas(organization_id, territory_id) where territory_id is not null;
 alter table public.pol_emendas enable row level security;
 drop policy if exists tenant_isolation_pol_emendas_all on public.pol_emendas;
-create policy tenant_isolation_pol_emendas_all on public.pol_emendas using (organization_id = any(public.fn_user_org_ids()));
+create policy tenant_isolation_pol_emendas_all on public.pol_emendas using (organization_id in (select public.fn_user_org_ids()));
 revoke all on public.pol_emendas from anon;
 grant select, insert, update, delete on public.pol_emendas to authenticated;
 
@@ -55477,3 +55477,32 @@ $$;
 
 revoke execute on function public.fn_ig_incrementar_stats_flow(uuid) from public, anon;
 grant  execute on function public.fn_ig_incrementar_stats_flow(uuid) to service_role;
+
+-- ── 0644: RLS pol_* compativel com Supabase (apendice idempotente) ──────────
+-- Garante uma policy tenant_isolation_<t>_all por tabela pol_* na forma
+-- "in (select public.fn_user_org_ids())" (SRF em subquery), aceita pelo
+-- Postgres do Supabase. Ver migration 0644.
+do $$
+declare t text;
+begin
+  for t in
+    select c.relname
+    from pg_class c
+    join pg_namespace n on n.oid = c.relnamespace
+    where n.nspname = 'public'
+      and c.relkind = 'r'
+      and c.relname like 'pol\_%'
+      and exists (
+        select 1 from pg_attribute a
+        where a.attrelid = c.oid and a.attname = 'organization_id' and not a.attisdropped
+      )
+  loop
+    execute format('drop policy if exists tenant_isolation_%1$s_read on public.%1$I', t);
+    execute format('drop policy if exists tenant_isolation_%1$s_write on public.%1$I', t);
+    execute format('drop policy if exists tenant_isolation_%1$s_all on public.%1$I', t);
+    execute format(
+      'create policy tenant_isolation_%1$s_all on public.%1$I for all '
+      'using (organization_id in (select public.fn_user_org_ids())) '
+      'with check (organization_id in (select public.fn_user_org_ids()))', t);
+  end loop;
+end $$;
