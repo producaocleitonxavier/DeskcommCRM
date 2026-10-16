@@ -165,7 +165,7 @@ export default function FunilClient({
                         style={
                           t.changed_by
                             ? { background: "#E4E7F8", color: "#2F3DA8" }
-                            : { background: "#F0F0EB", color: "#5B606B" }
+                            : { background: "var(--color-surface-elevated)", color: "var(--color-text-subtle)" }
                         }
                       >
                         {t.changed_by ? "Manual" : "Sistema"}

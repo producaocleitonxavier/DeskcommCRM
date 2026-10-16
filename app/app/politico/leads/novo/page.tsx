@@ -35,7 +35,7 @@ export default async function NovoCadastroPage() {
         <h1 className="font-heading text-[28px] sm:text-[36px] font-bold leading-tight">
           Novo cadastro
         </h1>
-        <p className="mt-1.5 text-base" style={{ color: "#4A4F59" }}>
+        <p className="mt-1.5 text-base" style={{ color: "var(--color-text-muted)" }}>
           Preencha os dados para adicionar uma nova pessoa à base.
         </p>
       </header>

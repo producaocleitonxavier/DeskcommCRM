@@ -150,7 +150,7 @@ export default function HojeClient({
         <Link
           href="/app/politico/leads/novo"
           className="inline-flex min-h-[44px] items-center gap-1.5 rounded-full px-5 text-sm font-semibold"
-          style={{ background: "#D7F36A", color: "#16181D" }}
+          style={{ background: "#D7F36A", color: "var(--color-text)" }}
         >
           <UserPlus className="h-4 w-4" aria-hidden />
           Novo cadastro

@@ -57,13 +57,13 @@ function estadoLabel(estado: string): string {
 
 function estadoEstilo(estado: string): { bg: string; color: string } {
   const mapa: Record<string, { bg: string; color: string }> = {
-    aberta: { bg: "#F0F0EB", color: "#4A4F59" },
+    aberta: { bg: "#F0F0EB", color: "var(--color-text-muted)" },
     em_atendimento: { bg: "#E4E7F8", color: "#2F3DA8" },
     aguardando_cliente: { bg: "#FCF1DC", color: "#8A5A10" },
     resolvida: { bg: "#E2F5EC", color: "#17784F" },
-    encerrada: { bg: "#F0F0EB", color: "#5B606B" },
+    encerrada: { bg: "#F0F0EB", color: "var(--color-text-subtle)" },
   };
-  return mapa[estado] ?? { bg: "#F0F0EB", color: "#4A4F59" };
+  return mapa[estado] ?? { bg: "#F0F0EB", color: "var(--color-text-muted)" };
 }
 
 function prioridadeLabel(prioridade: string | null): string | null {
@@ -244,7 +244,7 @@ export default async function GabinetePage({
       <header className="wr-card p-6 sm:p-7 flex flex-wrap items-center justify-between gap-4">
         <div>
           <h1 className="font-heading text-[36px] font-bold leading-tight">Gabinete</h1>
-          <p className="mt-1.5 text-base" style={{ color: "#4A4F59" }}>
+          <p className="mt-1.5 text-base" style={{ color: "var(--color-text-muted)" }}>
             Demandas, lideranças e projetos de lei do mandato.
           </p>
         </div>
@@ -263,7 +263,7 @@ export default async function GabinetePage({
                   style={
                     active
                       ? { background: "#16181D", color: "#FFFFFF" }
-                      : { background: "#FFFFFF", color: "#4A4F59", border: "1px solid #DCDCD5" }
+                      : { background: "var(--color-surface)", color: "var(--color-text-muted)", border: "1px solid var(--color-border)" }
                   }
                 >
                   {tab.label}
@@ -304,7 +304,7 @@ export default async function GabinetePage({
                 style={
                   !filtroEstado
                     ? { background: "#16181D", color: "#FFFFFF" }
-                    : { background: "#F6F6F2", color: "#4A4F59" }
+                    : { background: "var(--color-surface-elevated)", color: "var(--color-text-muted)" }
                 }
               >
                 Todas
@@ -317,7 +317,7 @@ export default async function GabinetePage({
                   style={
                     filtroEstado === est
                       ? { background: "#16181D", color: "#FFFFFF" }
-                      : { background: "#F6F6F2", color: "#4A4F59" }
+                      : { background: "var(--color-surface-elevated)", color: "var(--color-text-muted)" }
                   }
                 >
                   {estadoLabel(est)}
@@ -327,7 +327,7 @@ export default async function GabinetePage({
 
             {demandas.length === 0 ? (
               <div className="p-12 text-center">
-                <p className="text-sm" style={{ color: "#5B606B" }}>
+                <p className="text-sm" style={{ color: "var(--color-text-subtle)" }}>
                   Nenhuma demanda encontrada. Cadastre a primeira demanda para iniciar o acompanhamento.
                 </p>
               </div>
@@ -340,7 +340,7 @@ export default async function GabinetePage({
                         <th
                           key={col}
                           className="text-left font-medium text-[13px] px-4 py-3 whitespace-nowrap border-b"
-                          style={{ color: "#5B606B", borderColor: "#ECECE7" }}
+                          style={{ color: "var(--color-text-subtle)", borderColor: "var(--color-border)" }}
                         >
                           {col}
                         </th>
@@ -359,15 +359,15 @@ export default async function GabinetePage({
                       return (
                         <tr
                           key={d.id}
-                          className="group transition-colors hover:bg-[#F6F6F2]"
+                          className="group transition-colors hover:bg-[var(--color-surface-elevated)]"
                           style={{
-                            borderBottom: "1px solid #F0F0EB",
+                            borderBottom: "1px solid var(--color-border)",
                             ...((atrasada || urgente) ? { background: "#FEF6F5" } : {}),
                           }}
                         >
                           <td className="px-4 py-3.5 max-w-[280px]">
                             <div className="flex items-center gap-2">
-                              <span className="font-semibold truncate" style={{ color: "#16181D" }}>
+                              <span className="font-semibold truncate" style={{ color: "var(--color-text)" }}>
                                 {d.assunto || "Sem assunto"}
                               </span>
                               {temIA && (
@@ -380,10 +380,10 @@ export default async function GabinetePage({
                               )}
                             </div>
                           </td>
-                          <td className="px-4 py-3.5 whitespace-nowrap" style={{ color: "#4A4F59" }}>
+                          <td className="px-4 py-3.5 whitespace-nowrap" style={{ color: "var(--color-text-muted)" }}>
                             {d.pol_tipo ? d.pol_tipo.replace(/_/g, " ") : "—"}
                           </td>
-                          <td className="px-4 py-3.5 whitespace-nowrap" style={{ color: "#4A4F59" }}>
+                          <td className="px-4 py-3.5 whitespace-nowrap" style={{ color: "var(--color-text-muted)" }}>
                             {d.pol_orgao_destino ?? "—"}
                           </td>
                           <td className="px-4 py-3.5 whitespace-nowrap">
@@ -419,7 +419,7 @@ export default async function GabinetePage({
                                 )}
                               </span>
                             ) : (
-                              <span style={{ color: "#9A9D8F" }}>—</span>
+                              <span style={{ color: "var(--color-text-subtle)" }}>—</span>
                             )}
                           </td>
                           <td className="px-4 py-3.5 whitespace-nowrap">
@@ -431,7 +431,7 @@ export default async function GabinetePage({
                                 {pLabel}
                               </span>
                             ) : (
-                              <span style={{ color: "#9A9D8F" }}>Normal</span>
+                              <span style={{ color: "var(--color-text-subtle)" }}>Normal</span>
                             )}
                           </td>
                         </tr>
@@ -445,7 +445,7 @@ export default async function GabinetePage({
             {/* Pagination */}
             <div
               className="flex flex-wrap justify-between items-center gap-3 px-4 py-3.5 text-[13px]"
-              style={{ color: "#5B606B", borderTop: "1px solid #F0F0EB" }}
+              style={{ color: "var(--color-text-subtle)", borderTop: "1px solid var(--color-border)" }}
             >
               <span>
                 Mostrando {demandas.length} de {total.toLocaleString("pt-BR")}
@@ -476,10 +476,10 @@ export default async function GabinetePage({
       {/* ── Aba: Lideranças (placeholder) ───────────────────────── */}
       {aba === "liderancas" && (
         <section className="wr-card p-12 text-center">
-          <p className="font-heading text-lg font-semibold" style={{ color: "#16181D" }}>
+          <p className="font-heading text-lg font-semibold" style={{ color: "var(--color-text)" }}>
             Lideranças
           </p>
-          <p className="mt-2 text-sm" style={{ color: "#5B606B" }}>
+          <p className="mt-2 text-sm" style={{ color: "var(--color-text-subtle)" }}>
             Cadastro de líderes comunitários, aniversários e comunicação por WhatsApp.
             Em breve.
           </p>
@@ -489,10 +489,10 @@ export default async function GabinetePage({
       {/* ── Aba: Projetos de Lei (placeholder) ──────────────────── */}
       {aba === "projetos" && (
         <section className="wr-card p-12 text-center">
-          <p className="font-heading text-lg font-semibold" style={{ color: "#16181D" }}>
+          <p className="font-heading text-lg font-semibold" style={{ color: "var(--color-text)" }}>
             Projetos de Lei
           </p>
-          <p className="mt-2 text-sm" style={{ color: "#5B606B" }}>
+          <p className="mt-2 text-sm" style={{ color: "var(--color-text-subtle)" }}>
             Acompanhamento de proposições legislativas, configurável por tipo de mandato.
             Em breve.
           </p>
@@ -502,10 +502,10 @@ export default async function GabinetePage({
       {/* ── Aba: Emendas (placeholder) ──────────────────────────── */}
       {aba === "emendas" && (
         <section className="wr-card p-12 text-center">
-          <p className="font-heading text-lg font-semibold" style={{ color: "#16181D" }}>
+          <p className="font-heading text-lg font-semibold" style={{ color: "var(--color-text)" }}>
             Emendas
           </p>
-          <p className="mt-2 text-sm" style={{ color: "#5B606B" }}>
+          <p className="mt-2 text-sm" style={{ color: "var(--color-text-subtle)" }}>
             Gestão de emendas parlamentares (Deputado/Prefeito).
             Em breve.
           </p>

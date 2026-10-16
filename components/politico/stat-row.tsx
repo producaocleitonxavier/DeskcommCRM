@@ -40,20 +40,20 @@ export function StatRow({ items, className }: StatRowProps) {
             {Icone && (
               <span
                 className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full"
-                style={{ background: "var(--color-accent-50)" }}
+                style={{ background: "rgba(215,243,106,0.1)" }}
                 aria-hidden
               >
-                <Icone className="h-4 w-4" style={{ color: "var(--color-accent-700)" }} />
+                <Icone className="h-4 w-4" style={{ color: "var(--color-accent)" }} />
               </span>
             )}
             <div className="min-w-0">
               <div
                 className="font-heading text-lg font-bold tabular-nums leading-none"
-                style={item.color ? { color: item.color } : undefined}
+                style={{ color: item.color ?? "var(--color-accent)" }}
               >
                 {valor}
               </div>
-              <div className="mt-0.5 text-xs text-muted-foreground">{item.label}</div>
+              <div className="mt-0.5 text-xs" style={{ color: "var(--color-text-muted)" }}>{item.label}</div>
             </div>
           </div>
         );

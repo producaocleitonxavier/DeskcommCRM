@@ -69,7 +69,7 @@ function situacaoEstilo(classificacao: string): { bg: string; color: string } {
     oportunidade: { bg: "#FCF1DC", color: "#8A5A10" },
     alta_oportunidade: { bg: "#FBE4E2", color: "#A3302A" },
   };
-  return mapa[classificacao] ?? { bg: "#F0F0EB", color: "#4A4F59" };
+  return mapa[classificacao] ?? { bg: "#F0F0EB", color: "var(--color-text-muted)" };
 }
 
 /** Status estratégico → label + estilo */
@@ -88,9 +88,9 @@ function statusEstilo(status: string): { bg: string; color: string } {
     critico: { bg: "#FBE4E2", color: "#A3302A" },
     prioritario: { bg: "#FCF1DC", color: "#8A5A10" },
     oportunidade: { bg: "#E4E7F8", color: "#2F3DA8" },
-    normal: { bg: "#F0F0EB", color: "#4A4F59" },
+    normal: { bg: "#F0F0EB", color: "var(--color-text-muted)" },
   };
-  return mapa[status] ?? { bg: "#F0F0EB", color: "#4A4F59" };
+  return mapa[status] ?? { bg: "#F0F0EB", color: "var(--color-text-muted)" };
 }
 
 // -- Data fetching -----------------------------------------------------------
@@ -163,7 +163,7 @@ function CoberturaBar({ pct }: { pct: number }) {
     <div className="flex items-center gap-2">
       <div
         className="w-[96px] h-2 rounded"
-        style={{ background: "#F0F0EB" }}
+        style={{ background: "var(--color-surface-elevated)" }}
       >
         <div
           className="h-2 rounded"
@@ -173,7 +173,7 @@ function CoberturaBar({ pct }: { pct: number }) {
           }}
         />
       </div>
-      <span className="text-xs tabular-nums font-medium" style={{ color: "#4A4F59" }}>
+      <span className="text-xs tabular-nums font-medium" style={{ color: "var(--color-text-muted)" }}>
         {pct.toFixed(0)}%
       </span>
     </div>
@@ -282,7 +282,7 @@ export default async function TerritorioPage({
       <header className="wr-card p-6 sm:p-7 flex flex-wrap items-center justify-between gap-4">
         <div>
           <h1 className="font-heading text-[36px] font-bold leading-tight">Território</h1>
-          <p className="mt-1.5 text-base" style={{ color: "#4A4F59" }}>
+          <p className="mt-1.5 text-base" style={{ color: "var(--color-text-muted)" }}>
             Onde estão os votos e onde falta gente cadastrada.
           </p>
         </div>
@@ -301,7 +301,7 @@ export default async function TerritorioPage({
                   style={
                     active
                       ? { background: "#16181D", color: "#FFFFFF" }
-                      : { background: "#FFFFFF", color: "#4A4F59", border: "1px solid #DCDCD5" }
+                      : { background: "var(--color-surface)", color: "var(--color-text-muted)", border: "1px solid var(--color-border)" }
                   }
                 >
                   {tab.label}
@@ -317,7 +317,7 @@ export default async function TerritorioPage({
         <>
           {oportunidades.length === 0 ? (
             <div className="wr-card p-12 text-center">
-              <p className="text-sm" style={{ color: "#5B606B" }}>
+              <p className="text-sm" style={{ color: "var(--color-text-subtle)" }}>
                 Nenhum território cadastrado. Cadastre territórios com latitude e longitude.
               </p>
             </div>
@@ -329,7 +329,7 @@ export default async function TerritorioPage({
               {/* Table */}
               <section aria-label="Zonas por força eleitoral" className="wr-card pt-2 pb-0 px-0">
                 <div className="px-5 pt-3 pb-2">
-                  <h2 className="font-heading text-base font-semibold" style={{ color: "#16181D" }}>
+                  <h2 className="font-heading text-base font-semibold" style={{ color: "var(--color-text)" }}>
                     Zonas por força eleitoral
                   </h2>
                 </div>
@@ -343,7 +343,7 @@ export default async function TerritorioPage({
                             className={`font-medium text-[13px] px-4 py-3 whitespace-nowrap border-b ${
                               ["Leads", "Novos", "Pot. conversão"].includes(col) ? "text-right" : "text-left"
                             }`}
-                            style={{ color: "#5B606B", borderColor: "#ECECE7" }}
+                            style={{ color: "var(--color-text-subtle)", borderColor: "var(--color-border)" }}
                           >
                             {col}
                           </th>
@@ -356,24 +356,24 @@ export default async function TerritorioPage({
                         return (
                           <tr
                             key={o.territory_id}
-                            className="group transition-colors hover:bg-[#F6F6F2]"
+                            className="group transition-colors hover:bg-[var(--color-surface-elevated)]"
                             style={{
-                              borderBottom: "1px solid #F0F0EB",
+                              borderBottom: "1px solid var(--color-border)",
                               ...(highlighted ? { background: "#FAFDEB" } : {}),
                             }}
                           >
                             <td className="px-4 py-3.5 whitespace-nowrap">
-                              <span className="font-semibold" style={{ color: "#16181D" }}>
+                              <span className="font-semibold" style={{ color: "var(--color-text)" }}>
                                 {o.name}
                               </span>
                             </td>
-                            <td className="px-4 py-3.5 whitespace-nowrap" style={{ color: "#4A4F59" }}>
+                            <td className="px-4 py-3.5 whitespace-nowrap" style={{ color: "var(--color-text-muted)" }}>
                               {o.state_code ?? "—"}
                             </td>
-                            <td className="px-4 py-3.5 whitespace-nowrap text-right tabular-nums" style={{ color: "#16181D" }}>
+                            <td className="px-4 py-3.5 whitespace-nowrap text-right tabular-nums" style={{ color: "var(--color-text)" }}>
                               {o.total_leads.toLocaleString("pt-BR")}
                             </td>
-                            <td className="px-4 py-3.5 whitespace-nowrap text-right tabular-nums" style={{ color: "#4A4F59" }}>
+                            <td className="px-4 py-3.5 whitespace-nowrap text-right tabular-nums" style={{ color: "var(--color-text-muted)" }}>
                               {o.novos_cadastros.toLocaleString("pt-BR")}
                             </td>
                             <td className="px-4 py-3.5 whitespace-nowrap text-right tabular-nums font-bold">
@@ -395,7 +395,7 @@ export default async function TerritorioPage({
                 {/* Footer */}
                 <div
                   className="px-4 py-3 text-[12px]"
-                  style={{ color: "#9A9D8F", borderTop: "1px solid #F0F0EB" }}
+                  style={{ color: "var(--color-text-subtle)", borderTop: "1px solid var(--color-border)" }}
                 >
                   Cobertura = contatos ÷ eleitores cadastrados na zona
                 </div>
@@ -410,7 +410,7 @@ export default async function TerritorioPage({
         <>
           {prioridades.length === 0 ? (
             <div className="wr-card p-12 text-center">
-              <p className="text-sm" style={{ color: "#5B606B" }}>
+              <p className="text-sm" style={{ color: "var(--color-text-subtle)" }}>
                 Nenhum território cadastrado. Cadastre territórios com latitude e longitude.
               </p>
             </div>
@@ -447,7 +447,7 @@ export default async function TerritorioPage({
               {/* Table */}
               <section aria-label="Territórios por prioridade" className="wr-card pt-2 pb-0 px-0">
                 <div className="px-5 pt-3 pb-2">
-                  <h2 className="font-heading text-base font-semibold" style={{ color: "#16181D" }}>
+                  <h2 className="font-heading text-base font-semibold" style={{ color: "var(--color-text)" }}>
                     Territórios por prioridade estratégica
                   </h2>
                 </div>
@@ -461,7 +461,7 @@ export default async function TerritorioPage({
                             className={`font-medium text-[13px] px-4 py-3 whitespace-nowrap border-b ${
                               ["Score", "Influência", "Flags", "Flags críticas"].includes(col) ? "text-right" : "text-left"
                             }`}
-                            style={{ color: "#5B606B", borderColor: "#ECECE7" }}
+                            style={{ color: "var(--color-text-subtle)", borderColor: "var(--color-border)" }}
                           >
                             {col}
                           </th>
@@ -474,18 +474,18 @@ export default async function TerritorioPage({
                         return (
                           <tr
                             key={p.territory_id}
-                            className="group transition-colors hover:bg-[#F6F6F2]"
+                            className="group transition-colors hover:bg-[var(--color-surface-elevated)]"
                             style={{
-                              borderBottom: "1px solid #F0F0EB",
+                              borderBottom: "1px solid var(--color-border)",
                               ...(isCritico ? { background: "#FEF6F5" } : {}),
                             }}
                           >
                             <td className="px-4 py-3.5 whitespace-nowrap">
-                              <span className="font-semibold" style={{ color: "#16181D" }}>
+                              <span className="font-semibold" style={{ color: "var(--color-text)" }}>
                                 {p.name}
                               </span>
                             </td>
-                            <td className="px-4 py-3.5 whitespace-nowrap" style={{ color: "#4A4F59" }}>
+                            <td className="px-4 py-3.5 whitespace-nowrap" style={{ color: "var(--color-text-muted)" }}>
                               {p.state_code ?? "—"}
                             </td>
                             <td className="px-4 py-3.5 whitespace-nowrap">
@@ -494,7 +494,7 @@ export default async function TerritorioPage({
                             <td className="px-4 py-3.5 whitespace-nowrap text-right tabular-nums font-bold font-heading">
                               {p.priority_score}
                             </td>
-                            <td className="px-4 py-3.5 whitespace-nowrap text-right tabular-nums" style={{ color: "#4A4F59" }}>
+                            <td className="px-4 py-3.5 whitespace-nowrap text-right tabular-nums" style={{ color: "var(--color-text-muted)" }}>
                               {p.influence_score}
                             </td>
                             <td className="px-4 py-3.5 whitespace-nowrap text-right tabular-nums">
@@ -503,7 +503,7 @@ export default async function TerritorioPage({
                                   {p.flags_ativas}
                                 </span>
                               ) : (
-                                <span style={{ color: "#9A9D8F" }}>0</span>
+                                <span style={{ color: "var(--color-text-subtle)" }}>0</span>
                               )}
                             </td>
                             <td className="px-4 py-3.5 whitespace-nowrap text-right tabular-nums">
@@ -512,7 +512,7 @@ export default async function TerritorioPage({
                                   {p.flags_criticas}
                                 </span>
                               ) : (
-                                <span style={{ color: "#9A9D8F" }}>0</span>
+                                <span style={{ color: "var(--color-text-subtle)" }}>0</span>
                               )}
                             </td>
                           </tr>
@@ -525,7 +525,7 @@ export default async function TerritorioPage({
                 {/* Footer */}
                 <div
                   className="flex justify-between items-center px-4 py-3 text-[13px]"
-                  style={{ color: "#5B606B", borderTop: "1px solid #F0F0EB" }}
+                  style={{ color: "var(--color-text-subtle)", borderTop: "1px solid var(--color-border)" }}
                 >
                   <span>
                     {prioridades.length} territórios

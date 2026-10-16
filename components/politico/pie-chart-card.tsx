@@ -48,7 +48,7 @@ export function PieChartCard({ title, data, height = 280, className }: PieChartC
   const total = data.reduce((acc, d) => acc + d.value, 0);
 
   return (
-    <div className={cn("wr-card p-6", className)}>
+    <div className={cn("wr-card-dark p-6", className)}>
       <h3 className="mb-4 font-heading text-base font-bold">{title}</h3>
 
       <div className="relative">

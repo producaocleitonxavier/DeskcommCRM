@@ -114,18 +114,18 @@ function tempEstilo(temp: string): { bg: string; color: string } {
     morno: { bg: "#FCF1DC", color: "#8A5A10" },
     quente: { bg: "#FBE4E2", color: "#A3302A" },
   };
-  return m[temp] ?? { bg: "#F0F0EB", color: "#4A4F59" };
+  return m[temp] ?? { bg: "#F0F0EB", color: "var(--color-text-muted)" };
 }
 
 function estadoDemandaEstilo(estado: string): { bg: string; color: string } {
   const m: Record<string, { bg: string; color: string }> = {
-    aberta: { bg: "#F0F0EB", color: "#4A4F59" },
+    aberta: { bg: "#F0F0EB", color: "var(--color-text-muted)" },
     em_atendimento: { bg: "#E4E7F8", color: "#2F3DA8" },
     aguardando_cliente: { bg: "#FCF1DC", color: "#8A5A10" },
     resolvida: { bg: "#E2F5EC", color: "#17784F" },
-    encerrada: { bg: "#F0F0EB", color: "#5B606B" },
+    encerrada: { bg: "#F0F0EB", color: "var(--color-text-subtle)" },
   };
-  return m[estado] ?? { bg: "#F0F0EB", color: "#4A4F59" };
+  return m[estado] ?? { bg: "#F0F0EB", color: "var(--color-text-muted)" };
 }
 
 function estadoDemandaLabel(estado: string): string {
@@ -283,7 +283,7 @@ function InfoCard({ titulo, children }: { titulo: string; children: React.ReactN
     <div className="wr-card wr-hover p-5">
       <h3
         className="text-[11px] font-semibold uppercase tracking-[.08em] mb-3"
-        style={{ color: "#9A9D8F" }}
+        style={{ color: "var(--color-text-subtle)" }}
       >
         {titulo}
       </h3>
@@ -295,9 +295,9 @@ function InfoCard({ titulo, children }: { titulo: string; children: React.ReactN
 function InfoRow({ label, value }: { label: string; value: React.ReactNode }) {
   return (
     <div className="flex justify-between items-start py-1.5 text-sm">
-      <span style={{ color: "#5B606B" }}>{label}</span>
-      <span className="text-right font-medium" style={{ color: "#16181D" }}>
-        {value || <span style={{ color: "#9A9D8F" }}>—</span>}
+      <span style={{ color: "var(--color-text-subtle)" }}>{label}</span>
+      <span className="text-right font-medium" style={{ color: "var(--color-text)" }}>
+        {value || <span style={{ color: "var(--color-text-subtle)" }}>—</span>}
       </span>
     </div>
   );
@@ -332,7 +332,7 @@ export default async function FichaPage({
       <Link
         href="/app/politico/leads"
         className="inline-flex items-center gap-1.5 text-sm font-medium transition-colors hover:opacity-70"
-        style={{ color: "#5B606B" }}
+        style={{ color: "var(--color-text-subtle)" }}
       >
         ← Pessoas
       </Link>
@@ -374,7 +374,7 @@ export default async function FichaPage({
                   Líder
                 </span>
               )}
-              <span className="text-xs tabular-nums" style={{ color: "#5B606B" }}>
+              <span className="text-xs tabular-nums" style={{ color: "var(--color-text-subtle)" }}>
                 Score: {lead.political_score}
               </span>
             </div>
@@ -383,7 +383,7 @@ export default async function FichaPage({
           {/* Funil progresso */}
           <div className="hidden sm:block">
             <FunilProgresso current={lead.support_level} />
-            <div className="text-[11px] text-center mt-1.5" style={{ color: "#9A9D8F" }}>
+            <div className="text-[11px] text-center mt-1.5" style={{ color: "var(--color-text-subtle)" }}>
               Etapa {etapaIdx(lead.support_level) + 1} de {ETAPAS_FUNIL.length}
             </div>
           </div>
@@ -411,7 +411,7 @@ export default async function FichaPage({
 
           <InfoCard titulo="Linha do tempo">
             {transitions.length === 0 ? (
-              <p className="text-sm" style={{ color: "#9A9D8F" }}>Nenhuma transição registrada.</p>
+              <p className="text-sm" style={{ color: "var(--color-text-subtle)" }}>Nenhuma transição registrada.</p>
             ) : (
               <div className="space-y-3">
                 {transitions.map((t) => (
@@ -427,13 +427,13 @@ export default async function FichaPage({
                       <div className="flex items-center gap-2 text-sm">
                         {t.from_level && (
                           <>
-                            <span className="font-medium" style={{ color: "#5B606B" }}>{etapaLabel(t.from_level)}</span>
-                            <span style={{ color: "#9A9D8F" }}>→</span>
+                            <span className="font-medium" style={{ color: "var(--color-text-subtle)" }}>{etapaLabel(t.from_level)}</span>
+                            <span style={{ color: "var(--color-text-subtle)" }}>→</span>
                           </>
                         )}
-                        <span className="font-semibold" style={{ color: "#16181D" }}>{etapaLabel(t.to_level)}</span>
+                        <span className="font-semibold" style={{ color: "var(--color-text)" }}>{etapaLabel(t.to_level)}</span>
                       </div>
-                      <div className="mt-0.5 text-xs" style={{ color: "#9A9D8F" }}>
+                      <div className="mt-0.5 text-xs" style={{ color: "var(--color-text-subtle)" }}>
                         {formatarDataCurta(t.changed_at)}
                         {t.reason && ` · ${t.reason}`}
                       </div>
@@ -447,7 +447,7 @@ export default async function FichaPage({
           {/* Demandas recentes */}
           <section className="wr-card wr-hover pt-4 pb-0 px-0">
             <div className="flex items-center justify-between px-5 pb-3">
-              <h3 className="text-[11px] font-semibold uppercase tracking-[.08em]" style={{ color: "#9A9D8F" }}>
+              <h3 className="text-[11px] font-semibold uppercase tracking-[.08em]" style={{ color: "var(--color-text-subtle)" }}>
                 Demandas recentes
               </h3>
               <Link href="/app/politico/demandas" className="text-xs font-medium hover:opacity-70 transition-colors" style={{ color: "#4352C4" }}>
@@ -456,7 +456,7 @@ export default async function FichaPage({
             </div>
             {demandas.length === 0 ? (
               <div className="px-5 pb-5">
-                <p className="text-sm" style={{ color: "#9A9D8F" }}>Nenhuma demanda registrada.</p>
+                <p className="text-sm" style={{ color: "var(--color-text-subtle)" }}>Nenhuma demanda registrada.</p>
               </div>
             ) : (
               <div className="overflow-x-auto">
@@ -464,7 +464,7 @@ export default async function FichaPage({
                   <thead>
                     <tr>
                       {["Demanda", "Status", "Prioridade", "Prazo"].map((col) => (
-                        <th key={col} className="text-left font-medium text-[13px] px-5 py-2.5 whitespace-nowrap border-b" style={{ color: "#5B606B", borderColor: "#ECECE7" }}>
+                        <th key={col} className="text-left font-medium text-[13px] px-5 py-2.5 whitespace-nowrap border-b" style={{ color: "var(--color-text-subtle)", borderColor: "var(--color-border)" }}>
                           {col}
                         </th>
                       ))}
@@ -474,15 +474,15 @@ export default async function FichaPage({
                     {demandas.map((d) => {
                       const sE = estadoDemandaEstilo(d.estado);
                       return (
-                        <tr key={d.id} className="hover:bg-[#F6F6F2] transition-colors" style={{ borderBottom: "1px solid #F0F0EB" }}>
-                          <td className="px-5 py-3 font-medium max-w-[260px] truncate" style={{ color: "#16181D" }}>{d.assunto || "Sem assunto"}</td>
+                        <tr key={d.id} className="hover:bg-[var(--color-surface-elevated)] transition-colors" style={{ borderBottom: "1px solid var(--color-border)" }}>
+                          <td className="px-5 py-3 font-medium max-w-[260px] truncate" style={{ color: "var(--color-text)" }}>{d.assunto || "Sem assunto"}</td>
                           <td className="px-5 py-3 whitespace-nowrap">
                             <span className="inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold" style={{ background: sE.bg, color: sE.color }}>
                               {estadoDemandaLabel(d.estado)}
                             </span>
                           </td>
-                          <td className="px-5 py-3 whitespace-nowrap" style={{ color: "#4A4F59" }}>{d.pol_prioridade ?? "Normal"}</td>
-                          <td className="px-5 py-3 whitespace-nowrap tabular-nums" style={{ color: "#4A4F59" }}>{d.prazo_em ? formatarDataCurta(d.prazo_em) : "—"}</td>
+                          <td className="px-5 py-3 whitespace-nowrap" style={{ color: "var(--color-text-muted)" }}>{d.pol_prioridade ?? "Normal"}</td>
+                          <td className="px-5 py-3 whitespace-nowrap tabular-nums" style={{ color: "var(--color-text-muted)" }}>{d.prazo_em ? formatarDataCurta(d.prazo_em) : "—"}</td>
                         </tr>
                       );
                     })}
@@ -497,7 +497,7 @@ export default async function FichaPage({
         <div className="space-y-4">
           {/* Ações rápidas */}
           <div className="wr-card p-5">
-            <h3 className="text-[11px] font-semibold uppercase tracking-[.08em] mb-3" style={{ color: "#9A9D8F" }}>Ações rápidas</h3>
+            <h3 className="text-[11px] font-semibold uppercase tracking-[.08em] mb-3" style={{ color: "var(--color-text-subtle)" }}>Ações rápidas</h3>
             <div className="flex flex-col gap-2.5">
               {telefone && (
                 <a href={`tel:${telefone}`} className="wr-btn-dark w-full justify-center">
@@ -520,7 +520,7 @@ export default async function FichaPage({
 
           {/* KPIs do contato */}
           <div className="wr-card wr-hover p-5">
-            <h3 className="text-[11px] font-semibold uppercase tracking-[.08em] mb-3" style={{ color: "#9A9D8F" }}>Indicadores</h3>
+            <h3 className="text-[11px] font-semibold uppercase tracking-[.08em] mb-3" style={{ color: "var(--color-text-subtle)" }}>Indicadores</h3>
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <div className="font-heading text-2xl font-bold tabular-nums leading-none">{lead.political_score}</div>
@@ -541,10 +541,10 @@ export default async function FichaPage({
 
           {/* Funil visual */}
           <div className="wr-card wr-hover p-5">
-            <h3 className="text-[11px] font-semibold uppercase tracking-[.08em] mb-3" style={{ color: "#9A9D8F" }}>Nível no funil</h3>
+            <h3 className="text-[11px] font-semibold uppercase tracking-[.08em] mb-3" style={{ color: "var(--color-text-subtle)" }}>Nível no funil</h3>
             <div className="flex items-center justify-between">
               <EtapaPill value={lead.support_level} />
-              <span className="text-[11px]" style={{ color: "#9A9D8F" }}>Etapa {etapaIdx(lead.support_level) + 1} de {ETAPAS_FUNIL.length}</span>
+              <span className="text-[11px]" style={{ color: "var(--color-text-subtle)" }}>Etapa {etapaIdx(lead.support_level) + 1} de {ETAPAS_FUNIL.length}</span>
             </div>
             <div className="mt-3">
               <FunilProgresso current={lead.support_level} />
@@ -554,10 +554,10 @@ export default async function FichaPage({
           {/* Tags */}
           {contact.tags && contact.tags.length > 0 && (
             <div className="wr-card wr-hover p-5">
-              <h3 className="text-[11px] font-semibold uppercase tracking-[.08em] mb-3" style={{ color: "#9A9D8F" }}>Tags</h3>
+              <h3 className="text-[11px] font-semibold uppercase tracking-[.08em] mb-3" style={{ color: "var(--color-text-subtle)" }}>Tags</h3>
               <div className="flex flex-wrap gap-1.5">
                 {contact.tags.map((tag) => (
-                  <span key={tag} className="inline-flex items-center rounded-full px-2.5 py-0.5 text-[11px] font-medium" style={{ background: "#F0F0EB", color: "#4A4F59" }}>
+                  <span key={tag} className="inline-flex items-center rounded-full px-2.5 py-0.5 text-[11px] font-medium" style={{ background: "var(--color-surface-elevated)", color: "var(--color-text-muted)" }}>
                     {tag}
                   </span>
                 ))}

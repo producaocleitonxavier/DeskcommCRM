@@ -89,11 +89,11 @@ export default function AdversariosClient({ kpis, comparativo, adversarios }: Ad
                     </span>
                   </div>
                   <div className="flex flex-wrap items-center gap-2">
-                    <span className="rounded-full px-2 py-0.5 text-xs font-medium capitalize" style={{ background: "#F0F0EB", color: "#5B606B" }}>
+                    <span className="rounded-full px-2 py-0.5 text-xs font-medium capitalize" style={{ background: "var(--color-surface-elevated)", color: "var(--color-text-subtle)" }}>
                       {a.platform}
                     </span>
                     {!a.active && (
-                      <span className="rounded-full px-2 py-0.5 text-xs font-medium" style={{ background: "#F0F0EB", color: "#9A9D8F" }}>Inativo</span>
+                      <span className="rounded-full px-2 py-0.5 text-xs font-medium" style={{ background: "var(--color-surface-elevated)", color: "var(--color-text-subtle)" }}>Inativo</span>
                     )}
                   </div>
                   <div className="mt-auto flex items-center justify-between border-t pt-2.5 text-sm" style={{ borderColor: "var(--color-border)" }}>

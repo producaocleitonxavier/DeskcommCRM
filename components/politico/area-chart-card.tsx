@@ -65,7 +65,7 @@ export function AreaChartCard({
   const gradId = `area-grad-${useId().replace(/[:]/g, "")}`;
 
   return (
-    <div className={cn("wr-card p-6", className)}>
+    <div className={cn("wr-card-dark p-6", className)}>
       <h3 className="mb-4 font-heading text-base font-bold">{title}</h3>
       <ResponsiveContainer width="100%" height={height}>
         <AreaChart data={data} margin={{ top: 4, right: 8, left: -8, bottom: 0 }}>
@@ -75,7 +75,7 @@ export function AreaChartCard({
               <stop offset="95%" stopColor={color} stopOpacity={0} />
             </linearGradient>
           </defs>
-          <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border)" vertical={false} />
+          <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" vertical={false} />
           <XAxis
             dataKey="name"
             tick={{ fontSize: 12, fill: "var(--color-text-subtle)" }}

@@ -35,23 +35,17 @@ export function KpiCard({ label, valor, icone: Icone, variacao, cor, sufixo, var
   const escuro = variant === "dark";
 
   return (
-    <div
-      className={cn("wr-card p-6", className)}
-      style={escuro ? { background: "linear-gradient(135deg, #4352C4 0%, #26318F 100%)" } : undefined}
-    >
+    <div className={cn(escuro ? "wr-card-accent" : "wr-card-dark", "p-6", className)}>
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <div
-            className="font-heading text-3xl font-bold tabular-nums leading-none"
-            style={{ color: cor ?? (escuro ? "#FFFFFF" : undefined) }}
+            className={cn("wr-kpi-value text-3xl leading-none")}
+            style={cor ? { color: cor, textShadow: "none" } : undefined}
           >
             {typeof valor === "number" ? valor.toLocaleString("pt-BR") : valor}
             {sufixo && <span className="ml-0.5 text-lg font-semibold">{sufixo}</span>}
           </div>
-          <div
-            className={cn("mt-2 text-sm", !escuro && "text-muted-foreground")}
-            style={escuro ? { color: "rgba(255,255,255,0.78)" } : undefined}
-          >
+          <div className="mt-2 text-sm" style={{ color: "var(--color-text-muted)" }}>
             {label}
           </div>
 
@@ -60,8 +54,8 @@ export function KpiCard({ label, valor, icone: Icone, variacao, cor, sufixo, var
               className="mt-2.5 inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-semibold"
               style={
                 subiu
-                  ? { background: "#E2F5EC", color: "#17784F" }
-                  : { background: "#FBE4E2", color: "#A3302A" }
+                  ? { background: "rgba(34,197,94,0.15)", color: "#4ADE80" }
+                  : { background: "rgba(239,68,68,0.15)", color: "#F87171" }
               }
             >
               {subiu ? <ArrowUp className="h-3 w-3" aria-hidden /> : <ArrowDown className="h-3 w-3" aria-hidden />}
@@ -72,10 +66,10 @@ export function KpiCard({ label, valor, icone: Icone, variacao, cor, sufixo, var
 
         <span
           className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full"
-          style={{ background: escuro ? "rgba(255,255,255,0.15)" : "var(--color-accent-50)" }}
+          style={{ background: "rgba(215,243,106,0.1)" }}
           aria-hidden
         >
-          <Icone className="h-5 w-5" style={{ color: escuro ? "#FFFFFF" : "var(--color-accent-700)" }} />
+          <Icone className="h-5 w-5" style={{ color: "var(--color-accent)" }} />
         </span>
       </div>
     </div>

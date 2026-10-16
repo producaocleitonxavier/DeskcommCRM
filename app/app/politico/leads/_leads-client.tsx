@@ -88,7 +88,7 @@ export default function LeadsClient({ leads, total, contagens, filtros, porPagin
         style={
           ativo
             ? { background: "#16181D", color: "#FFFFFF", borderColor: "#16181D" }
-            : { background: "#FFFFFF", color: "var(--color-text-muted)", borderColor: "var(--color-border)" }
+            : { background: "var(--color-surface)", color: "var(--color-text-muted)", borderColor: "var(--color-border)" }
         }
       >
         {children}

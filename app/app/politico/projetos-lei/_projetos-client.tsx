@@ -94,7 +94,7 @@ export default function ProjetosClient({ kpis, projetos }: ProjetosClientProps) 
                     <span className="rounded-full px-2 py-0.5 text-xs font-medium" style={{ background: "#E2F5EC", color: "#17784F" }}>Alinhado</span>
                   )}
                   {p.comissao && (
-                    <span className="rounded-full px-2 py-0.5 text-xs font-medium" style={{ background: "#F0F0EB", color: "#5B606B" }}>{p.comissao}</span>
+                    <span className="rounded-full px-2 py-0.5 text-xs font-medium" style={{ background: "var(--color-surface-elevated)", color: "var(--color-text-subtle)" }}>{p.comissao}</span>
                   )}
                 </div>
 

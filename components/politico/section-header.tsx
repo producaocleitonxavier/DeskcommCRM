@@ -28,11 +28,7 @@ export function SectionHeader({ title, subtitle, action, actionTone = "default",
 
       {action &&
         (actionTone === "accent" ? (
-          <Link
-            href={action.href}
-            className="inline-flex min-h-[44px] shrink-0 items-center gap-1.5 rounded-full px-5 text-sm font-semibold"
-            style={{ background: "#D7F36A", color: "#16181D" }}
-          >
+          <Link href={action.href} className="wr-btn-tactical shrink-0">
             {action.label}
           </Link>
         ) : (

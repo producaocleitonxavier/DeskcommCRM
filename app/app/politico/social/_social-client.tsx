@@ -91,7 +91,7 @@ export default function SocialClient({ kpis, engajamentoPorPlataforma, perfis, p
                       </span>
                     </div>
                     <div className="flex flex-wrap items-center gap-2">
-                      <span className="rounded-full px-2 py-0.5 text-xs font-medium capitalize" style={{ background: "#F0F0EB", color: "#5B606B" }}>
+                      <span className="rounded-full px-2 py-0.5 text-xs font-medium capitalize" style={{ background: "var(--color-surface-elevated)", color: "var(--color-text-subtle)" }}>
                         {p.platform}
                       </span>
                       <span className="rounded-full px-2 py-0.5 text-xs font-semibold" style={{ background: cat.bg, color: cat.fg }}>
@@ -114,7 +114,7 @@ export default function SocialClient({ kpis, engajamentoPorPlataforma, perfis, p
               <ul className="space-y-3">
                 {posts.map((post) => (
                   <li key={post.id} className="flex items-start gap-3 border-b pb-3 last:border-0 last:pb-0" style={{ borderColor: "var(--color-border)" }}>
-                    <span className="mt-0.5 rounded-full px-2 py-0.5 text-[11px] font-medium capitalize" style={{ background: "#F0F0EB", color: "#5B606B" }}>
+                    <span className="mt-0.5 rounded-full px-2 py-0.5 text-[11px] font-medium capitalize" style={{ background: "var(--color-surface-elevated)", color: "var(--color-text-subtle)" }}>
                       {post.platform}
                     </span>
                     <div className="min-w-0 flex-1">

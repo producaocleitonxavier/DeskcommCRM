@@ -63,7 +63,7 @@ export function BarChartCard({ title, data, height = 280, horizontal = false, cl
   const eixoTick = { fontSize: 12, fill: "var(--color-text-subtle)" };
 
   return (
-    <div className={cn("wr-card p-6", className)}>
+    <div className={cn("wr-card-dark p-6", className)}>
       <h3 className="mb-4 font-heading text-base font-bold">{title}</h3>
       <ResponsiveContainer width="100%" height={height}>
         <BarChart
@@ -100,7 +100,7 @@ export function BarChartCard({ title, data, height = 280, horizontal = false, cl
               <YAxis tick={eixoTick} tickLine={false} axisLine={false} width={40} />
             </>
           )}
-          <Tooltip content={<ChartTooltip />} cursor={{ fill: "var(--color-accent-50)" }} />
+          <Tooltip content={<ChartTooltip />} cursor={{ fill: "rgba(215,243,106,0.1)" }} />
           <Bar dataKey="value" radius={horizontal ? [0, 8, 8, 0] : [8, 8, 0, 0]}>
             {data.map((d, i) => (
               <Cell key={`cell-${i}`} fill={d.fill ?? COR_PADRAO} />

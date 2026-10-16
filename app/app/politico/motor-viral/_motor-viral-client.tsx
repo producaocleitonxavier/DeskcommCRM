@@ -75,7 +75,7 @@ export default function MotorViralClient({ kpis, serieSemanal, conteudos, pagina
                   <p className="mt-0.5 text-sm text-muted-foreground line-clamp-1">{c.topic}</p>
                 </div>
                 <div className="flex flex-wrap gap-1.5">
-                  <span className="rounded-full px-2 py-0.5 text-xs font-medium" style={{ background: "#F0F0EB", color: "#5B606B" }}>
+                  <span className="rounded-full px-2 py-0.5 text-xs font-medium" style={{ background: "var(--color-surface-elevated)", color: "var(--color-text-subtle)" }}>
                     {c.tipo}
                   </span>
                   {c.plataforma && (

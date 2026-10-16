@@ -83,7 +83,7 @@ export default function NarrativasClient({ kpis, sentimentoPie, narrativas }: Na
                     <span className="rounded-full px-2 py-0.5 text-xs font-semibold" style={{ background: sen.bg, color: sen.fg }}>{sen.label}</span>
                     <span className="rounded-full px-2 py-0.5 text-xs font-semibold" style={{ background: st.bg, color: st.fg }}>{st.label}</span>
                     {n.platform && (
-                      <span className="rounded-full px-2 py-0.5 text-xs font-medium capitalize" style={{ background: "#F0F0EB", color: "#5B606B" }}>
+                      <span className="rounded-full px-2 py-0.5 text-xs font-medium capitalize" style={{ background: "var(--color-surface-elevated)", color: "var(--color-text-subtle)" }}>
                         {n.platform.replace("_", " ")}
                       </span>
                     )}

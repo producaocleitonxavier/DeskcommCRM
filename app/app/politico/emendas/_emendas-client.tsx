@@ -80,7 +80,7 @@ export default function EmendasClient({ kpis, valorPorArea, emendas }: EmendasCl
                       {st.label}
                     </span>
                   </div>
-                  <span className="w-fit rounded-full px-2 py-0.5 text-xs font-medium" style={{ background: "#F0F0EB", color: "#5B606B" }}>
+                  <span className="w-fit rounded-full px-2 py-0.5 text-xs font-medium" style={{ background: "var(--color-surface-elevated)", color: "var(--color-text-subtle)" }}>
                     {e.area}
                   </span>
                   <div className="mt-auto border-t pt-2.5 text-sm" style={{ borderColor: "var(--color-border)" }}>
