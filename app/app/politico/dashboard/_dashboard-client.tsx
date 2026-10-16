@@ -22,7 +22,7 @@ import {
 } from "lucide-react";
 
 import { KpiCard } from "@/components/politico/kpi-card";
-import { FunnelChartCard } from "@/components/politico/funnel-chart";
+import { FunnelBoard } from "@/components/politico/funnel-board";
 import { PieChartCard } from "@/components/politico/pie-chart-card";
 import { BarChartCard } from "@/components/politico/bar-chart-card";
 import { StatRow } from "@/components/politico/stat-row";
@@ -107,8 +107,8 @@ export default function DashboardClient({ dash, funil, calls }: DashboardClientP
                   <Badge>Taxa de conversão: {funil.taxa_conversao_pct}%</Badge>
                 </div>
               </div>
-              <FunnelChartCard
-                height={350}
+              <FunnelBoard
+                className="mt-5"
                 data={[
                   { label: "Novo cadastro", value: funil.funil_novo_cadastro, color: FUNIL_HEX[0]! },
                   { label: "Simpatizante", value: funil.funil_simpatizante, color: FUNIL_HEX[1]! },

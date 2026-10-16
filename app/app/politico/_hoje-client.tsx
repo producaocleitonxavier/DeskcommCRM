@@ -22,7 +22,7 @@ import {
 } from "lucide-react";
 
 import { KpiCard } from "@/components/politico/kpi-card";
-import { FunnelChartCard } from "@/components/politico/funnel-chart";
+import { FunnelBoard } from "@/components/politico/funnel-board";
 import { BarChartCard } from "@/components/politico/bar-chart-card";
 import { AreaChartCard } from "@/components/politico/area-chart-card";
 import { SectionHeader } from "@/components/politico/section-header";
@@ -173,7 +173,7 @@ export default function HojeClient({
           action={{ label: "Ver detalhes", href: "/app/politico/funil" }}
           className="mb-2"
         />
-        <FunnelChartCard data={funnelData} height={350} />
+        <FunnelBoard data={funnelData} className="mt-5" />
       </section>
 
       {/* ── 4. Temperatura + Ativações ──────────────────────────── */}
