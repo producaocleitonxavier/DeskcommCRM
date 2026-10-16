@@ -11,8 +11,17 @@ import { redirect } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { requireAuth, resolveActiveOrg } from "@/lib/auth/server";
+import DemandasCharts from "./_demandas-charts";
 
 export const dynamic = "force-dynamic";
+
+const ESTADO_COR: Record<string, string> = {
+  aberta: "#F59E0B",
+  em_atendimento: "#3B82F6",
+  aguardando_cliente: "#FCD34D",
+  resolvida: "#22C55E",
+  encerrada: "#9CA3AF",
+};
 
 // -- Tipos -------------------------------------------------------------------
 
@@ -162,45 +171,6 @@ function StatusPill({ estado }: { estado: string }) {
   );
 }
 
-function KpiCard({
-  label,
-  value,
-  sub,
-  bg,
-  accent,
-}: {
-  label: string;
-  value: string | number;
-  sub?: string;
-  bg?: string;
-  accent?: string;
-}) {
-  return (
-    <div
-      className="flex-1 min-w-[140px] rounded-[20px] p-4"
-      style={{
-        background: bg ?? "#FFFFFF",
-        boxShadow: "var(--wr-card-shadow)",
-      }}
-    >
-      <div className="text-[13px] font-medium" style={{ color: accent ?? "#4A4F59" }}>
-        {label}
-      </div>
-      <div
-        className="font-heading text-[28px] font-bold mt-0.5 tabular-nums"
-        style={{ color: accent ?? "var(--color-text)" }}
-      >
-        {typeof value === "number" ? value.toLocaleString("pt-BR") : value}
-      </div>
-      {sub && (
-        <div className="text-[12px] mt-0.5" style={{ color: accent ?? "#5B606B" }}>
-          {sub}
-        </div>
-      )}
-    </div>
-  );
-}
-
 // -- Componente principal ----------------------------------------------------
 
 export default async function GabinetePage({
@@ -225,11 +195,31 @@ export default async function GabinetePage({
 
   const totalPaginas = Math.ceil(total / POR_PAGINA);
 
-  // Contar demandas vencendo esta semana
-  const vencendoSemana = demandas.filter((d) => {
-    const dias = diasParaPrazo(d.prazo_em);
-    return dias !== null && dias >= 0 && dias <= 7 && !["resolvida", "encerrada"].includes(d.estado);
-  }).length;
+  // Distribuição por status + tempo médio de resolução (para os gráficos).
+  const dbCharts = await createClient();
+  const ESTADOS_PIE = ["aberta", "em_atendimento", "aguardando_cliente", "resolvida", "encerrada"];
+  const [distRes, resolvidasRes] = await Promise.all([
+    Promise.all(
+      ESTADOS_PIE.map((e) =>
+        dbCharts.from("demandas").select("id", { count: "exact", head: true }).eq("organization_id", org.orgId).eq("estado", e),
+      ),
+    ),
+    dbCharts.from("demandas").select("aberta_em, fechada_em").eq("organization_id", org.orgId).not("fechada_em", "is", null).limit(500),
+  ]);
+  const statusPie = ESTADOS_PIE.map((e, i) => ({
+    name: estadoLabel(e),
+    value: distRes[i]?.count ?? 0,
+    fill: ESTADO_COR[e] ?? "#9CA3AF",
+  })).filter((x) => x.value > 0);
+  const fechadas = (resolvidasRes.data ?? []) as { aberta_em: string; fechada_em: string }[];
+  const tempoMedioDias =
+    fechadas.length > 0
+      ? Math.round(
+          (fechadas.reduce((s, d) => s + (new Date(d.fechada_em).getTime() - new Date(d.aberta_em).getTime()), 0) /
+            fechadas.length /
+            86_400_000) * 10,
+        ) / 10
+      : null;
 
   function montarQuery(overrides: Record<string, string | undefined>) {
     const q = new URLSearchParams();
@@ -293,27 +283,16 @@ export default async function GabinetePage({
       {/* ── Aba: Demandas ───────────────────────────────────────── */}
       {aba === "demandas" && (
         <>
-          {/* KPI cards */}
-          <section aria-label="Resumo de demandas" className="flex flex-wrap gap-3">
-            <KpiCard
-              label="Demandas abertas"
-              value={`${contagens._abertas} de ${contagens._total}`}
-            />
-            <KpiCard
-              label="Vencendo esta semana"
-              value={vencendoSemana}
-              bg={vencendoSemana > 0 ? "#FBE4E2" : undefined}
-              accent={vencendoSemana > 0 ? "#A3302A" : undefined}
-            />
-            <KpiCard
-              label="Resolvidas este mês"
-              value={contagens._resolvidas_mes ?? 0}
-            />
-            <KpiCard
-              label="Com encaminhamento IA"
-              value={demandas.filter((d) => d.pol_encaminhamento_ia).length}
-            />
-          </section>
+          {/* KPIs + distribuição por status */}
+          <DemandasCharts
+            kpis={{
+              total: contagens._total ?? 0,
+              abertas: contagens._abertas ?? 0,
+              resolvidasMes: contagens._resolvidas_mes ?? 0,
+              tempoMedioDias,
+            }}
+            statusPie={statusPie}
+          />
 
           {/* Demandas table */}
           <section aria-label="Lista de demandas" className="wr-card pt-2 pb-0 px-0">
