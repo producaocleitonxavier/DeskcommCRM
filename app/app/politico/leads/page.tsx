@@ -35,12 +35,19 @@ export interface LeadRow {
   pol_territories: { name: string } | null;
 }
 
+export interface CidadeOpcao {
+  id: string;
+  name: string;
+  n: number;
+}
+
 async function buscarLeads(
   organizationId: string,
   pagina: number,
   etapa?: string,
   busca?: string,
   temp?: string,
+  cidade?: string,
 ) {
   const db = await createClient();
   const offset = (pagina - 1) * POR_PAGINA;
@@ -59,10 +66,27 @@ async function buscarLeads(
 
   if (etapa) query = query.eq("support_level", etapa);
   if (temp) query = query.eq("temperature", temp);
+  if (cidade) query = query.eq("territory_id", cidade);
   if (busca) query = query.ilike("contacts.name", `%${busca}%`);
 
   const { data, count } = await query;
   return { leads: (data as unknown as LeadRow[]) ?? [], total: count ?? 0 };
+}
+
+/** Cidades (territórios) com contagem, para o filtro — via view agregada. */
+async function buscarCidades(organizationId: string): Promise<CidadeOpcao[]> {
+  const db = await createClient();
+  const { data } = await db
+    .from("pol_vw_mapa_oportunidades")
+    .select("territory_id, name, total_leads")
+    .eq("organization_id", organizationId)
+    .order("total_leads", { ascending: false })
+    .limit(600);
+  return ((data ?? []) as { territory_id: string; name: string; total_leads: number }[]).map((r) => ({
+    id: r.territory_id,
+    name: r.name,
+    n: r.total_leads,
+  }));
 }
 
 async function contarPorEtapa(organizationId: string): Promise<Record<string, number>> {
@@ -104,10 +128,12 @@ export default async function PessoasPage({
   const etapa = typeof params.etapa === "string" ? params.etapa : "";
   const busca = typeof params.busca === "string" ? params.busca : "";
   const temp = typeof params.temp === "string" ? params.temp : "";
+  const cidade = typeof params.cidade === "string" ? params.cidade : "";
 
-  const [{ leads, total }, contagens] = await Promise.all([
-    buscarLeads(org.orgId, pagina, etapa || undefined, busca || undefined, temp || undefined),
+  const [{ leads, total }, contagens, cidades] = await Promise.all([
+    buscarLeads(org.orgId, pagina, etapa || undefined, busca || undefined, temp || undefined, cidade || undefined),
     contarPorEtapa(org.orgId),
+    buscarCidades(org.orgId),
   ]);
 
   return (
@@ -115,7 +141,8 @@ export default async function PessoasPage({
       leads={leads}
       total={total}
       contagens={contagens}
-      filtros={{ etapa, busca, temp, pagina }}
+      cidades={cidades}
+      filtros={{ etapa, busca, temp, cidade, pagina }}
       porPagina={POR_PAGINA}
     />
   );

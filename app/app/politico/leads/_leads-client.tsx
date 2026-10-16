@@ -7,6 +7,7 @@
  */
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { Search, Users } from "lucide-react";
 
 import { SectionHeader } from "@/components/politico/section-header";
@@ -55,6 +56,7 @@ interface Filtros {
   etapa: string;
   busca: string;
   temp: string;
+  cidade: string;
   pagina: number;
 }
 
@@ -62,11 +64,13 @@ export interface LeadsClientProps {
   leads: LeadRow[];
   total: number;
   contagens: Record<string, number>;
+  cidades: { id: string; name: string; n: number }[];
   filtros: Filtros;
   porPagina: number;
 }
 
-export default function LeadsClient({ leads, total, contagens, filtros, porPagina }: LeadsClientProps) {
+export default function LeadsClient({ leads, total, contagens, cidades, filtros, porPagina }: LeadsClientProps) {
+  const router = useRouter();
   const totalPaginas = Math.max(1, Math.ceil(total / porPagina));
 
   function href(overrides: Partial<Filtros>): string {
@@ -75,6 +79,7 @@ export default function LeadsClient({ leads, total, contagens, filtros, porPagin
     if (merged.etapa) q.set("etapa", merged.etapa);
     if (merged.busca) q.set("busca", merged.busca);
     if (merged.temp) q.set("temp", merged.temp);
+    if (merged.cidade) q.set("cidade", merged.cidade);
     if (merged.pagina > 1) q.set("pagina", String(merged.pagina));
     const s = q.toString();
     return `/app/politico/leads${s ? `?${s}` : ""}`;
@@ -111,6 +116,7 @@ export default function LeadsClient({ leads, total, contagens, filtros, porPagin
         <form action="/app/politico/leads" method="get">
           {filtros.etapa && <input type="hidden" name="etapa" value={filtros.etapa} />}
           {filtros.temp && <input type="hidden" name="temp" value={filtros.temp} />}
+          {filtros.cidade && <input type="hidden" name="cidade" value={filtros.cidade} />}
           <label
             className="flex min-h-[44px] items-center gap-2.5 rounded-full px-4"
             style={{ background: "var(--color-surface-elevated)" }}
@@ -154,6 +160,30 @@ export default function LeadsClient({ leads, total, contagens, filtros, porPagin
             </Pill>
           ))}
         </div>
+
+        {/* Cidade */}
+        {cidades.length > 0 && (
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="mr-1 text-xs font-medium" style={{ color: "var(--color-text-subtle)" }}>Cidade:</span>
+            <select
+              value={filtros.cidade}
+              onChange={(e) => router.push(href({ cidade: e.target.value }))}
+              className="h-9 max-w-[300px] rounded-full px-3.5 text-xs font-medium outline-none"
+              style={{
+                background: "var(--color-surface-elevated)",
+                color: "var(--color-text)",
+                border: "1px solid var(--color-border)",
+              }}
+            >
+              <option value="">Todas as cidades</option>
+              {cidades.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.name} ({c.n.toLocaleString("pt-BR")})
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
       </div>
 
       {/* ── Lista ───────────────────────────────────────────────── */}
