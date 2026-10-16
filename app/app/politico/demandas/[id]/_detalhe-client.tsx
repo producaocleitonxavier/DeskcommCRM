@@ -12,6 +12,7 @@ import { useRouter } from "next/navigation";
 import { ArrowLeft, Pencil, Sparkles, X } from "lucide-react";
 
 import { createClient } from "@/lib/supabase/browser";
+import { gerarEncaminhamento } from "@/app/actions/politico/gerarEncaminhamento";
 
 interface Opcao {
   id: string;
@@ -102,6 +103,7 @@ export default function DetalheDemandaClient({ demanda, territorios, liderancas 
   const [d, setD] = useState<DemandaDetalhe>(demanda);
   const [editando, setEditando] = useState(false);
   const [salvando, setSalvando] = useState(false);
+  const [gerandoIA, setGerandoIA] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
 
   // Campos editáveis (rascunho)
@@ -332,11 +334,23 @@ export default function DetalheDemandaClient({ demanda, territorios, liderancas 
           <h2 className="font-heading text-base font-bold" style={{ color: "var(--color-text)" }}>Encaminhamento ao órgão</h2>
           <button
             type="button"
-            disabled
-            title="Integração de IA — em breve"
-            className="wr-btn inline-flex items-center gap-1.5 opacity-50"
+            disabled={gerandoIA}
+            onClick={async () => {
+              setErro(null);
+              setGerandoIA(true);
+              const res = await gerarEncaminhamento(d.id);
+              setGerandoIA(false);
+              if (res.ok) {
+                setEncaminhamento(res.texto);
+                setEditando(true);
+              } else {
+                setErro(res.erro);
+              }
+            }}
+            className="wr-btn inline-flex items-center gap-1.5 disabled:opacity-50"
+            style={{ background: "rgba(215,243,106,0.14)", color: "#D7F36A", borderColor: "rgba(215,243,106,0.3)" }}
           >
-            <Sparkles className="h-4 w-4" aria-hidden /> Gerar com IA (em breve)
+            <Sparkles className="h-4 w-4" aria-hidden /> {gerandoIA ? "Gerando…" : "Gerar com IA"}
           </button>
         </div>
         {editando ? (
