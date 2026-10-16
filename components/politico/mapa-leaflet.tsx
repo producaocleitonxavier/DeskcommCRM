@@ -1,20 +1,22 @@
 "use client";
 
 /**
- * Mapa de calor de contatos por cidade (War Room 2.0). Bubble map sobre Leaflet
- * com tiles escuros Esri "World Dark Gray" — gratuitos, SEM API key e sem
- * watermark (não quebra self-host). (A Carto passou a exigir chave e estampa
- * "API KEY REQUIRED"; a Stadia exige key fora de localhost — por isso Esri.)
+ * Mapa de DENSIDADE de contatos por cidade (War Room 2.0). Em vez de centenas
+ * de bolhas sobrepostas, uma mancha de calor suave (leaflet.heat) ponderada
+ * pelo volume de contatos, sobre tiles escuros Esri "World Dark Gray"
+ * (gratuitos, SEM API key e sem watermark — não quebra self-host; a Carto
+ * passou a exigir chave e a Stadia exige key fora de localhost).
  *
- * - TAMANHO da bolha ∝ alcance (nº de contatos na cidade).
- * - COR da bolha = força (engajamento ponderado por nível de apoio), em escala
- *   de calor log-normalizada (frio azul → quente vermelho).
- *
- * É client-only (Leaflet depende de `window`); importar via next/dynamic
+ * Os rótulos de cidades vêm da própria camada Esri Reference (orientação sem
+ * poluir). Detalhe cidade-a-cidade fica no painel "Onde somos fortes" e na
+ * tabela. Client-only (Leaflet depende de `window`): importar via next/dynamic
  * ssr:false (ver mapa-eleitoral-hero.tsx).
  */
 
-import { MapContainer, TileLayer, CircleMarker, Popup, Tooltip } from "react-leaflet";
+import { useEffect } from "react";
+import L from "leaflet";
+import "leaflet.heat";
+import { MapContainer, TileLayer, useMap } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
 
 export interface MapaPonto {
@@ -33,28 +35,41 @@ export interface MapaLeafletProps {
   pontos: MapaPonto[];
 }
 
-const RAMPA = [
-  { min: 0.8, cor: "#ef4444", label: "Muito forte" },
-  { min: 0.6, cor: "#f59e0b", label: "Forte" },
-  { min: 0.4, cor: "#84cc16", label: "Média" },
-  { min: 0.2, cor: "#06b6d4", label: "Baixa" },
-  { min: 0.0, cor: "#2563eb", label: "Incipiente" },
-] as const;
+const GRADIENTE: Record<number, string> = {
+  0.2: "#2563eb",
+  0.4: "#06b6d4",
+  0.6: "#84cc16",
+  0.8: "#f59e0b",
+  1.0: "#ef4444",
+};
 
-function corForca(intensidade: number): string {
-  return (RAMPA.find((f) => intensidade >= f.min) ?? RAMPA[RAMPA.length - 1]!).cor;
-}
-
-function raio(total: number): number {
-  return Math.max(5, Math.min(40, Math.sqrt(total) * 1.15));
+/** Camada de calor: intensidade = log(contatos) normalizado; pontos próximos somam. */
+function CamadaCalor({ pontos }: { pontos: MapaPonto[] }) {
+  const map = useMap();
+  useEffect(() => {
+    const maxT = Math.max(...pontos.map((p) => p.total), 1);
+    const ln = Math.log(maxT + 1);
+    const pts: L.HeatLatLngTuple[] = pontos.map((p) => [
+      p.lat,
+      p.lng,
+      ln > 0 ? Math.log(p.total + 1) / ln : 0,
+    ]);
+    const layer = L.heatLayer(pts, {
+      radius: 28,
+      blur: 22,
+      max: 1,
+      minOpacity: 0.28,
+      gradient: GRADIENTE,
+    });
+    layer.addTo(map);
+    return () => {
+      map.removeLayer(layer);
+    };
+  }, [map, pontos]);
+  return null;
 }
 
 export default function MapaLeaflet({ pontos }: MapaLeafletProps) {
-  const maxForca = Math.max(...pontos.map((p) => p.forca), 1);
-  const lnMax = Math.log(maxForca + 1);
-  // Desenha os maiores por baixo para os menores não ficarem escondidos.
-  const ordenados = [...pontos].sort((a, b) => b.total - a.total);
-
   return (
     <div
       className="relative h-[520px] w-full overflow-hidden rounded-2xl"
@@ -67,45 +82,18 @@ export default function MapaLeaflet({ pontos }: MapaLeafletProps) {
         attributionControl={false}
         style={{ height: "100%", width: "100%", background: "#0A0C10" }}
       >
-        {/* Base escura Esri (sem chave) + camada de rótulos sutil por cima. */}
+        {/* Base escura Esri (sem chave) + rótulos sutis por cima. */}
         <TileLayer url="https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}" />
         <TileLayer
           url="https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Reference/MapServer/tile/{z}/{y}/{x}"
-          opacity={0.55}
+          opacity={0.6}
         />
-        {ordenados.map((p) => {
-          const intensidade = lnMax > 0 ? Math.log(p.forca + 1) / lnMax : 0;
-          const c = corForca(intensidade);
-          return (
-            <CircleMarker
-              key={p.id}
-              center={[p.lat, p.lng]}
-              radius={raio(p.total)}
-              pathOptions={{ color: c, fillColor: c, fillOpacity: 0.55, weight: 1, opacity: 0.9 }}
-            >
-              <Tooltip direction="top" opacity={1}>
-                <span style={{ fontWeight: 600 }}>{p.name}</span>: {p.total.toLocaleString("pt-BR")}
-              </Tooltip>
-              <Popup>
-                <div style={{ minWidth: 160, lineHeight: 1.55 }}>
-                  <strong>
-                    {p.name}
-                    {p.uf ? ` · ${p.uf}` : ""}
-                  </strong>
-                  <br />
-                  {p.total.toLocaleString("pt-BR")} contatos
-                  <br />
-                  {p.novos.toLocaleString("pt-BR")} novos · {p.apoiadores.toLocaleString("pt-BR")} apoiadores
-                </div>
-              </Popup>
-            </CircleMarker>
-          );
-        })}
+        <CamadaCalor pontos={pontos} />
       </MapContainer>
 
       {/* Legenda */}
       <div
-        className="absolute bottom-3 left-3 z-[1000] flex flex-col gap-1 rounded-xl px-3 py-2.5 text-xs"
+        className="absolute bottom-3 left-3 z-[1000] w-[180px] rounded-xl px-3 py-2.5 text-xs"
         style={{
           background: "rgba(10,12,16,0.82)",
           border: "1px solid rgba(255,255,255,0.1)",
@@ -113,15 +101,20 @@ export default function MapaLeaflet({ pontos }: MapaLeafletProps) {
           backdropFilter: "blur(6px)",
         }}
       >
-        <span className="mb-0.5 font-semibold">Força por cidade</span>
-        {RAMPA.map((f) => (
-          <span key={f.label} className="flex items-center gap-1.5">
-            <span className="inline-block h-2.5 w-2.5 rounded-full" style={{ background: f.cor }} aria-hidden />
-            {f.label}
-          </span>
-        ))}
-        <span className="mt-1 pt-1 text-[10px] opacity-70" style={{ borderTop: "1px solid rgba(255,255,255,0.1)" }}>
-          tamanho = nº de contatos · tiles © Esri
+        <span className="font-semibold">Densidade de contatos</span>
+        <div
+          className="mt-2 h-2 w-full rounded-full"
+          style={{ background: "linear-gradient(90deg,#2563eb,#06b6d4,#84cc16,#f59e0b,#ef4444)" }}
+        />
+        <div className="mt-1 flex justify-between opacity-80">
+          <span>menos</span>
+          <span>mais</span>
+        </div>
+        <span
+          className="mt-2 block pt-1 text-[10px] opacity-70"
+          style={{ borderTop: "1px solid rgba(255,255,255,0.1)" }}
+        >
+          tiles © Esri
         </span>
       </div>
     </div>

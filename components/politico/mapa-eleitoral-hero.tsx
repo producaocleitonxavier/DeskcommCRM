@@ -30,7 +30,7 @@ export default function MapaEleitoralHero({ pontos }: { pontos: MapaPonto[] }) {
             Mapa de força
           </h2>
           <p className="text-xs" style={{ color: "var(--color-text-muted)" }}>
-            {pontos.length.toLocaleString("pt-BR")} cidades · tamanho = contatos · cor = força
+            {pontos.length.toLocaleString("pt-BR")} cidades · mancha de calor por densidade de contatos
           </p>
         </div>
       </div>
