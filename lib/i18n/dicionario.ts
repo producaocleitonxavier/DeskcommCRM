@@ -37,6 +37,25 @@ import type { Idioma } from "./idiomas";
 type Traducoes = Record<string, Partial<Record<Exclude<Idioma, "pt-BR">, string>>>;
 
 export const DICIONARIO: Traducoes = {
+  // Navegação do módulo político — War Room 2.0 (Prompt 6)
+  // (Engajamento, Funil e Dashboard já existem no dicionário mais abaixo.)
+  Inteligência: { es: "Inteligencia" },
+  Social: { es: "Social" },
+  "Raio-X": { es: "Radiografía" },
+  Narrativas: { es: "Narrativas" },
+  Projeção: { es: "Proyección" },
+  Rankings: { es: "Rankings" },
+  Territórios: { es: "Territorios" },
+  "Painel gerencial da campanha — KPIs, funil, temperatura, módulos e fila de ligações.":
+    { es: "Panel gerencial de la campaña — KPIs, embudo, temperatura, módulos y cola de llamadas." },
+  "Monitoramento de narrativas e contra-narrativa — menções, enquadramento e resposta.":
+    { es: "Monitoreo de narrativas y contranarrativa — menciones, encuadre y respuesta." },
+  "Projeção eleitoral por cenário a partir da base e do histórico de votos.":
+    { es: "Proyección electoral por escenario a partir de la base y del histórico de votos." },
+  "Ranking de territórios e lideranças por desempenho e mobilização.":
+    { es: "Ranking de territorios y liderazgos por desempeño y movilización." },
+  "Cadastro hierárquico de territórios eleitorais com dados do TSE.":
+    { es: "Registro jerárquico de territorios electorales con datos del TSE." },
   "Conectar a assinatura do ChatGPT": { es: "Conectar la suscripción de ChatGPT" },
   "Cada empresa conecta a própria conta do ChatGPT. Abra o link e entre com a conta que tem a assinatura. No fim, o navegador vai para http://127.0.0.1:1455/auth/callback, que pode não abrir — é esperado. Copie esse endereço inteiro, da barra do navegador, e cole aqui.": {
     es: "Cada empresa conecta su propia cuenta de ChatGPT. Abre el enlace e inicia sesión con la cuenta que tiene la suscripción. Al final, el navegador irá a http://127.0.0.1:1455/auth/callback, que quizá no se abra — es normal. Copia la dirección completa de la barra del navegador y pégala aquí.",
