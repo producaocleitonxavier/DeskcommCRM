@@ -770,13 +770,51 @@
 }
 
 /* ---- Sala de Guerra — identidade tática dark (Prompt 11) ----------------- */
+/* .war-room sobrescreve DIRETAMENTE os tokens que o Tailwind/shadcn lê, com
+   valores dark fixos. Não depende da cascata de `data-theme` (o wrapper AINDA
+   carrega data-theme="dark" para os utilitários `dark:` das páginas antigas,
+   mas as cores do módulo valem por estes overrides, à prova de @theme inline).
+   Mesmo formato do :root (hex via var → aqui, hex direto). */
 .war-room {
+  color-scheme: dark;
+  min-height: 100vh;
   --wr-glow: 0 0 30px rgba(215, 243, 106, 0.05);
-  /* O wrapper carrega data-theme="dark"; pinta a região política inteira com os
-     tokens dark, cobrindo a área ao redor da coluna centrada. */
-  min-height: 100%;
-  background: var(--color-bg);
-  color: var(--color-text);
+
+  /* Primitivos War Room (meus componentes leem var(--color-*) direto) */
+  --color-bg: #0a0c10;
+  --color-surface: #12141a;
+  --color-surface-elevated: #1a1d25;
+  --color-text: #e8e8e4;
+  --color-text-muted: #9a9da8;
+  --color-text-subtle: #6b7080;
+  --color-border: #2a2d38;
+  --color-border-strong: #3a3e4a;
+  --color-accent: #d7f36a;
+  --color-accent-fg: #0a0c10;
+
+  /* Semânticos shadcn (bg-*, text-*, border-*, ring, etc.) — dark direto */
+  --background: #0a0c10;
+  --foreground: #e8e8e4;
+  --card: #12141a;
+  --card-foreground: #e8e8e4;
+  --popover: #12141a;
+  --popover-foreground: #e8e8e4;
+  --primary: #d7f36a;
+  --primary-foreground: #0a0c10;
+  --secondary: #1a1d25;
+  --secondary-foreground: #e8e8e4;
+  --muted: #1a1d25;
+  --muted-foreground: #9a9da8;
+  --accent: #1a1d25;
+  --accent-foreground: #e8e8e4;
+  --border: rgba(255, 255, 255, 0.08);
+  --input: rgba(255, 255, 255, 0.1);
+  --ring: #d7f36a;
+  --destructive: #ef4444;
+  --destructive-foreground: #ffffff;
+
+  background-color: #0a0c10;
+  color: #e8e8e4;
 }
 .wr-card-dark {
   background: var(--color-surface);

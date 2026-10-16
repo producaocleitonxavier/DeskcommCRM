@@ -1,17 +1,15 @@
 /**
  * WarRoomShell — escopa o tema "Sala de Guerra" (dark tático) ao módulo político.
  *
- * O DeskcommCRM já tem um sistema de tema próprio (lib/theme + THEME_INIT_SCRIPT)
- * que é o DONO do `data-theme` no <html>. Setar `data-theme="dark"` no <html>
- * daqui era sobrescrito por esse provider (o "toggle" global), então o dark
- * tático não pegava.
+ * As CORES vêm dos overrides da classe `.war-room` no globals.css, que redefine
+ * DIRETAMENTE os tokens que o Tailwind/shadcn lê (--background, --card, --border,
+ * --muted-foreground, …) e os primitivos (--color-*) com valores dark fixos — à
+ * prova do `@theme inline` e sem depender da cascata de `data-theme`.
  *
- * Solução: aplicar `data-theme="dark"` no PRÓPRIO wrapper. O globals.css define
- * os tokens em `[data-theme="dark"] { ... }` (não `:root`-restrito) e o
- * `@custom-variant dark` casa `[data-theme="dark"] *` — então as variáveis
- * (--color-bg, --color-surface, --color-text, --color-accent, …) e os utilitários
- * `dark:` cascateiam para tudo dentro do wrapper, sem tocar o <html> nem o resto
- * do app. Puramente SSR: sem useEffect, sem flash, sem conflito.
+ * `data-theme="dark"` fica no PRÓPRIO wrapper (não no <html>, que pertence ao
+ * theme provider do app) só para ativar os utilitários `dark:` das páginas
+ * antigas; como é no div, não conflita com o provider nem afeta o resto do app.
+ * Puramente SSR: sem useEffect, sem flash.
  */
 
 export default function WarRoomShell({ children }: { children: React.ReactNode }) {
