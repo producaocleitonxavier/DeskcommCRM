@@ -91,15 +91,17 @@ export interface NavMetadata {
  * diretamente no sidebar quando `sidebar: true`.
  */
 export const NAV_GROUPS: NavGroup[] = [
+  // Ordem do sidebar: Hoje (comando) → Gabinete → Atendimento → Território →
+  // Engajamento → Inteligência → Operação; demais grupos seguem depois.
   { id: "comando", label: "Comando" },
-  { id: "engajamento", label: "Engajamento" },
-  { id: "inteligencia", label: "Inteligência" },
-  { id: "monitoramento", label: "Estratégia" },
-  { id: "execucao", label: "Estratégia" },
-  { id: "territorio", label: "Território" },
-  { id: "operacao", label: "Operação", hub: { href: "/app/crm", label: "Ver tudo em Operação" } },
   { id: "gabinete", label: "Gabinete" },
   { id: "atendimento", label: "Atendimento" },
+  { id: "territorio", label: "Território" },
+  { id: "engajamento", label: "Engajamento" },
+  { id: "inteligencia", label: "Inteligência" },
+  { id: "operacao", label: "Operação", hub: { href: "/app/crm", label: "Ver tudo em Operação" } },
+  { id: "monitoramento", label: "Estratégia" },
+  { id: "execucao", label: "Estratégia" },
   { id: "ia", label: "Agente de IA", hub: { href: "/app/ai", label: "Ver tudo em IA" } },
   { id: "canais", label: "Canais" },
   { id: "analise", label: "Análise", hub: { href: "/app/analise", label: "Ver tudo em Análise" } },
@@ -911,7 +913,7 @@ export const NAV_CATALOG = [
     icon: "Phone",
     group: "engajamento",
     minRole: "manager",
-    sidebar: true,
+    sidebar: false, // oculto do menu (rota/funcionalidade mantida)
   },
   {
     href: "/app/politico/eventos",
@@ -920,7 +922,7 @@ export const NAV_CATALOG = [
     icon: "CalendarBlank",
     group: "engajamento",
     minRole: "manager",
-    sidebar: true,
+    sidebar: false, // oculto do menu (rota/funcionalidade mantida)
   },
   {
     href: "/app/politico/pesquisas",
