@@ -9,10 +9,11 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, Pencil, Printer, Sparkles, X } from "lucide-react";
+import { ArrowLeft, MessageCircle, Pencil, Printer, Sparkles, X } from "lucide-react";
 
 import { gerarEncaminhamento } from "@/app/actions/politico/gerarEncaminhamento";
 import { gerarOficioDemanda } from "@/app/actions/politico/gerarOficio";
+import { avisarCidadao } from "@/app/actions/politico/avisarCidadao";
 import { atualizarRegistro } from "@/app/actions/politico/gabinete-actions";
 import DemandaAnexos from "@/components/politico/demanda-anexos";
 
@@ -109,6 +110,8 @@ export default function DetalheDemandaClient({ demanda, territorios, liderancas,
   const [salvando, setSalvando] = useState(false);
   const [gerandoIA, setGerandoIA] = useState(false);
   const [gerandoOficio, setGerandoOficio] = useState(false);
+  const [avisando, setAvisando] = useState(false);
+  const [avisoMsg, setAvisoMsg] = useState<string | null>(null);
   const [anexoToken, setAnexoToken] = useState(0);
   const [erro, setErro] = useState<string | null>(null);
 
@@ -235,7 +238,7 @@ export default function DetalheDemandaClient({ demanda, territorios, liderancas,
           )}
         </div>
 
-        {/* Transições de estado */}
+        {/* Transições de estado + avisar cidadão */}
         <div className="mt-4 flex flex-wrap gap-2">
           {acoes.map((a) => (
             <button
@@ -249,8 +252,33 @@ export default function DetalheDemandaClient({ demanda, territorios, liderancas,
               {a.label}
             </button>
           ))}
+          <button
+            type="button"
+            disabled={avisando || !d.contacts?.phone_number}
+            title={!d.contacts?.phone_number ? "O cidadão não tem telefone cadastrado" : "Enviar aviso ao cidadão por WhatsApp"}
+            onClick={async () => {
+              if (!window.confirm("Enviar aviso ao cidadão por WhatsApp confirmando o registro da demanda?")) return;
+              setErro(null);
+              setAvisoMsg(null);
+              setAvisando(true);
+              const res = await avisarCidadao(d.id);
+              setAvisando(false);
+              if (res.ok) setAvisoMsg(`Cidadão avisado no WhatsApp (protocolo ${res.protocolo}).`);
+              else setErro(res.erro);
+            }}
+            className="wr-btn inline-flex items-center gap-1.5 disabled:opacity-50"
+            style={{ background: "rgba(37,211,102,0.14)", color: "#25D366", borderColor: "rgba(37,211,102,0.35)" }}
+          >
+            <MessageCircle className="h-4 w-4" aria-hidden /> {avisando ? "Enviando…" : "Avisar cidadão"}
+          </button>
         </div>
       </header>
+
+      {avisoMsg && (
+        <div className="rounded-xl px-4 py-3 text-sm" style={{ background: "rgba(34,197,94,0.14)", color: "#22C55E" }}>
+          {avisoMsg}
+        </div>
+      )}
 
       {erro && (
         <div role="alert" className="rounded-xl px-4 py-3 text-sm" style={{ background: "#FBE4E2", color: "#A3302A" }}>
