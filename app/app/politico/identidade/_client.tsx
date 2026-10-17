@@ -37,6 +37,11 @@ export default function IdentidadeClient({ inicial }: { inicial: IdentidadeGabin
   const [logoUrl, setLogoUrl] = useState(inicial.logoUrl);
   const [assinaturaUrl, setAssinaturaUrl] = useState(inicial.assinaturaUrl);
   const [timbradoUrl, setTimbradoUrl] = useState(inicial.timbradoUrl);
+  const [margemTopo, setMargemTopo] = useState(String(inicial.timbradoMargemTopoMm));
+  const [margemBase, setMargemBase] = useState(String(inicial.timbradoMargemBaseMm));
+  const [margemLados, setMargemLados] = useState(String(inicial.timbradoMargemLadosMm));
+  const [salvandoMargens, setSalvandoMargens] = useState(false);
+  const [margensOk, setMargensOk] = useState(false);
 
   const [salvando, setSalvando] = useState(false);
   const [okMsg, setOkMsg] = useState(false);
@@ -55,6 +60,25 @@ export default function IdentidadeClient({ inicial }: { inicial: IdentidadeGabin
     setSalvando(false);
     if (!res.ok) return setErro(res.erro);
     setOkMsg(true);
+    router.refresh();
+  }
+
+  async function salvarMargens() {
+    setErro(null);
+    setMargensOk(false);
+    setSalvandoMargens(true);
+    const num = (s: string) => {
+      const n = Number(s);
+      return Number.isFinite(n) && n >= 0 ? Math.round(n) : null;
+    };
+    const res = await salvarIdentidade({
+      timbrado_margem_topo_mm: num(margemTopo),
+      timbrado_margem_base_mm: num(margemBase),
+      timbrado_margem_lados_mm: num(margemLados),
+    });
+    setSalvandoMargens(false);
+    if (!res.ok) return setErro(res.erro);
+    setMargensOk(true);
     router.refresh();
   }
 
@@ -173,6 +197,33 @@ export default function IdentidadeClient({ inicial }: { inicial: IdentidadeGabin
         onRemover={() => remover("timbrado")}
         alturaPreview={300}
       />
+
+      {/* Margens do texto sobre o timbrado — cada diagramação é diferente */}
+      <section className="wr-card space-y-3 p-5 sm:p-6">
+        <div>
+          <h2 className="font-heading text-base font-bold" style={{ color: "var(--color-text)" }}>Margens do texto no timbrado (mm)</h2>
+          <p className="mt-0.5 text-xs" style={{ color: "var(--color-text-subtle)" }}>
+            Onde o texto do ofício começa sobre o timbrado. Ajuste para o texto não bater no cabeçalho nem no rodapé do seu modelo. Gere um ofício para conferir. Só vale quando há papel timbrado.
+          </p>
+        </div>
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+          <Campo label="Topo (mm)" dica="Distância do topo até o texto">
+            <input type="number" min={0} value={margemTopo} onChange={(e) => setMargemTopo(e.target.value)} className="wr-input w-full" />
+          </Campo>
+          <Campo label="Base (mm)" dica="Espaço reservado para o rodapé">
+            <input type="number" min={0} value={margemBase} onChange={(e) => setMargemBase(e.target.value)} className="wr-input w-full" />
+          </Campo>
+          <Campo label="Laterais (mm)" dica="Margem esquerda e direita">
+            <input type="number" min={0} value={margemLados} onChange={(e) => setMargemLados(e.target.value)} className="wr-input w-full" />
+          </Campo>
+        </div>
+        <div className="flex items-center gap-3">
+          <button type="button" disabled={salvandoMargens} onClick={salvarMargens} className="wr-btn-dark inline-flex items-center gap-2 disabled:opacity-60">
+            <Check className="h-4 w-4" aria-hidden /> {salvandoMargens ? "Salvando…" : "Salvar margens"}
+          </button>
+          {margensOk && <span className="text-sm" style={{ color: "#22C55E" }}>Margens salvas.</span>}
+        </div>
+      </section>
     </div>
   );
 }

@@ -14,6 +14,9 @@ import { requireAuth, resolveActiveOrg } from "@/lib/auth/server";
 
 const BUCKET_IDENTIDADE = "gabinete-identidade";
 
+/** Margens padrão (mm) do texto sobre o timbrado — espelham ~120/150/70pt. */
+export const TIMBRADO_MARGENS_MM_PADRAO = { topo: 42, base: 53, lados: 25 } as const;
+
 export interface IdentidadeGabinete {
   nome_parlamentar: string | null;
   cargo: string | null;
@@ -22,6 +25,9 @@ export interface IdentidadeGabinete {
   logoUrl: string | null;
   assinaturaUrl: string | null;
   timbradoUrl: string | null;
+  timbradoMargemTopoMm: number;
+  timbradoMargemBaseMm: number;
+  timbradoMargemLadosMm: number;
 }
 
 export type IdentidadeResultado = { ok: true } | { ok: false; erro: string };
@@ -42,13 +48,18 @@ export async function obterIdentidade(): Promise<IdentidadeGabinete> {
     logoUrl: null,
     assinaturaUrl: null,
     timbradoUrl: null,
+    timbradoMargemTopoMm: TIMBRADO_MARGENS_MM_PADRAO.topo,
+    timbradoMargemBaseMm: TIMBRADO_MARGENS_MM_PADRAO.base,
+    timbradoMargemLadosMm: TIMBRADO_MARGENS_MM_PADRAO.lados,
   };
   const org = await orgAtiva();
   if (!org) return vazio;
   const db = await createClient();
   const { data } = await db
     .from("pol_gabinete_config")
-    .select("nome_parlamentar, cargo, subtitulo, cidade, logo_path, assinatura_path, timbrado_path")
+    .select(
+      "nome_parlamentar, cargo, subtitulo, cidade, logo_path, assinatura_path, timbrado_path, timbrado_margem_topo_mm, timbrado_margem_base_mm, timbrado_margem_lados_mm",
+    )
     .eq("organization_id", org)
     .maybeSingle();
   if (!data) return vazio;
@@ -60,6 +71,9 @@ export async function obterIdentidade(): Promise<IdentidadeGabinete> {
     logo_path: string | null;
     assinatura_path: string | null;
     timbrado_path: string | null;
+    timbrado_margem_topo_mm: number | null;
+    timbrado_margem_base_mm: number | null;
+    timbrado_margem_lados_mm: number | null;
   };
   const admin = createAdminClient();
   const assinar = async (path: string | null): Promise<string | null> => {
@@ -75,30 +89,43 @@ export async function obterIdentidade(): Promise<IdentidadeGabinete> {
     logoUrl: await assinar(row.logo_path),
     assinaturaUrl: await assinar(row.assinatura_path),
     timbradoUrl: await assinar(row.timbrado_path),
+    timbradoMargemTopoMm: row.timbrado_margem_topo_mm ?? TIMBRADO_MARGENS_MM_PADRAO.topo,
+    timbradoMargemBaseMm: row.timbrado_margem_base_mm ?? TIMBRADO_MARGENS_MM_PADRAO.base,
+    timbradoMargemLadosMm: row.timbrado_margem_lados_mm ?? TIMBRADO_MARGENS_MM_PADRAO.lados,
   };
 }
 
-/** Grava os campos de texto da identidade (upsert por organização). */
+/**
+ * Grava a identidade (upsert por organização). Só atualiza as chaves PRESENTES
+ * no objeto — assim "Salvar dados" (textos) e "Salvar margens" não se apagam.
+ */
 export async function salvarIdentidade(campos: {
   nome_parlamentar?: string;
   cargo?: string;
   subtitulo?: string;
   cidade?: string;
+  timbrado_margem_topo_mm?: number | null;
+  timbrado_margem_base_mm?: number | null;
+  timbrado_margem_lados_mm?: number | null;
 }): Promise<IdentidadeResultado> {
   const org = await orgAtiva();
   if (!org) return { ok: false, erro: "Sessão ou organização inválida." };
   const db = await createClient();
-  const { error } = await db.from("pol_gabinete_config").upsert(
-    {
-      organization_id: org,
-      nome_parlamentar: campos.nome_parlamentar?.trim() || null,
-      cargo: campos.cargo?.trim() || null,
-      subtitulo: campos.subtitulo?.trim() || null,
-      cidade: campos.cidade?.trim() || null,
-      updated_at: new Date().toISOString(),
-    },
-    { onConflict: "organization_id" },
-  );
+
+  const patch: Record<string, unknown> = { organization_id: org, updated_at: new Date().toISOString() };
+  const texto = (v?: string) => (v?.trim() ? v.trim() : null);
+  if ("nome_parlamentar" in campos) patch.nome_parlamentar = texto(campos.nome_parlamentar);
+  if ("cargo" in campos) patch.cargo = texto(campos.cargo);
+  if ("subtitulo" in campos) patch.subtitulo = texto(campos.subtitulo);
+  if ("cidade" in campos) patch.cidade = texto(campos.cidade);
+  // Margens: inteiro >= 0 ou null (reseta para o padrão). Valor inválido vira null.
+  const mm = (v: number | null | undefined) =>
+    typeof v === "number" && Number.isFinite(v) && v >= 0 ? Math.round(v) : null;
+  if ("timbrado_margem_topo_mm" in campos) patch.timbrado_margem_topo_mm = mm(campos.timbrado_margem_topo_mm);
+  if ("timbrado_margem_base_mm" in campos) patch.timbrado_margem_base_mm = mm(campos.timbrado_margem_base_mm);
+  if ("timbrado_margem_lados_mm" in campos) patch.timbrado_margem_lados_mm = mm(campos.timbrado_margem_lados_mm);
+
+  const { error } = await db.from("pol_gabinete_config").upsert(patch, { onConflict: "organization_id" });
   if (error) return { ok: false, erro: error.message };
   return { ok: true };
 }

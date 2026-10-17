@@ -59,8 +59,16 @@ export interface OficioPdfInput {
    * corpo (margens generosas que limpam o cabeçalho e o rodapé do timbrado).
    */
   timbradoUrl: string | null;
+  /**
+   * Margens (em PONTOS) do texto sobre o timbrado, por cliente — cada timbrado
+   * tem diagramação própria. Ausentes = padrão (topo 120, base 150, lados 70).
+   */
+  timbradoMargens?: { topo?: number | null; base?: number | null; lados?: number | null } | null;
   marca: { appName: string | null; accentHex: string | null; logoUrl: string | null };
 }
+
+/** Padrão das margens do texto no timbrado, em pontos. */
+export const TIMBRADO_MARGENS_PADRAO = { topo: 120, base: 150, lados: 70 } as const;
 
 const MESES = [
   "janeiro", "fevereiro", "março", "abril", "maio", "junho",
@@ -106,11 +114,17 @@ function OficioDoc({ d }: { d: OficioPdfInput }): React.ReactElement {
   // Com papel timbrado: a imagem é o fundo da página inteira (cabeçalho e rodapé
   // já vêm nela), e o texto entra só na faixa do corpo.
   if (d.timbradoUrl) {
+    const m = d.timbradoMargens ?? {};
+    const margens = {
+      paddingTop: m.topo ?? TIMBRADO_MARGENS_PADRAO.topo,
+      paddingBottom: m.base ?? TIMBRADO_MARGENS_PADRAO.base,
+      paddingHorizontal: m.lados ?? TIMBRADO_MARGENS_PADRAO.lados,
+    };
     return (
       <Document>
         <Page size="A4" style={styles.pageTimbrado}>
           <Image src={d.timbradoUrl} style={styles.fundoTimbrado} fixed />
-          <View style={styles.conteudoTimbrado}>
+          <View style={margens}>
             <Corpo d={d} nome={nome} cargo={cargo} />
           </View>
         </Page>

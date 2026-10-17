@@ -55608,3 +55608,8 @@ grant select, insert, update, delete on public.pol_gabinete_config to authentica
 revoke all on public.pol_gabinete_config from anon;
 -- ── 9006: papel timbrado — apendice idempotente. Ver migration 9006. ──
 alter table public.pol_gabinete_config add column if not exists timbrado_path text;
+-- ── 9007: margens do texto no timbrado — apendice idempotente. Ver migration 9007. ──
+alter table public.pol_gabinete_config
+  add column if not exists timbrado_margem_topo_mm  integer,
+  add column if not exists timbrado_margem_base_mm  integer,
+  add column if not exists timbrado_margem_lados_mm integer;

@@ -78,7 +78,9 @@ export async function gerarOficioDemanda(demandaId: string): Promise<OficioResul
   // logo e assinatura próprios. Caem para a marca da organização quando ausentes.
   const { data: cfg } = await db
     .from("pol_gabinete_config")
-    .select("nome_parlamentar, cargo, subtitulo, cidade, logo_path, assinatura_path, timbrado_path")
+    .select(
+      "nome_parlamentar, cargo, subtitulo, cidade, logo_path, assinatura_path, timbrado_path, timbrado_margem_topo_mm, timbrado_margem_base_mm, timbrado_margem_lados_mm",
+    )
     .eq("organization_id", org.orgId)
     .maybeSingle();
   const ident = (cfg ?? null) as {
@@ -89,7 +91,13 @@ export async function gerarOficioDemanda(demandaId: string): Promise<OficioResul
     logo_path: string | null;
     assinatura_path: string | null;
     timbrado_path: string | null;
+    timbrado_margem_topo_mm: number | null;
+    timbrado_margem_base_mm: number | null;
+    timbrado_margem_lados_mm: number | null;
   } | null;
+  // mm → pontos (1mm ≈ 2.8346pt). null = usa o padrão do renderizador.
+  const mmParaPt = (v: number | null | undefined): number | null =>
+    typeof v === "number" ? Math.round(v * 2.834645669) : null;
   const assinarIdentidade = async (p: string | null): Promise<string | null> => {
     if (!p) return null;
     const { data: s } = await admin.storage.from("gabinete-identidade").createSignedUrl(p, 60 * 60);
@@ -113,6 +121,11 @@ export async function gerarOficioDemanda(demandaId: string): Promise<OficioResul
       cargo: ident?.cargo ?? null,
       assinaturaUrl,
       timbradoUrl,
+      timbradoMargens: {
+        topo: mmParaPt(ident?.timbrado_margem_topo_mm),
+        base: mmParaPt(ident?.timbrado_margem_base_mm),
+        lados: mmParaPt(ident?.timbrado_margem_lados_mm),
+      },
       marca: { appName: marca.appName, accentHex: marca.accentHex, logoUrl: logoProprio ?? marca.logoUrl },
     });
   } catch {
