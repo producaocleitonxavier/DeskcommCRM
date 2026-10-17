@@ -55576,3 +55576,11 @@ revoke all on function public.fn_pol_anexo_expurgo() from public, anon, authenti
 drop trigger if exists trg_pol_anexo_expurgo on public.pol_demanda_anexos;
 create trigger trg_pol_anexo_expurgo before delete on public.pol_demanda_anexos
   for each row execute function public.fn_pol_anexo_expurgo();
+
+-- ── 9003: demandas.pol_assessor_nome (Gabinete) — apendice idempotente. Ver migration 9003. ──
+alter table public.demandas add column if not exists pol_assessor_nome text;
+
+-- ── 9004: demandas.pol_oficio_numero/ano (Gabinete) — apendice idempotente. Ver migration 9004. ──
+alter table public.demandas
+  add column if not exists pol_oficio_numero integer,
+  add column if not exists pol_oficio_ano integer;

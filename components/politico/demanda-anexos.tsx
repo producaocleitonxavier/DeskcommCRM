@@ -20,7 +20,7 @@ function ehImagem(mime: string): boolean {
   return mime.startsWith("image/");
 }
 
-export default function DemandaAnexos({ demandaId }: { demandaId: string }) {
+export default function DemandaAnexos({ demandaId, refreshToken = 0 }: { demandaId: string; refreshToken?: number }) {
   const [anexos, setAnexos] = useState<AnexoDemanda[]>([]);
   const [carregando, setCarregando] = useState(true);
   const [enviando, setEnviando] = useState(false);
@@ -36,7 +36,7 @@ export default function DemandaAnexos({ demandaId }: { demandaId: string }) {
 
   useEffect(() => {
     void recarregar();
-  }, [recarregar]);
+  }, [recarregar, refreshToken]);
 
   async function aoEscolher(e: React.ChangeEvent<HTMLInputElement>) {
     const arquivos = Array.from(e.target.files ?? []);

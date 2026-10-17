@@ -81,7 +81,7 @@ export default function NovaDemandaForm({ territorios, liderancas, assessores }:
   const [orgao, setOrgao] = useState("");
   const [territoryId, setTerritoryId] = useState("");
   const [liderancaId, setLiderancaId] = useState("");
-  const [assessorId, setAssessorId] = useState("");
+  const [assessorNome, setAssessorNome] = useState("");
   const [prazo, setPrazo] = useState("");
 
   // Anexos escolhidos (só vão para o servidor DEPOIS que a demanda é criada —
@@ -140,17 +140,23 @@ export default function NovaDemandaForm({ territorios, liderancas, assessores }:
     if (!assunto.trim()) return setErro("Descreva o assunto da demanda.");
 
     setSalvando(true);
+    // Assessor: texto livre com sugestão dos membros. Se o nome digitado bate
+    // EXATAMENTE com um membro, vira dono humano de verdade (dono_user_id); se
+    // for um nome de fora do sistema, fica só o rótulo (pol_assessor_nome) e a
+    // demanda segue na triagem (o banco exige user quando dono_kind='humano').
+    const nomeAssessor = assessorNome.trim();
+    const membro = nomeAssessor ? assessores.find((a) => a.nome === nomeAssessor) : undefined;
+
     const payload: Record<string, unknown> = {
       contact_id: contato.id,
       origem: "manual",
       estado: "aberta",
-      // Com assessor escolhido a demanda nasce com dono humano (o banco exige
-      // dono_user_id quando dono_kind='humano'); sem assessor, fica na triagem.
-      dono_kind: assessorId ? "humano" : "ia",
+      dono_kind: membro ? "humano" : "ia",
       assunto: assunto.trim(),
       pol_prioridade: prioridade,
     };
-    if (assessorId) payload.dono_user_id = assessorId;
+    if (membro) payload.dono_user_id = membro.id;
+    if (nomeAssessor) payload.pol_assessor_nome = nomeAssessor;
     if (tipo) payload.pol_tipo = tipo;
     if (orgao.trim()) payload.pol_orgao_destino = orgao.trim();
     if (territoryId) payload.pol_territory_id = territoryId;
@@ -295,15 +301,23 @@ export default function NovaDemandaForm({ territorios, liderancas, assessores }:
                 {PRIORIDADES.map((p) => <option key={p.id} value={p.id}>{p.nome}</option>)}
               </select>
             </div>
-            {assessores.length > 0 && (
-              <div>
-                <Label>Assessor responsável</Label>
-                <select value={assessorId} onChange={(e) => setAssessorId(e.target.value)} className="wr-input w-full">
-                  <option value="">— IA / triagem</option>
-                  {assessores.map((a) => <option key={a.id} value={a.id}>{a.nome}</option>)}
-                </select>
-              </div>
-            )}
+            <div>
+              <Label>Assessor responsável</Label>
+              <input
+                type="text"
+                list="assessores-lista"
+                value={assessorNome}
+                onChange={(e) => setAssessorNome(e.target.value)}
+                placeholder="Nome do assessor"
+                className="wr-input w-full"
+                autoComplete="off"
+              />
+              {assessores.length > 0 && (
+                <datalist id="assessores-lista">
+                  {assessores.map((a) => <option key={a.id} value={a.nome} />)}
+                </datalist>
+              )}
+            </div>
             <div>
               <Label>Órgão de destino</Label>
               <input type="text" value={orgao} onChange={(e) => setOrgao(e.target.value)} placeholder="Ex.: Secretaria de Obras" className="wr-input w-full" />

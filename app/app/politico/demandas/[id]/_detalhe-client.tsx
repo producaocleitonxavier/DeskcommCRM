@@ -9,9 +9,10 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, Pencil, Sparkles, X } from "lucide-react";
+import { ArrowLeft, Pencil, Printer, Sparkles, X } from "lucide-react";
 
 import { gerarEncaminhamento } from "@/app/actions/politico/gerarEncaminhamento";
+import { gerarOficioDemanda } from "@/app/actions/politico/gerarOficio";
 import { atualizarRegistro } from "@/app/actions/politico/gabinete-actions";
 import DemandaAnexos from "@/components/politico/demanda-anexos";
 
@@ -33,6 +34,7 @@ export interface DemandaDetalhe {
   pol_lideranca_id: string | null;
   dono_kind: string | null;
   dono_user_id: string | null;
+  pol_assessor_nome: string | null;
   aberta_em: string;
   prazo_em: string | null;
   desfecho: string | null;
@@ -106,6 +108,8 @@ export default function DetalheDemandaClient({ demanda, territorios, liderancas,
   const [editando, setEditando] = useState(false);
   const [salvando, setSalvando] = useState(false);
   const [gerandoIA, setGerandoIA] = useState(false);
+  const [gerandoOficio, setGerandoOficio] = useState(false);
+  const [anexoToken, setAnexoToken] = useState(0);
   const [erro, setErro] = useState<string | null>(null);
 
   // Campos editáveis (rascunho)
@@ -116,7 +120,9 @@ export default function DetalheDemandaClient({ demanda, territorios, liderancas,
   const [prazo, setPrazo] = useState(paraInputDate(d.prazo_em));
   const [territoryId, setTerritoryId] = useState(d.pol_territory_id ?? "");
   const [liderancaId, setLiderancaId] = useState(d.pol_lideranca_id ?? "");
-  const [assessorId, setAssessorId] = useState(d.dono_kind === "humano" ? (d.dono_user_id ?? "") : "");
+  const [assessorNome, setAssessorNome] = useState(
+    d.pol_assessor_nome ?? (d.dono_kind === "humano" ? (assessores.find((a) => a.id === d.dono_user_id)?.nome ?? "") : ""),
+  );
   const [encaminhamento, setEncaminhamento] = useState(d.pol_encaminhamento_ia ?? "");
 
   const fechada = d.estado === "resolvida" || d.estado === "encerrada";
@@ -136,8 +142,11 @@ export default function DetalheDemandaClient({ demanda, territorios, liderancas,
   }
 
   async function salvarEdicao() {
-    // Assessor escolhido => dono humano (o banco exige dono_user_id quando
-    // dono_kind='humano'); sem assessor, volta para a triagem/IA.
+    // Assessor por texto livre: se bate exatamente com um membro, vira dono
+    // humano de verdade (dono_user_id); se for nome de fora, fica só o rótulo
+    // (o banco exige user quando dono_kind='humano').
+    const nomeAssessor = assessorNome.trim();
+    const membro = nomeAssessor ? assessores.find((a) => a.nome === nomeAssessor) : undefined;
     const campos = {
       assunto: assunto.trim() || null,
       pol_tipo: tipo || null,
@@ -145,8 +154,9 @@ export default function DetalheDemandaClient({ demanda, territorios, liderancas,
       pol_orgao_destino: orgao.trim() || null,
       pol_territory_id: territoryId || null,
       pol_lideranca_id: liderancaId || null,
-      dono_kind: assessorId ? "humano" : "ia",
-      dono_user_id: assessorId || null,
+      dono_kind: membro ? "humano" : "ia",
+      dono_user_id: membro ? membro.id : null,
+      pol_assessor_nome: nomeAssessor || null,
       pol_encaminhamento_ia: encaminhamento.trim() || null,
       prazo_em: prazo ? new Date(prazo + "T12:00:00").toISOString() : null,
     };
@@ -289,14 +299,22 @@ export default function DetalheDemandaClient({ demanda, territorios, liderancas,
                   </select>
                 </Campo>
               )}
-              {assessores.length > 0 && (
-                <Campo label="Assessor responsável">
-                  <select value={assessorId} onChange={(e) => setAssessorId(e.target.value)} className="wr-input w-full">
-                    <option value="">— IA / triagem</option>
-                    {assessores.map((a) => <option key={a.id} value={a.id}>{a.nome}</option>)}
-                  </select>
-                </Campo>
-              )}
+              <Campo label="Assessor responsável">
+                <input
+                  type="text"
+                  list="assessores-lista-detalhe"
+                  value={assessorNome}
+                  onChange={(e) => setAssessorNome(e.target.value)}
+                  placeholder="Nome do assessor"
+                  className="wr-input w-full"
+                  autoComplete="off"
+                />
+                {assessores.length > 0 && (
+                  <datalist id="assessores-lista-detalhe">
+                    {assessores.map((a) => <option key={a.id} value={a.nome} />)}
+                  </datalist>
+                )}
+              </Campo>
             </div>
             <div className="flex items-center gap-3 pt-1">
               <button type="button" disabled={salvando} onClick={salvarEdicao} className="wr-btn-dark disabled:opacity-60">
@@ -313,7 +331,7 @@ export default function DetalheDemandaClient({ demanda, territorios, liderancas,
                   setPrazo(paraInputDate(d.prazo_em));
                   setTerritoryId(d.pol_territory_id ?? "");
                   setLiderancaId(d.pol_lideranca_id ?? "");
-                  setAssessorId(d.dono_kind === "humano" ? (d.dono_user_id ?? "") : "");
+                  setAssessorNome(d.pol_assessor_nome ?? (d.dono_kind === "humano" ? (assessores.find((a) => a.id === d.dono_user_id)?.nome ?? "") : ""));
                 }}
                 className="wr-btn inline-flex items-center gap-1.5"
               >
@@ -330,7 +348,7 @@ export default function DetalheDemandaClient({ demanda, territorios, liderancas,
             <Info label="Território" valor={nomeDe(territorios, d.pol_territory_id)} />
             <Info label="Liderança" valor={nomeDe(liderancas, d.pol_lideranca_id)} />
             <Info label="Aberta em" valor={fmtData(d.aberta_em)} />
-            <Info label="Responsável" valor={d.dono_kind === "humano" ? nomeDe(assessores, d.dono_user_id) : "IA / triagem"} />
+            <Info label="Responsável" valor={d.pol_assessor_nome ?? (d.dono_kind === "humano" ? nomeDe(assessores, d.dono_user_id) : "IA / triagem")} />
           </dl>
         )}
       </section>
@@ -339,26 +357,48 @@ export default function DetalheDemandaClient({ demanda, territorios, liderancas,
       <section className="wr-card p-6 sm:p-7">
         <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
           <h2 className="font-heading text-base font-bold" style={{ color: "var(--color-text)" }}>Encaminhamento ao órgão</h2>
-          <button
-            type="button"
-            disabled={gerandoIA}
-            onClick={async () => {
-              setErro(null);
-              setGerandoIA(true);
-              const res = await gerarEncaminhamento(d.id);
-              setGerandoIA(false);
-              if (res.ok) {
-                setEncaminhamento(res.texto);
-                setEditando(true);
-              } else {
-                setErro(res.erro);
-              }
-            }}
-            className="wr-btn inline-flex items-center gap-1.5 disabled:opacity-50"
-            style={{ background: "rgba(215,243,106,0.14)", color: "#D7F36A", borderColor: "rgba(215,243,106,0.3)" }}
-          >
-            <Sparkles className="h-4 w-4" aria-hidden /> {gerandoIA ? "Gerando…" : "Gerar com IA"}
-          </button>
+          <div className="flex flex-wrap items-center gap-2">
+            <button
+              type="button"
+              disabled={gerandoOficio || !d.pol_encaminhamento_ia?.trim()}
+              title={!d.pol_encaminhamento_ia?.trim() ? "Gere e salve o encaminhamento primeiro" : "Emitir ofício em PDF"}
+              onClick={async () => {
+                setErro(null);
+                setGerandoOficio(true);
+                const res = await gerarOficioDemanda(d.id);
+                setGerandoOficio(false);
+                if (res.ok) {
+                  window.open(res.url, "_blank", "noopener,noreferrer");
+                  setAnexoToken((t) => t + 1);
+                } else {
+                  setErro(res.erro);
+                }
+              }}
+              className="wr-btn inline-flex items-center gap-1.5 disabled:opacity-50"
+            >
+              <Printer className="h-4 w-4" aria-hidden /> {gerandoOficio ? "Gerando…" : "Imprimir ofício"}
+            </button>
+            <button
+              type="button"
+              disabled={gerandoIA}
+              onClick={async () => {
+                setErro(null);
+                setGerandoIA(true);
+                const res = await gerarEncaminhamento(d.id);
+                setGerandoIA(false);
+                if (res.ok) {
+                  setEncaminhamento(res.texto);
+                  setEditando(true);
+                } else {
+                  setErro(res.erro);
+                }
+              }}
+              className="wr-btn inline-flex items-center gap-1.5 disabled:opacity-50"
+              style={{ background: "rgba(215,243,106,0.14)", color: "#D7F36A", borderColor: "rgba(215,243,106,0.3)" }}
+            >
+              <Sparkles className="h-4 w-4" aria-hidden /> {gerandoIA ? "Gerando…" : "Gerar com IA"}
+            </button>
+          </div>
         </div>
         {editando ? (
           <textarea
@@ -394,7 +434,7 @@ export default function DetalheDemandaClient({ demanda, territorios, liderancas,
       </section>
 
       {/* Anexos (ofícios, fotos, documentos) */}
-      <DemandaAnexos demandaId={d.id} />
+      <DemandaAnexos demandaId={d.id} refreshToken={anexoToken} />
     </div>
   );
 }

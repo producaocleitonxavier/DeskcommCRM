@@ -31,7 +31,7 @@ export default async function DemandaDetalhePage({
     db
       .from("demandas")
       .select(
-        "id, assunto, estado, origem, pol_tipo, pol_prioridade, pol_orgao_destino, pol_encaminhamento_ia, pol_territory_id, pol_lideranca_id, dono_kind, dono_user_id, aberta_em, prazo_em, desfecho, fechada_em, created_at, updated_at, contacts(name, phone_number)",
+        "id, assunto, estado, origem, pol_tipo, pol_prioridade, pol_orgao_destino, pol_encaminhamento_ia, pol_territory_id, pol_lideranca_id, dono_kind, dono_user_id, pol_assessor_nome, aberta_em, prazo_em, desfecho, fechada_em, created_at, updated_at, contacts(name, phone_number)",
       )
       .eq("organization_id", org.orgId)
       .eq("id", id)
