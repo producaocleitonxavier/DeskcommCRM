@@ -32,6 +32,7 @@ export interface DemandaDetalhe {
   pol_territory_id: string | null;
   pol_lideranca_id: string | null;
   dono_kind: string | null;
+  dono_user_id: string | null;
   aberta_em: string;
   prazo_em: string | null;
   desfecho: string | null;
@@ -45,6 +46,7 @@ export interface Props {
   demanda: DemandaDetalhe;
   territorios: Opcao[];
   liderancas: Opcao[];
+  assessores: Opcao[];
 }
 
 const TIPOS: Opcao[] = [
@@ -97,7 +99,7 @@ function paraInputDate(d: string | null): string {
   return new Date(d).toISOString().slice(0, 10);
 }
 
-export default function DetalheDemandaClient({ demanda, territorios, liderancas }: Props) {
+export default function DetalheDemandaClient({ demanda, territorios, liderancas, assessores }: Props) {
   const router = useRouter();
 
   const [d, setD] = useState<DemandaDetalhe>(demanda);
@@ -114,6 +116,7 @@ export default function DetalheDemandaClient({ demanda, territorios, liderancas 
   const [prazo, setPrazo] = useState(paraInputDate(d.prazo_em));
   const [territoryId, setTerritoryId] = useState(d.pol_territory_id ?? "");
   const [liderancaId, setLiderancaId] = useState(d.pol_lideranca_id ?? "");
+  const [assessorId, setAssessorId] = useState(d.dono_kind === "humano" ? (d.dono_user_id ?? "") : "");
   const [encaminhamento, setEncaminhamento] = useState(d.pol_encaminhamento_ia ?? "");
 
   const fechada = d.estado === "resolvida" || d.estado === "encerrada";
@@ -133,26 +136,21 @@ export default function DetalheDemandaClient({ demanda, territorios, liderancas 
   }
 
   async function salvarEdicao() {
-    const patch: Record<string, unknown> = {
+    // Assessor escolhido => dono humano (o banco exige dono_user_id quando
+    // dono_kind='humano'); sem assessor, volta para a triagem/IA.
+    const campos = {
       assunto: assunto.trim() || null,
       pol_tipo: tipo || null,
       pol_prioridade: prioridade,
       pol_orgao_destino: orgao.trim() || null,
       pol_territory_id: territoryId || null,
       pol_lideranca_id: liderancaId || null,
+      dono_kind: assessorId ? "humano" : "ia",
+      dono_user_id: assessorId || null,
       pol_encaminhamento_ia: encaminhamento.trim() || null,
       prazo_em: prazo ? new Date(prazo + "T12:00:00").toISOString() : null,
     };
-    const ok = await persistir(patch, {
-      assunto: assunto.trim() || null,
-      pol_tipo: tipo || null,
-      pol_prioridade: prioridade,
-      pol_orgao_destino: orgao.trim() || null,
-      pol_territory_id: territoryId || null,
-      pol_lideranca_id: liderancaId || null,
-      pol_encaminhamento_ia: encaminhamento.trim() || null,
-      prazo_em: prazo ? new Date(prazo + "T12:00:00").toISOString() : null,
-    });
+    const ok = await persistir(campos, campos as Partial<DemandaDetalhe>);
     if (ok) setEditando(false);
   }
 
@@ -291,6 +289,14 @@ export default function DetalheDemandaClient({ demanda, territorios, liderancas 
                   </select>
                 </Campo>
               )}
+              {assessores.length > 0 && (
+                <Campo label="Assessor responsável">
+                  <select value={assessorId} onChange={(e) => setAssessorId(e.target.value)} className="wr-input w-full">
+                    <option value="">— IA / triagem</option>
+                    {assessores.map((a) => <option key={a.id} value={a.id}>{a.nome}</option>)}
+                  </select>
+                </Campo>
+              )}
             </div>
             <div className="flex items-center gap-3 pt-1">
               <button type="button" disabled={salvando} onClick={salvarEdicao} className="wr-btn-dark disabled:opacity-60">
@@ -307,6 +313,7 @@ export default function DetalheDemandaClient({ demanda, territorios, liderancas 
                   setPrazo(paraInputDate(d.prazo_em));
                   setTerritoryId(d.pol_territory_id ?? "");
                   setLiderancaId(d.pol_lideranca_id ?? "");
+                  setAssessorId(d.dono_kind === "humano" ? (d.dono_user_id ?? "") : "");
                 }}
                 className="wr-btn inline-flex items-center gap-1.5"
               >
@@ -323,7 +330,7 @@ export default function DetalheDemandaClient({ demanda, territorios, liderancas 
             <Info label="Território" valor={nomeDe(territorios, d.pol_territory_id)} />
             <Info label="Liderança" valor={nomeDe(liderancas, d.pol_lideranca_id)} />
             <Info label="Aberta em" valor={fmtData(d.aberta_em)} />
-            <Info label="Responsável" valor={d.dono_kind === "humano" ? "Assessor" : "IA / triagem"} />
+            <Info label="Responsável" valor={d.dono_kind === "humano" ? nomeDe(assessores, d.dono_user_id) : "IA / triagem"} />
           </dl>
         )}
       </section>
