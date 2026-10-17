@@ -18,6 +18,7 @@ import {
   MapPin,
   Megaphone,
   MessageCircle,
+  UserCheck,
   Users,
 } from "lucide-react";
 
@@ -82,7 +83,9 @@ export interface LiderancasClientProps {
 }
 
 export default function LiderancasClient({ liderancas }: LiderancasClientProps) {
+  const total = liderancas.length;
   const ativas = liderancas.filter((l) => l.status === "ativo").length;
+  const municipios = new Set(liderancas.map((l) => l.cidade?.trim()).filter(Boolean)).size;
   const totalMobilizados = liderancas.reduce((s, l) => s + (l.leads_mobilizados ?? 0), 0);
   const totalEventos = liderancas.reduce((s, l) => s + (l.eventos_organizados ?? 0), 0);
   const comWhatsapp = liderancas.filter((l) => l.whatsapp).length;
@@ -120,11 +123,13 @@ export default function LiderancasClient({ liderancas }: LiderancasClientProps) 
       ) : (
         <>
           {/* ── KPIs ──────────────────────────────────────────────── */}
-          <section className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-            <KpiCard label="Lideranças ativas" valor={ativas} icone={Users} />
-            <KpiCard label="Leads mobilizados" valor={totalMobilizados} icone={Megaphone} />
-            <KpiCard label="Eventos organizados" valor={totalEventos} icone={CalendarCheck} />
+          <section className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-6">
+            <KpiCard label="Total de lideranças" valor={total} icone={Users} />
+            <KpiCard label="Ativas" valor={ativas} icone={UserCheck} />
+            <KpiCard label="Municípios" valor={municipios} icone={MapPin} />
             <KpiCard label="Com WhatsApp" valor={comWhatsapp} icone={MessageCircle} />
+            <KpiCard label="Pessoas indicadas" valor={totalMobilizados} icone={Megaphone} />
+            <KpiCard label="Eventos" valor={totalEventos} icone={CalendarCheck} />
           </section>
 
           {/* ── Próximos aniversários ─────────────────────────────── */}
@@ -203,7 +208,7 @@ export default function LiderancasClient({ liderancas }: LiderancasClientProps) 
                         <div className="font-heading text-lg font-bold tabular-nums leading-none">
                           {(l.leads_mobilizados ?? 0).toLocaleString("pt-BR")}
                         </div>
-                        <div className="mt-0.5 text-[11px] text-muted-foreground">mobilizados</div>
+                        <div className="mt-0.5 text-[11px] text-muted-foreground">indicadas</div>
                       </div>
                       <div className="text-center">
                         <div className="font-heading text-lg font-bold tabular-nums leading-none">
