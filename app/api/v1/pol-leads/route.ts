@@ -45,6 +45,8 @@ const criarPolLeadSchema = z.object({
   community_role: z.string().max(120).nullable().optional(),
   territory_id: z.string().uuid().nullable().optional(),
   consent_origin: z.string().max(120).nullable().optional(),
+  // Liderança que trouxe/indicou esta pessoa (métrica "pessoas indicadas").
+  pol_lideranca_id: z.string().uuid().nullable().optional(),
 });
 
 // -- GET — listar pol_leads ---------------------------------------------------
@@ -154,6 +156,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
       community_role: parsed.data.community_role ?? null,
       territory_id: parsed.data.territory_id ?? null,
       consent_origin: parsed.data.consent_origin ?? null,
+      pol_lideranca_id: parsed.data.pol_lideranca_id ?? null,
     })
     .select()
     .single();

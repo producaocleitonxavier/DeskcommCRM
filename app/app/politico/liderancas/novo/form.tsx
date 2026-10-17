@@ -70,6 +70,8 @@ export default function NovaLiderancaForm({ territorios }: NovaLiderancaFormProp
   const [cargo, setCargo] = useState("");
   const [tipo, setTipo] = useState("cabo_eleitoral");
   const [whatsapp, setWhatsapp] = useState("");
+  const [email, setEmail] = useState("");
+  const [instagram, setInstagram] = useState("");
   const [aniversario, setAniversario] = useState("");
   const [cidade, setCidade] = useState("");
   const [bairro, setBairro] = useState("");
@@ -125,6 +127,8 @@ export default function NovaLiderancaForm({ territorios }: NovaLiderancaFormProp
     if (apelido.trim()) payload.apelido = apelido.trim();
     if (cargo.trim()) payload.cargo = cargo.trim();
     if (whatsapp.trim()) payload.whatsapp = whatsapp.replace(/\D/g, "");
+    if (email.trim()) payload.email = email.trim();
+    if (instagram.trim()) payload.instagram = instagram.trim().replace(/^@/, "");
     if (aniversario) payload.aniversario = aniversario;
     if (cidade.trim()) payload.cidade = cidade.trim();
     if (bairro.trim()) payload.bairro = bairro.trim();
@@ -238,6 +242,14 @@ export default function NovaLiderancaForm({ territorios }: NovaLiderancaFormProp
             <div>
               <Label>WhatsApp</Label>
               <input type="tel" value={whatsapp} onChange={(e) => setWhatsapp(e.target.value)} placeholder="5531999999999" className="wr-input w-full" />
+            </div>
+            <div>
+              <Label>E-mail</Label>
+              <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="email@exemplo.com" className="wr-input w-full" />
+            </div>
+            <div>
+              <Label>Instagram</Label>
+              <input type="text" value={instagram} onChange={(e) => setInstagram(e.target.value)} placeholder="@usuario" className="wr-input w-full" />
             </div>
             <div>
               <Label>Aniversário</Label>

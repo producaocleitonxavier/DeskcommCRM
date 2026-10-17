@@ -33,16 +33,47 @@ export interface Lideranca {
 
 async function buscarLiderancas(organizationId: string): Promise<Lideranca[]> {
   const db = await createClient();
-  const { data } = await db
-    .from("pol_liderancas")
-    .select(
-      "id, nome, apelido, cargo, tipo, whatsapp, aniversario, cidade, bairro, leads_mobilizados, eventos_organizados, nivel_engajamento, status, ultimo_contato_em",
-    )
-    .eq("organization_id", organizationId)
-    .order("status", { ascending: true })
-    .order("nome", { ascending: true });
+  const [{ data }, { data: leads }, { data: eventos }] = await Promise.all([
+    db
+      .from("pol_liderancas")
+      .select(
+        "id, nome, apelido, cargo, tipo, whatsapp, aniversario, cidade, bairro, leads_mobilizados, eventos_organizados, nivel_engajamento, status, ultimo_contato_em",
+      )
+      .eq("organization_id", organizationId)
+      .order("status", { ascending: true })
+      .order("nome", { ascending: true }),
+    // Pessoas indicadas por liderança (ao vivo) — só os leads atribuídos.
+    db
+      .from("pol_leads")
+      .select("pol_lideranca_id")
+      .eq("organization_id", organizationId)
+      .not("pol_lideranca_id", "is", null)
+      .limit(20000),
+    // Eventos da liderança (ao vivo) — compromissos tipo 'evento' na Agenda.
+    db
+      .from("pol_agenda")
+      .select("lideranca_id")
+      .eq("organization_id", organizationId)
+      .eq("tipo", "evento")
+      .not("lideranca_id", "is", null)
+      .limit(5000),
+  ]);
 
-  return (data ?? []) as Lideranca[];
+  const contarPessoas = new Map<string, number>();
+  for (const l of (leads ?? []) as { pol_lideranca_id: string }[]) {
+    contarPessoas.set(l.pol_lideranca_id, (contarPessoas.get(l.pol_lideranca_id) ?? 0) + 1);
+  }
+  const contarEventos = new Map<string, number>();
+  for (const e of (eventos ?? []) as { lideranca_id: string }[]) {
+    contarEventos.set(e.lideranca_id, (contarEventos.get(e.lideranca_id) ?? 0) + 1);
+  }
+
+  // Sobrepõe os contadores estáticos (sempre 0) pelos números REAIS ao vivo.
+  return ((data ?? []) as Lideranca[]).map((l) => ({
+    ...l,
+    leads_mobilizados: contarPessoas.get(l.id) ?? 0,
+    eventos_organizados: contarEventos.get(l.id) ?? 0,
+  }));
 }
 
 export default async function LiderancasPage() {

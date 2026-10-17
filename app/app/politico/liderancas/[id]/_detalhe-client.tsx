@@ -24,6 +24,8 @@ export interface LiderancaDetalhe {
   cargo: string | null;
   tipo: string;
   whatsapp: string | null;
+  email: string | null;
+  instagram: string | null;
   aniversario: string | null;
   territory_id: string | null;
   cidade: string | null;
@@ -94,6 +96,8 @@ export default function DetalheLiderancaClient({ lideranca, territorios }: Props
   const [cargo, setCargo] = useState(l.cargo ?? "");
   const [tipo, setTipo] = useState(l.tipo ?? "cabo_eleitoral");
   const [whatsapp, setWhatsapp] = useState(l.whatsapp ?? "");
+  const [email, setEmail] = useState(l.email ?? "");
+  const [instagram, setInstagram] = useState(l.instagram ?? "");
   const [aniversario, setAniversario] = useState(l.aniversario ?? "");
   const [cidade, setCidade] = useState(l.cidade ?? "");
   const [bairro, setBairro] = useState(l.bairro ?? "");
@@ -113,6 +117,8 @@ export default function DetalheLiderancaClient({ lideranca, territorios }: Props
       cargo: cargo.trim() || null,
       tipo,
       whatsapp: whatsapp.trim() ? whatsapp.replace(/\D/g, "") : null,
+      email: email.trim() || null,
+      instagram: instagram.trim() ? instagram.trim().replace(/^@/, "") : null,
       aniversario: aniversario || null,
       cidade: cidade.trim() || null,
       bairro: bairro.trim() || null,
@@ -174,7 +180,7 @@ export default function DetalheLiderancaClient({ lideranca, territorios }: Props
 
         {/* Contadores */}
         <div className="mt-4 flex flex-wrap gap-6">
-          <Contador valor={l.leads_mobilizados} label="mobilizados" />
+          <Contador valor={l.leads_mobilizados} label="indicadas" />
           <Contador valor={l.eventos_organizados} label="eventos" />
           <div>
             <div className="text-xs" style={{ color: "var(--color-text-subtle)" }}>último contato</div>
@@ -200,6 +206,8 @@ export default function DetalheLiderancaClient({ lideranca, territorios }: Props
               </Campo>
               <Campo label="Cargo"><input type="text" value={cargo} onChange={(e) => setCargo(e.target.value)} className="wr-input w-full" /></Campo>
               <Campo label="WhatsApp"><input type="tel" value={whatsapp} onChange={(e) => setWhatsapp(e.target.value)} className="wr-input w-full" /></Campo>
+              <Campo label="E-mail"><input type="email" value={email} onChange={(e) => setEmail(e.target.value)} className="wr-input w-full" /></Campo>
+              <Campo label="Instagram"><input type="text" value={instagram} onChange={(e) => setInstagram(e.target.value)} placeholder="@usuario" className="wr-input w-full" /></Campo>
               <Campo label="Aniversário"><input type="date" value={aniversario} onChange={(e) => setAniversario(e.target.value)} className="wr-input w-full" /></Campo>
               <Campo label="Cidade"><input type="text" value={cidade} onChange={(e) => setCidade(e.target.value)} className="wr-input w-full" /></Campo>
               <Campo label="Bairro"><input type="text" value={bairro} onChange={(e) => setBairro(e.target.value)} className="wr-input w-full" /></Campo>
@@ -240,6 +248,8 @@ export default function DetalheLiderancaClient({ lideranca, territorios }: Props
             <Info label="Tipo" valor={rotulo(TIPOS, l.tipo)} />
             <Info label="Cargo" valor={l.cargo ?? "—"} />
             <Info label="WhatsApp" valor={l.whatsapp ?? "—"} />
+            <Info label="E-mail" valor={l.email ?? "—"} />
+            <Info label="Instagram" valor={l.instagram ? `@${l.instagram}` : "—"} />
             <Info label="Aniversário" valor={l.aniversario ? fmtData(l.aniversario) : "—"} />
             <Info label="Cidade" valor={l.cidade ?? "—"} />
             <Info label="Bairro" valor={l.bairro ?? "—"} />

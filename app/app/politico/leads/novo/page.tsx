@@ -20,13 +20,22 @@ export default async function NovoCadastroPage() {
   const org = await resolveActiveOrg(user);
   if (!org) redirect("/app/onboarding");
 
-  // Buscar territórios da organização para o select
+  // Buscar territórios + lideranças ativas da organização para os selects
   const db = await createClient();
-  const { data: territorios } = await db
-    .from("pol_territories")
-    .select("id, name, type")
-    .eq("organization_id", org.orgId)
-    .order("name");
+  const [{ data: territorios }, { data: liderancas }] = await Promise.all([
+    db.from("pol_territories").select("id, name, type").eq("organization_id", org.orgId).order("name"),
+    db
+      .from("pol_liderancas")
+      .select("id, nome, cidade")
+      .eq("organization_id", org.orgId)
+      .eq("status", "ativo")
+      .order("nome")
+      .limit(500),
+  ]);
+  const liderancasOpts = ((liderancas ?? []) as { id: string; nome: string; cidade: string | null }[]).map((l) => ({
+    id: l.id,
+    nome: l.cidade ? `${l.nome} · ${l.cidade}` : l.nome,
+  }));
 
   return (
     <div className="mx-auto max-w-[720px] px-4 py-7 space-y-[18px]">
@@ -41,7 +50,7 @@ export default async function NovoCadastroPage() {
       </header>
 
       {/* Formulário */}
-      <NovoCadastroForm territorios={territorios ?? []} />
+      <NovoCadastroForm territorios={territorios ?? []} liderancas={liderancasOpts} />
     </div>
   );
 }

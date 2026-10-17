@@ -55642,3 +55642,12 @@ revoke all on public.pol_demanda_eventos from anon;
 
 -- ── 9010: contato opcional na lideranca — apendice idempotente. Ver migration 9010. ──
 alter table public.pol_liderancas alter column contact_id drop not null;
+-- ── 9011: pol_leads.pol_lideranca_id (indicado por) — apendice idempotente. Ver migration 9011. ──
+alter table public.pol_leads
+  add column if not exists pol_lideranca_id uuid references public.pol_liderancas(id) on delete set null;
+create index if not exists pol_leads_org_lideranca_idx
+  on public.pol_leads (organization_id, pol_lideranca_id) where pol_lideranca_id is not null;
+-- ── 9012: email/instagram na lideranca — apendice idempotente. Ver migration 9012. ──
+alter table public.pol_liderancas
+  add column if not exists email     text,
+  add column if not exists instagram text;

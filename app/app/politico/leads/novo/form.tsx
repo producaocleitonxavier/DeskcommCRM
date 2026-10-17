@@ -27,8 +27,14 @@ interface Territorio {
   type: string;
 }
 
+interface LiderancaOpt {
+  id: string;
+  nome: string;
+}
+
 interface Props {
   territorios: Territorio[];
+  liderancas: LiderancaOpt[];
 }
 
 /* ── constantes ────────────────────────────────────────────────────────────── */
@@ -190,7 +196,7 @@ function IconeProfissao() {
 
 /* ── form principal ────────────────────────────────────────────────────────── */
 
-export default function NovoCadastroForm({ territorios }: Props) {
+export default function NovoCadastroForm({ territorios, liderancas }: Props) {
   const router = useRouter();
   const [salvando, setSalvando] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
@@ -225,6 +231,7 @@ export default function NovoCadastroForm({ territorios }: Props) {
 
   // Origem & relacionamento
   const [origem, setOrigem] = useState("manual");
+  const [liderancaId, setLiderancaId] = useState("");
   const [quemIndicou, setQuemIndicou] = useState("");
   const [consentOrigin, setConsentOrigin] = useState("");
   const [observacoes, setObservacoes] = useState("");
@@ -329,6 +336,7 @@ export default function NovoCadastroForm({ territorios }: Props) {
       if (bairro.trim()) customFields.bairro = bairro.trim();
       if (profissao.trim()) customFields.profissao = profissao.trim();
       if (tituloEleitor.trim()) customFields.titulo_eleitor = tituloEleitor.trim();
+      if (quemIndicou.trim()) customFields.quem_indicou = quemIndicou.trim();
       if (observacoes.trim()) customFields.observacoes = observacoes.trim();
 
       // Endereço completo como sub-objeto
@@ -392,6 +400,7 @@ export default function NovoCadastroForm({ territorios }: Props) {
       if (secaoEleitoral.trim()) leadBody.secao_eleitoral = secaoEleitoral.trim();
       if (comunidadeRole.trim()) leadBody.community_role = comunidadeRole.trim();
       if (consentOrigin.trim()) leadBody.consent_origin = consentOrigin.trim();
+      if (liderancaId) leadBody.pol_lideranca_id = liderancaId;
 
       const resLead = await fetch("/api/v1/pol-leads", {
         method: "POST",
@@ -823,14 +832,30 @@ export default function NovoCadastroForm({ territorios }: Props) {
           </select>
         </label>
 
-        {/* Quem indicou */}
+        {/* Indicado por (liderança) — alimenta a métrica "pessoas indicadas" */}
+        {liderancas.length > 0 && (
+          <label className="block space-y-1.5">
+            <Label>Indicado por (liderança)</Label>
+            <select value={liderancaId} onChange={(e) => setLiderancaId(e.target.value)} className="wr-input">
+              <option value="">— Nenhuma</option>
+              {liderancas.map((l) => (
+                <option key={l.id} value={l.id}>{l.nome}</option>
+              ))}
+            </select>
+            <span className="text-xs" style={{ color: "var(--color-text-subtle)" }}>
+              Vincula este cadastro à liderança que trouxe a pessoa — conta em "pessoas indicadas".
+            </span>
+          </label>
+        )}
+
+        {/* Quem indicou (texto livre, quando não for uma liderança cadastrada) */}
         <label className="block space-y-1.5">
-          <Label>Quem indicou / mobilizador</Label>
+          <Label>Quem indicou (texto livre)</Label>
           <input
             type="text"
             value={quemIndicou}
             onChange={(e) => setQuemIndicou(e.target.value)}
-            placeholder="Nome de quem trouxe esse contato"
+            placeholder="Nome de quem trouxe esse contato, se não for uma liderança cadastrada"
             maxLength={200}
             className="wr-input"
           />
