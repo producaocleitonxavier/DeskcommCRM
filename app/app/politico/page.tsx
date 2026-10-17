@@ -32,6 +32,110 @@ export interface MetricasHoje {
   ativacoesPorDia: { name: string; value: number }[];
 }
 
+export interface GabineteHoje {
+  atencao: {
+    id: string;
+    assunto: string;
+    prioridade: string | null;
+    prazoISO: string | null;
+    categoria: "atrasada" | "vence" | "prioridade";
+  }[];
+  agenda: { id: string; titulo: string; dataISO: string; diaInteiro: boolean; local: string | null }[];
+  aniversariantes: { id: string; nome: string; cidade: string | null }[];
+  resumo: { totalDemandas: number; resolvidas: number; taxaResolucao: number; nomeParlamentar: string | null };
+}
+
+async function buscarGabineteHoje(organizationId: string): Promise<GabineteHoje> {
+  const db = await createClient();
+  const agora = new Date();
+  const hojeIni = new Date(agora);
+  hojeIni.setHours(0, 0, 0, 0);
+  const hojeFim = new Date(hojeIni);
+  hojeFim.setDate(hojeIni.getDate() + 1);
+  const em3dias = new Date(hojeIni);
+  em3dias.setDate(hojeIni.getDate() + 3);
+  em3dias.setHours(23, 59, 59, 999);
+
+  const [abertasRes, agendaRes, aniRes, totalGabRes, resolvidasGabRes, cfgRes] = await Promise.all([
+    db
+      .from("demandas")
+      .select("id, assunto, estado, pol_prioridade, prazo_em")
+      .eq("organization_id", organizationId)
+      .eq("pol_gabinete", true)
+      .not("estado", "in", "(resolvida,encerrada)")
+      .order("prazo_em", { ascending: true, nullsFirst: false })
+      .limit(60),
+    db
+      .from("pol_agenda")
+      .select("id, titulo, data_inicio, dia_inteiro, local, status")
+      .eq("organization_id", organizationId)
+      .gte("data_inicio", hojeIni.toISOString())
+      .lt("data_inicio", hojeFim.toISOString())
+      .neq("status", "cancelado")
+      .order("data_inicio", { ascending: true })
+      .limit(12),
+    db
+      .from("pol_liderancas")
+      .select("id, nome, cidade, aniversario")
+      .eq("organization_id", organizationId)
+      .not("aniversario", "is", null)
+      .limit(1000),
+    db.from("demandas").select("id", { count: "exact", head: true }).eq("organization_id", organizationId).eq("pol_gabinete", true),
+    db.from("demandas").select("id", { count: "exact", head: true }).eq("organization_id", organizationId).eq("pol_gabinete", true).eq("estado", "resolvida"),
+    db.from("pol_gabinete_config").select("nome_parlamentar").eq("organization_id", organizationId).maybeSingle(),
+  ]);
+
+  const abertas = (abertasRes.data ?? []) as {
+    id: string;
+    assunto: string | null;
+    pol_prioridade: string | null;
+    prazo_em: string | null;
+  }[];
+  const ordem: Record<GabineteHoje["atencao"][number]["categoria"], number> = { atrasada: 0, vence: 1, prioridade: 2 };
+  const atencao: GabineteHoje["atencao"] = [];
+  for (const d of abertas) {
+    let categoria: "atrasada" | "vence" | "prioridade" | null = null;
+    if (d.prazo_em) {
+      const p = new Date(d.prazo_em);
+      if (p < hojeIni) categoria = "atrasada";
+      else if (p <= em3dias) categoria = "vence";
+    }
+    if (!categoria && (d.pol_prioridade === "urgente" || d.pol_prioridade === "alta")) categoria = "prioridade";
+    if (categoria) atencao.push({ id: d.id, assunto: d.assunto ?? "Sem assunto", prioridade: d.pol_prioridade, prazoISO: d.prazo_em, categoria });
+  }
+  atencao.sort((a, b) => ordem[a.categoria] - ordem[b.categoria]);
+
+  const agenda = ((agendaRes.data ?? []) as { id: string; titulo: string; data_inicio: string; dia_inteiro: boolean; local: string | null }[]).map((a) => ({
+    id: a.id,
+    titulo: a.titulo,
+    dataISO: a.data_inicio,
+    diaInteiro: a.dia_inteiro,
+    local: a.local,
+  }));
+
+  const hojeM = agora.getMonth();
+  const hojeD = agora.getDate();
+  const aniversariantes = ((aniRes.data ?? []) as { id: string; nome: string; cidade: string | null; aniversario: string }[])
+    .filter((l) => {
+      const a = new Date(`${l.aniversario}T12:00:00`);
+      return a.getMonth() === hojeM && a.getDate() === hojeD;
+    })
+    .map((l) => ({ id: l.id, nome: l.nome, cidade: l.cidade }))
+    .slice(0, 12);
+
+  const totalDemandas = totalGabRes.count ?? 0;
+  const resolvidas = resolvidasGabRes.count ?? 0;
+  const taxaResolucao = totalDemandas > 0 ? Math.round((resolvidas / totalDemandas) * 100) : 0;
+  const nomeParlamentar = (cfgRes.data as { nome_parlamentar?: string | null } | null)?.nome_parlamentar ?? null;
+
+  return {
+    atencao: atencao.slice(0, 8),
+    agenda,
+    aniversariantes,
+    resumo: { totalDemandas, resolvidas, taxaResolucao, nomeParlamentar },
+  };
+}
+
 // -- Data fetching -----------------------------------------------------------
 
 async function buscarMetricas(organizationId: string): Promise<MetricasHoje> {
@@ -81,17 +185,21 @@ async function buscarMetricas(organizationId: string): Promise<MetricasHoje> {
       .select("id", { count: "exact", head: true })
       .eq("organization_id", organizationId)
       .in("support_level", ["apoiador", "militante", "voto_certo"]),
+    // Demandas DO GABINETE (tabela `demandas`, pol_gabinete), não a antiga pol_demands.
     db
-      .from("pol_demands")
+      .from("demandas")
       .select("id", { count: "exact", head: true })
       .eq("organization_id", organizationId)
-      .neq("status", "concluida"),
+      .eq("pol_gabinete", true)
+      .not("estado", "in", "(resolvida,encerrada)"),
     db
-      .from("pol_demands")
+      .from("demandas")
       .select("id", { count: "exact", head: true })
       .eq("organization_id", organizationId)
-      .neq("status", "concluida")
-      .lte("deadline", sextaFeira.toISOString()),
+      .eq("pol_gabinete", true)
+      .not("estado", "in", "(resolvida,encerrada)")
+      .not("prazo_em", "is", null)
+      .lte("prazo_em", sextaFeira.toISOString()),
     db
       .from("pol_alerts")
       .select("id", { count: "exact", head: true })
@@ -190,11 +298,12 @@ export default async function HojePage() {
   const org = await resolveActiveOrg(user);
   if (!org) redirect("/app/onboarding");
 
-  const metrics = await buscarMetricas(org.orgId);
+  const [metrics, gabineteHoje] = await Promise.all([buscarMetricas(org.orgId), buscarGabineteHoje(org.orgId)]);
 
   return (
     <HojeClient
       metrics={metrics}
+      gabineteHoje={gabineteHoje}
       nome={primeiroNome(user.full_name)}
       saudacao={saudacao()}
       dataFormatada={dataFormatada()}
