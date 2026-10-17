@@ -1060,6 +1060,15 @@ export const NAV_CATALOG = [
     minRole: "manager",
     sidebar: true,
   },
+  {
+    href: "/app/politico/identidade",
+    label: "Identidade",
+    description: "Logo, assinatura e dados do parlamentar no timbre dos ofícios.",
+    icon: "IdentificationCard",
+    group: "gabinete",
+    minRole: "manager",
+    sidebar: true,
+  },
 
   // ── Rotas políticas que existiam sem porta no menu (Prompt 6) ────────
   {

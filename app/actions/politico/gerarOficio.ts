@@ -72,6 +72,31 @@ export async function gerarOficioDemanda(demandaId: string): Promise<OficioResul
   }
 
   const marca = await marcaDaOrganizacaoParaPdf(db, org.orgId);
+  const admin = createAdminClient();
+
+  // Identidade do gabinete (pol_gabinete_config): nome/cargo/subtitulo/cidade +
+  // logo e assinatura próprios. Caem para a marca da organização quando ausentes.
+  const { data: cfg } = await db
+    .from("pol_gabinete_config")
+    .select("nome_parlamentar, cargo, subtitulo, cidade, logo_path, assinatura_path")
+    .eq("organization_id", org.orgId)
+    .maybeSingle();
+  const ident = (cfg ?? null) as {
+    nome_parlamentar: string | null;
+    cargo: string | null;
+    subtitulo: string | null;
+    cidade: string | null;
+    logo_path: string | null;
+    assinatura_path: string | null;
+  } | null;
+  const assinarIdentidade = async (p: string | null): Promise<string | null> => {
+    if (!p) return null;
+    const { data: s } = await admin.storage.from("gabinete-identidade").createSignedUrl(p, 60 * 60);
+    return s?.signedUrl ?? null;
+  };
+  const logoProprio = await assinarIdentidade(ident?.logo_path ?? null);
+  const assinaturaUrl = await assinarIdentidade(ident?.assinatura_path ?? null);
+
   let buffer: Buffer;
   try {
     buffer = await renderOficioPdf({
@@ -79,15 +104,18 @@ export async function gerarOficioDemanda(demandaId: string): Promise<OficioResul
       ano,
       corpo,
       orgao: d.pol_orgao_destino ?? null,
-      cidade: null,
+      cidade: ident?.cidade ?? null,
       dataISO: agora.toISOString(),
-      marca: { appName: marca.appName, accentHex: marca.accentHex, logoUrl: marca.logoUrl },
+      nome: ident?.nome_parlamentar ?? null,
+      subtitulo: ident?.subtitulo ?? null,
+      cargo: ident?.cargo ?? null,
+      assinaturaUrl,
+      marca: { appName: marca.appName, accentHex: marca.accentHex, logoUrl: logoProprio ?? marca.logoUrl },
     });
   } catch {
     return { ok: false, erro: "Falha ao renderizar o PDF do ofício." };
   }
 
-  const admin = createAdminClient();
   const path = `${org.orgId}/${demandaId}/oficio.pdf`;
   const up = await admin.storage.from(BUCKET).upload(path, buffer, { contentType: "application/pdf", upsert: true });
   if (up.error) return { ok: false, erro: "Erro ao salvar o ofício no armazenamento." };

@@ -21,7 +21,8 @@ const styles = StyleSheet.create({
   data: { fontSize: 11 },
   destinatario: { marginBottom: 20, fontSize: 11, fontWeight: 700 },
   corpo: { fontSize: 11, lineHeight: 1.6, textAlign: "justify" },
-  assinaturaBloco: { marginTop: 56, alignItems: "center" },
+  assinaturaBloco: { marginTop: 48, alignItems: "center" },
+  assinaturaImagem: { height: 56, width: 180, objectFit: "contain", marginBottom: 2 },
   assinaturaLinha: { width: 220, borderTopWidth: 1, borderTopColor: "#1A1A1A", marginBottom: 4 },
   assinaturaNome: { fontSize: 11, fontWeight: 700 },
   assinaturaCargo: { fontSize: 9, color: "#555" },
@@ -39,6 +40,14 @@ export interface OficioPdfInput {
   cidade: string | null;
   /** Data de emissão (ISO). */
   dataISO: string;
+  /** Nome do parlamentar (cabeçalho + assinatura). Cai para a marca da org. */
+  nome: string | null;
+  /** Linha de apoio no cabeçalho (ex.: "Trabalhando por Minas Gerais"). */
+  subtitulo: string | null;
+  /** Cargo na assinatura (ex.: "Deputado Estadual"). */
+  cargo: string | null;
+  /** URL da imagem da assinatura (acima do nome); null omite. */
+  assinaturaUrl: string | null;
   marca: { appName: string | null; accentHex: string | null; logoUrl: string | null };
 }
 
@@ -55,7 +64,10 @@ function dataPorExtenso(iso: string, cidade: string | null): string {
 
 function OficioDoc({ d }: { d: OficioPdfInput }): React.ReactElement {
   const accent = d.marca.accentHex ?? "#1A1A1A";
-  const nome = d.marca.appName ?? "Gabinete";
+  const nome = (d.nome ?? d.marca.appName ?? "Gabinete").trim();
+  const subtitulo = (d.subtitulo ?? "Gabinete — Atendimento ao cidadão").trim();
+  const cargo = (d.cargo ?? "Gabinete Parlamentar").trim();
+  const logoUrl = d.marca.logoUrl;
   const destino = d.orgao?.trim() ? `Ao(À) ${d.orgao.trim()}` : "Ao órgão competente";
   const numeroFmt = `OFÍCIO Nº ${String(d.numero).padStart(3, "0")}/${d.ano}`;
   return (
@@ -64,9 +76,9 @@ function OficioDoc({ d }: { d: OficioPdfInput }): React.ReactElement {
         <View style={[styles.cabecalho, { borderBottomColor: accent }]}>
           <View>
             <Text style={[styles.marcaNome, { color: accent }]}>{nome}</Text>
-            <Text style={styles.marcaSub}>Gabinete — Atendimento ao cidadão</Text>
+            {subtitulo ? <Text style={styles.marcaSub}>{subtitulo}</Text> : null}
           </View>
-          {d.marca.logoUrl ? <Image src={d.marca.logoUrl} style={styles.logo} /> : null}
+          {logoUrl ? <Image src={logoUrl} style={styles.logo} /> : null}
         </View>
 
         <View style={styles.linhaTopo}>
@@ -79,9 +91,10 @@ function OficioDoc({ d }: { d: OficioPdfInput }): React.ReactElement {
         <Text style={styles.corpo}>{d.corpo}</Text>
 
         <View style={styles.assinaturaBloco}>
+          {d.assinaturaUrl ? <Image src={d.assinaturaUrl} style={styles.assinaturaImagem} /> : null}
           <View style={styles.assinaturaLinha} />
           <Text style={styles.assinaturaNome}>{nome}</Text>
-          <Text style={styles.assinaturaCargo}>Gabinete Parlamentar</Text>
+          <Text style={styles.assinaturaCargo}>{cargo}</Text>
         </View>
 
         <Text

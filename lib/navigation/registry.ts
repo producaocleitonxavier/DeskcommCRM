@@ -54,6 +54,7 @@ import {
   Stack,
   Crown,
   CurrencyDollar,
+  IdentificationCard,
 } from "@/lib/ui/icons";
 
 import {
@@ -123,6 +124,7 @@ const ICONS = {
   Stack,
   Crown,
   CurrencyDollar,
+  IdentificationCard,
 };
 export interface NavDestination extends Omit<NavMetadata, "icon"> {
   icon: PhosphorIcon;
