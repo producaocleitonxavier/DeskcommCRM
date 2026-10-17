@@ -356,14 +356,28 @@ export default function DetalheDemandaClient({ demanda, territorios, liderancas 
           <textarea
             value={encaminhamento}
             onChange={(e) => setEncaminhamento(e.target.value)}
-            rows={5}
+            rows={12}
             placeholder="Ex.: Ofício encaminhado à Secretaria de Obras solicitando…"
-            className="wr-input w-full"
+            className="w-full resize-y rounded-xl px-4 py-3.5 text-sm leading-relaxed outline-none transition-colors focus:border-[rgba(215,243,106,0.55)]"
+            style={{
+              background: "var(--color-surface-elevated)",
+              border: "1px solid var(--color-border)",
+              color: "var(--color-text)",
+              minHeight: 260,
+              boxShadow: "none",
+            }}
           />
         ) : d.pol_encaminhamento_ia ? (
-          <p className="whitespace-pre-wrap text-sm leading-relaxed" style={{ color: "var(--color-text)" }}>
+          <div
+            className="rounded-xl p-5 text-sm leading-relaxed whitespace-pre-wrap"
+            style={{
+              background: "var(--color-surface-elevated)",
+              border: "1px solid var(--color-border)",
+              color: "var(--color-text)",
+            }}
+          >
             {d.pol_encaminhamento_ia}
-          </p>
+          </div>
         ) : (
           <p className="text-sm" style={{ color: "var(--color-text-subtle)" }}>
             Sem encaminhamento registrado. Edite para redigir — em breve, a IA redige para você.
