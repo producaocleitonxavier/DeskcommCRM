@@ -1,23 +1,22 @@
 "use client";
 
 /**
- * Formulário de nova liderança (Gabinete). Liga a um contato existente da base
- * (contact_id, obrigatório; único por organização) e grava em pol_liderancas
- * via Supabase browser client (RLS).
+ * Formulário de nova liderança (Gabinete). A liderança tem nome próprio; grava
+ * em pol_liderancas via server action (RLS). Sem vínculo a contato aqui — a
+ * atribuição de cadastros à liderança acontece no cadastro de Pessoas.
  */
 
-import { useEffect, useRef, useState } from "react";
+import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, Check, Search, X } from "lucide-react";
+import { ArrowLeft, Check } from "lucide-react";
 
-import { buscarCidadaos, criarRegistro, type CidadaoOpcao } from "@/app/actions/politico/gabinete-actions";
+import { criarRegistro } from "@/app/actions/politico/gabinete-actions";
 
 interface Opcao {
   id: string;
   nome: string;
 }
-type Contato = CidadaoOpcao;
 
 export interface NovaLiderancaFormProps {
   orgId: string;
@@ -25,15 +24,13 @@ export interface NovaLiderancaFormProps {
 }
 
 const TIPOS: Opcao[] = [
+  { id: "apoiador", nome: "Apoiador" },
   { id: "cabo_eleitoral", nome: "Cabo eleitoral" },
-  { id: "coordenador_bairro", nome: "Coordenador de bairro" },
-  { id: "coordenador_cidade", nome: "Coordenador de cidade" },
-  { id: "lider_comunitario", nome: "Líder comunitário" },
   { id: "vereador_aliado", nome: "Vereador aliado" },
-  { id: "presidente_associacao", nome: "Presidente de associação" },
-  { id: "lider_religioso", nome: "Líder religioso" },
-  { id: "lider_sindical", nome: "Líder sindical" },
-  { id: "assessor", nome: "Assessor" },
+  { id: "lider_religioso", nome: "Liderança religiosa" },
+  { id: "deputado", nome: "Deputado(a)" },
+  { id: "prefeito", nome: "Prefeito(a)" },
+  { id: "vice_prefeito", nome: "Vice-Prefeito(a)" },
   { id: "outro", nome: "Outro" },
 ];
 const ENGAJAMENTOS: Opcao[] = [
@@ -60,11 +57,6 @@ function Label({ children, obrig }: { children: React.ReactNode; obrig?: boolean
 export default function NovaLiderancaForm({ territorios }: NovaLiderancaFormProps) {
   const router = useRouter();
 
-  const [busca, setBusca] = useState("");
-  const [resultados, setResultados] = useState<Contato[]>([]);
-  const [buscando, setBuscando] = useState(false);
-  const [contato, setContato] = useState<Contato | null>(null);
-
   const [nome, setNome] = useState("");
   const [apelido, setApelido] = useState("");
   const [cargo, setCargo] = useState("");
@@ -84,33 +76,6 @@ export default function NovaLiderancaForm({ territorios }: NovaLiderancaFormProp
   const [salvando, setSalvando] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
 
-  const buscaRef = useRef(busca);
-  buscaRef.current = busca;
-  useEffect(() => {
-    if (contato) return;
-    const q = busca.trim();
-    if (q.length < 2) {
-      setResultados([]);
-      return;
-    }
-    setBuscando(true);
-    const id = setTimeout(async () => {
-      const achados = await buscarCidadaos(q);
-      if (buscaRef.current.trim() === q) {
-        setResultados(achados);
-        setBuscando(false);
-      }
-    }, 300);
-    return () => clearTimeout(id);
-  }, [busca, contato]);
-
-  function escolher(c: Contato) {
-    setContato(c);
-    setResultados([]);
-    if (!nome.trim() && c.name) setNome(c.name);
-    if (!whatsapp.trim() && c.phone_number) setWhatsapp(c.phone_number.replace(/\D/g, ""));
-  }
-
   async function salvar(e: React.FormEvent) {
     e.preventDefault();
     setErro(null);
@@ -123,7 +88,6 @@ export default function NovaLiderancaForm({ territorios }: NovaLiderancaFormProp
       nivel_engajamento: engajamento,
       status,
     };
-    if (contato) payload.contact_id = contato.id;
     if (apelido.trim()) payload.apelido = apelido.trim();
     if (cargo.trim()) payload.cargo = cargo.trim();
     if (whatsapp.trim()) payload.whatsapp = whatsapp.replace(/\D/g, "");
@@ -159,65 +123,6 @@ export default function NovaLiderancaForm({ territorios }: NovaLiderancaFormProp
       </div>
 
       <form onSubmit={salvar} className="space-y-5">
-        {/* Contato (opcional) */}
-        <section className="wr-card p-5 sm:p-6">
-          <Label>Contato <span style={{ color: "var(--color-text-subtle)", fontWeight: 400 }}>(opcional)</span></Label>
-          <p className="mb-2 -mt-0.5 text-xs" style={{ color: "var(--color-text-subtle)" }}>
-            Vincule a um contato já cadastrado na base, se houver. A liderança tem nome próprio abaixo — não é obrigatório vincular.
-          </p>
-          {contato ? (
-            <div
-              className="flex items-center justify-between gap-3 rounded-xl px-4 py-3"
-              style={{ background: "var(--color-surface-elevated)", border: "1px solid var(--color-border)" }}
-            >
-              <div className="min-w-0">
-                <div className="truncate font-semibold" style={{ color: "var(--color-text)" }}>{contato.name ?? "Sem nome"}</div>
-                <div className="truncate text-xs" style={{ color: "var(--color-text-muted)" }}>{contato.phone_number ?? "sem telefone"}</div>
-              </div>
-              <button
-                type="button"
-                onClick={() => { setContato(null); setBusca(""); setResultados([]); }}
-                className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full"
-                style={{ background: "rgba(255,255,255,0.06)", color: "var(--color-text-muted)" }}
-                aria-label="Trocar contato"
-              >
-                <X className="h-4 w-4" aria-hidden />
-              </button>
-            </div>
-          ) : (
-            <div className="relative">
-              <div className="flex min-h-[44px] items-center gap-2.5 rounded-full px-4" style={{ background: "var(--color-surface-elevated)", border: "1px solid var(--color-border)" }}>
-                <Search className="h-4 w-4 shrink-0" style={{ color: "var(--color-text-subtle)" }} aria-hidden />
-                <input
-                  type="search"
-                  value={busca}
-                  onChange={(e) => setBusca(e.target.value)}
-                  placeholder="Buscar contato pelo nome…"
-                  className="min-w-0 flex-1 border-0 bg-transparent text-sm outline-none"
-                  style={{ color: "var(--color-text)" }}
-                  autoComplete="off"
-                />
-              </div>
-              {busca.trim().length >= 2 && (
-                <div className="absolute z-20 mt-1 max-h-72 w-full overflow-auto rounded-xl py-1" style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)", boxShadow: "0 8px 24px rgba(0,0,0,0.4)" }}>
-                  {buscando && <div className="px-4 py-2 text-xs" style={{ color: "var(--color-text-subtle)" }}>Buscando…</div>}
-                  {!buscando && resultados.length === 0 && (
-                    <div className="px-4 py-2 text-xs" style={{ color: "var(--color-text-subtle)" }}>
-                      Nenhum contato encontrado — você pode seguir sem vincular.
-                    </div>
-                  )}
-                  {resultados.map((c) => (
-                    <button key={c.id} type="button" onClick={() => escolher(c)} className="flex w-full items-center justify-between gap-2 px-4 py-2 text-left transition-colors hover:bg-[var(--color-surface-elevated)]">
-                      <span className="truncate text-sm font-medium" style={{ color: "var(--color-text)" }}>{c.name ?? "Sem nome"}</span>
-                      <span className="shrink-0 text-xs tabular-nums" style={{ color: "var(--color-text-subtle)" }}>{c.phone_number ?? ""}</span>
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
-          )}
-        </section>
-
         {/* Dados */}
         <section className="wr-card space-y-4 p-5 sm:p-6">
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">

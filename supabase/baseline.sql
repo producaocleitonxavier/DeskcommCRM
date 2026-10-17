@@ -55651,3 +55651,13 @@ create index if not exists pol_leads_org_lideranca_idx
 alter table public.pol_liderancas
   add column if not exists email     text,
   add column if not exists instagram text;
+-- ── 9013: tipos de lideranca enxutos (apoiador/cabo/vereador/religiosa/deputado/prefeito/vice/outro) — apendice idempotente. Ver migration 9013. ──
+update public.pol_liderancas set tipo = 'cabo_eleitoral'
+  where tipo in ('coordenador_bairro', 'coordenador_cidade', 'lider_comunitario');
+update public.pol_liderancas set tipo = 'outro'
+  where tipo in ('presidente_associacao', 'lider_sindical', 'assessor');
+alter table public.pol_liderancas drop constraint if exists pol_liderancas_tipo_check;
+alter table public.pol_liderancas add constraint pol_liderancas_tipo_check check (tipo in (
+  'apoiador', 'cabo_eleitoral', 'vereador_aliado', 'lider_religioso',
+  'deputado', 'prefeito', 'vice_prefeito', 'outro'
+));

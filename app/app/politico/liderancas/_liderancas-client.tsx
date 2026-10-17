@@ -30,16 +30,21 @@ import { CommandHero } from "@/components/politico/command-hero";
 import type { Lideranca } from "./page";
 
 const TIPO_LABELS: Record<string, string> = {
+  apoiador: "Apoiador",
   cabo_eleitoral: "Cabo eleitoral",
-  coordenador_bairro: "Coord. bairro",
-  coordenador_cidade: "Coord. cidade",
-  lider_comunitario: "Líder comunitário",
   vereador_aliado: "Vereador aliado",
-  presidente_associacao: "Pres. associação",
-  lider_religioso: "Líder religioso",
-  lider_sindical: "Líder sindical",
-  assessor: "Assessor",
+  lider_religioso: "Liderança religiosa",
+  deputado: "Deputado(a)",
+  prefeito: "Prefeito(a)",
+  vice_prefeito: "Vice-Prefeito(a)",
   outro: "Outro",
+  // compat: rótulos antigos ainda podem aparecer em dados não migrados
+  coordenador_bairro: "Cabo eleitoral",
+  coordenador_cidade: "Cabo eleitoral",
+  lider_comunitario: "Cabo eleitoral",
+  presidente_associacao: "Outro",
+  lider_sindical: "Outro",
+  assessor: "Outro",
 };
 
 const STATUS_CFG: Record<string, { label: string; bg: string; fg: string }> = {

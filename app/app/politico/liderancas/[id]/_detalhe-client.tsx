@@ -46,15 +46,13 @@ export interface Props {
 }
 
 const TIPOS: Opcao[] = [
+  { id: "apoiador", nome: "Apoiador" },
   { id: "cabo_eleitoral", nome: "Cabo eleitoral" },
-  { id: "coordenador_bairro", nome: "Coordenador de bairro" },
-  { id: "coordenador_cidade", nome: "Coordenador de cidade" },
-  { id: "lider_comunitario", nome: "Líder comunitário" },
   { id: "vereador_aliado", nome: "Vereador aliado" },
-  { id: "presidente_associacao", nome: "Presidente de associação" },
-  { id: "lider_religioso", nome: "Líder religioso" },
-  { id: "lider_sindical", nome: "Líder sindical" },
-  { id: "assessor", nome: "Assessor" },
+  { id: "lider_religioso", nome: "Liderança religiosa" },
+  { id: "deputado", nome: "Deputado(a)" },
+  { id: "prefeito", nome: "Prefeito(a)" },
+  { id: "vice_prefeito", nome: "Vice-Prefeito(a)" },
   { id: "outro", nome: "Outro" },
 ];
 const ENGAJAMENTOS: Opcao[] = [
