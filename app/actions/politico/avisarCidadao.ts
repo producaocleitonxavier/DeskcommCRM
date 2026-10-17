@@ -101,10 +101,10 @@ export async function avisarCidadao(demandaId: string): Promise<AvisoResultado> 
   const protocolo = numero && ano ? `OF ${String(numero).padStart(3, "0")}/${ano}` : protocoloDe(d);
   const primeiroNome = (contato.name ?? "").trim().split(/\s+/)[0] ?? "";
   const saudacao = primeiroNome ? `Olá, ${primeiroNome}!` : "Olá!";
-  const assunto = d.assunto?.trim();
+  // Mensagem GENÉRICA de propósito: NÃO embute o assunto (que costuma ser a
+  // descrição longa do cidadão e deixa o texto feio). O detalhe vai no ofício.
   const corpo =
     `${saudacao} Passo para avisar que a sua demanda (protocolo ${protocolo})` +
-    (assunto ? ` sobre "${assunto}"` : "") +
     ` já foi encaminhada ao órgão competente para a resolução.` +
     ` Assim que houver novidades, te retorno por aqui, ok?` +
     (oficioBytes ? ` Encaminho o ofício para seu conhecimento.` : "") +
