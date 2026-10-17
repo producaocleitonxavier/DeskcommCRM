@@ -55639,3 +55639,6 @@ create index if not exists pol_demanda_eventos_demanda_idx
   on public.pol_demanda_eventos (organization_id, demanda_id, created_at);
 grant select, insert, update, delete on public.pol_demanda_eventos to authenticated;
 revoke all on public.pol_demanda_eventos from anon;
+
+-- ── 9010: contato opcional na lideranca — apendice idempotente. Ver migration 9010. ──
+alter table public.pol_liderancas alter column contact_id drop not null;

@@ -9,7 +9,7 @@ import { Activity, AlertTriangle, MessageSquare, TrendingUp } from "lucide-react
 
 import { KpiCard } from "@/components/politico/kpi-card";
 import { PieChartCard } from "@/components/politico/pie-chart-card";
-import { SectionHeader } from "@/components/politico/section-header";
+import { CommandHero } from "@/components/politico/command-hero";
 import { EmptyState } from "@/components/politico/empty-state";
 
 const SENTIMENTO: Record<string, { label: string; bg: string; fg: string }> = {
@@ -46,7 +46,7 @@ export interface NarrativasClientProps {
 export default function NarrativasClient({ kpis, sentimentoPie, narrativas }: NarrativasClientProps) {
   return (
     <div className="mx-auto max-w-[1140px] px-4 py-7 space-y-6" style={{ background: "var(--color-bg)" }}>
-      <SectionHeader title="Radar de Narrativas" subtitle="Temas do debate público — oportunidades, ameaças e sentimento." />
+      <CommandHero eyebrow="Inteligência" titulo="Radar de Narrativas" subtitulo="Temas do debate público — oportunidades, ameaças e sentimento." />
 
       <section className="grid grid-cols-2 gap-4 lg:grid-cols-4">
         <KpiCard label="Total de narrativas" valor={kpis.total} icone={MessageSquare} />

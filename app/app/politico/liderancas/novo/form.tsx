@@ -112,17 +112,16 @@ export default function NovaLiderancaForm({ territorios }: NovaLiderancaFormProp
   async function salvar(e: React.FormEvent) {
     e.preventDefault();
     setErro(null);
-    if (!contato) return setErro("Selecione o contato da liderança.");
     if (!nome.trim()) return setErro("Informe o nome da liderança.");
 
     setSalvando(true);
     const payload: Record<string, unknown> = {
-      contact_id: contato.id,
       nome: nome.trim(),
       tipo,
       nivel_engajamento: engajamento,
       status,
     };
+    if (contato) payload.contact_id = contato.id;
     if (apelido.trim()) payload.apelido = apelido.trim();
     if (cargo.trim()) payload.cargo = cargo.trim();
     if (whatsapp.trim()) payload.whatsapp = whatsapp.replace(/\D/g, "");
@@ -156,9 +155,12 @@ export default function NovaLiderancaForm({ territorios }: NovaLiderancaFormProp
       </div>
 
       <form onSubmit={salvar} className="space-y-5">
-        {/* Contato */}
+        {/* Contato (opcional) */}
         <section className="wr-card p-5 sm:p-6">
-          <Label obrig>Contato</Label>
+          <Label>Contato <span style={{ color: "var(--color-text-subtle)", fontWeight: 400 }}>(opcional)</span></Label>
+          <p className="mb-2 -mt-0.5 text-xs" style={{ color: "var(--color-text-subtle)" }}>
+            Vincule a um contato já cadastrado na base, se houver. A liderança tem nome próprio abaixo — não é obrigatório vincular.
+          </p>
           {contato ? (
             <div
               className="flex items-center justify-between gap-3 rounded-xl px-4 py-3"
@@ -197,7 +199,7 @@ export default function NovaLiderancaForm({ territorios }: NovaLiderancaFormProp
                   {buscando && <div className="px-4 py-2 text-xs" style={{ color: "var(--color-text-subtle)" }}>Buscando…</div>}
                   {!buscando && resultados.length === 0 && (
                     <div className="px-4 py-2 text-xs" style={{ color: "var(--color-text-subtle)" }}>
-                      Nenhum contato encontrado. Cadastre em Pessoas primeiro.
+                      Nenhum contato encontrado — você pode seguir sem vincular.
                     </div>
                   )}
                   {resultados.map((c) => (

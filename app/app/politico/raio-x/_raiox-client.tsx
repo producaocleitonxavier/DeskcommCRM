@@ -9,7 +9,7 @@ import { CalendarCheck, MapPin, Percent, Vote } from "lucide-react";
 
 import { KpiCard } from "@/components/politico/kpi-card";
 import { BarChartCard } from "@/components/politico/bar-chart-card";
-import { SectionHeader } from "@/components/politico/section-header";
+import { CommandHero } from "@/components/politico/command-hero";
 import { EmptyState } from "@/components/politico/empty-state";
 
 export interface RaioxClientProps {
@@ -22,9 +22,10 @@ export interface RaioxClientProps {
 export default function RaioxClient({ resumo, topCidades, evolucao, temDados }: RaioxClientProps) {
   return (
     <div className="mx-auto max-w-[1140px] px-4 py-7 space-y-6" style={{ background: "var(--color-bg)" }}>
-      <SectionHeader
-        title="Raio-X de Votos"
-        subtitle="Análise por seção eleitoral — dados do TSE, comparativo entre cidades e evolução."
+      <CommandHero
+        eyebrow="Território"
+        titulo="Raio-X de Votos"
+        subtitulo="Análise por seção eleitoral — dados do TSE, comparativo entre cidades e evolução."
       />
 
       <section className="grid grid-cols-2 gap-4 lg:grid-cols-4">

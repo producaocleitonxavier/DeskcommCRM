@@ -9,7 +9,7 @@ import { ArrowRight, Clock, Target, TrendingUp } from "lucide-react";
 
 import { FunnelBoard } from "@/components/politico/funnel-board";
 import { KpiCard } from "@/components/politico/kpi-card";
-import { SectionHeader } from "@/components/politico/section-header";
+import { CommandHero } from "@/components/politico/command-hero";
 import type { TransicaoRow } from "./page";
 
 const STAGES = [
@@ -65,11 +65,11 @@ export default function FunilClient({
 
   return (
     <div className="mx-auto max-w-[1140px] px-4 py-7 space-y-6" style={{ background: "var(--color-bg)" }}>
-      <SectionHeader
-        title="Funil Político"
-        subtitle={`${total.toLocaleString("pt-BR")} ${total === 1 ? "pessoa" : "pessoas"} no funil — de novo cadastro a voto certo.`}
-        action={{ label: "+ Novo cadastro", href: "/app/politico/leads/novo" }}
-        actionTone="accent"
+      <CommandHero
+        eyebrow="Comando · Funil"
+        titulo="Funil Político"
+        subtitulo={`${total.toLocaleString("pt-BR")} ${total === 1 ? "pessoa" : "pessoas"} no funil — de novo cadastro a voto certo.`}
+        acoes={[{ href: "/app/politico/leads/novo", label: "+ Novo cadastro", primary: true }]}
       />
 
       {/* ── Funil hero + conversões ─────────────────────────────── */}

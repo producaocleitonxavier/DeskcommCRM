@@ -10,6 +10,7 @@ import { Bell, Heart, Star, Users } from "lucide-react";
 import { KpiCard } from "@/components/politico/kpi-card";
 import { BarChartCard } from "@/components/politico/bar-chart-card";
 import { SectionHeader } from "@/components/politico/section-header";
+import { CommandHero } from "@/components/politico/command-hero";
 import { EmptyState } from "@/components/politico/empty-state";
 
 const CATEGORIA: Record<string, { label: string; bg: string; fg: string }> = {
@@ -50,7 +51,7 @@ export interface SocialClientProps {
 export default function SocialClient({ kpis, engajamentoPorPlataforma, perfis, posts }: SocialClientProps) {
   return (
     <div className="mx-auto max-w-[1140px] px-4 py-7 space-y-6" style={{ background: "var(--color-bg)" }}>
-      <SectionHeader title="Monitoramento Social" subtitle="Perfis, engajamento e inteligência de redes sociais." />
+      <CommandHero eyebrow="Engajamento" titulo="Monitoramento Social" subtitulo="Perfis, engajamento e inteligência de redes sociais." />
 
       <section className="grid grid-cols-2 gap-4 lg:grid-cols-4">
         <KpiCard label="Perfis monitorados" valor={kpis.totalPerfis} icone={Users} />

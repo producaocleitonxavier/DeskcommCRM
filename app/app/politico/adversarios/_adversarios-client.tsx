@@ -12,7 +12,7 @@ import { Activity, AlertTriangle, ShieldAlert } from "lucide-react";
 
 import { KpiCard } from "@/components/politico/kpi-card";
 import { BarChartCard } from "@/components/politico/bar-chart-card";
-import { SectionHeader } from "@/components/politico/section-header";
+import { CommandHero } from "@/components/politico/command-hero";
 import { EmptyState } from "@/components/politico/empty-state";
 
 const RISCO: Record<string, { label: string; bg: string; fg: string }> = {
@@ -47,7 +47,7 @@ export interface AdversariosClientProps {
 export default function AdversariosClient({ kpis, comparativo, adversarios }: AdversariosClientProps) {
   return (
     <div className="mx-auto max-w-[1140px] px-4 py-7 space-y-6" style={{ background: "var(--color-bg)" }}>
-      <SectionHeader title="Adversários" subtitle="Oposição monitorada — nível de ameaça, alcance e sinais de alerta." />
+      <CommandHero eyebrow="Inteligência" titulo="Adversários" subtitulo="Oposição monitorada — nível de ameaça, alcance e sinais de alerta." />
 
       <section className="grid grid-cols-1 gap-4 sm:grid-cols-3">
         <KpiCard label="Adversários monitorados" valor={kpis.total} icone={ShieldAlert} />

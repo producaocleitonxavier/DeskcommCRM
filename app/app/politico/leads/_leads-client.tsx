@@ -10,7 +10,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Search, Users } from "lucide-react";
 
-import { SectionHeader } from "@/components/politico/section-header";
+import { CommandHero } from "@/components/politico/command-hero";
 import { EmptyState } from "@/components/politico/empty-state";
 import type { LeadRow } from "./page";
 
@@ -103,11 +103,11 @@ export default function LeadsClient({ leads, total, contagens, cidades, filtros,
 
   return (
     <div className="mx-auto max-w-[1140px] px-4 py-7 space-y-6" style={{ background: "var(--color-bg)" }}>
-      <SectionHeader
-        title="Pessoas"
-        subtitle="Toda a base em um lugar — filtre por etapa ou temperatura."
-        action={{ label: "+ Novo cadastro", href: "/app/politico/leads/novo" }}
-        actionTone="accent"
+      <CommandHero
+        eyebrow="Comando · Pessoas"
+        titulo="Pessoas"
+        subtitulo="Toda a base em um lugar — filtre por etapa ou temperatura."
+        acoes={[{ href: "/app/politico/leads/novo", label: "+ Novo cadastro", primary: true }]}
       />
 
       {/* ── Filtros ─────────────────────────────────────────────── */}

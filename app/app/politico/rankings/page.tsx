@@ -11,7 +11,7 @@ import { redirect } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { requireAuth, resolveActiveOrg } from "@/lib/auth/server";
-import { SectionHeader } from "@/components/politico/section-header";
+import { CommandHero } from "@/components/politico/command-hero";
 
 export const dynamic = "force-dynamic";
 
@@ -118,7 +118,7 @@ export default async function RankingsPage({
 
   return (
     <div className="mx-auto max-w-[1140px] px-4 py-7 space-y-6" style={{ background: "var(--color-bg)" }}>
-      <SectionHeader title="Rankings" subtitle="Cidades por desempenho e lideranças por mobilização." />
+      <CommandHero eyebrow="Território" titulo="Rankings" subtitulo="Cidades por desempenho e lideranças por mobilização." />
 
       {/* Tabs */}
       <div className="flex gap-2">

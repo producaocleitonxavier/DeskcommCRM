@@ -10,7 +10,7 @@ import { Flame, Plus, Share2, Sparkles } from "lucide-react";
 
 import { KpiCard } from "@/components/politico/kpi-card";
 import { AreaChartCard } from "@/components/politico/area-chart-card";
-import { SectionHeader } from "@/components/politico/section-header";
+import { CommandHero } from "@/components/politico/command-hero";
 import { EmptyState } from "@/components/politico/empty-state";
 
 export interface ConteudoItem {
@@ -43,11 +43,11 @@ function scoreCor(score: number | null): string {
 export default function MotorViralClient({ kpis, serieSemanal, conteudos, pagina, totalPaginas }: MotorViralClientProps) {
   return (
     <div className="mx-auto max-w-[1140px] px-4 py-7 space-y-6" style={{ background: "var(--color-bg)" }}>
-      <SectionHeader
-        title="Motor Viral"
-        subtitle="Conteúdo otimizado por IA para ampliar alcance e engajamento."
-        action={{ label: "+ Nova campanha", href: "/app/politico/motor-viral/novo" }}
-        actionTone="accent"
+      <CommandHero
+        eyebrow="Engajamento"
+        titulo="Motor Viral"
+        subtitulo="Conteúdo otimizado por IA para ampliar alcance e engajamento."
+        acoes={[{ href: "/app/politico/motor-viral/novo", label: "+ Nova campanha", primary: true }]}
       />
 
       <section className="grid grid-cols-1 gap-4 sm:grid-cols-3">

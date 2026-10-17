@@ -11,7 +11,7 @@ import { redirect } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { requireAuth, resolveActiveOrg } from "@/lib/auth/server";
-import { SectionHeader } from "@/components/politico/section-header";
+import { CommandHero } from "@/components/politico/command-hero";
 
 export const dynamic = "force-dynamic";
 
@@ -105,7 +105,7 @@ export default async function TerritoriosPage({
 
   return (
     <div className="mx-auto max-w-[1140px] px-4 py-7 space-y-6" style={{ background: "var(--color-bg)" }}>
-      <SectionHeader title="Territórios" subtitle={`${territorios.length} território(s) gerenciado(s)`} />
+      <CommandHero eyebrow="Território" titulo="Territórios" subtitulo={`${territorios.length} território(s) gerenciado(s)`} />
 
       {/* Resumo */}
       <section className="grid grid-cols-3 gap-4">
