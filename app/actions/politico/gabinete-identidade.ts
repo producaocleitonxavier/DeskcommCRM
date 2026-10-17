@@ -14,8 +14,12 @@ import { requireAuth, resolveActiveOrg } from "@/lib/auth/server";
 
 const BUCKET_IDENTIDADE = "gabinete-identidade";
 
-/** Margens padrão (mm) do texto sobre o timbrado — espelham ~120/150/70pt. */
-export const TIMBRADO_MARGENS_MM_PADRAO = { topo: 42, base: 53, lados: 25 } as const;
+/**
+ * Margens padrão (mm) do texto sobre o timbrado — espelham ~120/150/70pt.
+ * NÃO exportar: este arquivo é "use server" e só pode exportar funções async
+ * (Next quebra o build com object export). Usada só aqui dentro.
+ */
+const TIMBRADO_MARGENS_MM_PADRAO = { topo: 42, base: 53, lados: 25 } as const;
 
 export interface IdentidadeGabinete {
   nome_parlamentar: string | null;
