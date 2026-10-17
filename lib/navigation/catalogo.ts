@@ -1051,6 +1051,15 @@ export const NAV_CATALOG = [
     minRole: "manager",
     sidebar: true,
   },
+  {
+    href: "/app/politico/agenda",
+    label: "Agenda",
+    description: "Agenda do mandato — reuniões, visitas, audiências, eventos e compromissos.",
+    icon: "CalendarBlank",
+    group: "gabinete",
+    minRole: "manager",
+    sidebar: true,
+  },
 
   // ── Rotas políticas que existiam sem porta no menu (Prompt 6) ────────
   {
