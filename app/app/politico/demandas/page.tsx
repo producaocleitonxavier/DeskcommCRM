@@ -12,7 +12,7 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { requireAuth, resolveActiveOrg } from "@/lib/auth/server";
 import DemandasCharts from "./_demandas-charts";
-import { ExportCsv } from "@/components/politico/export-csv";
+import { RelatorioPdfButton } from "@/components/politico/relatorio-pdf-button";
 
 export const dynamic = "force-dynamic";
 
@@ -199,25 +199,6 @@ export default async function GabinetePage({
 
   const totalPaginas = Math.ceil(total / POR_PAGINA);
 
-  // Export (todas as demandas, não só a página).
-  const dbExport = await createClient();
-  const { data: todasExport } = await dbExport
-    .from("demandas")
-    .select("assunto, pol_tipo, pol_orgao_destino, estado, pol_prioridade, prazo_em, aberta_em")
-    .eq("organization_id", org.orgId)
-    .eq("pol_gabinete", true)
-    .order("aberta_em", { ascending: false })
-    .limit(2000);
-  const exportRows = ((todasExport ?? []) as Record<string, unknown>[]).map((d) => [
-    (d.assunto as string | null) ?? "",
-    (d.pol_tipo as string | null) ?? "",
-    (d.pol_orgao_destino as string | null) ?? "",
-    estadoLabel(String(d.estado ?? "")),
-    (d.pol_prioridade as string | null) ?? "",
-    d.prazo_em ? new Date(String(d.prazo_em)).toLocaleDateString("pt-BR") : "",
-    d.aberta_em ? new Date(String(d.aberta_em)).toLocaleDateString("pt-BR") : "",
-  ]);
-
   // Distribuição por status + tempo médio de resolução (para os gráficos).
   const dbCharts = await createClient();
   const ESTADOS_PIE = ["aberta", "em_atendimento", "aguardando_cliente", "resolvida", "encerrada"];
@@ -265,11 +246,7 @@ export default async function GabinetePage({
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <ExportCsv
-            filename="demandas.csv"
-            headers={["Assunto", "Tipo", "Órgão destino", "Status", "Prioridade", "Prazo", "Aberta em"]}
-            rows={exportRows}
-          />
+          <RelatorioPdfButton filtroEstado={filtroEstado} />
           <Link href="/app/politico/demandas/nova" className="wr-btn-dark">
             + Nova demanda
           </Link>
