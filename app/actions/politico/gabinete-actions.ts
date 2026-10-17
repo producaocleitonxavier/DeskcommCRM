@@ -111,6 +111,19 @@ export async function atualizarRegistro(tabela: string, id: string, patch: Recor
   return { ok: true };
 }
 
+/** Exclui um registro de uma tabela do gabinete (escopado à org ativa). Para
+ * `demandas`, os FKs cuidam do resto (anexos e vínculos de conversa em cascata,
+ * referências em mensagens/conversas viram null). */
+export async function excluirRegistro(tabela: string, id: string): Promise<AcaoResultado> {
+  if (!TABELAS.has(tabela)) return { ok: false, erro: "Tabela inválida." };
+  const org = await orgAtiva();
+  if (!org) return { ok: false, erro: "Sessão ou organização inválida." };
+  const db = await createClient();
+  const { error } = await db.from(tabela).delete().eq("id", id).eq("organization_id", org);
+  if (error) return { ok: false, erro: traduzErro(error) };
+  return { ok: true };
+}
+
 /**
  * Lista os anexos de uma demanda com URL assinada (1h) para download. O upload
  * é pela rota multipart; aqui só leitura + assinatura. O bucket é privado (sem

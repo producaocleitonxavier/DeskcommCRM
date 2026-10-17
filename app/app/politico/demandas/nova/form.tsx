@@ -150,6 +150,9 @@ export default function NovaDemandaForm({ territorios, liderancas, assessores }:
     const payload: Record<string, unknown> = {
       contact_id: contato.id,
       origem: "manual",
+      // Marca como demanda DO GABINETE — separa das criadas automaticamente no
+      // ponto de entrada do WhatsApp, que não aparecem nesta lista.
+      pol_gabinete: true,
       estado: "aberta",
       dono_kind: membro ? "humano" : "ia",
       assunto: assunto.trim(),

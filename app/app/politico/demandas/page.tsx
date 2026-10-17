@@ -110,6 +110,7 @@ async function buscarDemandas(organizationId: string, pagina: number, filtroEsta
       { count: "exact" },
     )
     .eq("organization_id", organizationId)
+    .eq("pol_gabinete", true)
     .order("aberta_em", { ascending: false })
     .range(offset, offset + POR_PAGINA - 1);
 
@@ -132,7 +133,8 @@ async function contarEstados(organizationId: string) {
   const { count: totalCount } = await db
     .from("demandas")
     .select("id", { count: "exact", head: true })
-    .eq("organization_id", organizationId);
+    .eq("organization_id", organizationId)
+    .eq("pol_gabinete", true);
   counts._total = totalCount ?? 0;
 
   // Abertas (não resolvida/encerrada)
@@ -140,6 +142,7 @@ async function contarEstados(organizationId: string) {
     .from("demandas")
     .select("id", { count: "exact", head: true })
     .eq("organization_id", organizationId)
+    .eq("pol_gabinete", true)
     .not("estado", "in", "(resolvida,encerrada)");
   counts._abertas = abertasCount ?? 0;
 
@@ -151,6 +154,7 @@ async function contarEstados(organizationId: string) {
     .from("demandas")
     .select("id", { count: "exact", head: true })
     .eq("organization_id", organizationId)
+    .eq("pol_gabinete", true)
     .eq("estado", "resolvida")
     .gte("aberta_em", inicioMes.toISOString());
   counts._resolvidas_mes = resolvidasMes ?? 0;
@@ -201,6 +205,7 @@ export default async function GabinetePage({
     .from("demandas")
     .select("assunto, pol_tipo, pol_orgao_destino, estado, pol_prioridade, prazo_em, aberta_em")
     .eq("organization_id", org.orgId)
+    .eq("pol_gabinete", true)
     .order("aberta_em", { ascending: false })
     .limit(2000);
   const exportRows = ((todasExport ?? []) as Record<string, unknown>[]).map((d) => [
@@ -219,10 +224,10 @@ export default async function GabinetePage({
   const [distRes, resolvidasRes] = await Promise.all([
     Promise.all(
       ESTADOS_PIE.map((e) =>
-        dbCharts.from("demandas").select("id", { count: "exact", head: true }).eq("organization_id", org.orgId).eq("estado", e),
+        dbCharts.from("demandas").select("id", { count: "exact", head: true }).eq("organization_id", org.orgId).eq("pol_gabinete", true).eq("estado", e),
       ),
     ),
-    dbCharts.from("demandas").select("aberta_em, fechada_em").eq("organization_id", org.orgId).not("fechada_em", "is", null).limit(500),
+    dbCharts.from("demandas").select("aberta_em, fechada_em").eq("organization_id", org.orgId).eq("pol_gabinete", true).not("fechada_em", "is", null).limit(500),
   ]);
   const statusPie = ESTADOS_PIE.map((e, i) => ({
     name: estadoLabel(e),

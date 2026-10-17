@@ -9,12 +9,12 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, MessageCircle, Pencil, Printer, Sparkles, X } from "lucide-react";
+import { ArrowLeft, MessageCircle, Pencil, Printer, Sparkles, Trash2, X } from "lucide-react";
 
 import { gerarEncaminhamento } from "@/app/actions/politico/gerarEncaminhamento";
 import { gerarOficioDemanda } from "@/app/actions/politico/gerarOficio";
 import { avisarCidadao } from "@/app/actions/politico/avisarCidadao";
-import { atualizarRegistro } from "@/app/actions/politico/gabinete-actions";
+import { atualizarRegistro, excluirRegistro } from "@/app/actions/politico/gabinete-actions";
 import DemandaAnexos from "@/components/politico/demanda-anexos";
 
 interface Opcao {
@@ -112,6 +112,7 @@ export default function DetalheDemandaClient({ demanda, territorios, liderancas,
   const [gerandoOficio, setGerandoOficio] = useState(false);
   const [avisando, setAvisando] = useState(false);
   const [avisoMsg, setAvisoMsg] = useState<string | null>(null);
+  const [excluindo, setExcluindo] = useState(false);
   const [anexoToken, setAnexoToken] = useState(0);
   const [erro, setErro] = useState<string | null>(null);
 
@@ -232,9 +233,32 @@ export default function DetalheDemandaClient({ demanda, territorios, liderancas,
             </p>
           </div>
           {!editando && (
-            <button type="button" onClick={() => setEditando(true)} className="wr-btn inline-flex items-center gap-2">
-              <Pencil className="h-4 w-4" aria-hidden /> Editar
-            </button>
+            <div className="flex items-center gap-2">
+              <button type="button" onClick={() => setEditando(true)} className="wr-btn inline-flex items-center gap-2">
+                <Pencil className="h-4 w-4" aria-hidden /> Editar
+              </button>
+              <button
+                type="button"
+                disabled={excluindo}
+                onClick={async () => {
+                  if (!window.confirm("Excluir esta demanda? Esta ação não pode ser desfeita (anexos e ofício também serão removidos).")) return;
+                  setErro(null);
+                  setExcluindo(true);
+                  const res = await excluirRegistro("demandas", d.id);
+                  if (!res.ok) {
+                    setExcluindo(false);
+                    setErro(res.erro);
+                    return;
+                  }
+                  router.push("/app/politico/demandas");
+                  router.refresh();
+                }}
+                className="wr-btn inline-flex items-center gap-2 disabled:opacity-50"
+                style={{ color: "#EF4444", borderColor: "rgba(239,68,68,0.35)" }}
+              >
+                <Trash2 className="h-4 w-4" aria-hidden /> {excluindo ? "Excluindo…" : "Excluir"}
+              </button>
+            </div>
           )}
         </div>
 

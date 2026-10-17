@@ -55613,3 +55613,8 @@ alter table public.pol_gabinete_config
   add column if not exists timbrado_margem_topo_mm  integer,
   add column if not exists timbrado_margem_base_mm  integer,
   add column if not exists timbrado_margem_lados_mm integer;
+-- ── 9008: flag pol_gabinete em demandas — apendice idempotente. Ver migration 9008. ──
+alter table public.demandas add column if not exists pol_gabinete boolean not null default false;
+update public.demandas set pol_gabinete = true where origem = 'manual' and pol_gabinete = false;
+create index if not exists demandas_pol_gabinete_idx
+  on public.demandas (organization_id, aberta_em desc) where pol_gabinete;
