@@ -8,19 +8,13 @@
 
 import Link from "next/link";
 import {
-  Activity,
   AlertTriangle,
   Calendar,
   CheckCircle2,
-  ChevronRight,
   Clock,
   Gift,
-  Heart,
   Inbox,
-  TrendingUp,
-  UserPlus,
   Users,
-  type LucideIcon,
 } from "lucide-react";
 
 import { KpiCard } from "@/components/politico/kpi-card";
@@ -28,7 +22,6 @@ import { FunnelBoard } from "@/components/politico/funnel-board";
 import { BarChartCard } from "@/components/politico/bar-chart-card";
 import { AreaChartCard } from "@/components/politico/area-chart-card";
 import { SectionHeader } from "@/components/politico/section-header";
-import { EmptyState } from "@/components/politico/empty-state";
 import type { MetricasHoje, GabineteHoje } from "./page";
 
 // Hexes do funil (espelham --wr-funnel-1..5) — Recharts aplica fill como
@@ -42,20 +35,6 @@ const TIPO_CORES: Record<Tipo, { soft: string; strong: string }> = {
   warn: { soft: "#FCF1DC", strong: "#8A5A10" },
   ok: { soft: "#E2F5EC", strong: "#17784F" },
 };
-
-interface Prioridade {
-  tipo: Tipo;
-  label: string;
-  icon: LucideIcon;
-  titulo: string;
-  descricao: string;
-  href: string;
-  cta: string;
-}
-
-function plural(n: number, singular: string, pluralForma: string): string {
-  return n === 1 ? singular : pluralForma;
-}
 
 export interface HojeClientProps {
   metrics: MetricasHoje;
@@ -129,64 +108,15 @@ export default function HojeClient({
   dataFormatada,
   horaAtualizacao,
 }: HojeClientProps) {
-  const funnelData = m.funilStages.map((s, i) => ({
+  // Funil de ATENDIMENTO (ciclo de vida da demanda) — não o funil de campanha.
+  const lifecycleData = g.lifecycle.map((s, i) => ({
     label: s.label,
     value: s.count,
     color: FUNIL_HEX[i] ?? FUNIL_HEX[FUNIL_HEX.length - 1]!,
   }));
-
-  const temperaturaData = [
-    { name: "Quentes", value: m.temperaturas.quentes, fill: "#EF4444" },
-    { name: "Mornos", value: m.temperaturas.mornos, fill: "#F59E0B" },
-    { name: "Frios", value: m.temperaturas.frios, fill: "#3B82F6" },
-  ];
-
-  // Monta as prioridades do dia a partir das métricas (ordem = impacto).
-  const prioridades: Prioridade[] = [];
-  if (m.alertasAtivos > 0) {
-    prioridades.push({
-      tipo: "risk",
-      label: "Urgente",
-      icon: AlertTriangle,
-      titulo: `${m.alertasAtivos} ${plural(m.alertasAtivos, "alerta ativo", "alertas ativos")}`,
-      descricao: "Sentimento, adversários e fake news pedem atenção.",
-      href: "/app/politico/alertas",
-      cta: "Ver alertas",
-    });
-  }
-  if (m.demandasUrgentes > 0) {
-    prioridades.push({
-      tipo: "warn",
-      label: "Vence até sexta",
-      icon: Clock,
-      titulo: `${m.demandasUrgentes} ${plural(m.demandasUrgentes, "demanda no prazo curto", "demandas no prazo curto")}`,
-      descricao: "Encaminhamentos pendentes no gabinete.",
-      href: "/app/politico/demandas",
-      cta: "Ver demandas",
-    });
-  }
-  if (m.ativadasSemana > 0) {
-    prioridades.push({
-      tipo: "ok",
-      label: "Momentum",
-      icon: TrendingUp,
-      titulo: `${m.ativadasSemana.toLocaleString("pt-BR")} ${plural(m.ativadasSemana, "ativação esta semana", "ativações esta semana")}`,
-      descricao: "Transições no funil. Mantenha a mobilização.",
-      href: "/app/politico/funil",
-      cta: "Ver funil",
-    });
-  }
-  if (m.totalPessoas === 0) {
-    prioridades.push({
-      tipo: "warn",
-      label: "Comece aqui",
-      icon: UserPlus,
-      titulo: "Sua base está vazia",
-      descricao: "Cadastre ou importe seus primeiros contatos para começar.",
-      href: "/app/politico/leads/novo",
-      cta: "+ Cadastrar",
-    });
-  }
+  const AREA_HEX = ["#D7F36A", "#60A5FA", "#F59E0B", "#22C55E", "#A78BFA", "#F472B6"];
+  const porAreaData = g.porArea.map((a, i) => ({ name: a.name, value: a.value, fill: AREA_HEX[i % AREA_HEX.length]! }));
+  const registradasData = g.registradas14d;
 
   return (
     <div className="mx-auto max-w-[1140px] px-4 py-7 space-y-6" style={{ background: "var(--color-bg)" }}>
@@ -331,80 +261,33 @@ export default function HojeClient({
         </div>
       </section>
 
-      {/* ── 2. KPIs ─────────────────────────────────────────────── */}
+      {/* ── 2. KPIs do gabinete ─────────────────────────────────── */}
       <section aria-label="Números principais" className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-        <KpiCard label="Total de pessoas" valor={m.totalPessoas} icone={Users} />
-        <KpiCard label="Ativadas esta semana" valor={m.ativadasSemana} icone={Activity} />
-        <KpiCard label="Apoiadores ou mais" valor={m.apoiadoresOuMais} icone={Heart} />
-        <KpiCard label="Demandas abertas" valor={m.demandasGabinete} icone={Inbox} />
+        <KpiCard label="Base de contatos" valor={m.totalPessoas} icone={Users} />
+        <KpiCard label="Demandas abertas" valor={g.resumo.abertas} icone={Inbox} />
+        <KpiCard label="Resolvidas este mês" valor={g.resumo.resolvidasMes} icone={CheckCircle2} />
+        <KpiCard
+          label="Tempo médio (dias)"
+          valor={g.resumo.tempoMedioDias ?? 0}
+          icone={Clock}
+        />
       </section>
 
-      {/* ── 3. Funil Político ───────────────────────────────────── */}
+      {/* ── 3. Funil de atendimento (ciclo da demanda) ──────────── */}
       <section className="wr-card p-6 sm:p-7">
         <SectionHeader
-          title="Funil Político"
-          subtitle="O mesmo funil em todo o sistema"
-          action={{ label: "Ver detalhes", href: "/app/politico/funil" }}
+          title="Funil de atendimento"
+          subtitle="O caminho de cada demanda até a resolução"
+          action={{ label: "Ver demandas", href: "/app/politico/demandas" }}
           className="mb-2"
         />
-        <FunnelBoard data={funnelData} className="mt-5" />
+        <FunnelBoard data={lifecycleData} className="mt-5" />
       </section>
 
-      {/* ── 4. Temperatura + Ativações ──────────────────────────── */}
+      {/* ── 4. Demandas por área + evolução ─────────────────────── */}
       <section className="grid grid-cols-1 gap-4 md:grid-cols-2">
-        <BarChartCard title="Temperatura dos Leads" data={temperaturaData} />
-        <AreaChartCard title="Ativações da Semana" data={m.ativacoesPorDia} color="#C4E64A" />
-      </section>
-
-      {/* ── 5. Prioridades do dia ───────────────────────────────── */}
-      <section className="space-y-4">
-        <SectionHeader title="Prioridades do dia" subtitle="Ordenadas por impacto" />
-        {prioridades.length === 0 ? (
-          <EmptyState
-            icon={CheckCircle2}
-            title="Tudo em ordem"
-            description="Nenhuma prioridade crítica hoje. Bom trabalho — foco no que faz a base crescer."
-          />
-        ) : (
-          <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-            {prioridades.map((p, i) => {
-              const Icone = p.icon;
-              const c = TIPO_CORES[p.tipo];
-              return (
-                <Link
-                  key={i}
-                  href={p.href}
-                  className="wr-card group flex items-center gap-4 p-5 transition-colors hover:bg-[var(--color-surface-elevated)]"
-                >
-                  <span
-                    className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full"
-                    style={{ background: c.soft }}
-                    aria-hidden
-                  >
-                    <Icone className="h-5 w-5" style={{ color: c.strong }} />
-                  </span>
-                  <div className="min-w-0 flex-1">
-                    <span
-                      className="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold"
-                      style={{ background: c.soft, color: c.strong }}
-                    >
-                      {p.label}
-                    </span>
-                    <div className="mt-1 font-semibold leading-snug">{p.titulo}</div>
-                    <div className="mt-0.5 text-sm text-muted-foreground">{p.descricao}</div>
-                  </div>
-                  <span
-                    className="hidden shrink-0 items-center gap-1 text-sm font-semibold sm:inline-flex"
-                    style={{ color: "var(--color-text-muted)" }}
-                  >
-                    {p.cta}
-                    <ChevronRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" aria-hidden />
-                  </span>
-                </Link>
-              );
-            })}
-          </div>
-        )}
+        <BarChartCard title="Demandas por área" data={porAreaData} />
+        <AreaChartCard title="Registradas (últimos 14 dias)" data={registradasData} color="#C4E64A" />
       </section>
     </div>
   );

@@ -42,8 +42,35 @@ export interface GabineteHoje {
   }[];
   agenda: { id: string; titulo: string; dataISO: string; diaInteiro: boolean; local: string | null }[];
   aniversariantes: { id: string; nome: string; cidade: string | null }[];
-  resumo: { totalDemandas: number; resolvidas: number; taxaResolucao: number; nomeParlamentar: string | null };
+  resumo: {
+    totalDemandas: number;
+    resolvidas: number;
+    taxaResolucao: number;
+    abertas: number;
+    resolvidasMes: number;
+    tempoMedioDias: number | null;
+    nomeParlamentar: string | null;
+  };
+  /** Funil de atendimento (ciclo de vida das demandas). */
+  lifecycle: { label: string; count: number }[];
+  /** Demandas por área (pol_tipo), top 6. */
+  porArea: { name: string; value: number }[];
+  /** Demandas registradas por dia nos últimos 14 dias. */
+  registradas14d: { name: string; value: number }[];
 }
+
+const TIPO_LABEL: Record<string, string> = {
+  servico_publico: "Serviço público",
+  infraestrutura: "Infraestrutura",
+  saude: "Saúde",
+  educacao: "Educação",
+  seguranca: "Segurança",
+  assistencia_social: "Assistência social",
+  meio_ambiente: "Meio ambiente",
+  documentacao: "Documentação",
+  emprego: "Emprego",
+  outro: "Outro",
+};
 
 async function buscarGabineteHoje(organizationId: string): Promise<GabineteHoje> {
   const db = await createClient();
@@ -55,16 +82,18 @@ async function buscarGabineteHoje(organizationId: string): Promise<GabineteHoje>
   const em3dias = new Date(hojeIni);
   em3dias.setDate(hojeIni.getDate() + 3);
   em3dias.setHours(23, 59, 59, 999);
+  const inicioMes = new Date(agora);
+  inicioMes.setDate(1);
+  inicioMes.setHours(0, 0, 0, 0);
 
-  const [abertasRes, agendaRes, aniRes, totalGabRes, resolvidasGabRes, cfgRes] = await Promise.all([
+  const [demRes, agendaRes, aniRes, cfgRes] = await Promise.all([
     db
       .from("demandas")
-      .select("id, assunto, estado, pol_prioridade, prazo_em")
+      .select("id, assunto, estado, pol_prioridade, prazo_em, pol_tipo, aberta_em, fechada_em")
       .eq("organization_id", organizationId)
       .eq("pol_gabinete", true)
-      .not("estado", "in", "(resolvida,encerrada)")
-      .order("prazo_em", { ascending: true, nullsFirst: false })
-      .limit(60),
+      .order("aberta_em", { ascending: false })
+      .limit(2000),
     db
       .from("pol_agenda")
       .select("id, titulo, data_inicio, dia_inteiro, local, status")
@@ -80,20 +109,25 @@ async function buscarGabineteHoje(organizationId: string): Promise<GabineteHoje>
       .eq("organization_id", organizationId)
       .not("aniversario", "is", null)
       .limit(1000),
-    db.from("demandas").select("id", { count: "exact", head: true }).eq("organization_id", organizationId).eq("pol_gabinete", true),
-    db.from("demandas").select("id", { count: "exact", head: true }).eq("organization_id", organizationId).eq("pol_gabinete", true).eq("estado", "resolvida"),
     db.from("pol_gabinete_config").select("nome_parlamentar").eq("organization_id", organizationId).maybeSingle(),
   ]);
 
-  const abertas = (abertasRes.data ?? []) as {
+  const demandas = (demRes.data ?? []) as {
     id: string;
     assunto: string | null;
+    estado: string;
     pol_prioridade: string | null;
     prazo_em: string | null;
+    pol_tipo: string | null;
+    aberta_em: string;
+    fechada_em: string | null;
   }[];
+
+  // Atenção: abertas atrasadas / vencendo / alta prioridade.
   const ordem: Record<GabineteHoje["atencao"][number]["categoria"], number> = { atrasada: 0, vence: 1, prioridade: 2 };
   const atencao: GabineteHoje["atencao"] = [];
-  for (const d of abertas) {
+  for (const d of demandas) {
+    if (d.estado === "resolvida" || d.estado === "encerrada") continue;
     let categoria: "atrasada" | "vence" | "prioridade" | null = null;
     if (d.prazo_em) {
       const p = new Date(d.prazo_em);
@@ -104,6 +138,52 @@ async function buscarGabineteHoje(organizationId: string): Promise<GabineteHoje>
     if (categoria) atencao.push({ id: d.id, assunto: d.assunto ?? "Sem assunto", prioridade: d.pol_prioridade, prazoISO: d.prazo_em, categoria });
   }
   atencao.sort((a, b) => ordem[a.categoria] - ordem[b.categoria]);
+
+  // KPIs + funil de atendimento.
+  const totalDemandas = demandas.length;
+  const porEstado = (e: string) => demandas.filter((d) => d.estado === e).length;
+  const resolvidas = porEstado("resolvida");
+  const abertas = demandas.filter((d) => d.estado !== "resolvida" && d.estado !== "encerrada").length;
+  const taxaResolucao = totalDemandas > 0 ? Math.round((resolvidas / totalDemandas) * 100) : 0;
+  const resolvidasMes = demandas.filter((d) => d.estado === "resolvida" && d.fechada_em && new Date(d.fechada_em) >= inicioMes).length;
+  const fechadas = demandas.filter((d) => d.fechada_em);
+  const tempoMedioDias =
+    fechadas.length > 0
+      ? Math.round(
+          (fechadas.reduce((s, d) => s + (new Date(d.fechada_em as string).getTime() - new Date(d.aberta_em).getTime()), 0) / fechadas.length / 86_400_000) * 10,
+        ) / 10
+      : null;
+  const lifecycle = [
+    { label: "Novas", count: porEstado("aberta") },
+    { label: "Em atendimento", count: porEstado("em_atendimento") },
+    { label: "Aguardando", count: porEstado("aguardando_cliente") },
+    { label: "Resolvidas", count: resolvidas },
+  ];
+
+  // Demandas por área (pol_tipo), top 6.
+  const areaMap = new Map<string, number>();
+  for (const d of demandas) {
+    const k = d.pol_tipo ?? "outro";
+    areaMap.set(k, (areaMap.get(k) ?? 0) + 1);
+  }
+  const porArea = [...areaMap.entries()]
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 6)
+    .map(([k, v]) => ({ name: TIPO_LABEL[k] ?? k, value: v }));
+
+  // Registradas por dia (últimos 14 dias).
+  const registradas14d: { name: string; value: number }[] = [];
+  for (let i = 13; i >= 0; i--) {
+    const ini = new Date(hojeIni);
+    ini.setDate(hojeIni.getDate() - i);
+    const fim = new Date(ini);
+    fim.setDate(ini.getDate() + 1);
+    const count = demandas.filter((d) => {
+      const t = new Date(d.aberta_em).getTime();
+      return t >= ini.getTime() && t < fim.getTime();
+    }).length;
+    registradas14d.push({ name: `${String(ini.getDate()).padStart(2, "0")}/${String(ini.getMonth() + 1).padStart(2, "0")}`, value: count });
+  }
 
   const agenda = ((agendaRes.data ?? []) as { id: string; titulo: string; data_inicio: string; dia_inteiro: boolean; local: string | null }[]).map((a) => ({
     id: a.id,
@@ -123,16 +203,16 @@ async function buscarGabineteHoje(organizationId: string): Promise<GabineteHoje>
     .map((l) => ({ id: l.id, nome: l.nome, cidade: l.cidade }))
     .slice(0, 12);
 
-  const totalDemandas = totalGabRes.count ?? 0;
-  const resolvidas = resolvidasGabRes.count ?? 0;
-  const taxaResolucao = totalDemandas > 0 ? Math.round((resolvidas / totalDemandas) * 100) : 0;
   const nomeParlamentar = (cfgRes.data as { nome_parlamentar?: string | null } | null)?.nome_parlamentar ?? null;
 
   return {
     atencao: atencao.slice(0, 8),
     agenda,
     aniversariantes,
-    resumo: { totalDemandas, resolvidas, taxaResolucao, nomeParlamentar },
+    resumo: { totalDemandas, resolvidas, taxaResolucao, abertas, resolvidasMes, tempoMedioDias, nomeParlamentar },
+    lifecycle,
+    porArea,
+    registradas14d,
   };
 }
 
