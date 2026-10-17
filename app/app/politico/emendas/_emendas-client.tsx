@@ -5,6 +5,7 @@
  * valor indicado por área temática (BarChart) e cards por emenda.
  */
 
+import Link from "next/link";
 import { CheckCircle2, Clock, Wallet } from "lucide-react";
 
 import { KpiCard } from "@/components/politico/kpi-card";
@@ -43,7 +44,12 @@ export interface EmendasClientProps {
 export default function EmendasClient({ kpis, valorPorArea, emendas }: EmendasClientProps) {
   return (
     <div className="mx-auto max-w-[1140px] px-4 py-7 space-y-6" style={{ background: "var(--color-bg)" }}>
-      <SectionHeader title="Emendas Parlamentares" subtitle="Valores, destino e status de execução." />
+      <SectionHeader
+        title="Emendas Parlamentares"
+        subtitle="Valores, destino e status de execução."
+        action={{ label: "+ Nova emenda", href: "/app/politico/emendas/novo" }}
+        actionTone="accent"
+      />
 
       <section className="grid grid-cols-1 gap-4 sm:grid-cols-3">
         <KpiCard label="Total alocado" valor={kpis.alocado} icone={Wallet} />
@@ -68,7 +74,7 @@ export default function EmendasClient({ kpis, valorPorArea, emendas }: EmendasCl
               const st = STATUS[e.status] ?? { label: e.status, bg: "#F0F0EB", fg: "#5B606B" };
               const destino = e.municipio || e.entidade || "—";
               return (
-                <div key={e.id} className="wr-card flex flex-col gap-2.5 p-5 transition-shadow duration-200 hover:shadow-md">
+                <Link key={e.id} href={`/app/politico/emendas/${e.id}`} className="wr-card flex flex-col gap-2.5 p-5 transition-shadow duration-200 hover:shadow-md">
                   <div className="flex items-start justify-between gap-2">
                     <div className="min-w-0">
                       <div className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--color-text-subtle)" }}>
@@ -93,7 +99,7 @@ export default function EmendasClient({ kpis, valorPorArea, emendas }: EmendasCl
                       <span className="font-semibold tabular-nums" style={{ color: "#17784F" }}>{e.valorPago}</span>
                     </div>
                   </div>
-                </div>
+                </Link>
               );
             })}
           </div>
