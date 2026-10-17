@@ -55538,3 +55538,41 @@ create policy tenant_isolation_pol_agenda_all on public.pol_agenda for all
 create index if not exists pol_agenda_org_inicio_idx on public.pol_agenda (organization_id, data_inicio);
 grant select, insert, update, delete on public.pol_agenda to authenticated;
 revoke all on public.pol_agenda from anon;
+
+-- ── 9002: pol_demanda_anexos (Gabinete) — apendice idempotente. Ver migration 9002. ──
+insert into storage.buckets (id, name, public, file_size_limit)
+values ('gabinete-anexos', 'gabinete-anexos', false, 52428800)
+on conflict (id) do update set file_size_limit = excluded.file_size_limit;
+create table if not exists public.pol_demanda_anexos (
+  id                uuid        primary key default gen_random_uuid(),
+  organization_id   uuid        not null references public.organizations(id) on delete cascade,
+  demanda_id        uuid        not null references public.demandas(id) on delete cascade,
+  storage_path      text        not null,
+  nome_arquivo      text        not null,
+  media_mime        text        not null,
+  media_size_bytes  bigint      not null,
+  created_by        uuid        references auth.users(id) on delete set null,
+  created_at        timestamptz not null default now()
+);
+alter table public.pol_demanda_anexos enable row level security;
+drop policy if exists tenant_isolation_pol_demanda_anexos_all on public.pol_demanda_anexos;
+create policy tenant_isolation_pol_demanda_anexos_all on public.pol_demanda_anexos for all
+  using (organization_id in (select public.fn_user_org_ids()))
+  with check (organization_id in (select public.fn_user_org_ids()));
+create index if not exists pol_demanda_anexos_demanda_idx on public.pol_demanda_anexos (organization_id, demanda_id, created_at);
+grant select, insert, update, delete on public.pol_demanda_anexos to authenticated;
+revoke all on public.pol_demanda_anexos from anon;
+create or replace function public.fn_pol_anexo_expurgo() returns trigger
+  language plpgsql security definer set search_path = public, pg_temp as $$
+begin
+  if old.storage_path is not null and length(old.storage_path) > 0 then
+    insert into public.storage_redaction_queue (organization_id, bucket, object_path)
+    values (old.organization_id, 'gabinete-anexos', old.storage_path)
+    on conflict (bucket, object_path) do nothing;
+  end if;
+  return old;
+end $$;
+revoke all on function public.fn_pol_anexo_expurgo() from public, anon, authenticated;
+drop trigger if exists trg_pol_anexo_expurgo on public.pol_demanda_anexos;
+create trigger trg_pol_anexo_expurgo before delete on public.pol_demanda_anexos
+  for each row execute function public.fn_pol_anexo_expurgo();

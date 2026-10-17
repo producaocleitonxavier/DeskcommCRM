@@ -13,6 +13,7 @@ import { ArrowLeft, Pencil, Sparkles, X } from "lucide-react";
 
 import { gerarEncaminhamento } from "@/app/actions/politico/gerarEncaminhamento";
 import { atualizarRegistro } from "@/app/actions/politico/gabinete-actions";
+import DemandaAnexos from "@/components/politico/demanda-anexos";
 
 interface Opcao {
   id: string;
@@ -384,6 +385,9 @@ export default function DetalheDemandaClient({ demanda, territorios, liderancas 
           </p>
         )}
       </section>
+
+      {/* Anexos (ofícios, fotos, documentos) */}
+      <DemandaAnexos demandaId={d.id} />
     </div>
   );
 }

@@ -10,6 +10,7 @@
  */
 
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { requireAuth, resolveActiveOrg } from "@/lib/auth/server";
 
 export type AcaoResultado = { ok: true; id?: string } | { ok: false; erro: string };
@@ -18,6 +19,17 @@ export interface CidadaoOpcao {
   name: string | null;
   phone_number: string | null;
 }
+export interface AnexoDemanda {
+  id: string;
+  nome_arquivo: string;
+  media_mime: string;
+  media_size_bytes: number;
+  created_at: string;
+  /** URL assinada temporaria (1h) para baixar; null se o Storage recusou. */
+  url: string | null;
+}
+
+const BUCKET_ANEXOS = "gabinete-anexos";
 
 // Tabelas do gabinete que as actions podem gravar (whitelist).
 const TABELAS = new Set(["demandas", "pol_liderancas", "pol_emendas", "pol_projetos_lei", "pol_agenda"]);
@@ -95,6 +107,61 @@ export async function atualizarRegistro(tabela: string, id: string, patch: Recor
   if (!org) return { ok: false, erro: "Sessão ou organização inválida." };
   const db = await createClient();
   const { error } = await db.from(tabela).update(patch).eq("id", id).eq("organization_id", org);
+  if (error) return { ok: false, erro: traduzErro(error) };
+  return { ok: true };
+}
+
+/**
+ * Lista os anexos de uma demanda com URL assinada (1h) para download. O upload
+ * é pela rota multipart; aqui só leitura + assinatura. O bucket é privado (sem
+ * policy de storage), por isso a URL é assinada pelo admin client.
+ */
+export async function listarAnexosDemanda(demandaId: string): Promise<AnexoDemanda[]> {
+  const org = await orgAtiva();
+  if (!org) return [];
+  const db = await createClient();
+  const { data } = await db
+    .from("pol_demanda_anexos")
+    .select("id, storage_path, nome_arquivo, media_mime, media_size_bytes, created_at")
+    .eq("organization_id", org)
+    .eq("demanda_id", demandaId)
+    .order("created_at", { ascending: true });
+  const linhas = (data ?? []) as {
+    id: string;
+    storage_path: string;
+    nome_arquivo: string;
+    media_mime: string;
+    media_size_bytes: number;
+    created_at: string;
+  }[];
+  if (linhas.length === 0) return [];
+
+  const admin = createAdminClient();
+  const out: AnexoDemanda[] = [];
+  for (const a of linhas) {
+    const { data: signed } = await admin.storage.from(BUCKET_ANEXOS).createSignedUrl(a.storage_path, 60 * 60);
+    out.push({
+      id: a.id,
+      nome_arquivo: a.nome_arquivo,
+      media_mime: a.media_mime,
+      media_size_bytes: a.media_size_bytes,
+      created_at: a.created_at,
+      url: signed?.signedUrl ?? null,
+    });
+  }
+  return out;
+}
+
+/**
+ * Remove um anexo (escopado à org ativa). Apagar a linha dispara o gatilho
+ * `trg_pol_anexo_expurgo`, que enfileira o arquivo na fila de expurgo — o worker
+ * de LGPD remove o binário do bucket. Nada fica órfão.
+ */
+export async function removerAnexoDemanda(anexoId: string): Promise<AcaoResultado> {
+  const org = await orgAtiva();
+  if (!org) return { ok: false, erro: "Sessão ou organização inválida." };
+  const db = await createClient();
+  const { error } = await db.from("pol_demanda_anexos").delete().eq("id", anexoId).eq("organization_id", org);
   if (error) return { ok: false, erro: traduzErro(error) };
   return { ok: true };
 }

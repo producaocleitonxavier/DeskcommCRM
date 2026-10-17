@@ -10,7 +10,7 @@
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, Check, Search, UserPlus, X } from "lucide-react";
+import { ArrowLeft, Check, FileText, Paperclip, Search, UserPlus, X } from "lucide-react";
 
 import {
   buscarCidadaos,
@@ -18,6 +18,7 @@ import {
   criarRegistro,
   type CidadaoOpcao,
 } from "@/app/actions/politico/gabinete-actions";
+import { uploadAnexoDemanda, formatarBytes, ANEXO_MAX_BYTES } from "@/lib/politico/anexos-upload";
 
 interface Opcao {
   id: string;
@@ -80,6 +81,11 @@ export default function NovaDemandaForm({ territorios, liderancas }: NovaDemanda
   const [territoryId, setTerritoryId] = useState("");
   const [liderancaId, setLiderancaId] = useState("");
   const [prazo, setPrazo] = useState("");
+
+  // Anexos escolhidos (só vão para o servidor DEPOIS que a demanda é criada —
+  // o arquivo precisa de um id de demanda no caminho do bucket).
+  const [arquivos, setArquivos] = useState<File[]>([]);
+  const arquivoRef = useRef<HTMLInputElement>(null);
 
   const [salvando, setSalvando] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
@@ -152,8 +158,25 @@ export default function NovaDemandaForm({ territorios, liderancas }: NovaDemanda
       setErro(res.erro);
       return;
     }
-    router.push("/app/politico/demandas");
+
+    // Anexos: sobem agora que a demanda tem id. Uma falha de anexo não desfaz a
+    // demanda já criada — avisa e segue para o detalhe, onde dá para reenviar.
+    if (res.id && arquivos.length > 0) {
+      for (const f of arquivos) {
+        if (f.size > ANEXO_MAX_BYTES) continue;
+        await uploadAnexoDemanda(res.id, f);
+      }
+    }
+
+    router.push(res.id ? `/app/politico/demandas/${res.id}` : "/app/politico/demandas");
     router.refresh();
+  }
+
+  function adicionarArquivos(e: React.ChangeEvent<HTMLInputElement>) {
+    const novos = Array.from(e.target.files ?? []);
+    if (arquivoRef.current) arquivoRef.current.value = "";
+    if (novos.length === 0) return;
+    setArquivos((prev) => [...prev, ...novos]);
   }
 
   return (
@@ -294,6 +317,58 @@ export default function NovaDemandaForm({ territorios, liderancas }: NovaDemanda
               </div>
             )}
           </div>
+        </section>
+
+        {/* Anexos */}
+        <section className="wr-card space-y-3 p-5 sm:p-6">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <Label>Anexos</Label>
+            <button type="button" onClick={() => arquivoRef.current?.click()} className="wr-btn inline-flex items-center gap-1.5">
+              <Paperclip className="h-4 w-4" aria-hidden /> Anexar arquivo
+            </button>
+            <input
+              ref={arquivoRef}
+              type="file"
+              multiple
+              onChange={adicionarArquivos}
+              className="hidden"
+              accept="image/*,application/pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.csv,.zip"
+            />
+          </div>
+          {arquivos.length === 0 ? (
+            <p className="text-xs" style={{ color: "var(--color-text-subtle)" }}>
+              Ofícios, fotos do problema ou documentos (até 50MB cada). Opcional.
+            </p>
+          ) : (
+            <ul className="space-y-2">
+              {arquivos.map((f, i) => (
+                <li
+                  key={`${f.name}-${i}`}
+                  className="flex items-center gap-3 rounded-xl px-3 py-2.5"
+                  style={{ background: "var(--color-surface-elevated)", border: "1px solid var(--color-border)" }}
+                >
+                  <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg" style={{ background: "rgba(215,243,106,0.12)", color: "#D7F36A" }} aria-hidden>
+                    <FileText className="h-5 w-5" />
+                  </span>
+                  <div className="min-w-0 flex-1">
+                    <div className="truncate text-sm font-medium" style={{ color: "var(--color-text)" }}>{f.name}</div>
+                    <div className="text-xs" style={{ color: "var(--color-text-subtle)" }}>
+                      {formatarBytes(f.size)}{f.size > ANEXO_MAX_BYTES ? " · acima de 50MB, não será enviado" : ""}
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setArquivos((prev) => prev.filter((_, j) => j !== i))}
+                    className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full"
+                    style={{ background: "rgba(255,255,255,0.06)", color: "var(--color-text-muted)" }}
+                    aria-label={`Remover ${f.name}`}
+                  >
+                    <X className="h-4 w-4" aria-hidden />
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
         </section>
 
         {erro && (
