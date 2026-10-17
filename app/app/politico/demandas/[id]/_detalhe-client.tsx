@@ -9,12 +9,12 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, MessageCircle, Pencil, Printer, Sparkles, Trash2, X } from "lucide-react";
+import { ArrowLeft, Clock, Flag, MessageCircle, Pencil, Printer, Sparkles, Trash2, X } from "lucide-react";
 
 import { gerarEncaminhamento } from "@/app/actions/politico/gerarEncaminhamento";
 import { gerarOficioDemanda } from "@/app/actions/politico/gerarOficio";
 import { avisarCidadao } from "@/app/actions/politico/avisarCidadao";
-import { atualizarRegistro, excluirRegistro } from "@/app/actions/politico/gabinete-actions";
+import { atualizarRegistro, excluirRegistro, registrarEventoDemanda } from "@/app/actions/politico/gabinete-actions";
 import DemandaAnexos from "@/components/politico/demanda-anexos";
 
 interface Opcao {
@@ -45,11 +45,19 @@ export interface DemandaDetalhe {
   contacts: { name: string | null; phone_number: string | null } | null;
 }
 
+export interface EventoDemanda {
+  id: string;
+  tipo: string;
+  descricao: string | null;
+  created_at: string;
+}
+
 export interface Props {
   demanda: DemandaDetalhe;
   territorios: Opcao[];
   liderancas: Opcao[];
   assessores: Opcao[];
+  eventos: EventoDemanda[];
 }
 
 const TIPOS: Opcao[] = [
@@ -102,7 +110,7 @@ function paraInputDate(d: string | null): string {
   return new Date(d).toISOString().slice(0, 10);
 }
 
-export default function DetalheDemandaClient({ demanda, territorios, liderancas, assessores }: Props) {
+export default function DetalheDemandaClient({ demanda, territorios, liderancas, assessores, eventos }: Props) {
   const router = useRouter();
 
   const [d, setD] = useState<DemandaDetalhe>(demanda);
@@ -182,7 +190,11 @@ export default function DetalheDemandaClient({ demanda, territorios, liderancas,
       patch = { estado: novo, desfecho: null, fechada_em: null };
       otim = { estado: novo, desfecho: null, fechada_em: null };
     }
-    await persistir(patch, otim);
+    const ok = await persistir(patch, otim);
+    if (ok) {
+      void registrarEventoDemanda(d.id, "estado_alterado", `Status alterado para "${ESTADO_LABEL[novo] ?? novo}"`);
+      router.refresh();
+    }
   }
 
   // Ações de estado disponíveis conforme o estado atual.
@@ -287,8 +299,10 @@ export default function DetalheDemandaClient({ demanda, territorios, liderancas,
               setAvisando(true);
               const res = await avisarCidadao(d.id);
               setAvisando(false);
-              if (res.ok) setAvisoMsg(`Cidadão avisado no WhatsApp (protocolo ${res.protocolo})${res.comOficio ? " com o ofício em anexo" : ""}.`);
-              else setErro(res.erro);
+              if (res.ok) {
+                setAvisoMsg(`Cidadão avisado no WhatsApp (protocolo ${res.protocolo})${res.comOficio ? " com o ofício em anexo" : ""}.`);
+                router.refresh();
+              } else setErro(res.erro);
             }}
             className="wr-btn inline-flex items-center gap-1.5 disabled:opacity-50"
             style={{ background: "rgba(37,211,102,0.14)", color: "#25D366", borderColor: "rgba(37,211,102,0.35)" }}
@@ -422,6 +436,7 @@ export default function DetalheDemandaClient({ demanda, territorios, liderancas,
                 if (res.ok) {
                   window.open(res.url, "_blank", "noopener,noreferrer");
                   setAnexoToken((t) => t + 1);
+                  router.refresh();
                 } else {
                   setErro(res.erro);
                 }
@@ -487,7 +502,61 @@ export default function DetalheDemandaClient({ demanda, territorios, liderancas,
 
       {/* Anexos (ofícios, fotos, documentos) */}
       <DemandaAnexos demandaId={d.id} refreshToken={anexoToken} />
+
+      {/* Histórico / linha do tempo */}
+      <LinhaDoTempo aberturaISO={d.aberta_em} eventos={eventos} />
     </div>
+  );
+}
+
+const EVT_ICONE: Record<string, { Icon: typeof Flag; cor: string }> = {
+  registrada: { Icon: Flag, cor: "#9CA3AF" },
+  encaminhamento_ia: { Icon: Sparkles, cor: "#D7F36A" },
+  oficio_emitido: { Icon: Printer, cor: "#60A5FA" },
+  cidadao_avisado: { Icon: MessageCircle, cor: "#25D366" },
+  estado_alterado: { Icon: Clock, cor: "#F59E0B" },
+  nota: { Icon: Pencil, cor: "#9CA3AF" },
+};
+
+function quandoTexto(iso: string): string {
+  const d = new Date(iso);
+  return d.toLocaleString("pt-BR", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" });
+}
+
+function LinhaDoTempo({ aberturaISO, eventos }: { aberturaISO: string; eventos: EventoDemanda[] }) {
+  const itens = [
+    { id: "__reg", tipo: "registrada", descricao: "Demanda registrada", created_at: aberturaISO },
+    ...eventos,
+  ].sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
+
+  return (
+    <section className="wr-card p-6 sm:p-7">
+      <h2 className="mb-4 font-heading text-base font-bold" style={{ color: "var(--color-text)" }}>Histórico do atendimento</h2>
+      <ol className="space-y-0">
+        {itens.map((e, i) => {
+          const cfg = EVT_ICONE[e.tipo] ?? EVT_ICONE.nota!;
+          const ultimo = i === itens.length - 1;
+          return (
+            <li key={e.id} className="relative flex gap-3 pb-5 last:pb-0">
+              {!ultimo && (
+                <span className="absolute left-[15px] top-8 bottom-0 w-px" style={{ background: "var(--color-border)" }} aria-hidden />
+              )}
+              <span
+                className="relative z-10 flex h-8 w-8 shrink-0 items-center justify-center rounded-full"
+                style={{ background: "var(--color-surface-elevated)", border: "1px solid var(--color-border)", color: cfg.cor }}
+                aria-hidden
+              >
+                <cfg.Icon className="h-4 w-4" />
+              </span>
+              <div className="min-w-0 pt-1">
+                <div className="text-sm font-medium" style={{ color: "var(--color-text)" }}>{e.descricao ?? "—"}</div>
+                <div className="text-xs" style={{ color: "var(--color-text-subtle)" }}>{quandoTexto(e.created_at)}</div>
+              </div>
+            </li>
+          );
+        })}
+      </ol>
+    </section>
   );
 }
 

@@ -27,7 +27,7 @@ export default async function DemandaDetalhePage({
   if (!org) redirect("/app/onboarding");
 
   const db = await createClient();
-  const [demRes, terrRes, lidRes, membrosRes] = await Promise.all([
+  const [demRes, terrRes, lidRes, membrosRes, evtRes] = await Promise.all([
     db
       .from("demandas")
       .select(
@@ -39,6 +39,13 @@ export default async function DemandaDetalhePage({
     db.from("pol_territories").select("id, name, state_code").eq("organization_id", org.orgId).order("name").limit(600),
     db.from("pol_liderancas").select("id, nome, cidade").eq("organization_id", org.orgId).eq("status", "ativo").order("nome").limit(500),
     db.from("user_organizations").select("user_id, role").eq("organization_id", org.orgId).is("revoked_at", null),
+    db
+      .from("pol_demanda_eventos")
+      .select("id, tipo, descricao, created_at")
+      .eq("organization_id", org.orgId)
+      .eq("demanda_id", id)
+      .order("created_at", { ascending: true })
+      .limit(200),
   ]);
 
   if (!demRes.data) notFound();
@@ -58,12 +65,20 @@ export default async function DemandaDetalhePage({
     .map((m) => ({ id: m.user_id, nome: nomes.get(m.user_id) ?? `${m.user_id.slice(0, 8)} · ${m.role}` }))
     .sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR"));
 
+  const eventos = ((evtRes.data ?? []) as { id: string; tipo: string; descricao: string | null; created_at: string }[]).map((e) => ({
+    id: e.id,
+    tipo: e.tipo,
+    descricao: e.descricao,
+    created_at: e.created_at,
+  }));
+
   return (
     <DetalheDemandaClient
       demanda={demRes.data as unknown as DemandaDetalhe}
       territorios={territorios}
       liderancas={liderancas}
       assessores={assessores}
+      eventos={eventos}
     />
   );
 }

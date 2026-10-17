@@ -26,6 +26,7 @@ export type AvisoResultado = { ok: true; protocolo: string; comOficio: boolean }
 
 interface DemandaParaAviso {
   id: string;
+  estado: string;
   contact_id: string | null;
   assunto: string | null;
   pol_orgao_destino: string | null;
@@ -50,7 +51,7 @@ export async function avisarCidadao(demandaId: string): Promise<AvisoResultado> 
 
   const { data, error } = await db
     .from("demandas")
-    .select("id, contact_id, assunto, pol_orgao_destino, pol_encaminhamento_ia, pol_oficio_numero, pol_oficio_ano, contacts(name, phone_number)")
+    .select("id, estado, contact_id, assunto, pol_orgao_destino, pol_encaminhamento_ia, pol_oficio_numero, pol_oficio_ano, contacts(name, phone_number)")
     .eq("organization_id", org.orgId)
     .eq("id", demandaId)
     .maybeSingle();
@@ -79,13 +80,17 @@ export async function avisarCidadao(demandaId: string): Promise<AvisoResultado> 
     return { ok: false, erro: "Não consegui abrir a conversa do cidadão." };
   }
 
-  // Ofício em PDF para anexar: se houver encaminhamento, garante que o ofício
-  // existe (gera se preciso) e baixa os bytes. Sem encaminhamento, segue sem anexo.
+  // A mensagem muda conforme o estado: resolvida = boa notícia (sem anexar o
+  // ofício de novo); demais = registro + encaminhamento (com o ofício anexo).
+  const ehResolucao = d.estado === "resolvida";
+
+  // Ofício em PDF para anexar: só no aviso de encaminhamento (não na resolução),
+  // e se houver encaminhamento. Gera se preciso e baixa os bytes.
   let numero = d.pol_oficio_numero;
   let ano = d.pol_oficio_ano;
   let oficioBytes: Buffer | null = null;
   const oficioPath = `${org.orgId}/${demandaId}/oficio.pdf`;
-  if (d.pol_encaminhamento_ia?.trim()) {
+  if (!ehResolucao && d.pol_encaminhamento_ia?.trim()) {
     let dl = await admin.storage.from("gabinete-anexos").download(oficioPath);
     if (dl.error || !dl.data) {
       const g = await gerarOficioDemanda(demandaId);
@@ -103,12 +108,15 @@ export async function avisarCidadao(demandaId: string): Promise<AvisoResultado> 
   const saudacao = primeiroNome ? `Olá, ${primeiroNome}!` : "Olá!";
   // Mensagem GENÉRICA de propósito: NÃO embute o assunto (que costuma ser a
   // descrição longa do cidadão e deixa o texto feio). O detalhe vai no ofício.
-  const corpo =
-    `${saudacao} Passo para avisar que a sua demanda (protocolo ${protocolo})` +
-    ` já foi encaminhada ao órgão competente para a resolução.` +
-    ` Assim que houver novidades, te retorno por aqui, ok?` +
-    (oficioBytes ? ` Encaminho o ofício para seu conhecimento.` : "") +
-    ` Sigo à disposição. Conte sempre com o nosso gabinete.`;
+  const corpo = ehResolucao
+    ? `${saudacao} Boa notícia: a sua demanda (protocolo ${protocolo}) foi RESOLVIDA.` +
+      ` Agradecemos a confiança e seguimos à disposição para o que precisar.` +
+      ` Conte sempre com o nosso gabinete.`
+    : `${saudacao} Passo para avisar que a sua demanda (protocolo ${protocolo})` +
+      ` já foi encaminhada ao órgão competente para a resolução.` +
+      ` Assim que houver novidades, te retorno por aqui, ok?` +
+      (oficioBytes ? ` Encaminho o ofício para seu conhecimento.` : "") +
+      ` Sigo à disposição. Conte sempre com o nosso gabinete.`;
 
   // Com ofício: copia o PDF para o bucket da conversa (whatsapp-media sob
   // {org}/{conversa}/, exigência do handler) e envia como DOCUMENTO com o texto
@@ -148,5 +156,17 @@ export async function avisarCidadao(demandaId: string): Promise<AvisoResultado> 
     return { ok: false, erro: `Não foi possível enviar: ${msg}` };
   }
 
-  return { ok: true, protocolo, comOficio: !!oficioBytes && input.type === "document" };
+  const comOficio = !!oficioBytes && input.type === "document";
+  // Histórico: registra o aviso enviado.
+  await db.from("pol_demanda_eventos").insert({
+    organization_id: org.orgId,
+    demanda_id: demandaId,
+    tipo: "cidadao_avisado",
+    descricao: ehResolucao
+      ? "Cidadão avisado da resolução por WhatsApp"
+      : `Cidadão avisado por WhatsApp${comOficio ? ` (com ofício ${protocolo})` : ""}`,
+    created_by: user.id,
+  });
+
+  return { ok: true, protocolo, comOficio };
 }

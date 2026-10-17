@@ -55618,3 +55618,24 @@ alter table public.demandas add column if not exists pol_gabinete boolean not nu
 update public.demandas set pol_gabinete = true where origem = 'manual' and pol_gabinete = false;
 create index if not exists demandas_pol_gabinete_idx
   on public.demandas (organization_id, aberta_em desc) where pol_gabinete;
+
+-- ── 9009: pol_demanda_eventos (historico) — apendice idempotente. Ver migration 9009. ──
+create table if not exists public.pol_demanda_eventos (
+  id              uuid        primary key default gen_random_uuid(),
+  organization_id uuid        not null references public.organizations(id) on delete cascade,
+  demanda_id      uuid        not null references public.demandas(id) on delete cascade,
+  tipo            text        not null default 'nota'
+                  check (tipo in ('registrada', 'encaminhamento_ia', 'oficio_emitido', 'cidadao_avisado', 'estado_alterado', 'nota')),
+  descricao       text,
+  created_by      uuid        references auth.users(id) on delete set null,
+  created_at      timestamptz not null default now()
+);
+alter table public.pol_demanda_eventos enable row level security;
+drop policy if exists tenant_isolation_pol_demanda_eventos_all on public.pol_demanda_eventos;
+create policy tenant_isolation_pol_demanda_eventos_all on public.pol_demanda_eventos for all
+  using (organization_id in (select public.fn_user_org_ids()))
+  with check (organization_id in (select public.fn_user_org_ids()));
+create index if not exists pol_demanda_eventos_demanda_idx
+  on public.pol_demanda_eventos (organization_id, demanda_id, created_at);
+grant select, insert, update, delete on public.pol_demanda_eventos to authenticated;
+revoke all on public.pol_demanda_eventos from anon;

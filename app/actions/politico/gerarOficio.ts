@@ -51,6 +51,7 @@ export async function gerarOficioDemanda(demandaId: string): Promise<OficioResul
   const agora = new Date();
   let numero = d.pol_oficio_numero;
   let ano = d.pol_oficio_ano;
+  const ehPrimeiraEmissao = !numero || !ano;
   if (!numero || !ano) {
     ano = agora.getFullYear();
     const { data: ult } = await db
@@ -158,6 +159,17 @@ export async function gerarOficioDemanda(demandaId: string): Promise<OficioResul
       nome_arquivo: nome,
       media_mime: "application/pdf",
       media_size_bytes: buffer.length,
+      created_by: user.id,
+    });
+  }
+
+  // Histórico: ofício emitido (só na primeira emissão; reemissões não poluem).
+  if (ehPrimeiraEmissao) {
+    await db.from("pol_demanda_eventos").insert({
+      organization_id: org.orgId,
+      demanda_id: demandaId,
+      tipo: "oficio_emitido",
+      descricao: `Ofício OF ${String(numero).padStart(3, "0")}/${ano} emitido`,
       created_by: user.id,
     });
   }

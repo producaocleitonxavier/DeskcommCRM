@@ -111,6 +111,27 @@ export async function atualizarRegistro(tabela: string, id: string, patch: Recor
   return { ok: true };
 }
 
+/** Registra um evento no histórico de uma demanda (escopado à org ativa). */
+export async function registrarEventoDemanda(
+  demandaId: string,
+  tipo: "estado_alterado" | "nota" | "cidadao_avisado" | "oficio_emitido" | "encaminhamento_ia",
+  descricao: string,
+): Promise<AcaoResultado> {
+  const user = await requireAuth();
+  const org = await resolveActiveOrg(user);
+  if (!org) return { ok: false, erro: "Sessão ou organização inválida." };
+  const db = await createClient();
+  const { error } = await db.from("pol_demanda_eventos").insert({
+    organization_id: org.orgId,
+    demanda_id: demandaId,
+    tipo,
+    descricao,
+    created_by: user.id,
+  });
+  if (error) return { ok: false, erro: traduzErro(error) };
+  return { ok: true };
+}
+
 /** Exclui um registro de uma tabela do gabinete (escopado à org ativa). Para
  * `demandas`, os FKs cuidam do resto (anexos e vínculos de conversa em cascata,
  * referências em mensagens/conversas viram null). */
