@@ -12,7 +12,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, Check, Pencil, X } from "lucide-react";
 
-import { createClient } from "@/lib/supabase/browser";
+import { atualizarRegistro } from "@/app/actions/politico/gabinete-actions";
 
 interface Opcao {
   id: string;
@@ -116,7 +116,6 @@ function rotulo(lista: Opcao[], id: string | null): string {
 
 export default function DetalheEmendaClient({ emenda, territorios, liderancas }: Props) {
   const router = useRouter();
-  const supabase = createClient();
 
   const [e, setE] = useState<EmendaDetalhe>(emenda);
   const [editando, setEditando] = useState(false);
@@ -152,10 +151,10 @@ export default function DetalheEmendaClient({ emenda, territorios, liderancas }:
   async function persistir(patch: Record<string, unknown>, otim: Partial<EmendaDetalhe>) {
     setErro(null);
     setSalvando(true);
-    const { error } = await supabase.from("pol_emendas").update(patch).eq("id", e.id);
+    const res = await atualizarRegistro("pol_emendas", e.id, patch);
     setSalvando(false);
-    if (error) {
-      setErro(`Não foi possível salvar: ${error.message}`);
+    if (!res.ok) {
+      setErro(res.erro);
       return false;
     }
     setE((prev) => ({ ...prev, ...otim }));

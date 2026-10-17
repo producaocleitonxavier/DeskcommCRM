@@ -11,17 +11,13 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, Check, Search, X } from "lucide-react";
 
-import { createClient } from "@/lib/supabase/browser";
+import { buscarCidadaos, criarRegistro, type CidadaoOpcao } from "@/app/actions/politico/gabinete-actions";
 
 interface Opcao {
   id: string;
   nome: string;
 }
-interface Contato {
-  id: string;
-  name: string | null;
-  phone_number: string | null;
-}
+type Contato = CidadaoOpcao;
 
 export interface NovaLiderancaFormProps {
   orgId: string;
@@ -61,9 +57,8 @@ function Label({ children, obrig }: { children: React.ReactNode; obrig?: boolean
   );
 }
 
-export default function NovaLiderancaForm({ orgId, territorios }: NovaLiderancaFormProps) {
+export default function NovaLiderancaForm({ territorios }: NovaLiderancaFormProps) {
   const router = useRouter();
-  const supabase = createClient();
 
   const [busca, setBusca] = useState("");
   const [resultados, setResultados] = useState<Contato[]>([]);
@@ -98,20 +93,14 @@ export default function NovaLiderancaForm({ orgId, territorios }: NovaLiderancaF
     }
     setBuscando(true);
     const id = setTimeout(async () => {
-      const { data } = await supabase
-        .from("contacts")
-        .select("id, name, phone_number")
-        .eq("organization_id", orgId)
-        .ilike("name", `%${q}%`)
-        .order("name")
-        .limit(8);
+      const achados = await buscarCidadaos(q);
       if (buscaRef.current.trim() === q) {
-        setResultados((data ?? []) as Contato[]);
+        setResultados(achados);
         setBuscando(false);
       }
     }, 300);
     return () => clearTimeout(id);
-  }, [busca, contato, orgId, supabase]);
+  }, [busca, contato]);
 
   function escolher(c: Contato) {
     setContato(c);
@@ -128,7 +117,6 @@ export default function NovaLiderancaForm({ orgId, territorios }: NovaLiderancaF
 
     setSalvando(true);
     const payload: Record<string, unknown> = {
-      organization_id: orgId,
       contact_id: contato.id,
       nome: nome.trim(),
       tipo,
@@ -145,14 +133,10 @@ export default function NovaLiderancaForm({ orgId, territorios }: NovaLiderancaF
     if (territoryId) payload.territory_id = territoryId;
     if (observacoes.trim()) payload.observacoes = observacoes.trim();
 
-    const { error } = await supabase.from("pol_liderancas").insert(payload);
-    if (error) {
+    const res = await criarRegistro("pol_liderancas", payload);
+    if (!res.ok) {
       setSalvando(false);
-      setErro(
-        error.code === "23505"
-          ? "Este contato já está cadastrado como liderança."
-          : `Não foi possível salvar: ${error.message}`,
-      );
+      setErro(res.erro);
       return;
     }
     router.push("/app/politico/liderancas");

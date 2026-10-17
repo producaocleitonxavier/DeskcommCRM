@@ -10,7 +10,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, Pencil, X } from "lucide-react";
 
-import { createClient } from "@/lib/supabase/browser";
+import { atualizarRegistro } from "@/app/actions/politico/gabinete-actions";
 
 interface Opcao {
   id: string;
@@ -81,7 +81,6 @@ function quando(c: CompromissoDetalhe): string {
 
 export default function DetalheCompromissoClient({ compromisso, territorios, liderancas }: Props) {
   const router = useRouter();
-  const supabase = createClient();
 
   const [c, setC] = useState<CompromissoDetalhe>(compromisso);
   const [editando, setEditando] = useState(false);
@@ -102,10 +101,10 @@ export default function DetalheCompromissoClient({ compromisso, territorios, lid
   async function persistir(patch: Record<string, unknown>, otim: Partial<CompromissoDetalhe>) {
     setErro(null);
     setSalvando(true);
-    const { error } = await supabase.from("pol_agenda").update(patch).eq("id", c.id);
+    const res = await atualizarRegistro("pol_agenda", c.id, patch);
     setSalvando(false);
-    if (error) {
-      setErro(`Não foi possível salvar: ${error.message}`);
+    if (!res.ok) {
+      setErro(res.erro);
       return false;
     }
     setC((prev) => ({ ...prev, ...otim }));

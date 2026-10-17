@@ -10,7 +10,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, Check } from "lucide-react";
 
-import { createClient } from "@/lib/supabase/browser";
+import { criarRegistro } from "@/app/actions/politico/gabinete-actions";
 
 interface Opcao {
   id: string;
@@ -48,9 +48,8 @@ function Label({ children, obrig }: { children: React.ReactNode; obrig?: boolean
   );
 }
 
-export default function NovoCompromissoForm({ orgId, territorios, liderancas }: NovoCompromissoFormProps) {
+export default function NovoCompromissoForm({ territorios, liderancas }: NovoCompromissoFormProps) {
   const router = useRouter();
-  const supabase = createClient();
 
   const [titulo, setTitulo] = useState("");
   const [tipo, setTipo] = useState("reuniao");
@@ -75,7 +74,6 @@ export default function NovoCompromissoForm({ orgId, territorios, liderancas }: 
 
     setSalvando(true);
     const payload: Record<string, unknown> = {
-      organization_id: orgId,
       titulo: titulo.trim(),
       tipo,
       data_inicio: new Date(inicio).toISOString(),
@@ -89,10 +87,10 @@ export default function NovoCompromissoForm({ orgId, territorios, liderancas }: 
     if (liderancaId) payload.lideranca_id = liderancaId;
     if (descricao.trim()) payload.descricao = descricao.trim();
 
-    const { error } = await supabase.from("pol_agenda").insert(payload);
-    if (error) {
+    const res = await criarRegistro("pol_agenda", payload);
+    if (!res.ok) {
       setSalvando(false);
-      setErro(`Não foi possível salvar: ${error.message}`);
+      setErro(res.erro);
       return;
     }
     router.push("/app/politico/agenda");

@@ -10,7 +10,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, Check } from "lucide-react";
 
-import { createClient } from "@/lib/supabase/browser";
+import { criarRegistro } from "@/app/actions/politico/gabinete-actions";
 
 interface Opcao {
   id: string;
@@ -63,9 +63,8 @@ function Label({ children, obrig }: { children: React.ReactNode; obrig?: boolean
   );
 }
 
-export default function NovaEmendaForm({ orgId, territorios, liderancas }: NovaEmendaFormProps) {
+export default function NovaEmendaForm({ territorios, liderancas }: NovaEmendaFormProps) {
   const router = useRouter();
-  const supabase = createClient();
 
   const [numero, setNumero] = useState("");
   const [ano, setAno] = useState(String(new Date().getFullYear()));
@@ -97,7 +96,6 @@ export default function NovaEmendaForm({ orgId, territorios, liderancas }: NovaE
 
     setSalvando(true);
     const payload: Record<string, unknown> = {
-      organization_id: orgId,
       ano: anoNum,
       tipo,
       esfera,
@@ -118,10 +116,10 @@ export default function NovaEmendaForm({ orgId, territorios, liderancas }: NovaE
     if (beneficiarios.trim() && Number(beneficiarios)) payload.beneficiarios_estimados = Number(beneficiarios);
     if (observacoes.trim()) payload.observacoes = observacoes.trim();
 
-    const { error } = await supabase.from("pol_emendas").insert(payload);
-    if (error) {
+    const res = await criarRegistro("pol_emendas", payload);
+    if (!res.ok) {
       setSalvando(false);
-      setErro(`Não foi possível salvar: ${error.message}`);
+      setErro(res.erro);
       return;
     }
     router.push("/app/politico/emendas");

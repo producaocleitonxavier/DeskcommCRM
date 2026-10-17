@@ -10,7 +10,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, MessageCircle, Pencil, X } from "lucide-react";
 
-import { createClient } from "@/lib/supabase/browser";
+import { atualizarRegistro } from "@/app/actions/politico/gabinete-actions";
 
 interface Opcao {
   id: string;
@@ -83,7 +83,6 @@ function fmtData(d: string | null): string {
 
 export default function DetalheLiderancaClient({ lideranca, territorios }: Props) {
   const router = useRouter();
-  const supabase = createClient();
 
   const [l, setL] = useState<LiderancaDetalhe>(lideranca);
   const [editando, setEditando] = useState(false);
@@ -123,10 +122,10 @@ export default function DetalheLiderancaClient({ lideranca, territorios }: Props
       status,
       observacoes: observacoes.trim() || null,
     };
-    const { error } = await supabase.from("pol_liderancas").update(patch).eq("id", l.id);
+    const res = await atualizarRegistro("pol_liderancas", l.id, patch);
     setSalvando(false);
-    if (error) {
-      setErro(`Não foi possível salvar: ${error.message}`);
+    if (!res.ok) {
+      setErro(res.erro);
       return;
     }
     setL((prev) => ({ ...prev, ...(patch as Partial<LiderancaDetalhe>) }));

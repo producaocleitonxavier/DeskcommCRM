@@ -11,7 +11,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, Check } from "lucide-react";
 
-import { createClient } from "@/lib/supabase/browser";
+import { criarRegistro } from "@/app/actions/politico/gabinete-actions";
 
 interface Opcao {
   id: string;
@@ -80,9 +80,8 @@ function Toggle({ on, set, label }: { on: boolean; set: (v: boolean) => void; la
   );
 }
 
-export default function NovoProjetoForm({ orgId }: { orgId: string }) {
+export default function NovoProjetoForm({}: { orgId: string }) {
   const router = useRouter();
-  const supabase = createClient();
 
   const [numero, setNumero] = useState("");
   const [tipo, setTipo] = useState("projeto_de_lei");
@@ -114,7 +113,6 @@ export default function NovoProjetoForm({ orgId }: { orgId: string }) {
 
     setSalvando(true);
     const payload: Record<string, unknown> = {
-      organization_id: orgId,
       numero: numero.trim(),
       tipo,
       esfera,
@@ -138,10 +136,10 @@ export default function NovoProjetoForm({ orgId }: { orgId: string }) {
       payload.data_ultima_movimentacao = dataApresentacao;
     }
 
-    const { error } = await supabase.from("pol_projetos_lei").insert(payload);
-    if (error) {
+    const res = await criarRegistro("pol_projetos_lei", payload);
+    if (!res.ok) {
       setSalvando(false);
-      setErro(error.code === "23505" ? "Já existe um projeto com esse número." : `Não foi possível salvar: ${error.message}`);
+      setErro(res.erro);
       return;
     }
     router.push("/app/politico/projetos-lei");

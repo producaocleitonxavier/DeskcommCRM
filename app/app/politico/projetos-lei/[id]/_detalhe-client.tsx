@@ -12,7 +12,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, ExternalLink, Pencil, X } from "lucide-react";
 
-import { createClient } from "@/lib/supabase/browser";
+import { atualizarRegistro } from "@/app/actions/politico/gabinete-actions";
 
 interface Opcao {
   id: string;
@@ -100,7 +100,6 @@ function fmtData(d: string | null): string {
 
 export default function DetalheProjetoClient({ projeto }: { projeto: ProjetoDetalhe }) {
   const router = useRouter();
-  const supabase = createClient();
 
   const [p, setP] = useState<ProjetoDetalhe>(projeto);
   const [editando, setEditando] = useState(false);
@@ -127,10 +126,10 @@ export default function DetalheProjetoClient({ projeto }: { projeto: ProjetoDeta
   async function persistir(patch: Record<string, unknown>, otim: Partial<ProjetoDetalhe>) {
     setErro(null);
     setSalvando(true);
-    const { error } = await supabase.from("pol_projetos_lei").update(patch).eq("id", p.id);
+    const res = await atualizarRegistro("pol_projetos_lei", p.id, patch);
     setSalvando(false);
-    if (error) {
-      setErro(error.code === "23505" ? "Já existe um projeto com esse número." : `Não foi possível salvar: ${error.message}`);
+    if (!res.ok) {
+      setErro(res.erro);
       return false;
     }
     setP((prev) => ({ ...prev, ...otim }));

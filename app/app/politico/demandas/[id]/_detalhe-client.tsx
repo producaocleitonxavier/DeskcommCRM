@@ -11,8 +11,8 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, Pencil, Sparkles, X } from "lucide-react";
 
-import { createClient } from "@/lib/supabase/browser";
 import { gerarEncaminhamento } from "@/app/actions/politico/gerarEncaminhamento";
+import { atualizarRegistro } from "@/app/actions/politico/gabinete-actions";
 
 interface Opcao {
   id: string;
@@ -98,7 +98,6 @@ function paraInputDate(d: string | null): string {
 
 export default function DetalheDemandaClient({ demanda, territorios, liderancas }: Props) {
   const router = useRouter();
-  const supabase = createClient();
 
   const [d, setD] = useState<DemandaDetalhe>(demanda);
   const [editando, setEditando] = useState(false);
@@ -121,10 +120,10 @@ export default function DetalheDemandaClient({ demanda, territorios, liderancas 
   async function persistir(patch: Record<string, unknown>, otimista: Partial<DemandaDetalhe>) {
     setErro(null);
     setSalvando(true);
-    const { error } = await supabase.from("demandas").update(patch).eq("id", d.id);
+    const res = await atualizarRegistro("demandas", d.id, patch);
     setSalvando(false);
-    if (error) {
-      setErro(`Não foi possível salvar: ${error.message}`);
+    if (!res.ok) {
+      setErro(res.erro);
       return false;
     }
     setD((prev) => ({ ...prev, ...otimista }));
