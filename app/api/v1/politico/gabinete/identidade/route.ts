@@ -37,8 +37,8 @@ export async function POST(req: NextRequest): Promise<Response> {
 
   const form = await req.formData().catch(() => null);
   const campo = String(form?.get("campo") ?? "");
-  if (campo !== "logo" && campo !== "assinatura") {
-    return fail("validation_failed", "Campo 'campo' deve ser 'logo' ou 'assinatura'.", 422, { requestId });
+  if (campo !== "logo" && campo !== "assinatura" && campo !== "timbrado") {
+    return fail("validation_failed", "Campo 'campo' deve ser 'logo', 'assinatura' ou 'timbrado'.", 422, { requestId });
   }
   const file = form?.get("file");
   if (!(file instanceof File)) {
@@ -70,7 +70,7 @@ export async function POST(req: NextRequest): Promise<Response> {
     return fail("internal_error", "Erro ao subir a imagem.", 500, { requestId });
   }
 
-  const coluna = campo === "logo" ? "logo_path" : "assinatura_path";
+  const coluna = campo === "logo" ? "logo_path" : campo === "assinatura" ? "assinatura_path" : "timbrado_path";
   const db = await createClient();
   const { error: upsertErr } = await db.from("pol_gabinete_config").upsert(
     { organization_id: org.orgId, [coluna]: storagePath, updated_at: new Date().toISOString() },

@@ -78,7 +78,7 @@ export async function gerarOficioDemanda(demandaId: string): Promise<OficioResul
   // logo e assinatura próprios. Caem para a marca da organização quando ausentes.
   const { data: cfg } = await db
     .from("pol_gabinete_config")
-    .select("nome_parlamentar, cargo, subtitulo, cidade, logo_path, assinatura_path")
+    .select("nome_parlamentar, cargo, subtitulo, cidade, logo_path, assinatura_path, timbrado_path")
     .eq("organization_id", org.orgId)
     .maybeSingle();
   const ident = (cfg ?? null) as {
@@ -88,6 +88,7 @@ export async function gerarOficioDemanda(demandaId: string): Promise<OficioResul
     cidade: string | null;
     logo_path: string | null;
     assinatura_path: string | null;
+    timbrado_path: string | null;
   } | null;
   const assinarIdentidade = async (p: string | null): Promise<string | null> => {
     if (!p) return null;
@@ -96,6 +97,7 @@ export async function gerarOficioDemanda(demandaId: string): Promise<OficioResul
   };
   const logoProprio = await assinarIdentidade(ident?.logo_path ?? null);
   const assinaturaUrl = await assinarIdentidade(ident?.assinatura_path ?? null);
+  const timbradoUrl = await assinarIdentidade(ident?.timbrado_path ?? null);
 
   let buffer: Buffer;
   try {
@@ -110,6 +112,7 @@ export async function gerarOficioDemanda(demandaId: string): Promise<OficioResul
       subtitulo: ident?.subtitulo ?? null,
       cargo: ident?.cargo ?? null,
       assinaturaUrl,
+      timbradoUrl,
       marca: { appName: marca.appName, accentHex: marca.accentHex, logoUrl: logoProprio ?? marca.logoUrl },
     });
   } catch {

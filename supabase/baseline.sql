@@ -55606,3 +55606,5 @@ create policy tenant_isolation_pol_gabinete_config_all on public.pol_gabinete_co
   with check (organization_id in (select public.fn_user_org_ids()));
 grant select, insert, update, delete on public.pol_gabinete_config to authenticated;
 revoke all on public.pol_gabinete_config from anon;
+-- ── 9006: papel timbrado — apendice idempotente. Ver migration 9006. ──
+alter table public.pol_gabinete_config add column if not exists timbrado_path text;

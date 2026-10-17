@@ -36,14 +36,16 @@ export default function IdentidadeClient({ inicial }: { inicial: IdentidadeGabin
   const [cidade, setCidade] = useState(inicial.cidade ?? "");
   const [logoUrl, setLogoUrl] = useState(inicial.logoUrl);
   const [assinaturaUrl, setAssinaturaUrl] = useState(inicial.assinaturaUrl);
+  const [timbradoUrl, setTimbradoUrl] = useState(inicial.timbradoUrl);
 
   const [salvando, setSalvando] = useState(false);
   const [okMsg, setOkMsg] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
-  const [enviando, setEnviando] = useState<"logo" | "assinatura" | null>(null);
+  const [enviando, setEnviando] = useState<"logo" | "assinatura" | "timbrado" | null>(null);
 
   const logoRef = useRef<HTMLInputElement>(null);
   const assinaturaRef = useRef<HTMLInputElement>(null);
+  const timbradoRef = useRef<HTMLInputElement>(null);
 
   async function salvar() {
     setErro(null);
@@ -56,7 +58,7 @@ export default function IdentidadeClient({ inicial }: { inicial: IdentidadeGabin
     router.refresh();
   }
 
-  async function enviarImagem(campo: "logo" | "assinatura", file: File) {
+  async function enviarImagem(campo: "logo" | "assinatura" | "timbrado", file: File) {
     setErro(null);
     setEnviando(campo);
     const fd = new FormData();
@@ -82,17 +84,19 @@ export default function IdentidadeClient({ inicial }: { inicial: IdentidadeGabin
     setEnviando(null);
     if (url) {
       if (campo === "logo") setLogoUrl(url);
-      else setAssinaturaUrl(url);
+      else if (campo === "assinatura") setAssinaturaUrl(url);
+      else setTimbradoUrl(url);
       router.refresh();
     }
   }
 
-  async function remover(campo: "logo" | "assinatura") {
+  async function remover(campo: "logo" | "assinatura" | "timbrado") {
     setErro(null);
     const res = await removerImagemIdentidade(campo);
     if (!res.ok) return setErro(res.erro);
     if (campo === "logo") setLogoUrl(null);
-    else setAssinaturaUrl(null);
+    else if (campo === "assinatura") setAssinaturaUrl(null);
+    else setTimbradoUrl(null);
     router.refresh();
   }
 
@@ -157,6 +161,18 @@ export default function IdentidadeClient({ inicial }: { inicial: IdentidadeGabin
           alturaPreview={56}
         />
       </div>
+
+      {/* Papel timbrado (A4) — fundo de página do ofício */}
+      <ImagemCard
+        titulo="Papel timbrado (opcional)"
+        dica="Imagem A4 do timbrado pronto do gabinete (PNG/JPG, retrato). Quando houver, o ofício usa essa folha como fundo e sobrepõe só o texto — o cabeçalho e o rodapé passam a vir do seu timbrado, não do gerado."
+        url={timbradoUrl}
+        enviando={enviando === "timbrado"}
+        inputRef={timbradoRef}
+        onEscolher={(f) => enviarImagem("timbrado", f)}
+        onRemover={() => remover("timbrado")}
+        alturaPreview={300}
+      />
     </div>
   );
 }

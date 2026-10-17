@@ -21,6 +21,7 @@ export interface IdentidadeGabinete {
   cidade: string | null;
   logoUrl: string | null;
   assinaturaUrl: string | null;
+  timbradoUrl: string | null;
 }
 
 export type IdentidadeResultado = { ok: true } | { ok: false; erro: string };
@@ -40,13 +41,14 @@ export async function obterIdentidade(): Promise<IdentidadeGabinete> {
     cidade: null,
     logoUrl: null,
     assinaturaUrl: null,
+    timbradoUrl: null,
   };
   const org = await orgAtiva();
   if (!org) return vazio;
   const db = await createClient();
   const { data } = await db
     .from("pol_gabinete_config")
-    .select("nome_parlamentar, cargo, subtitulo, cidade, logo_path, assinatura_path")
+    .select("nome_parlamentar, cargo, subtitulo, cidade, logo_path, assinatura_path, timbrado_path")
     .eq("organization_id", org)
     .maybeSingle();
   if (!data) return vazio;
@@ -57,6 +59,7 @@ export async function obterIdentidade(): Promise<IdentidadeGabinete> {
     cidade: string | null;
     logo_path: string | null;
     assinatura_path: string | null;
+    timbrado_path: string | null;
   };
   const admin = createAdminClient();
   const assinar = async (path: string | null): Promise<string | null> => {
@@ -71,6 +74,7 @@ export async function obterIdentidade(): Promise<IdentidadeGabinete> {
     cidade: row.cidade,
     logoUrl: await assinar(row.logo_path),
     assinaturaUrl: await assinar(row.assinatura_path),
+    timbradoUrl: await assinar(row.timbrado_path),
   };
 }
 
@@ -100,10 +104,10 @@ export async function salvarIdentidade(campos: {
 }
 
 /** Remove a imagem (logo ou assinatura): apaga do bucket e limpa o path. */
-export async function removerImagemIdentidade(campo: "logo" | "assinatura"): Promise<IdentidadeResultado> {
+export async function removerImagemIdentidade(campo: "logo" | "assinatura" | "timbrado"): Promise<IdentidadeResultado> {
   const org = await orgAtiva();
   if (!org) return { ok: false, erro: "Sessão ou organização inválida." };
-  const coluna = campo === "logo" ? "logo_path" : "assinatura_path";
+  const coluna = campo === "logo" ? "logo_path" : campo === "assinatura" ? "assinatura_path" : "timbrado_path";
   const db = await createClient();
   const { data } = await db
     .from("pol_gabinete_config")

@@ -27,6 +27,11 @@ const styles = StyleSheet.create({
   assinaturaNome: { fontSize: 11, fontWeight: 700 },
   assinaturaCargo: { fontSize: 9, color: "#555" },
   footer: { position: "absolute", bottom: 28, left: 56, right: 56, fontSize: 8, color: "#888", textAlign: "center", borderTopWidth: 0.5, borderTopColor: "#CCC", paddingTop: 6 },
+  // Timbrado: página sem padding (a imagem é o fundo) + faixa de conteúdo que
+  // limpa o cabeçalho (~120pt) e o rodapé (~150pt) típicos do papel timbrado.
+  pageTimbrado: { position: "relative", fontSize: 11, lineHeight: 1.5, color: "#1A1A1A" },
+  fundoTimbrado: { position: "absolute", top: 0, left: 0, width: "100%", height: "100%" },
+  conteudoTimbrado: { paddingTop: 120, paddingBottom: 150, paddingHorizontal: 70 },
 });
 
 export interface OficioPdfInput {
@@ -48,6 +53,12 @@ export interface OficioPdfInput {
   cargo: string | null;
   /** URL da imagem da assinatura (acima do nome); null omite. */
   assinaturaUrl: string | null;
+  /**
+   * Imagem A4 do papel timbrado (fundo de página inteira). Quando presente, o
+   * cabeçalho/rodapé gerados são omitidos e o texto é sobreposto na faixa do
+   * corpo (margens generosas que limpam o cabeçalho e o rodapé do timbrado).
+   */
+  timbradoUrl: string | null;
   marca: { appName: string | null; accentHex: string | null; logoUrl: string | null };
 }
 
@@ -62,14 +73,52 @@ function dataPorExtenso(iso: string, cidade: string | null): string {
   return cidade ? `${cidade}, ${texto}.` : `${texto}.`;
 }
 
+/** Corpo do ofício (sem cabeçalho/rodapé) — compartilhado pelos dois layouts. */
+function Corpo({ d, nome, cargo }: { d: OficioPdfInput; nome: string; cargo: string }): React.ReactElement {
+  const destino = d.orgao?.trim() ? `Ao(À) ${d.orgao.trim()}` : "Ao órgão competente";
+  const numeroFmt = `OFÍCIO Nº ${String(d.numero).padStart(3, "0")}/${d.ano}`;
+  return (
+    <>
+      <View style={styles.linhaTopo}>
+        <Text style={styles.numero}>{numeroFmt}</Text>
+        <Text style={styles.data}>{dataPorExtenso(d.dataISO, d.cidade)}</Text>
+      </View>
+      <Text style={styles.destinatario}>{destino}</Text>
+      <Text style={styles.corpo}>{d.corpo}</Text>
+      <View style={styles.assinaturaBloco}>
+        {d.assinaturaUrl ? <Image src={d.assinaturaUrl} style={styles.assinaturaImagem} /> : null}
+        <View style={styles.assinaturaLinha} />
+        <Text style={styles.assinaturaNome}>{nome}</Text>
+        <Text style={styles.assinaturaCargo}>{cargo}</Text>
+      </View>
+    </>
+  );
+}
+
 function OficioDoc({ d }: { d: OficioPdfInput }): React.ReactElement {
   const accent = d.marca.accentHex ?? "#1A1A1A";
   const nome = (d.nome ?? d.marca.appName ?? "Gabinete").trim();
   const subtitulo = (d.subtitulo ?? "Gabinete — Atendimento ao cidadão").trim();
   const cargo = (d.cargo ?? "Gabinete Parlamentar").trim();
   const logoUrl = d.marca.logoUrl;
-  const destino = d.orgao?.trim() ? `Ao(À) ${d.orgao.trim()}` : "Ao órgão competente";
   const numeroFmt = `OFÍCIO Nº ${String(d.numero).padStart(3, "0")}/${d.ano}`;
+
+  // Com papel timbrado: a imagem é o fundo da página inteira (cabeçalho e rodapé
+  // já vêm nela), e o texto entra só na faixa do corpo.
+  if (d.timbradoUrl) {
+    return (
+      <Document>
+        <Page size="A4" style={styles.pageTimbrado}>
+          <Image src={d.timbradoUrl} style={styles.fundoTimbrado} fixed />
+          <View style={styles.conteudoTimbrado}>
+            <Corpo d={d} nome={nome} cargo={cargo} />
+          </View>
+        </Page>
+      </Document>
+    );
+  }
+
+  // Sem timbrado: cabeçalho gerado (marca da org) + rodapé de paginação.
   return (
     <Document>
       <Page size="A4" style={styles.page}>
@@ -81,21 +130,7 @@ function OficioDoc({ d }: { d: OficioPdfInput }): React.ReactElement {
           {logoUrl ? <Image src={logoUrl} style={styles.logo} /> : null}
         </View>
 
-        <View style={styles.linhaTopo}>
-          <Text style={styles.numero}>{numeroFmt}</Text>
-          <Text style={styles.data}>{dataPorExtenso(d.dataISO, d.cidade)}</Text>
-        </View>
-
-        <Text style={styles.destinatario}>{destino}</Text>
-
-        <Text style={styles.corpo}>{d.corpo}</Text>
-
-        <View style={styles.assinaturaBloco}>
-          {d.assinaturaUrl ? <Image src={d.assinaturaUrl} style={styles.assinaturaImagem} /> : null}
-          <View style={styles.assinaturaLinha} />
-          <Text style={styles.assinaturaNome}>{nome}</Text>
-          <Text style={styles.assinaturaCargo}>{cargo}</Text>
-        </View>
+        <Corpo d={d} nome={nome} cargo={cargo} />
 
         <Text
           style={styles.footer}
