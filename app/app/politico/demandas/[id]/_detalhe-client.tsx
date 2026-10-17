@@ -287,7 +287,7 @@ export default function DetalheDemandaClient({ demanda, territorios, liderancas,
               setAvisando(true);
               const res = await avisarCidadao(d.id);
               setAvisando(false);
-              if (res.ok) setAvisoMsg(`Cidadão avisado no WhatsApp (protocolo ${res.protocolo}).`);
+              if (res.ok) setAvisoMsg(`Cidadão avisado no WhatsApp (protocolo ${res.protocolo})${res.comOficio ? " com o ofício em anexo" : ""}.`);
               else setErro(res.erro);
             }}
             className="wr-btn inline-flex items-center gap-1.5 disabled:opacity-50"

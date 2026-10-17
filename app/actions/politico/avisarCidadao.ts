@@ -18,16 +18,18 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { requireAuth, resolveActiveOrg } from "@/lib/auth/server";
 import { openSharedContactConversation } from "@/lib/messaging/open-shared-contact-conversation";
 import { sendMessageHandler } from "@/app/api/v1/messages/_handler";
+import { gerarOficioDemanda } from "@/app/actions/politico/gerarOficio";
 import { ApiError } from "@/lib/api/types";
 import type { SendMessageInput } from "@/lib/schemas";
 
-export type AvisoResultado = { ok: true; protocolo: string } | { ok: false; erro: string };
+export type AvisoResultado = { ok: true; protocolo: string; comOficio: boolean } | { ok: false; erro: string };
 
 interface DemandaParaAviso {
   id: string;
   contact_id: string | null;
   assunto: string | null;
   pol_orgao_destino: string | null;
+  pol_encaminhamento_ia: string | null;
   pol_oficio_numero: number | null;
   pol_oficio_ano: number | null;
   contacts: { name: string | null; phone_number: string | null } | null;
@@ -48,7 +50,7 @@ export async function avisarCidadao(demandaId: string): Promise<AvisoResultado> 
 
   const { data, error } = await db
     .from("demandas")
-    .select("id, contact_id, assunto, pol_orgao_destino, pol_oficio_numero, pol_oficio_ano, contacts(name, phone_number)")
+    .select("id, contact_id, assunto, pol_orgao_destino, pol_encaminhamento_ia, pol_oficio_numero, pol_oficio_ano, contacts(name, phone_number)")
     .eq("organization_id", org.orgId)
     .eq("id", demandaId)
     .maybeSingle();
@@ -77,18 +79,64 @@ export async function avisarCidadao(demandaId: string): Promise<AvisoResultado> 
     return { ok: false, erro: "Não consegui abrir a conversa do cidadão." };
   }
 
-  const protocolo = protocoloDe(d);
-  const primeiroNome = (contato.name ?? "").trim().split(/\s+/)[0] || "tudo bem";
-  const assunto = d.assunto?.trim();
-  const orgao = d.pol_orgao_destino?.trim();
-  const corpo =
-    `Olá, ${primeiroNome}! Sua demanda (protocolo ${protocolo})` +
-    (assunto ? ` sobre "${assunto}"` : "") +
-    ` foi registrada no gabinete` +
-    (orgao ? ` e já encaminhamos o ofício à ${orgao}.` : ` e já encaminhamos o ofício ao órgão competente.`) +
-    ` Assim que houver novidades, retornaremos por aqui. Obrigado por nos acionar.`;
+  // Ofício em PDF para anexar: se houver encaminhamento, garante que o ofício
+  // existe (gera se preciso) e baixa os bytes. Sem encaminhamento, segue sem anexo.
+  let numero = d.pol_oficio_numero;
+  let ano = d.pol_oficio_ano;
+  let oficioBytes: Buffer | null = null;
+  const oficioPath = `${org.orgId}/${demandaId}/oficio.pdf`;
+  if (d.pol_encaminhamento_ia?.trim()) {
+    let dl = await admin.storage.from("gabinete-anexos").download(oficioPath);
+    if (dl.error || !dl.data) {
+      const g = await gerarOficioDemanda(demandaId);
+      if (g.ok) {
+        numero = g.numero;
+        ano = g.ano;
+      }
+      dl = await admin.storage.from("gabinete-anexos").download(oficioPath);
+    }
+    if (dl.data) oficioBytes = Buffer.from(await dl.data.arrayBuffer());
+  }
 
-  const input: SendMessageInput = { conversation_id: conversationId, type: "text", body: corpo };
+  const protocolo = numero && ano ? `OF ${String(numero).padStart(3, "0")}/${ano}` : protocoloDe(d);
+  const primeiroNome = (contato.name ?? "").trim().split(/\s+/)[0] ?? "";
+  const saudacao = primeiroNome ? `Olá, ${primeiroNome}!` : "Olá!";
+  const assunto = d.assunto?.trim();
+  const corpo =
+    `${saudacao} Passo para avisar que a sua demanda (protocolo ${protocolo})` +
+    (assunto ? ` sobre "${assunto}"` : "") +
+    ` já foi encaminhada ao órgão competente para a resolução.` +
+    ` Assim que houver novidades, te retorno por aqui, ok?` +
+    (oficioBytes ? ` Encaminho o ofício para seu conhecimento.` : "") +
+    ` Sigo à disposição. Conte sempre com o nosso gabinete.`;
+
+  // Com ofício: copia o PDF para o bucket da conversa (whatsapp-media sob
+  // {org}/{conversa}/, exigência do handler) e envia como DOCUMENTO com o texto
+  // de legenda — uma única mensagem. Sem ofício: texto puro.
+  let input: SendMessageInput;
+  if (oficioBytes) {
+    const nomeArquivo = `Oficio-${String(numero ?? 0).padStart(3, "0")}-${ano ?? new Date().getFullYear()}.pdf`;
+    const waPath = `${org.orgId}/${conversationId}/${nomeArquivo}`;
+    const up = await admin.storage
+      .from("whatsapp-media")
+      .upload(waPath, oficioBytes, { contentType: "application/pdf", upsert: true });
+    if (up.error) {
+      // Falhou copiar o anexo: não perde o aviso — manda ao menos o texto.
+      input = { conversation_id: conversationId, type: "text", body: corpo };
+    } else {
+      input = {
+        conversation_id: conversationId,
+        type: "document",
+        media_storage_path: waPath,
+        media_mime: "application/pdf",
+        media_size_bytes: oficioBytes.length,
+        body: corpo,
+      };
+    }
+  } else {
+    input = { conversation_id: conversationId, type: "text", body: corpo };
+  }
+
   try {
     await sendMessageHandler(
       db,
@@ -100,5 +148,5 @@ export async function avisarCidadao(demandaId: string): Promise<AvisoResultado> 
     return { ok: false, erro: `Não foi possível enviar: ${msg}` };
   }
 
-  return { ok: true, protocolo };
+  return { ok: true, protocolo, comOficio: !!oficioBytes && input.type === "document" };
 }
