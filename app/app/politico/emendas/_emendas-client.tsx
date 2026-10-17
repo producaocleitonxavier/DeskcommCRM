@@ -12,6 +12,7 @@ import { KpiCard } from "@/components/politico/kpi-card";
 import { BarChartCard } from "@/components/politico/bar-chart-card";
 import { SectionHeader } from "@/components/politico/section-header";
 import { EmptyState } from "@/components/politico/empty-state";
+import { ExportCsv } from "@/components/politico/export-csv";
 
 const STATUS: Record<string, { label: string; bg: string; fg: string }> = {
   rascunho: { label: "Rascunho", bg: "#F0F0EB", fg: "#5B606B" },
@@ -50,6 +51,16 @@ export default function EmendasClient({ kpis, valorPorArea, emendas }: EmendasCl
         action={{ label: "+ Nova emenda", href: "/app/politico/emendas/novo" }}
         actionTone="accent"
       />
+
+      {emendas.length > 0 && (
+        <div className="flex justify-end">
+          <ExportCsv
+            filename="emendas.csv"
+            headers={["Número", "Ano", "Área", "Município", "Entidade", "Status", "Indicado", "Pago"]}
+            rows={emendas.map((e) => [e.numero, e.ano, e.area, e.municipio, e.entidade, e.status, e.valorIndicado, e.valorPago])}
+          />
+        </div>
+      )}
 
       <section className="grid grid-cols-1 gap-4 sm:grid-cols-3">
         <KpiCard label="Total alocado" valor={kpis.alocado} icone={Wallet} />

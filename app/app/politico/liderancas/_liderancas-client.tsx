@@ -24,6 +24,7 @@ import {
 import { KpiCard } from "@/components/politico/kpi-card";
 import { SectionHeader } from "@/components/politico/section-header";
 import { EmptyState } from "@/components/politico/empty-state";
+import { ExportCsv } from "@/components/politico/export-csv";
 import type { Lideranca } from "./page";
 
 const TIPO_LABELS: Record<string, string> = {
@@ -93,6 +94,19 @@ export default function LiderancasClient({ liderancas }: LiderancasClientProps) 
         subtitle="Rede de mobilização — aniversários, WhatsApp e engajamento."
         action={{ label: "+ Adicionar liderança", href: "/app/politico/liderancas/novo" }}
       />
+
+      {liderancas.length > 0 && (
+        <div className="flex justify-end">
+          <ExportCsv
+            filename="liderancas.csv"
+            headers={["Nome", "Apelido", "Tipo", "Cargo", "Cidade", "Bairro", "WhatsApp", "Aniversário", "Mobilizados", "Eventos", "Engajamento", "Status"]}
+            rows={liderancas.map((l) => [
+              l.nome, l.apelido, TIPO_LABELS[l.tipo] ?? l.tipo, l.cargo, l.cidade, l.bairro,
+              l.whatsapp, l.aniversario, l.leads_mobilizados, l.eventos_organizados, l.nivel_engajamento, l.status,
+            ])}
+          />
+        </div>
+      )}
 
       {liderancas.length === 0 ? (
         <EmptyState

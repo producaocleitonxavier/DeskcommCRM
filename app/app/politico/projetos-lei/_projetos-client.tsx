@@ -11,6 +11,7 @@ import { CheckCircle2, FileText, Scale, Target } from "lucide-react";
 import { KpiCard } from "@/components/politico/kpi-card";
 import { SectionHeader } from "@/components/politico/section-header";
 import { EmptyState } from "@/components/politico/empty-state";
+import { ExportCsv } from "@/components/politico/export-csv";
 
 const STATUS: Record<string, { label: string; bg: string; fg: string }> = {
   rascunho: { label: "Rascunho", bg: "#F0F0EB", fg: "#5B606B" },
@@ -60,6 +61,19 @@ export default function ProjetosClient({ kpis, projetos }: ProjetosClientProps) 
         action={{ label: "+ Novo projeto", href: "/app/politico/projetos-lei/novo" }}
         actionTone="accent"
       />
+
+      {projetos.length > 0 && (
+        <div className="flex justify-end">
+          <ExportCsv
+            filename="projetos-de-lei.csv"
+            headers={["Número", "Tipo", "Esfera", "Título", "Status", "Comissão", "Autoria", "Alinhado", "Apresentação", "Última mov."]}
+            rows={projetos.map((p) => [
+              p.numero, p.tipo, p.esfera, p.titulo, p.status, p.comissao,
+              p.autorMandatario ? "De autoria" : "", p.alinhamento ? "Sim" : "", p.dataApresentacao, p.dataUltimaMov,
+            ])}
+          />
+        </div>
+      )}
 
       <section className="grid grid-cols-2 gap-4 lg:grid-cols-4">
         <KpiCard label="Em tramitação" valor={kpis.emTramitacao} icone={Scale} />
