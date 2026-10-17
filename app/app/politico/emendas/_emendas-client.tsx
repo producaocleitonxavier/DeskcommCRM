@@ -10,7 +10,7 @@ import { CheckCircle2, Clock, Wallet } from "lucide-react";
 
 import { KpiCard } from "@/components/politico/kpi-card";
 import { BarChartCard } from "@/components/politico/bar-chart-card";
-import { SectionHeader } from "@/components/politico/section-header";
+import { CommandHero } from "@/components/politico/command-hero";
 import { EmptyState } from "@/components/politico/empty-state";
 import { ExportCsv } from "@/components/politico/export-csv";
 
@@ -45,11 +45,11 @@ export interface EmendasClientProps {
 export default function EmendasClient({ kpis, valorPorArea, emendas }: EmendasClientProps) {
   return (
     <div className="mx-auto max-w-[1140px] px-4 py-7 space-y-6" style={{ background: "var(--color-bg)" }}>
-      <SectionHeader
-        title="Emendas Parlamentares"
-        subtitle="Valores, destino e status de execução."
-        action={{ label: "+ Nova emenda", href: "/app/politico/emendas/novo" }}
-        actionTone="accent"
+      <CommandHero
+        eyebrow="Gabinete · Emendas"
+        titulo="Emendas Parlamentares"
+        subtitulo="Valores, destino e status de execução."
+        acoes={[{ href: "/app/politico/emendas/novo", label: "+ Nova emenda", primary: true }]}
       />
 
       {emendas.length > 0 && (

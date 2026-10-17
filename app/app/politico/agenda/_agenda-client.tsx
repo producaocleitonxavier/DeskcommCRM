@@ -10,7 +10,7 @@ import Link from "next/link";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 
 import { KpiCard } from "@/components/politico/kpi-card";
-import { SectionHeader } from "@/components/politico/section-header";
+import { CommandHero } from "@/components/politico/command-hero";
 import { Calendar, CalendarCheck, Clock, Hourglass } from "lucide-react";
 
 export interface Compromisso {
@@ -92,11 +92,11 @@ export default function AgendaClient({ compromissos }: AgendaClientProps) {
 
   return (
     <div className="mx-auto max-w-[1140px] px-4 py-7 space-y-6" style={{ background: "var(--color-bg)" }}>
-      <SectionHeader
-        title="Agenda"
-        subtitle="Compromissos do mandato — reuniões, visitas, audiências e eventos."
-        action={{ label: "+ Novo compromisso", href: "/app/politico/agenda/novo" }}
-        actionTone="accent"
+      <CommandHero
+        eyebrow="Gabinete · Agenda"
+        titulo="Agenda"
+        subtitulo="Compromissos do mandato — reuniões, visitas, audiências e eventos."
+        acoes={[{ href: "/app/politico/agenda/novo", label: "+ Novo compromisso", primary: true }]}
       />
 
       <section className="grid grid-cols-2 gap-4 lg:grid-cols-4">

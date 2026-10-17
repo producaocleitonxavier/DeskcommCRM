@@ -25,6 +25,7 @@ import { KpiCard } from "@/components/politico/kpi-card";
 import { SectionHeader } from "@/components/politico/section-header";
 import { EmptyState } from "@/components/politico/empty-state";
 import { ExportCsv } from "@/components/politico/export-csv";
+import { CommandHero } from "@/components/politico/command-hero";
 import type { Lideranca } from "./page";
 
 const TIPO_LABELS: Record<string, string> = {
@@ -89,10 +90,11 @@ export default function LiderancasClient({ liderancas }: LiderancasClientProps) 
 
   return (
     <div className="mx-auto max-w-[1140px] px-4 py-7 space-y-6" style={{ background: "var(--color-bg)" }}>
-      <SectionHeader
-        title="Lideranças"
-        subtitle="Rede de mobilização — aniversários, WhatsApp e engajamento."
-        action={{ label: "+ Adicionar liderança", href: "/app/politico/liderancas/novo" }}
+      <CommandHero
+        eyebrow="Gabinete · Lideranças"
+        titulo="Lideranças"
+        subtitulo="Rede de mobilização — aniversários, WhatsApp e engajamento."
+        acoes={[{ href: "/app/politico/liderancas/novo", label: "+ Adicionar liderança", primary: true }]}
       />
 
       {liderancas.length > 0 && (

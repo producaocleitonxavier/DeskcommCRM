@@ -9,7 +9,7 @@ import Link from "next/link";
 import { CheckCircle2, FileText, Scale, Target } from "lucide-react";
 
 import { KpiCard } from "@/components/politico/kpi-card";
-import { SectionHeader } from "@/components/politico/section-header";
+import { CommandHero } from "@/components/politico/command-hero";
 import { EmptyState } from "@/components/politico/empty-state";
 import { ExportCsv } from "@/components/politico/export-csv";
 
@@ -55,11 +55,11 @@ function data(d: string | null): string {
 export default function ProjetosClient({ kpis, projetos }: ProjetosClientProps) {
   return (
     <div className="mx-auto max-w-[1140px] px-4 py-7 space-y-6" style={{ background: "var(--color-bg)" }}>
-      <SectionHeader
-        title="Projetos de Lei"
-        subtitle="Acompanhamento legislativo — projetos, indicações e requerimentos."
-        action={{ label: "+ Novo projeto", href: "/app/politico/projetos-lei/novo" }}
-        actionTone="accent"
+      <CommandHero
+        eyebrow="Gabinete · Projetos de Lei"
+        titulo="Projetos de Lei"
+        subtitulo="Acompanhamento legislativo — projetos, indicações e requerimentos."
+        acoes={[{ href: "/app/politico/projetos-lei/novo", label: "+ Novo projeto", primary: true }]}
       />
 
       {projetos.length > 0 && (
