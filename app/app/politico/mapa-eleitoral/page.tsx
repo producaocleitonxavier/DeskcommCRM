@@ -12,6 +12,7 @@ import { redirect } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { requireAuth, resolveActiveOrg } from "@/lib/auth/server";
+import { CommandHero } from "@/components/politico/command-hero";
 import TerritorioClient, { type CidadeRow } from "./_territorio-client";
 
 export const dynamic = "force-dynamic";
@@ -208,36 +209,35 @@ export default async function TerritorioPage({
 
   return (
     <div className="mx-auto max-w-[1140px] px-4 py-7 space-y-[18px]">
-      {/* ── Header card ─────────────────────────────────────────── */}
-      <header className="wr-card p-6 sm:p-7 flex flex-wrap items-center justify-between gap-4">
-        <div>
-          <h1 className="font-heading text-[36px] font-bold leading-tight">Território</h1>
-          <p className="mt-1.5 text-base" style={{ color: "var(--color-text-muted)" }}>
-            Onde estão os votos e onde falta gente cadastrada.
-          </p>
-        </div>
-        <div role="tablist" aria-label="Camadas do território" className="flex gap-1">
-          {tabs.map((tab) => {
-            const active = camada === tab.value;
-            return (
-              <Link
-                key={tab.value}
-                href={tab.href}
-                role="tab"
-                aria-selected={active}
-                className="inline-flex items-center h-10 px-4 rounded-full font-semibold text-sm transition-colors"
-                style={
-                  active
-                    ? { background: "#16181D", color: "#FFFFFF" }
-                    : { background: "var(--color-surface)", color: "var(--color-text-muted)", border: "1px solid var(--color-border)" }
-                }
-              >
-                {tab.label}
-              </Link>
-            );
-          })}
-        </div>
-      </header>
+      {/* ── Header (Centro de Comando) ──────────────────────────── */}
+      <CommandHero
+        eyebrow="War Room · Território"
+        titulo="Território"
+        subtitulo="Onde estão os votos e onde falta gente cadastrada."
+        extra={
+          <div role="tablist" aria-label="Camadas do território" className="flex gap-1.5">
+            {tabs.map((tab) => {
+              const active = camada === tab.value;
+              return (
+                <Link
+                  key={tab.value}
+                  href={tab.href}
+                  role="tab"
+                  aria-selected={active}
+                  className="inline-flex min-h-[40px] items-center rounded-full px-4 text-sm font-semibold transition-colors"
+                  style={
+                    active
+                      ? { background: "#D7F36A", color: "#14181F" }
+                      : { border: "1px solid rgba(255,255,255,0.18)", color: "rgba(255,255,255,0.9)" }
+                  }
+                >
+                  {tab.label}
+                </Link>
+              );
+            })}
+          </div>
+        }
+      />
 
       {/* ── Camada: Oportunidades (Zonas) ───────────────────────── */}
       {camada === "oportunidades" &&
