@@ -8,7 +8,7 @@
 import { useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, Camera, Loader2, MessageCircle, Pencil, X } from "lucide-react";
+import { ArrowLeft, Camera, Check, Link2, Loader2, MessageCircle, Pencil, X } from "lucide-react";
 
 import { atualizarRegistro } from "@/app/actions/politico/gabinete-actions";
 import { uploadFotoLideranca } from "@/lib/politico/foto-lideranca";
@@ -98,6 +98,19 @@ export default function DetalheLiderancaClient({ lideranca, fotoUrl, territorios
   const [foto, setFoto] = useState<string | null>(fotoUrl);
   const [enviandoFoto, setEnviandoFoto] = useState(false);
   const fotoRef = useRef<HTMLInputElement>(null);
+  const [linkCopiado, setLinkCopiado] = useState(false);
+
+  async function copiarLinkCaptacao() {
+    const url = `${window.location.origin}/c/${l.id}`;
+    try {
+      await navigator.clipboard.writeText(url);
+    } catch {
+      window.prompt("Copie o link de captação:", url);
+      return;
+    }
+    setLinkCopiado(true);
+    setTimeout(() => setLinkCopiado(false), 2500);
+  }
 
   async function trocarFoto(file: File) {
     setErro(null);
@@ -216,12 +229,16 @@ export default function DetalheLiderancaClient({ lideranca, fotoUrl, territorios
               </p>
             </div>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             {waLink && (
               <a href={waLink} target="_blank" rel="noopener noreferrer" className="wr-btn inline-flex items-center gap-2" style={{ color: "#22C55E" }}>
                 <MessageCircle className="h-4 w-4" aria-hidden /> WhatsApp
               </a>
             )}
+            <button type="button" onClick={copiarLinkCaptacao} className="wr-btn inline-flex items-center gap-2" title="Copiar link público de captação desta liderança">
+              {linkCopiado ? <Check className="h-4 w-4" aria-hidden /> : <Link2 className="h-4 w-4" aria-hidden />}
+              {linkCopiado ? "Copiado!" : "Link de captação"}
+            </button>
             {!editando && (
               <button type="button" onClick={() => setEditando(true)} className="wr-btn inline-flex items-center gap-2">
                 <Pencil className="h-4 w-4" aria-hidden /> Editar

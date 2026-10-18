@@ -5,6 +5,12 @@
 export const PUBLIC_PATHS: RegExp[] = [
   // Link público persistido: org e destino são resolvidos exclusivamente no servidor.
   /^\/api\/v1\/rastreio\/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i,
+  // CAPTAÇÃO PÚBLICA POR LIDERANÇA (War Room/Gabinete). A liderança compartilha
+  // o link /c/<uuid>; quem se cadastra entra na base da org JÁ atribuído a ela.
+  // Sem sessão: a org é derivada SÓ da liderança no servidor (nunca do corpo).
+  // Âncora `$` + forma de UUID de propósito — nenhum sub-path nasce público.
+  /^\/c\/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i,
+  /^\/api\/public\/captacao\/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i,
   /^\/$/,
   /^\/login(\/.*)?$/,
   /^\/signup$/,
