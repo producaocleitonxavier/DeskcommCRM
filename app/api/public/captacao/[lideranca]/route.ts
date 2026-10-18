@@ -19,6 +19,7 @@ import { ok, fail } from "@/lib/api/wrappers";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { encontrarContatoPorTelefone } from "@/lib/channels/contato-por-telefone";
 import { canonicalPhoneBR } from "@/lib/channels/phone-variants";
+import { checkRateLimit } from "@/lib/ai/dispatcher/rate-limit";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -50,6 +51,15 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ lideranca:
   // Honeypot: bot preencheu o campo oculto → finge sucesso, não grava nada.
   if (parsed.data.website && parsed.data.website.trim().length > 0) {
     return ok({ recebido: true }, { status: 201, requestId });
+  }
+
+  // Rate limit (endpoint público): por IP e por liderança. O UUID do link é
+  // compartilhável (não secreto), então sem freio um bot poderia inflar a base.
+  const ip = (req.headers.get("x-forwarded-for") ?? "").split(",")[0]?.trim() || "desconhecido";
+  const porIp = await checkRateLimit(`captacao:ip:${ip}`, 8, 300);
+  const porLid = await checkRateLimit(`captacao:lid:${liderancaId}`, 60, 3600);
+  if (!porIp.allowed || !porLid.allowed) {
+    return fail("rate_limited", "Muitas tentativas. Tente novamente em alguns minutos.", 429, { requestId });
   }
 
   const admin = createAdminClient();
