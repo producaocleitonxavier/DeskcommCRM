@@ -5,12 +5,13 @@
  * grava via Supabase browser client (RLS). Link direto de WhatsApp.
  */
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, MessageCircle, Pencil, X } from "lucide-react";
+import { ArrowLeft, Camera, Loader2, MessageCircle, Pencil, X } from "lucide-react";
 
 import { atualizarRegistro } from "@/app/actions/politico/gabinete-actions";
+import { uploadFotoLideranca } from "@/lib/politico/foto-lideranca";
 
 interface Opcao {
   id: string;
@@ -42,7 +43,13 @@ export interface LiderancaDetalhe {
 
 export interface Props {
   lideranca: LiderancaDetalhe;
+  fotoUrl: string | null;
   territorios: Opcao[];
+}
+
+function iniciais(nome: string): string {
+  const p = nome.trim().split(/\s+/);
+  return ((p[0]?.[0] ?? "") + (p.length > 1 ? p[p.length - 1]?.[0] ?? "" : "")).toUpperCase() || "?";
 }
 
 const TIPOS: Opcao[] = [
@@ -81,13 +88,26 @@ function fmtData(d: string | null): string {
   return new Date(d).toLocaleDateString("pt-BR", { day: "2-digit", month: "short", year: "numeric" });
 }
 
-export default function DetalheLiderancaClient({ lideranca, territorios }: Props) {
+export default function DetalheLiderancaClient({ lideranca, fotoUrl, territorios }: Props) {
   const router = useRouter();
 
   const [l, setL] = useState<LiderancaDetalhe>(lideranca);
   const [editando, setEditando] = useState(false);
   const [salvando, setSalvando] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
+  const [foto, setFoto] = useState<string | null>(fotoUrl);
+  const [enviandoFoto, setEnviandoFoto] = useState(false);
+  const fotoRef = useRef<HTMLInputElement>(null);
+
+  async function trocarFoto(file: File) {
+    setErro(null);
+    setEnviandoFoto(true);
+    const res = await uploadFotoLideranca(l.id, file);
+    setEnviandoFoto(false);
+    if (!res.ok) return setErro(res.erro ?? "Falha ao enviar a foto.");
+    setFoto(URL.createObjectURL(file));
+    router.refresh();
+  }
 
   const [nome, setNome] = useState(l.nome ?? "");
   const [apelido, setApelido] = useState(l.apelido ?? "");
@@ -150,17 +170,51 @@ export default function DetalheLiderancaClient({ lideranca, territorios }: Props
 
       <header className="wr-card p-6 sm:p-7">
         <div className="flex flex-wrap items-start justify-between gap-3">
-          <div className="min-w-0">
-            <span className="inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold" style={{ background: sc.bg, color: sc.color }}>
-              {STATUS.find((s) => s.id === l.status)?.nome ?? l.status}
-            </span>
-            <h1 className="mt-2 font-heading text-2xl font-bold leading-tight" style={{ color: "var(--color-text)" }}>
-              {l.apelido || l.nome}
-            </h1>
-            <p className="mt-1 text-sm" style={{ color: "var(--color-text-muted)" }}>
-              {l.cargo ?? rotulo(TIPOS, l.tipo)}
-              {[l.cidade, l.bairro].filter(Boolean).length ? ` · ${[l.cidade, l.bairro].filter(Boolean).join(" · ")}` : ""}
-            </p>
+          <div className="flex min-w-0 items-center gap-4">
+            {/* Avatar com botão de trocar foto */}
+            <button
+              type="button"
+              onClick={() => fotoRef.current?.click()}
+              disabled={enviandoFoto}
+              className="group relative h-16 w-16 shrink-0 overflow-hidden rounded-full"
+              style={{ border: "1px solid var(--color-border)" }}
+              aria-label="Trocar foto da liderança"
+            >
+              {foto ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={foto} alt={l.nome} className="h-full w-full object-cover" />
+              ) : (
+                <span className="flex h-full w-full items-center justify-center text-base font-bold text-white" style={{ background: "linear-gradient(135deg, #6B79DD 0%, #26318F 100%)" }}>
+                  {iniciais(l.nome)}
+                </span>
+              )}
+              <span className="absolute inset-0 flex items-center justify-center bg-black/45 opacity-0 transition-opacity group-hover:opacity-100">
+                {enviandoFoto ? <Loader2 className="h-5 w-5 animate-spin text-white" /> : <Camera className="h-5 w-5 text-white" />}
+              </span>
+            </button>
+            <input
+              ref={fotoRef}
+              type="file"
+              accept="image/png,image/jpeg,image/webp"
+              className="hidden"
+              onChange={(e) => {
+                const f = e.target.files?.[0];
+                if (fotoRef.current) fotoRef.current.value = "";
+                if (f) void trocarFoto(f);
+              }}
+            />
+            <div className="min-w-0">
+              <span className="inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold" style={{ background: sc.bg, color: sc.color }}>
+                {STATUS.find((s) => s.id === l.status)?.nome ?? l.status}
+              </span>
+              <h1 className="mt-2 font-heading text-2xl font-bold leading-tight" style={{ color: "var(--color-text)" }}>
+                {l.apelido || l.nome}
+              </h1>
+              <p className="mt-1 text-sm" style={{ color: "var(--color-text-muted)" }}>
+                {l.cargo ?? rotulo(TIPOS, l.tipo)}
+                {[l.cidade, l.bairro].filter(Boolean).length ? ` · ${[l.cidade, l.bairro].filter(Boolean).join(" · ")}` : ""}
+              </p>
+            </div>
           </div>
           <div className="flex items-center gap-2">
             {waLink && (

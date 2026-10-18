@@ -29,6 +29,8 @@ export interface Lideranca {
   nivel_engajamento: string;
   status: string;
   ultimo_contato_em: string | null;
+  foto_path: string | null;
+  fotoUrl: string | null;
 }
 
 async function buscarLiderancas(organizationId: string): Promise<Lideranca[]> {
@@ -37,7 +39,7 @@ async function buscarLiderancas(organizationId: string): Promise<Lideranca[]> {
     db
       .from("pol_liderancas")
       .select(
-        "id, nome, apelido, cargo, tipo, whatsapp, aniversario, cidade, bairro, leads_mobilizados, eventos_organizados, nivel_engajamento, status, ultimo_contato_em",
+        "id, nome, apelido, cargo, tipo, whatsapp, aniversario, cidade, bairro, leads_mobilizados, eventos_organizados, nivel_engajamento, status, ultimo_contato_em, foto_path",
       )
       .eq("organization_id", organizationId)
       .order("status", { ascending: true })
@@ -68,11 +70,25 @@ async function buscarLiderancas(organizationId: string): Promise<Lideranca[]> {
     contarEventos.set(e.lideranca_id, (contarEventos.get(e.lideranca_id) ?? 0) + 1);
   }
 
-  // Sobrepõe os contadores estáticos (sempre 0) pelos números REAIS ao vivo.
-  return ((data ?? []) as Lideranca[]).map((l) => ({
+  const linhas = (data ?? []) as Lideranca[];
+
+  // Fotos: assina em LOTE (uma chamada) as que têm foto_path.
+  const urlPorPath = new Map<string, string>();
+  const paths = linhas.map((l) => l.foto_path).filter((p): p is string => !!p);
+  if (paths.length > 0) {
+    const { createAdminClient } = await import("@/lib/supabase/admin");
+    const { data: signed } = await createAdminClient().storage.from("gabinete-liderancas").createSignedUrls(paths, 60 * 60);
+    for (const s of signed ?? []) {
+      if (s.signedUrl && s.path) urlPorPath.set(s.path, s.signedUrl);
+    }
+  }
+
+  // Sobrepõe os contadores estáticos (sempre 0) pelos números REAIS ao vivo + foto.
+  return linhas.map((l) => ({
     ...l,
     leads_mobilizados: contarPessoas.get(l.id) ?? 0,
     eventos_organizados: contarEventos.get(l.id) ?? 0,
+    fotoUrl: l.foto_path ? urlPorPath.get(l.foto_path) ?? null : null,
   }));
 }
 

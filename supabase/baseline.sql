@@ -55661,3 +55661,8 @@ alter table public.pol_liderancas add constraint pol_liderancas_tipo_check check
   'apoiador', 'cabo_eleitoral', 'vereador_aliado', 'lider_religioso',
   'deputado', 'prefeito', 'vice_prefeito', 'outro'
 ));
+-- ── 9014: foto da lideranca — apendice idempotente. Ver migration 9014. ──
+insert into storage.buckets (id, name, public, file_size_limit)
+values ('gabinete-liderancas', 'gabinete-liderancas', false, 5242880)
+on conflict (id) do update set file_size_limit = excluded.file_size_limit;
+alter table public.pol_liderancas add column if not exists foto_path text;

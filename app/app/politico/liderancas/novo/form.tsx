@@ -6,12 +6,13 @@
  * atribuição de cadastros à liderança acontece no cadastro de Pessoas.
  */
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, Check } from "lucide-react";
+import { ArrowLeft, Camera, Check } from "lucide-react";
 
 import { criarRegistro } from "@/app/actions/politico/gabinete-actions";
+import { uploadFotoLideranca } from "@/lib/politico/foto-lideranca";
 
 interface Opcao {
   id: string;
@@ -73,6 +74,10 @@ export default function NovaLiderancaForm({ territorios }: NovaLiderancaFormProp
   const [status, setStatus] = useState("ativo");
   const [observacoes, setObservacoes] = useState("");
 
+  const [foto, setFoto] = useState<File | null>(null);
+  const [fotoPreview, setFotoPreview] = useState<string | null>(null);
+  const fotoRef = useRef<HTMLInputElement>(null);
+
   const [salvando, setSalvando] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
 
@@ -106,6 +111,8 @@ export default function NovaLiderancaForm({ territorios }: NovaLiderancaFormProp
       setErro(res.erro);
       return;
     }
+    // Foto (opcional): sobe agora que a liderança tem id.
+    if (res.id && foto) await uploadFotoLideranca(res.id, foto);
     router.push("/app/politico/liderancas");
     router.refresh();
   }
@@ -123,6 +130,44 @@ export default function NovaLiderancaForm({ territorios }: NovaLiderancaFormProp
       </div>
 
       <form onSubmit={salvar} className="space-y-5">
+        {/* Foto (opcional) */}
+        <div className="wr-card flex items-center gap-4 p-5 sm:p-6">
+          <button
+            type="button"
+            onClick={() => fotoRef.current?.click()}
+            className="relative h-16 w-16 shrink-0 overflow-hidden rounded-full"
+            style={{ border: "1px dashed var(--color-border)", background: "var(--color-surface-elevated)" }}
+            aria-label="Escolher foto"
+          >
+            {fotoPreview ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={fotoPreview} alt="" className="h-full w-full object-cover" />
+            ) : (
+              <span className="flex h-full w-full items-center justify-center" style={{ color: "var(--color-text-subtle)" }}>
+                <Camera className="h-5 w-5" aria-hidden />
+              </span>
+            )}
+          </button>
+          <input
+            ref={fotoRef}
+            type="file"
+            accept="image/png,image/jpeg,image/webp"
+            className="hidden"
+            onChange={(e) => {
+              const f = e.target.files?.[0];
+              if (fotoRef.current) fotoRef.current.value = "";
+              if (f) {
+                setFoto(f);
+                setFotoPreview(URL.createObjectURL(f));
+              }
+            }}
+          />
+          <div>
+            <Label>Foto (opcional)</Label>
+            <p className="text-xs" style={{ color: "var(--color-text-subtle)" }}>Aparece na lista e no detalhe. PNG/JPG, até 5MB.</p>
+          </div>
+        </div>
+
         {/* Dados */}
         <section className="wr-card space-y-4 p-5 sm:p-6">
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">

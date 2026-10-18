@@ -179,13 +179,23 @@ export default function LiderancasClient({ liderancas }: LiderancasClientProps) 
                     className="wr-card flex flex-col gap-4 p-5 transition-shadow duration-200 hover:shadow-md sm:flex-row sm:items-center"
                   >
                     <div className="flex min-w-0 flex-1 items-center gap-3">
-                      <span
-                        className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full text-sm font-bold text-white"
-                        style={{ background: "linear-gradient(135deg, #6B79DD 0%, #26318F 100%)" }}
-                        aria-hidden
-                      >
-                        {iniciais(nome)}
-                      </span>
+                      {l.fotoUrl ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img
+                          src={l.fotoUrl}
+                          alt={nome}
+                          className="h-12 w-12 shrink-0 rounded-full object-cover"
+                          style={{ border: "1px solid var(--color-border)" }}
+                        />
+                      ) : (
+                        <span
+                          className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full text-sm font-bold text-white"
+                          style={{ background: "linear-gradient(135deg, #6B79DD 0%, #26318F 100%)" }}
+                          aria-hidden
+                        >
+                          {iniciais(nome)}
+                        </span>
+                      )}
                       <div className="min-w-0">
                         <div className="flex flex-wrap items-center gap-2">
                           <span className="truncate font-semibold leading-tight">{nome}</span>

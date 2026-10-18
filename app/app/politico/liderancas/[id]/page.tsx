@@ -29,7 +29,7 @@ export default async function LiderancaDetalhePage({
     db
       .from("pol_liderancas")
       .select(
-        "id, nome, apelido, cargo, tipo, whatsapp, email, instagram, aniversario, territory_id, cidade, bairro, zona_eleitoral, leads_mobilizados, eventos_organizados, ultimo_contato_em, nivel_engajamento, status, observacoes, contacts(name, phone_number)",
+        "id, nome, apelido, cargo, tipo, whatsapp, email, instagram, aniversario, territory_id, cidade, bairro, zona_eleitoral, leads_mobilizados, eventos_organizados, ultimo_contato_em, nivel_engajamento, status, observacoes, foto_path, contacts(name, phone_number)",
       )
       .eq("organization_id", org.orgId)
       .eq("id", id)
@@ -47,11 +47,18 @@ export default async function LiderancaDetalhePage({
     nome: t.state_code ? `${t.name} · ${t.state_code}` : t.name,
   }));
 
+  const base = lidRes.data as unknown as LiderancaDetalhe & { foto_path: string | null };
+  let fotoUrl: string | null = null;
+  if (base.foto_path) {
+    const { createAdminClient } = await import("@/lib/supabase/admin");
+    const { data: signed } = await createAdminClient().storage.from("gabinete-liderancas").createSignedUrl(base.foto_path, 60 * 60);
+    fotoUrl = signed?.signedUrl ?? null;
+  }
   const lideranca = {
-    ...(lidRes.data as unknown as LiderancaDetalhe),
+    ...base,
     leads_mobilizados: pessoasRes.count ?? 0,
     eventos_organizados: eventosRes.count ?? 0,
   };
 
-  return <DetalheLiderancaClient lideranca={lideranca} territorios={territorios} />;
+  return <DetalheLiderancaClient lideranca={lideranca} fotoUrl={fotoUrl} territorios={territorios} />;
 }
