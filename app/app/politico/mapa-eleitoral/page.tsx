@@ -14,6 +14,8 @@ import { createClient } from "@/lib/supabase/server";
 import { requireAuth, resolveActiveOrg } from "@/lib/auth/server";
 import { CommandHero } from "@/components/politico/command-hero";
 import TerritorioClient, { type CidadeRow } from "./_territorio-client";
+import EleicoesClient from "./_eleicoes-client";
+import { listarEleicoes, candidatosDaEleicao, mapaMunicipio, listarMunicipios } from "@/app/actions/politico/intelEleitoral";
 
 export const dynamic = "force-dynamic";
 
@@ -153,12 +155,32 @@ async function buscarPrioridades(organizationId: string): Promise<PrioridadeRow[
   return (data ?? []) as unknown as PrioridadeRow[];
 }
 
+// -- Camada Eleições (Inteligência/TSE) --------------------------------------
+
+// Prioridade de cargo no seletor: Governador, Prefeito, Dep. Federal, Estadual, Vereador.
+const CARGO_PRIO: Record<number, number> = { 3: 0, 11: 1, 6: 2, 7: 3, 13: 4 };
+
+async function montarEleicoes(eleicaoParam?: string, candParam?: string) {
+  const eleicoes = await listarEleicoes();
+  if (eleicoes.length === 0) {
+    return { eleicoes: [], eleicaoInicial: 0, candidatos: [], candidatoInicial: "", pontos: [], nomes: {} as Record<string, string> };
+  }
+  eleicoes.sort(
+    (a, b) => b.ano - a.ano || (CARGO_PRIO[a.cargo_cod] ?? 9) - (CARGO_PRIO[b.cargo_cod] ?? 9) || b.turno - a.turno,
+  );
+  const sel = eleicoes.find((e) => String(e.id) === eleicaoParam) ?? eleicoes[0]!;
+  const [candidatos, nomes] = await Promise.all([candidatosDaEleicao(sel.id), listarMunicipios()]);
+  const candidatoInicial = candidatos.find((c) => c.nr === candParam)?.nr ?? candidatos[0]?.nr ?? "";
+  const pontos = candidatoInicial ? await mapaMunicipio(sel.id, candidatoInicial) : [];
+  return { eleicoes, eleicaoInicial: sel.id, candidatos, candidatoInicial, pontos, nomes };
+}
+
 // -- Componente principal ----------------------------------------------------
 
 export default async function TerritorioPage({
   searchParams,
 }: {
-  searchParams: Promise<{ camada?: string }>;
+  searchParams: Promise<{ camada?: string; eleicao?: string; cand?: string }>;
 }) {
   const user = await requireAuth();
 
@@ -172,6 +194,9 @@ export default async function TerritorioPage({
     camada === "oportunidades" ? buscarOportunidades(org.orgId) : Promise.resolve([]),
     camada === "prioridade" ? buscarPrioridades(org.orgId) : Promise.resolve([]),
   ]);
+
+  // Camada "Eleições" (Inteligência/TSE): choropleth por município.
+  const eleicoesData = camada === "eleicoes" ? await montarEleicoes(params.eleicao, params.cand) : null;
 
   // -- Camada oportunidades: cidades geolocalizadas + força --
   const cidades: CidadeRow[] = oportunidades
@@ -205,6 +230,7 @@ export default async function TerritorioPage({
   const tabs = [
     { value: "oportunidades", label: "Zonas", href: "/app/politico/mapa-eleitoral" },
     { value: "prioridade", label: "Prioridade", href: "/app/politico/mapa-eleitoral?camada=prioridade" },
+    { value: "eleicoes", label: "Eleições", href: "/app/politico/mapa-eleitoral?camada=eleicoes" },
   ];
 
   return (
@@ -341,6 +367,25 @@ export default async function TerritorioPage({
               </div>
             </section>
           </>
+        ))}
+
+      {/* ── Camada: Eleições (Inteligência/TSE) ──────────────────── */}
+      {camada === "eleicoes" &&
+        (eleicoesData && eleicoesData.eleicoes.length > 0 ? (
+          <EleicoesClient
+            eleicoes={eleicoesData.eleicoes}
+            eleicaoInicial={eleicoesData.eleicaoInicial}
+            candidatosIniciais={eleicoesData.candidatos}
+            candidatoInicial={eleicoesData.candidatoInicial}
+            pontosIniciais={eleicoesData.pontos}
+            nomes={eleicoesData.nomes}
+          />
+        ) : (
+          <div className="wr-card p-12 text-center">
+            <p className="text-sm" style={{ color: "var(--color-text-subtle)" }}>
+              Dados eleitorais ainda não carregados nesta instalação.
+            </p>
+          </div>
         ))}
     </div>
   );

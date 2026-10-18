@@ -55666,3 +55666,65 @@ insert into storage.buckets (id, name, public, file_size_limit)
 values ('gabinete-liderancas', 'gabinete-liderancas', false, 5242880)
 on conflict (id) do update set file_size_limit = excluded.file_size_limit;
 alter table public.pol_liderancas add column if not exists foto_path text;
+-- ── 9015: Modulo Inteligencia (Pilar 1 TSE) — tabelas de referencia intel_* (dados publicos, globais). Ver migration 9015. ──
+create table if not exists public.intel_elections (
+  id bigint generated always as identity primary key,
+  ano smallint not null, turno smallint not null default 1,
+  cargo_cod smallint not null, cargo text not null, uf char(2) not null,
+  created_at timestamptz not null default now(),
+  unique (ano, turno, cargo_cod, uf)
+);
+create table if not exists public.intel_municipios (
+  ibge_code char(7) primary key, tse_code text not null, nome text not null,
+  uf char(2) not null, latitude numeric, longitude numeric
+);
+create index if not exists intel_municipios_tse_idx on public.intel_municipios (tse_code);
+create index if not exists intel_municipios_uf_idx on public.intel_municipios (uf);
+create table if not exists public.intel_election_results (
+  id bigint generated always as identity primary key,
+  election_id bigint not null references public.intel_elections(id) on delete cascade,
+  ibge_code char(7) not null, tse_code text not null, municipio text not null,
+  nr_votavel text not null, nm_votavel text not null, partido_num smallint,
+  votos int not null default 0
+);
+create index if not exists intel_results_election_mun_idx on public.intel_election_results (election_id, ibge_code);
+create index if not exists intel_results_mun_idx on public.intel_election_results (ibge_code);
+create index if not exists intel_results_election_votos_idx on public.intel_election_results (election_id, votos desc);
+alter table public.intel_elections enable row level security;
+alter table public.intel_municipios enable row level security;
+alter table public.intel_election_results enable row level security;
+drop policy if exists intel_elections_read on public.intel_elections;
+create policy intel_elections_read on public.intel_elections for select to authenticated using (true);
+drop policy if exists intel_municipios_read on public.intel_municipios;
+create policy intel_municipios_read on public.intel_municipios for select to authenticated using (true);
+drop policy if exists intel_election_results_read on public.intel_election_results;
+create policy intel_election_results_read on public.intel_election_results for select to authenticated using (true);
+grant select on public.intel_elections to authenticated;
+grant select on public.intel_municipios to authenticated;
+grant select on public.intel_election_results to authenticated;
+revoke all on public.intel_elections from anon;
+revoke all on public.intel_municipios from anon;
+revoke all on public.intel_election_results from anon;
+-- ── 9016: Modulo Inteligencia (Pilar 1 TSE) — RPCs de agregacao do mapa de calor. Ver migration 9016. ──
+create or replace function public.intel_mapa_municipio(p_election bigint, p_nr text)
+returns table (ibge_code char(7), cand_votos int, total_votos bigint)
+language sql stable security invoker set search_path = public as $$
+  select r.ibge_code,
+         coalesce(sum(r.votos) filter (where r.nr_votavel = p_nr), 0)::int as cand_votos,
+         sum(r.votos) as total_votos
+  from public.intel_election_results r
+  where r.election_id = p_election
+  group by r.ibge_code;
+$$;
+create or replace function public.intel_eleicao_candidatos(p_election bigint, p_limit int default 100)
+returns table (nr_votavel text, nm_votavel text, partido_num smallint, votos bigint)
+language sql stable security invoker set search_path = public as $$
+  select r.nr_votavel, max(r.nm_votavel) as nm_votavel, max(r.partido_num) as partido_num, sum(r.votos) as votos
+  from public.intel_election_results r
+  where r.election_id = p_election
+  group by r.nr_votavel
+  order by sum(r.votos) desc
+  limit greatest(p_limit, 1);
+$$;
+grant execute on function public.intel_mapa_municipio(bigint, text) to authenticated;
+grant execute on function public.intel_eleicao_candidatos(bigint, int) to authenticated;
