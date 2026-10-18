@@ -3,6 +3,10 @@
 /**
  * Formulário público de captação (cadastro) vinculado a uma liderança.
  * Posta em /api/public/captacao/[lideranca]. Inclui honeypot (campo oculto).
+ *
+ * Hierarquia visual: o POLÍTICO no topo (logo OU nome grande) — é a peça que
+ * reforça a imagem do mandato. A plataforma (Guerrilheiros) só aparece pequena
+ * no rodapé, como assinatura de quem fornece a tecnologia.
  */
 
 import { useState } from "react";
@@ -10,11 +14,20 @@ import { useState } from "react";
 interface Props {
   liderancaId: string;
   liderancaNome: string;
-  gabineteNome: string;
+  politicoNome: string | null;
+  politicoCargo: string | null;
   logoUrl: string | null;
+  plataformaNome: string | null;
 }
 
-export default function CaptacaoClient({ liderancaId, liderancaNome, gabineteNome, logoUrl }: Props) {
+export default function CaptacaoClient({
+  liderancaId,
+  liderancaNome,
+  politicoNome,
+  politicoCargo,
+  logoUrl,
+  plataformaNome,
+}: Props) {
   const [nome, setNome] = useState("");
   const [telefone, setTelefone] = useState("");
   const [cidade, setCidade] = useState("");
@@ -23,6 +36,8 @@ export default function CaptacaoClient({ liderancaId, liderancaNome, gabineteNom
   const [enviando, setEnviando] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
   const [ok, setOk] = useState(false);
+
+  const tituloPolitico = politicoNome || "Gabinete";
 
   async function enviar(e: React.FormEvent) {
     e.preventDefault();
@@ -59,18 +74,28 @@ export default function CaptacaoClient({ liderancaId, liderancaNome, gabineteNom
 
   return (
     <div
-      className="flex min-h-screen items-center justify-center px-4 py-10"
+      className="flex min-h-screen flex-col items-center justify-center px-4 py-10"
       style={{ background: "linear-gradient(160deg,#0E1116 0%,#14181F 55%,#1A2410 100%)" }}
     >
       <div className="w-full max-w-md">
+        {/* Topo: a IDENTIDADE DO POLÍTICO em primeiro plano */}
         <div className="mb-6 flex flex-col items-center text-center">
           {logoUrl ? (
             // eslint-disable-next-line @next/next/no-img-element
-            <img src={logoUrl} alt={gabineteNome} className="mb-3 h-16 w-auto object-contain" />
-          ) : null}
-          <div className="text-[11px] font-bold uppercase tracking-[0.2em]" style={{ color: "#D7F36A" }}>
-            {gabineteNome}
-          </div>
+            <img src={logoUrl} alt={tituloPolitico} className="h-24 w-auto max-w-[260px] object-contain" />
+          ) : (
+            <>
+              <h2 className="font-heading text-2xl font-extrabold leading-tight sm:text-3xl" style={{ color: "#FFFFFF" }}>
+                {tituloPolitico}
+              </h2>
+              {politicoCargo ? (
+                <div className="mt-1 text-[12px] font-semibold uppercase tracking-[0.18em]" style={{ color: "#D7F36A" }}>
+                  {politicoCargo}
+                </div>
+              ) : null}
+              <div className="mt-3 h-[3px] w-12 rounded-full" style={{ background: "#D7F36A" }} />
+            </>
+          )}
         </div>
 
         <div className="rounded-2xl p-6 sm:p-7" style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.1)" }}>
@@ -138,6 +163,13 @@ export default function CaptacaoClient({ liderancaId, liderancaNome, gabineteNom
           )}
         </div>
       </div>
+
+      {/* Rodapé: assinatura discreta da plataforma */}
+      {plataformaNome ? (
+        <p className="mt-7 text-center text-[10px] uppercase tracking-[0.16em]" style={{ color: "rgba(255,255,255,0.28)" }}>
+          Tecnologia {plataformaNome}
+        </p>
+      ) : null}
 
       <style>{`
         .campo {
