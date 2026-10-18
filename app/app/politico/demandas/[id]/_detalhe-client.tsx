@@ -230,7 +230,19 @@ export default function DetalheDemandaClient({ demanda, territorios, liderancas,
       </div>
 
       {/* Cabeçalho */}
-      <header className="wr-card p-6 sm:p-7">
+      <header className="wr-card overflow-hidden p-6 sm:p-7">
+        {/* Faixa tactical (assinatura Centro de Comando) */}
+        <div
+          className="-mx-6 -mt-6 mb-5 px-6 py-2.5 sm:-mx-7 sm:-mt-7 sm:px-7"
+          style={{
+            background: "linear-gradient(135deg,#0E1116 0%,#14181F 55%,#1A2410 100%)",
+            borderBottom: "1px solid rgba(215,243,106,0.22)",
+          }}
+        >
+          <span className="text-[11px] font-bold uppercase tracking-[0.2em]" style={{ color: "#D7F36A" }}>
+            Gabinete · Atendimento ao cidadão
+          </span>
+        </div>
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div className="min-w-0">
             <span className="inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold" style={{ background: ec.bg, color: ec.color }}>

@@ -27,6 +27,7 @@ import { PieChartCard } from "@/components/politico/pie-chart-card";
 import { BarChartCard } from "@/components/politico/bar-chart-card";
 import { StatRow } from "@/components/politico/stat-row";
 import { SectionHeader } from "@/components/politico/section-header";
+import { CommandHero } from "@/components/politico/command-hero";
 import { EmptyState } from "@/components/politico/empty-state";
 import type { CallQueueStatus, DashboardData, FunilKpis } from "./page";
 
@@ -66,18 +67,24 @@ export default function DashboardClient({ dash, funil, calls }: DashboardClientP
           <ArrowLeft className="h-4 w-4" aria-hidden />
           War Room
         </Link>
-        <header className="wr-card mt-3 flex flex-wrap items-center justify-between gap-4 p-6 sm:p-7">
-          <div className="min-w-0">
-            <h1 className="font-heading text-3xl font-bold leading-tight lg:text-4xl">Dashboard</h1>
-            <p className="mt-1.5 text-base text-muted-foreground">Painel central da campanha</p>
-          </div>
-          {dash && (
-            <Badge>
-              <Users className="h-3.5 w-3.5" aria-hidden />
-              {dash.total_leads.toLocaleString("pt-BR")} leads
-            </Badge>
-          )}
-        </header>
+        <div className="mt-3">
+          <CommandHero
+            eyebrow="War Room · Painel"
+            titulo="Dashboard"
+            subtitulo="Panorama central da campanha."
+            extra={
+              dash ? (
+                <span
+                  className="inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold"
+                  style={{ background: "rgba(215,243,106,0.14)", color: "#D7F36A", border: "1px solid rgba(215,243,106,0.3)" }}
+                >
+                  <Users className="h-3.5 w-3.5" aria-hidden />
+                  {dash.total_leads.toLocaleString("pt-BR")} leads
+                </span>
+              ) : undefined
+            }
+          />
+        </div>
       </div>
 
       {!dash ? (

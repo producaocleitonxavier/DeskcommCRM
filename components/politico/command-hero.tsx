@@ -5,6 +5,7 @@
  */
 
 import Link from "next/link";
+import type { ReactNode } from "react";
 
 export interface CommandHeroAcao {
   href: string;
@@ -19,9 +20,11 @@ export interface CommandHeroProps {
   titulo: string;
   subtitulo?: string;
   acoes?: CommandHeroAcao[];
+  /** Conteúdo livre no canto direito (badges, contadores) — não é link. */
+  extra?: ReactNode;
 }
 
-export function CommandHero({ eyebrow, titulo, subtitulo, acoes = [] }: CommandHeroProps) {
+export function CommandHero({ eyebrow, titulo, subtitulo, acoes = [], extra }: CommandHeroProps) {
   return (
     <header
       className="wr-card relative overflow-hidden p-6 sm:p-7"
@@ -49,8 +52,9 @@ export function CommandHero({ eyebrow, titulo, subtitulo, acoes = [] }: CommandH
             </p>
           ) : null}
         </div>
-        {acoes.length > 0 && (
-          <div className="flex flex-wrap gap-2">
+        {(acoes.length > 0 || extra) && (
+          <div className="flex flex-wrap items-center gap-2">
+            {extra}
             {acoes.map((a) =>
               a.primary ? (
                 <Link

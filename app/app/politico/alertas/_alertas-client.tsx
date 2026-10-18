@@ -12,7 +12,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { AlertOctagon, AlertTriangle, Bell, Info, Loader2 } from "lucide-react";
 
-import { SectionHeader } from "@/components/politico/section-header";
+import { CommandHero } from "@/components/politico/command-hero";
 import { EmptyState } from "@/components/politico/empty-state";
 import type { Alerta } from "./page";
 
@@ -137,18 +137,22 @@ export default function AlertasClient({ alertas, filtros, criticosAtivos }: Aler
 
   return (
     <div className="mx-auto max-w-[1140px] px-4 py-7 space-y-6" style={{ background: "var(--color-bg)" }}>
-      <div className="flex flex-wrap items-end justify-between gap-3">
-        <SectionHeader title="Central de Alertas" subtitle="Sentimento, adversários, crises e fake news." />
-        {criticosAtivos > 0 && (
-          <span
-            className="inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold"
-            style={{ background: "#FBE4E2", color: "#A3302A" }}
-          >
-            <AlertOctagon className="h-3.5 w-3.5" aria-hidden />
-            {criticosAtivos} {criticosAtivos === 1 ? "crítico ativo" : "críticos ativos"}
-          </span>
-        )}
-      </div>
+      <CommandHero
+        eyebrow="War Room · Monitoramento"
+        titulo="Central de Alertas"
+        subtitulo="Sentimento, adversários, crises e fake news."
+        extra={
+          criticosAtivos > 0 ? (
+            <span
+              className="inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold"
+              style={{ background: "rgba(201,114,99,0.18)", color: "#F0A59A", border: "1px solid rgba(201,114,99,0.4)" }}
+            >
+              <AlertOctagon className="h-3.5 w-3.5" aria-hidden />
+              {criticosAtivos} {criticosAtivos === 1 ? "crítico ativo" : "críticos ativos"}
+            </span>
+          ) : undefined
+        }
+      />
 
       {/* ── Filtros ─────────────────────────────────────────────── */}
       <div className="wr-card space-y-3 p-4 sm:p-5">
