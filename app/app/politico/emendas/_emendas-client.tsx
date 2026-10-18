@@ -12,7 +12,7 @@ import { KpiCard } from "@/components/politico/kpi-card";
 import { BarChartCard } from "@/components/politico/bar-chart-card";
 import { CommandHero } from "@/components/politico/command-hero";
 import { EmptyState } from "@/components/politico/empty-state";
-import { ExportCsv } from "@/components/politico/export-csv";
+import { RelatorioGabineteButton } from "@/components/politico/relatorio-gabinete-button";
 
 const STATUS: Record<string, { label: string; bg: string; fg: string }> = {
   rascunho: { label: "Rascunho", bg: "#F0F0EB", fg: "#5B606B" },
@@ -54,10 +54,37 @@ export default function EmendasClient({ kpis, valorPorArea, emendas }: EmendasCl
 
       {emendas.length > 0 && (
         <div className="flex justify-end">
-          <ExportCsv
-            filename="emendas.csv"
-            headers={["Número", "Ano", "Área", "Município", "Entidade", "Status", "Indicado", "Pago"]}
-            rows={emendas.map((e) => [e.numero, e.ano, e.area, e.municipio, e.entidade, e.status, e.valorIndicado, e.valorPago])}
+          <RelatorioGabineteButton
+            dados={{
+              slug: "emendas",
+              titulo: "Relatório de Emendas Parlamentares",
+              resumo: `${emendas.length} emenda(s)`,
+              kpis: [
+                { num: kpis.alocado, label: "Total alocado" },
+                { num: kpis.executado, label: "Executado (pago)" },
+                { num: kpis.pendente, label: "Pendente" },
+              ],
+              colunas: [
+                { header: "Número", largura: "11%" },
+                { header: "Ano", largura: "7%" },
+                { header: "Área", largura: "16%" },
+                { header: "Município", largura: "14%" },
+                { header: "Entidade", largura: "20%" },
+                { header: "Status", largura: "12%" },
+                { header: "Indicado", largura: "10%" },
+                { header: "Pago", largura: "10%" },
+              ],
+              linhas: emendas.map((e) => [
+                e.numero ?? "—",
+                String(e.ano),
+                e.area ?? "",
+                e.municipio ?? "",
+                e.entidade ?? "",
+                STATUS[e.status]?.label ?? e.status,
+                e.valorIndicado,
+                e.valorPago,
+              ]),
+            }}
           />
         </div>
       )}

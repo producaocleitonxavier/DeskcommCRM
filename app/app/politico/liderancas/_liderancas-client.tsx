@@ -25,7 +25,7 @@ import {
 import { KpiCard } from "@/components/politico/kpi-card";
 import { SectionHeader } from "@/components/politico/section-header";
 import { EmptyState } from "@/components/politico/empty-state";
-import { ExportCsv } from "@/components/politico/export-csv";
+import { RelatorioGabineteButton } from "@/components/politico/relatorio-gabinete-button";
 import { CommandHero } from "@/components/politico/command-hero";
 import type { Lideranca } from "./page";
 
@@ -96,6 +96,13 @@ export default function LiderancasClient({ liderancas }: LiderancasClientProps) 
   const comWhatsapp = liderancas.filter((l) => l.whatsapp).length;
   const aniversariantes = proximosAniversarios(liderancas);
 
+  const aniversarioBR = (v: string | null): string => {
+    if (!v) return "—";
+    const [, mes, dia] = v.split("-");
+    return mes && dia ? `${dia}/${mes}` : "—";
+  };
+  const engajamentoBR: Record<string, string> = { baixo: "Baixo", medio: "Médio", alto: "Alto", critico: "Crítico" };
+
   return (
     <div className="mx-auto max-w-[1140px] px-4 py-7 space-y-6" style={{ background: "var(--color-bg)" }}>
       <CommandHero
@@ -107,13 +114,48 @@ export default function LiderancasClient({ liderancas }: LiderancasClientProps) 
 
       {liderancas.length > 0 && (
         <div className="flex justify-end">
-          <ExportCsv
-            filename="liderancas.csv"
-            headers={["Nome", "Apelido", "Tipo", "Cargo", "Cidade", "Bairro", "WhatsApp", "Aniversário", "Mobilizados", "Eventos", "Engajamento", "Status"]}
-            rows={liderancas.map((l) => [
-              l.nome, l.apelido, TIPO_LABELS[l.tipo] ?? l.tipo, l.cargo, l.cidade, l.bairro,
-              l.whatsapp, l.aniversario, l.leads_mobilizados, l.eventos_organizados, l.nivel_engajamento, l.status,
-            ])}
+          <RelatorioGabineteButton
+            dados={{
+              slug: "liderancas",
+              titulo: "Relatório de Lideranças",
+              resumo: `${total} liderança(s) · ${ativas} ativa(s)`,
+              kpis: [
+                { num: String(total), label: "Total de lideranças" },
+                { num: String(ativas), label: "Ativas" },
+                { num: String(municipios), label: "Municípios" },
+                { num: String(comWhatsapp), label: "Com WhatsApp" },
+                { num: String(totalMobilizados), label: "Pessoas indicadas" },
+                { num: String(totalEventos), label: "Eventos" },
+              ],
+              colunas: [
+                { header: "Nome", largura: "15%" },
+                { header: "Apelido", largura: "9%" },
+                { header: "Tipo", largura: "10%" },
+                { header: "Cargo", largura: "10%" },
+                { header: "Cidade", largura: "9%" },
+                { header: "Bairro", largura: "8%" },
+                { header: "WhatsApp", largura: "10%" },
+                { header: "Aniv.", largura: "7%" },
+                { header: "Indicados", largura: "6%" },
+                { header: "Eventos", largura: "5%" },
+                { header: "Engaj.", largura: "6%" },
+                { header: "Status", largura: "5%" },
+              ],
+              linhas: liderancas.map((l) => [
+                l.nome ?? "",
+                l.apelido ?? "",
+                TIPO_LABELS[l.tipo] ?? l.tipo,
+                l.cargo ?? "",
+                l.cidade ?? "",
+                l.bairro ?? "",
+                l.whatsapp ?? "",
+                aniversarioBR(l.aniversario),
+                String(l.leads_mobilizados ?? 0),
+                String(l.eventos_organizados ?? 0),
+                engajamentoBR[l.nivel_engajamento] ?? l.nivel_engajamento,
+                STATUS_CFG[l.status]?.label ?? l.status,
+              ]),
+            }}
           />
         </div>
       )}

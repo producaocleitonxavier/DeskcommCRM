@@ -11,7 +11,7 @@ import { CheckCircle2, FileText, Scale, Target } from "lucide-react";
 import { KpiCard } from "@/components/politico/kpi-card";
 import { CommandHero } from "@/components/politico/command-hero";
 import { EmptyState } from "@/components/politico/empty-state";
-import { ExportCsv } from "@/components/politico/export-csv";
+import { RelatorioGabineteButton } from "@/components/politico/relatorio-gabinete-button";
 
 const STATUS: Record<string, { label: string; bg: string; fg: string }> = {
   rascunho: { label: "Rascunho", bg: "#F0F0EB", fg: "#5B606B" },
@@ -64,13 +64,42 @@ export default function ProjetosClient({ kpis, projetos }: ProjetosClientProps) 
 
       {projetos.length > 0 && (
         <div className="flex justify-end">
-          <ExportCsv
-            filename="projetos-de-lei.csv"
-            headers={["Número", "Tipo", "Esfera", "Título", "Status", "Comissão", "Autoria", "Alinhado", "Apresentação", "Última mov."]}
-            rows={projetos.map((p) => [
-              p.numero, p.tipo, p.esfera, p.titulo, p.status, p.comissao,
-              p.autorMandatario ? "De autoria" : "", p.alinhamento ? "Sim" : "", p.dataApresentacao, p.dataUltimaMov,
-            ])}
+          <RelatorioGabineteButton
+            dados={{
+              slug: "projetos",
+              titulo: "Relatório de Projetos de Lei",
+              resumo: `${projetos.length} projeto(s)`,
+              kpis: [
+                { num: String(kpis.emTramitacao), label: "Em tramitação" },
+                { num: String(kpis.deAutoria), label: "De autoria" },
+                { num: String(kpis.alinhados), label: "Alinhados à campanha" },
+                { num: String(kpis.aprovados), label: "Aprovados" },
+              ],
+              colunas: [
+                { header: "Número", largura: "9%" },
+                { header: "Tipo", largura: "10%" },
+                { header: "Esfera", largura: "8%" },
+                { header: "Título", largura: "22%" },
+                { header: "Status", largura: "13%" },
+                { header: "Comissão", largura: "12%" },
+                { header: "Autoria", largura: "8%" },
+                { header: "Alinhado", largura: "6%" },
+                { header: "Apres.", largura: "6%" },
+                { header: "Últ. mov.", largura: "6%" },
+              ],
+              linhas: projetos.map((p) => [
+                p.numero ?? "",
+                p.tipo ?? "",
+                ESFERA[p.esfera] ?? p.esfera,
+                p.titulo ?? "",
+                STATUS[p.status]?.label ?? p.status,
+                p.comissao ?? "",
+                p.autorMandatario ? "De autoria" : "—",
+                p.alinhamento ? "Sim" : "—",
+                data(p.dataApresentacao),
+                data(p.dataUltimaMov),
+              ]),
+            }}
           />
         </div>
       )}
