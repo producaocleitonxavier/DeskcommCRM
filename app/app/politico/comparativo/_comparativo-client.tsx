@@ -26,7 +26,7 @@ const DIMS: { key: Dim; label: string }[] = [
   { key: "zona", label: "Zona" },
   { key: "secao", label: "Seção" },
 ];
-const CORES = ["#D7F36A", "#7da9bf", "#d09455"]; // até 3 candidatos
+const CORES = ["#D7F36A", "#7da9bf", "#d09455", "#c87263", "#a78bfa"]; // até 5 candidatos
 
 function pct(n: number, d: number): string {
   return d > 0 ? `${((n / d) * 100).toFixed(2)}%` : "—";
@@ -39,6 +39,7 @@ export default function ComparativoClient({ eleicoes, municipios }: { eleicoes: 
   const [ranking, setRanking] = useState<CandidatoRank[]>([]);
   const [sel, setSel] = useState<CandidatoRank[]>([]);
   const [dim, setDim] = useState<Dim>("bairro");
+  const [maxCand, setMaxCand] = useState(3); // quantos comparar (2–5)
   const [comp, setComp] = useState<ComparativoLinha[]>([]);
   const [carregando, inicia] = useTransition();
   const eleicaoAno = eleicoes.find((e) => e.id === eleicaoId)?.ano ?? 0;
@@ -53,7 +54,7 @@ export default function ComparativoClient({ eleicoes, municipios }: { eleicoes: 
   function toggle(c: CandidatoRank) {
     setSel((cur) => {
       const existe = cur.some((x) => x.sq === c.sq);
-      const prox = existe ? cur.filter((x) => x.sq !== c.sq) : cur.length >= 3 ? cur : [...cur, c];
+      const prox = existe ? cur.filter((x) => x.sq !== c.sq) : cur.length >= maxCand ? cur : [...cur, c];
       if (prox.length >= 2) carregarComp(prox, dim);
       else setComp([]);
       return prox;
@@ -97,6 +98,12 @@ export default function ComparativoClient({ eleicoes, municipios }: { eleicoes: 
           <select value={munTse} onChange={(e) => trocarMun(e.target.value)} className="wr-input min-w-[220px]">
             <option value="">Selecione…</option>
             {municipios.map((m) => <option key={m.tse} value={m.tse}>{m.nome}</option>)}
+          </select>
+        </label>
+        <label className="flex flex-col gap-1">
+          <span className="text-xs font-semibold" style={{ color: "var(--color-text-subtle)" }}>Comparar até</span>
+          <select value={maxCand} onChange={(e) => setMaxCand(Number(e.target.value))} className="wr-input min-w-[110px]">
+            {[2, 3, 4, 5].map((n) => <option key={n} value={n}>{n} candidatos</option>)}
           </select>
         </label>
         {munTse && (

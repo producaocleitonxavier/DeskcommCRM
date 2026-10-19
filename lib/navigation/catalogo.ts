@@ -1123,7 +1123,7 @@ export const NAV_CATALOG = [
     icon: "Stack",
     group: "territorio",
     minRole: "manager",
-    sidebar: true,
+    sidebar: false,
   },
 
   // ---- Análise — olhar o sistema funcionando ----

@@ -217,10 +217,10 @@ export default function RadarClient({ eleicoes, municipios }: { eleicoes: Eleica
                     <h4 className="mb-1.5 text-xs font-bold uppercase tracking-wide" style={{ color: "var(--color-text-subtle)" }}>Top locais de votação</h4>
                     <ul className="flex flex-col gap-1.5">
                       {locais.slice(0, 8).map((l, i) => (
-                        <li key={i} className="flex items-center justify-between gap-2 text-sm">
+                        <li key={i} className="flex items-start justify-between gap-2 text-sm">
                           <div className="min-w-0">
-                            <div className="truncate" style={{ color: "var(--color-text)" }}>{l.local}</div>
-                            {l.bairro && <div className="text-[11px]" style={{ color: "var(--color-text-subtle)" }}>{l.bairro}</div>}
+                            <div className="font-medium" style={{ color: "var(--color-text)" }}>{l.local}</div>
+                            {(l.endereco || l.bairro) && <div className="text-[11px] leading-snug" style={{ color: "var(--color-text-subtle)" }}>{l.endereco || l.bairro}</div>}
                           </div>
                           <span className="shrink-0 font-bold tabular-nums" style={{ color: "var(--color-text)" }}>{l.votos.toLocaleString("pt-BR")}</span>
                         </li>

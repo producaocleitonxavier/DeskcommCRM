@@ -108,6 +108,7 @@ export interface ZonaRadar {
 export interface ZonaLocal {
   local: string;
   bairro: string | null;
+  endereco: string | null;
   votos: number;
 }
 
@@ -135,8 +136,8 @@ export async function zonaLocais(electionId: number, sq: string, municipioTse: s
   const db = await createClient();
   const { data, error } = await db.rpc("intel_zona_locais", { p_election: electionId, p_sq: sq, p_municipio: Number(municipioTse), p_zona: zona });
   if (error || !data) return [];
-  return (data as { local_nome: string; bairro: string | null; votos: number }[]).map((r) => ({
-    local: r.local_nome, bairro: r.bairro, votos: Number(r.votos),
+  return (data as { local_nome: string; bairro: string | null; endereco: string | null; votos: number }[]).map((r) => ({
+    local: r.local_nome, bairro: r.bairro, endereco: r.endereco, votos: Number(r.votos),
   }));
 }
 
