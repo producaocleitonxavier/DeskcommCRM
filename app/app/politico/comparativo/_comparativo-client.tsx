@@ -7,7 +7,7 @@
  */
 
 import { useEffect, useMemo, useState, useTransition } from "react";
-import { Loader2, MapPin, Plus, Search, Swords, X } from "lucide-react";
+import { Loader2, MapPin, Plus, Search, Sparkles, Swords, X } from "lucide-react";
 
 import type { EleicaoOpcao } from "@/app/actions/politico/intelEleitoral";
 import { CandFoto } from "@/components/politico/cand-foto";
@@ -20,6 +20,24 @@ import {
   type MunicipioOpcao,
   type RecortesMunicipio,
 } from "@/app/actions/politico/raioX";
+import { analiseArenaIA } from "@/app/actions/politico/analiseArena";
+
+/** Renderização mínima do markdown da IA: **negrito**, títulos e linhas. Sem dependência nova. */
+function MiniMarkdown({ texto }: { texto: string }) {
+  const bloco = (linha: string, i: number) => {
+    const partes = linha.split(/(\*\*[^*]+\*\*)/g).filter(Boolean);
+    const soNegrito = partes.length === 1 && /^\*\*[^*]+\*\*$/.test(partes[0]!);
+    const nodes = partes.map((p, j) =>
+      /^\*\*[^*]+\*\*$/.test(p) ? <strong key={j} style={{ color: "var(--color-text)" }}>{p.slice(2, -2)}</strong> : <span key={j}>{p}</span>,
+    );
+    const bullet = /^\s*[-*]\s+/.test(linha);
+    if (soNegrito) return <h4 key={i} className="mt-3 mb-1 font-heading text-sm font-bold" style={{ color: "#D7F36A" }}>{partes[0]!.slice(2, -2)}</h4>;
+    if (bullet) return <li key={i} className="ml-4 list-disc text-sm leading-relaxed" style={{ color: "var(--color-text-muted)" }}>{linha.replace(/^\s*[-*]\s+/, "").split(/(\*\*[^*]+\*\*)/g).filter(Boolean).map((p, j) => /^\*\*[^*]+\*\*$/.test(p) ? <strong key={j} style={{ color: "var(--color-text)" }}>{p.slice(2, -2)}</strong> : <span key={j}>{p}</span>)}</li>;
+    if (linha.trim() === "") return <div key={i} className="h-1.5" />;
+    return <p key={i} className="text-sm leading-relaxed" style={{ color: "var(--color-text-muted)" }}>{nodes}</p>;
+  };
+  return <div className="space-y-0.5">{texto.split("\n").map(bloco)}</div>;
+}
 
 type Dim = "bairro" | "local" | "zona" | "secao";
 const DIMS: { key: Dim; label: string }[] = [
@@ -47,6 +65,10 @@ export default function ComparativoClient({ eleicoes, municipios }: { eleicoes: 
   const [recortes, setRecortes] = useState<RecortesMunicipio>({ zonas: [], bairros: [] });
   const [recZona, setRecZona] = useState<number | null>(null);
   const [recBairro, setRecBairro] = useState("");
+  // Análise estratégica (IA) — leitura ancorada nos números em tela.
+  const [gerandoIA, setGerandoIA] = useState(false);
+  const [analise, setAnalise] = useState<string | null>(null);
+  const [analiseErro, setAnaliseErro] = useState<string | null>(null);
   const [carregando, inicia] = useTransition();
   const eleicaoAno = eleicoes.find((e) => e.id === eleicaoId)?.ano ?? 0;
   const dimTemRecorte = dim === "local" || dim === "secao";
@@ -82,6 +104,7 @@ export default function ComparativoClient({ eleicoes, municipios }: { eleicoes: 
   function carregarComp(selecionados: CandidatoRank[], d: Dim, zona: number | null, bairro: string) {
     // O recorte só faz sentido (e só é aplicado) nas dimensões Local e Seção.
     const usa = d === "local" || d === "secao";
+    setAnalise(null); setAnaliseErro(null); // a leitura da IA vale para o estado anterior — invalida.
     inicia(async () =>
       setComp(await comparativo(eleicaoId, munTse, d, selecionados.map((s) => s.sq), usa ? zona : null, usa ? bairro : null)),
     );
@@ -89,6 +112,27 @@ export default function ComparativoClient({ eleicoes, municipios }: { eleicoes: 
   function trocarDim(d: Dim) { setDim(d); if (sel.length >= 2) carregarComp(sel, d, recZona, recBairro); }
   function trocarRecZona(z: number | null) { setRecZona(z); if (sel.length >= 2) carregarComp(sel, dim, z, recBairro); }
   function trocarRecBairro(b: string) { setRecBairro(b); if (sel.length >= 2) carregarComp(sel, dim, recZona, b); }
+
+  async function gerarAnalise() {
+    setGerandoIA(true); setAnalise(null); setAnaliseErro(null);
+    try {
+      const r = await analiseArenaIA({
+        electionId: eleicaoId,
+        municipioTse: munTse,
+        munNome: municipios.find((m) => m.tse === munTse)?.nome ?? "",
+        cargoAno: eleicoes.find((e) => e.id === eleicaoId)?.label ?? "",
+        dim,
+        candidatos: sel.map((c) => ({ sq: c.sq, nome: c.nomeUrna })),
+        zona: recZona,
+        bairro: recBairro || null,
+      });
+      if (r.ok) setAnalise(r.texto); else setAnaliseErro(r.erro);
+    } catch {
+      setAnaliseErro("Não consegui gerar agora. Tente novamente em instantes.");
+    } finally {
+      setGerandoIA(false);
+    }
+  }
 
   const corDe = (sq: string) => CORES[sel.findIndex((s) => s.sq === sq)] ?? "#9CA3AF";
 
@@ -279,6 +323,40 @@ export default function ComparativoClient({ eleicoes, municipios }: { eleicoes: 
             )}
           </section>
         </div>
+      )}
+
+      {/* Leitura estratégica (IA) — ancorada nos números em tela. Fim da página. */}
+      {munTse && sel.length >= 2 && (
+        <section className="wr-card p-5">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div className="flex items-center gap-2.5">
+              <Sparkles className="h-5 w-5 shrink-0" style={{ color: "#D7F36A" }} aria-hidden />
+              <div>
+                <h3 className="font-heading text-base font-bold" style={{ color: "var(--color-text)" }}>Leitura estratégica (IA)</h3>
+                <p className="text-xs" style={{ color: "var(--color-text-subtle)" }}>
+                  Análise acionável dos números acima — {DIMS.find((d) => d.key === dim)?.label}
+                  {dimTemRecorte && (recBairro ? ` · ${recBairro}` : recZona != null ? ` · Zona ${recZona}` : "")}.
+                </p>
+              </div>
+            </div>
+            <button type="button" onClick={gerarAnalise} disabled={gerandoIA}
+              className="flex items-center gap-2 rounded-full px-4 py-2 text-sm font-semibold transition-opacity disabled:opacity-60"
+              style={{ background: "#D7F36A", color: "#16181D" }}>
+              {gerandoIA
+                ? <><Loader2 className="h-4 w-4 animate-spin" aria-hidden /> Analisando…</>
+                : <><Sparkles className="h-4 w-4" aria-hidden /> {analise ? "Refazer análise" : "Gerar análise"}</>}
+            </button>
+          </div>
+          {analiseErro && <p className="mt-3 text-sm" style={{ color: "#A3302A" }}>{analiseErro}</p>}
+          {analise && (
+            <div className="mt-4 rounded-lg p-4" style={{ background: "rgba(0,0,0,0.02)", border: "1px solid var(--color-border)" }}>
+              <MiniMarkdown texto={analise} />
+              <p className="mt-3 text-[11px]" style={{ color: "var(--color-text-subtle)" }}>
+                Gerado por IA a partir dos votos reais do TSE em tela. Confira antes de decidir.
+              </p>
+            </div>
+          )}
+        </section>
       )}
     </div>
   );
