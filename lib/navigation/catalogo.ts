@@ -1108,6 +1108,15 @@ export const NAV_CATALOG = [
     sidebar: true,
   },
   {
+    href: "/app/politico/radar-zonal",
+    label: "Radar Zonal",
+    description: "A zona como unidade de operação: votos, bairros, locais de votação e a sua base de leads cruzados (TSE + CRM).",
+    icon: "Gauge",
+    group: "territorio",
+    minRole: "manager",
+    sidebar: true,
+  },
+  {
     href: "/app/politico/territorios",
     label: "Territórios",
     description: "Cadastro hierárquico de territórios eleitorais com dados do TSE.",

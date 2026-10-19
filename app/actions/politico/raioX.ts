@@ -98,6 +98,48 @@ export async function comparativo(electionId: number, municipioTse: string, dim:
   }));
 }
 
+export interface ZonaRadar {
+  zona: number;
+  votos: number;
+  bairros: string[];
+  leads: number; // leads do nosso CRM mapeados na zona
+}
+
+export interface ZonaLocal {
+  local: string;
+  bairro: string | null;
+  votos: number;
+}
+
+/** Radar Zonal: por zona de um município, votos do candidato + bairros + leads do CRM. */
+export async function radarZonal(electionId: number, sq: string, municipioTse: string, ano: number): Promise<ZonaRadar[]> {
+  await requireAuth();
+  const db = await createClient();
+  const [{ data: zonas }, { data: leadsRows }] = await Promise.all([
+    db.rpc("intel_radar_zonal", { p_election: electionId, p_sq: sq, p_municipio: Number(municipioTse) }),
+    db.rpc("intel_zona_leads", { p_municipio: Number(municipioTse), p_ano: ano }),
+  ]);
+  const leadsPorZona = new Map<number, number>();
+  for (const r of (leadsRows ?? []) as { nr_zona: number; leads: number }[]) leadsPorZona.set(Number(r.nr_zona), Number(r.leads));
+  return ((zonas ?? []) as { nr_zona: number; votos: number; bairros: string[] | null }[]).map((z) => ({
+    zona: Number(z.nr_zona),
+    votos: Number(z.votos),
+    bairros: z.bairros ?? [],
+    leads: leadsPorZona.get(Number(z.nr_zona)) ?? 0,
+  }));
+}
+
+/** Top locais de votação (escolas) do candidato numa zona. */
+export async function zonaLocais(electionId: number, sq: string, municipioTse: string, zona: number): Promise<ZonaLocal[]> {
+  await requireAuth();
+  const db = await createClient();
+  const { data, error } = await db.rpc("intel_zona_locais", { p_election: electionId, p_sq: sq, p_municipio: Number(municipioTse), p_zona: zona });
+  if (error || !data) return [];
+  return (data as { local_nome: string; bairro: string | null; votos: number }[]).map((r) => ({
+    local: r.local_nome, bairro: r.bairro, votos: Number(r.votos),
+  }));
+}
+
 /** Total de votos válidos (nominais) do cargo na eleição (p/ % no ranking). */
 export async function eleicaoTotal(electionId: number): Promise<number> {
   await requireAuth();
