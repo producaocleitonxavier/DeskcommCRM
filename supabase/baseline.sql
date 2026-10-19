@@ -55850,3 +55850,62 @@ returns bigint language sql stable security invoker set search_path = public as 
   select coalesce(sum(votos), 0)::bigint from public.intel_election_results where election_id = p_election and tse_code = p_municipio::text;
 $$;
 grant execute on function public.intel_total_municipio(bigint, int) to authenticated;
+-- ── 9019: Raio-X — fix de performance do drill por municipio (indice tse_code + sem subquery correlacionado). Ver migration 9019. ──
+create index if not exists intel_results_election_tse_idx on public.intel_election_results (election_id, tse_code);
+create or replace function public.intel_cand_drill(p_election bigint, p_sq bigint, p_dim text, p_municipio int default null)
+returns table (chave text, rotulo text, votos bigint, universo bigint)
+language plpgsql stable security invoker set search_path = public as $$
+declare v_ano smallint;
+begin
+  select e.ano into v_ano from public.intel_elections e where e.id = p_election;
+  if p_dim = 'municipio' then
+    return query
+    with cand as (select sv.cd_municipio, sum(sv.votos)::bigint as votos from public.intel_secao_votos sv where sv.election_id = p_election and sv.sq_candidato = p_sq group by sv.cd_municipio),
+    tot as (select r.tse_code, sum(r.votos)::bigint as total from public.intel_election_results r where r.election_id = p_election group by r.tse_code)
+    select c.cd_municipio::text, coalesce(m.nome, c.cd_municipio::text), c.votos, coalesce(t.total, 0)::bigint
+    from cand c
+    left join public.intel_municipios m on m.tse_code = c.cd_municipio::text
+    left join tot t on t.tse_code = c.cd_municipio::text
+    order by c.votos desc;
+  else
+    return query
+    with uni as (select coalesce(sum(r.votos),0)::bigint as total from public.intel_election_results r where r.election_id = p_election and r.tse_code = p_municipio::text),
+    base as (select sv.nr_zona, sv.nr_secao, sv.votos, l.bairro, l.local_nome from public.intel_secao_votos sv left join public.intel_locais l on l.ano = v_ano and l.cd_municipio = sv.cd_municipio and l.nr_zona = sv.nr_zona and l.nr_secao = sv.nr_secao where sv.election_id = p_election and sv.sq_candidato = p_sq and sv.cd_municipio = p_municipio)
+    select case p_dim when 'zona' then b.nr_zona::text when 'bairro' then coalesce(b.bairro,'Sem bairro') when 'local' then coalesce(b.local_nome,'Local '||b.nr_zona||'/'||b.nr_secao) else b.nr_zona::text||'-'||b.nr_secao::text end,
+           case p_dim when 'zona' then 'Zona '||b.nr_zona::text when 'bairro' then coalesce(b.bairro,'Sem bairro') when 'local' then coalesce(b.local_nome,'Local sem nome') else 'Zona '||b.nr_zona::text||' · Seção '||b.nr_secao::text end,
+           sum(b.votos)::bigint, (select total from uni)
+    from base b group by 1,2 order by sum(b.votos) desc;
+  end if;
+end; $$;
+-- ── 9020: Raio-X — indices cobridores (index-only, sub-segundo no compute pequeno) + fix do comparativo (sq_candidato ambiguo). Ver migration 9020. ──
+drop index if exists public.intel_secao_mun_idx;
+drop index if exists public.intel_secao_cand_idx;
+create index if not exists intel_secao_mun_cover on public.intel_secao_votos (election_id, cd_municipio, sq_candidato, nr_zona, nr_secao) include (votos);
+create index if not exists intel_secao_cand_cover on public.intel_secao_votos (election_id, sq_candidato, cd_municipio, nr_zona, nr_secao) include (votos);
+drop index if exists public.intel_results_election_tse_idx;
+create index if not exists intel_results_tse_cover on public.intel_election_results (election_id, tse_code) include (votos);
+create or replace function public.intel_comparativo(p_election bigint, p_municipio int, p_dim text, p_sqs bigint[])
+returns table (chave text, rotulo text, sq_candidato bigint, votos bigint, universo bigint)
+language plpgsql stable security invoker set search_path = public as $$
+declare v_ano smallint;
+begin
+  select e.ano into v_ano from public.intel_elections e where e.id = p_election;
+  return query
+  with base as (
+    select sv.nr_zona, sv.nr_secao, sv.sq_candidato as sqc, sv.votos as vt, l.bairro, l.local_nome
+    from public.intel_secao_votos sv
+    left join public.intel_locais l on l.ano = v_ano and l.cd_municipio = sv.cd_municipio and l.nr_zona = sv.nr_zona and l.nr_secao = sv.nr_secao
+    where sv.election_id = p_election and sv.cd_municipio = p_municipio
+  ),
+  keyed as (
+    select
+      case p_dim when 'zona' then base.nr_zona::text when 'bairro' then coalesce(base.bairro,'Sem bairro') when 'local' then coalesce(base.local_nome,'Local '||base.nr_zona||'/'||base.nr_secao) else base.nr_zona::text||'-'||base.nr_secao::text end as chv,
+      case p_dim when 'zona' then 'Zona '||base.nr_zona::text when 'bairro' then coalesce(base.bairro,'Sem bairro') when 'local' then coalesce(base.local_nome,'Local sem nome') else 'Zona '||base.nr_zona::text||' · Seção '||base.nr_secao::text end as rot,
+      base.sqc, base.vt
+    from base
+  ),
+  uni as (select k.chv, sum(k.vt) as total from keyed k group by k.chv)
+  select k.chv, max(k.rot), k.sqc, sum(k.vt)::bigint, (select u.total from uni u where u.chv = k.chv)
+  from keyed k where k.sqc = any(p_sqs) group by k.chv, k.sqc;
+end; $$;
+grant execute on function public.intel_comparativo(bigint, int, text, bigint[]) to authenticated;

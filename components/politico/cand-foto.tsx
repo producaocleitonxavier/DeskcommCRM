@@ -7,7 +7,7 @@
  * caso comum em alguns cargos/anos, então o fallback é silencioso.
  */
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 function iniciais(nome: string): string {
   const p = nome.trim().split(/\s+/);
@@ -16,11 +16,15 @@ function iniciais(nome: string): string {
   return (a + b).toUpperCase() || "?";
 }
 
-const BASE = process.env.NEXT_PUBLIC_SUPABASE_URL ?? "";
-
+// A URL do Supabase é injetada em runtime em window.__PUBLIC_ENV__ (a imagem
+// Docker é genérica: process.env.NEXT_PUBLIC_* vira placeholder no build).
 export function CandFoto({ sq, ano, nome, size = 40 }: { sq: string; ano: number; nome: string; size?: number }) {
   const [erro, setErro] = useState(false);
-  const url = BASE ? `${BASE}/storage/v1/object/public/intel-fotos/${ano}/${sq}.jpg` : "";
+  const [base, setBase] = useState("");
+  useEffect(() => {
+    setBase((window.__PUBLIC_ENV__?.NEXT_PUBLIC_SUPABASE_URL ?? "").trim());
+  }, []);
+  const url = base ? `${base}/storage/v1/object/public/intel-fotos/${ano}/${sq}.jpg` : "";
   const estiloBase = { width: size, height: size } as const;
 
   if (erro || !url) {
