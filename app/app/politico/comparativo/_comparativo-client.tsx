@@ -52,13 +52,16 @@ export default function ComparativoClient({ eleicoes, municipios }: { eleicoes: 
   function trocarMun(mun: string) { setMunTse(mun); setSel([]); setComp([]); carregarRanking(eleicaoId, mun, q.trim()); }
 
   function toggle(c: CandidatoRank) {
-    setSel((cur) => {
-      const existe = cur.some((x) => x.sq === c.sq);
-      const prox = existe ? cur.filter((x) => x.sq !== c.sq) : cur.length >= maxCand ? cur : [...cur, c];
-      if (prox.length >= 2) carregarComp(prox, dim);
-      else setComp([]);
-      return prox;
-    });
+    // Importante: calcular a próxima seleção e disparar o efeito FORA do updater
+    // do setState. Chamar startTransition/carregarComp dentro do updater é um
+    // side-effect em fase de render (React re-executa o updater) e pode deixar a
+    // transição "pendente" para sempre — era o que travava a Arena em "carregando".
+    const existe = sel.some((x) => x.sq === c.sq);
+    const prox = existe ? sel.filter((x) => x.sq !== c.sq) : sel.length >= maxCand ? sel : [...sel, c];
+    if (prox === sel) return; // nada mudou (limite atingido)
+    setSel(prox);
+    if (prox.length >= 2) carregarComp(prox, dim);
+    else setComp([]);
   }
   function carregarComp(selecionados: CandidatoRank[], d: Dim) {
     inicia(async () => setComp(await comparativo(eleicaoId, munTse, d, selecionados.map((s) => s.sq))));
@@ -128,7 +131,7 @@ export default function ComparativoClient({ eleicoes, municipios }: { eleicoes: 
           <section className="wr-card flex flex-col p-0">
             <div className="px-5 pt-4 pb-2">
               <h3 className="font-heading text-base font-bold" style={{ color: "var(--color-text)" }}>Candidatos — {munNome}</h3>
-              <p className="text-xs" style={{ color: "var(--color-text-subtle)" }}>Clique para comparar (até 3)</p>
+              <p className="text-xs" style={{ color: "var(--color-text-subtle)" }}>Clique para comparar (até {maxCand})</p>
             </div>
             <ul className="max-h-[560px] overflow-y-auto">
               {ranking.map((c) => {
