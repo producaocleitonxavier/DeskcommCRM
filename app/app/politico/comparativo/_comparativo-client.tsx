@@ -6,17 +6,19 @@
  * posição de cada um em cada localidade). Dados via server actions (RLS).
  */
 
-import { useMemo, useState, useTransition } from "react";
-import { Loader2, Plus, Search, Swords, X } from "lucide-react";
+import { useEffect, useMemo, useState, useTransition } from "react";
+import { Loader2, MapPin, Plus, Search, Swords, X } from "lucide-react";
 
 import type { EleicaoOpcao } from "@/app/actions/politico/intelEleitoral";
 import { CandFoto } from "@/components/politico/cand-foto";
 import {
   rankingCandidatosMun,
   comparativo,
+  recortesMunicipio,
   type CandidatoRank,
   type ComparativoLinha,
   type MunicipioOpcao,
+  type RecortesMunicipio,
 } from "@/app/actions/politico/raioX";
 
 type Dim = "bairro" | "local" | "zona" | "secao";
@@ -41,15 +43,29 @@ export default function ComparativoClient({ eleicoes, municipios }: { eleicoes: 
   const [dim, setDim] = useState<Dim>("bairro");
   const [maxCand, setMaxCand] = useState(3); // quantos comparar (2–5)
   const [comp, setComp] = useState<ComparativoLinha[]>([]);
+  // Recorte por região: foca as dimensões Local e Seção (cidade grande = milhares de linhas).
+  const [recortes, setRecortes] = useState<RecortesMunicipio>({ zonas: [], bairros: [] });
+  const [recZona, setRecZona] = useState<number | null>(null);
+  const [recBairro, setRecBairro] = useState("");
   const [carregando, inicia] = useTransition();
   const eleicaoAno = eleicoes.find((e) => e.id === eleicaoId)?.ano ?? 0;
+  const dimTemRecorte = dim === "local" || dim === "secao";
+
+  // Carrega zonas/bairros disponíveis quando muda eleição/município.
+  useEffect(() => {
+    if (!munTse) { setRecortes({ zonas: [], bairros: [] }); return; }
+    let vivo = true;
+    recortesMunicipio(eleicaoId, munTse).then((r) => { if (vivo) setRecortes(r); }).catch(() => {});
+    return () => { vivo = false; };
+  }, [eleicaoId, munTse]);
 
   function carregarRanking(id: number, mun: string, termo: string) {
     if (!mun) { setRanking([]); return; }
     inicia(async () => setRanking(await rankingCandidatosMun(id, mun, termo, 60)));
   }
-  function trocarEleicao(id: number) { setEleicaoId(id); setSel([]); setComp([]); carregarRanking(id, munTse, q.trim()); }
-  function trocarMun(mun: string) { setMunTse(mun); setSel([]); setComp([]); carregarRanking(eleicaoId, mun, q.trim()); }
+  function limparRecorte() { setRecZona(null); setRecBairro(""); }
+  function trocarEleicao(id: number) { setEleicaoId(id); setSel([]); setComp([]); limparRecorte(); carregarRanking(id, munTse, q.trim()); }
+  function trocarMun(mun: string) { setMunTse(mun); setSel([]); setComp([]); limparRecorte(); carregarRanking(eleicaoId, mun, q.trim()); }
 
   function toggle(c: CandidatoRank) {
     // Importante: calcular a próxima seleção e disparar o efeito FORA do updater
@@ -60,13 +76,19 @@ export default function ComparativoClient({ eleicoes, municipios }: { eleicoes: 
     const prox = existe ? sel.filter((x) => x.sq !== c.sq) : sel.length >= maxCand ? sel : [...sel, c];
     if (prox === sel) return; // nada mudou (limite atingido)
     setSel(prox);
-    if (prox.length >= 2) carregarComp(prox, dim);
+    if (prox.length >= 2) carregarComp(prox, dim, recZona, recBairro);
     else setComp([]);
   }
-  function carregarComp(selecionados: CandidatoRank[], d: Dim) {
-    inicia(async () => setComp(await comparativo(eleicaoId, munTse, d, selecionados.map((s) => s.sq))));
+  function carregarComp(selecionados: CandidatoRank[], d: Dim, zona: number | null, bairro: string) {
+    // O recorte só faz sentido (e só é aplicado) nas dimensões Local e Seção.
+    const usa = d === "local" || d === "secao";
+    inicia(async () =>
+      setComp(await comparativo(eleicaoId, munTse, d, selecionados.map((s) => s.sq), usa ? zona : null, usa ? bairro : null)),
+    );
   }
-  function trocarDim(d: Dim) { setDim(d); if (sel.length >= 2) carregarComp(sel, d); }
+  function trocarDim(d: Dim) { setDim(d); if (sel.length >= 2) carregarComp(sel, d, recZona, recBairro); }
+  function trocarRecZona(z: number | null) { setRecZona(z); if (sel.length >= 2) carregarComp(sel, dim, z, recBairro); }
+  function trocarRecBairro(b: string) { setRecBairro(b); if (sel.length >= 2) carregarComp(sel, dim, recZona, b); }
 
   const corDe = (sq: string) => CORES[sel.findIndex((s) => s.sq === sq)] ?? "#9CA3AF";
 
@@ -188,6 +210,36 @@ export default function ComparativoClient({ eleicoes, municipios }: { eleicoes: 
                     </button>
                   ))}
                 </div>
+                {/* Recorte por região — foca Local/Seção numa zona e/ou bairro */}
+                {dimTemRecorte && (
+                  <div className="flex flex-wrap items-center gap-2 border-b px-4 py-2.5" style={{ borderColor: "var(--color-border)", background: "rgba(0,0,0,0.015)" }}>
+                    <span className="flex items-center gap-1.5 text-xs font-semibold" style={{ color: "var(--color-text-subtle)" }}>
+                      <MapPin className="h-3.5 w-3.5" aria-hidden style={{ color: "#5C7F23" }} /> Recorte
+                    </span>
+                    <select value={recZona ?? ""} onChange={(e) => trocarRecZona(e.target.value === "" ? null : Number(e.target.value))}
+                      className="wr-input h-8 py-0 text-xs" style={{ minWidth: 130 }}>
+                      <option value="">Todas as zonas</option>
+                      {recortes.zonas.map((z) => <option key={z} value={z}>Zona {z}</option>)}
+                    </select>
+                    <select value={recBairro} onChange={(e) => trocarRecBairro(e.target.value)}
+                      className="wr-input h-8 py-0 text-xs" style={{ minWidth: 170, maxWidth: 240 }}>
+                      <option value="">Todos os bairros</option>
+                      {recortes.bairros.map((b) => <option key={b} value={b}>{b}</option>)}
+                    </select>
+                    {(recZona !== null || recBairro !== "") && (
+                      <button type="button" onClick={limparRecorte}
+                        className="flex items-center gap-1 rounded-full px-2 py-1 text-xs font-medium transition-colors hover:bg-[rgba(0,0,0,0.05)]"
+                        style={{ color: "var(--color-text-muted)" }}>
+                        <X className="h-3 w-3" aria-hidden /> limpar
+                      </button>
+                    )}
+                    {recZona === null && recBairro === "" && (
+                      <span className="text-[11px]" style={{ color: "var(--color-text-subtle)" }}>
+                        escolha uma zona ou bairro para focar a análise
+                      </span>
+                    )}
+                  </div>
+                )}
                 {/* Tabela comparativa */}
                 <div className="overflow-auto" style={{ maxHeight: 520 }}>
                   <table className="w-full border-collapse text-sm">

@@ -85,17 +85,50 @@ export async function totalMunicipio(electionId: number, municipioTse: string): 
   return Number(data ?? 0);
 }
 
-/** Comparativo: por localidade (dim) de um município, votos de cada candidato. */
-export async function comparativo(electionId: number, municipioTse: string, dim: "zona" | "bairro" | "local" | "secao", sqs: string[]): Promise<ComparativoLinha[]> {
+/**
+ * Comparativo: por localidade (dim) de um município, votos de cada candidato.
+ * Recorte opcional (zona/bairro) para focar as dimensões Local e Seção, que em
+ * município grande teriam centenas/milhares de linhas espalhadas pela cidade.
+ */
+export async function comparativo(
+  electionId: number,
+  municipioTse: string,
+  dim: "zona" | "bairro" | "local" | "secao",
+  sqs: string[],
+  zona: number | null = null,
+  bairro: string | null = null,
+): Promise<ComparativoLinha[]> {
   await requireAuth();
   const db = await createClient();
   const { data, error } = await db.rpc("intel_comparativo", {
     p_election: electionId, p_municipio: Number(municipioTse), p_dim: dim, p_sqs: sqs.map((s) => Number(s)),
+    p_zona: zona ?? null, p_bairro: bairro && bairro.length > 0 ? bairro : null,
   });
   if (error || !data) return [];
   return (data as { chave: string; rotulo: string; sq_candidato: number; votos: number; universo: number }[]).map((r) => ({
     chave: r.chave, rotulo: r.rotulo, sq: String(r.sq_candidato), votos: Number(r.votos), universo: Number(r.universo),
   }));
+}
+
+export interface RecortesMunicipio {
+  zonas: number[];
+  bairros: string[];
+}
+
+/** Zonas e bairros disponíveis de um município — para os seletores de recorte da Arena. */
+export async function recortesMunicipio(electionId: number, municipioTse: string): Promise<RecortesMunicipio> {
+  await requireAuth();
+  const db = await createClient();
+  const { data } = await db.rpc("intel_recortes_municipio", { p_election: electionId, p_municipio: Number(municipioTse) });
+  const zonas: number[] = [];
+  const bairros: string[] = [];
+  for (const r of (data ?? []) as { tipo: string; valor: string }[]) {
+    if (r.tipo === "zona") zonas.push(Number(r.valor));
+    else if (r.tipo === "bairro") bairros.push(r.valor);
+  }
+  zonas.sort((a, b) => a - b);
+  bairros.sort((a, b) => a.localeCompare(b, "pt-BR"));
+  return { zonas, bairros };
 }
 
 export interface ZonaRadar {
