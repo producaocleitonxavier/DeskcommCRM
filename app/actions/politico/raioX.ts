@@ -41,6 +41,63 @@ export interface DrillLinha {
   universo: number; // votos válidos do município (p/ % relativa)
 }
 
+export interface MunicipioOpcao {
+  tse: string; // CD_MUNICIPIO do TSE
+  nome: string;
+}
+
+export interface ComparativoLinha {
+  chave: string;
+  rotulo: string;
+  sq: string;
+  votos: number;
+  universo: number;
+}
+
+/** Lista de municípios (para o seletor), ordenada por nome. */
+export async function listarMunicipiosRaioX(uf = "MG"): Promise<MunicipioOpcao[]> {
+  await requireAuth();
+  const db = await createClient();
+  const { data, error } = await db.from("intel_municipios").select("tse_code, nome").eq("uf", uf).order("nome");
+  if (error || !data) return [];
+  return (data as { tse_code: string; nome: string }[]).map((m) => ({ tse: m.tse_code, nome: m.nome }));
+}
+
+/** Ranking de candidatos DENTRO de um município (votos no município). */
+export async function rankingCandidatosMun(electionId: number, municipioTse: string, q = "", limit = 50, offset = 0): Promise<CandidatoRank[]> {
+  await requireAuth();
+  const db = await createClient();
+  const { data, error } = await db.rpc("intel_cand_ranking_mun", {
+    p_election: electionId, p_municipio: Number(municipioTse), p_q: q || null, p_limit: limit, p_offset: offset,
+  });
+  if (error || !data) return [];
+  return (data as { sq_candidato: number; nr_votavel: string; nome_urna: string | null; nome: string; partido_sigla: string | null; situacao: string | null; votos_total: number; posicao: number }[]).map((r) => ({
+    sq: String(r.sq_candidato), nr: r.nr_votavel, nomeUrna: r.nome_urna ?? r.nome, nome: r.nome,
+    partido: r.partido_sigla, situacao: r.situacao, votos: Number(r.votos_total), posicao: Number(r.posicao),
+  }));
+}
+
+/** Total de votos válidos do cargo num município (p/ % no modo município). */
+export async function totalMunicipio(electionId: number, municipioTse: string): Promise<number> {
+  await requireAuth();
+  const db = await createClient();
+  const { data } = await db.rpc("intel_total_municipio", { p_election: electionId, p_municipio: Number(municipioTse) });
+  return Number(data ?? 0);
+}
+
+/** Comparativo: por localidade (dim) de um município, votos de cada candidato. */
+export async function comparativo(electionId: number, municipioTse: string, dim: "zona" | "bairro" | "local" | "secao", sqs: string[]): Promise<ComparativoLinha[]> {
+  await requireAuth();
+  const db = await createClient();
+  const { data, error } = await db.rpc("intel_comparativo", {
+    p_election: electionId, p_municipio: Number(municipioTse), p_dim: dim, p_sqs: sqs.map((s) => Number(s)),
+  });
+  if (error || !data) return [];
+  return (data as { chave: string; rotulo: string; sq_candidato: number; votos: number; universo: number }[]).map((r) => ({
+    chave: r.chave, rotulo: r.rotulo, sq: String(r.sq_candidato), votos: Number(r.votos), universo: Number(r.universo),
+  }));
+}
+
 /** Total de votos válidos (nominais) do cargo na eleição (p/ % no ranking). */
 export async function eleicaoTotal(electionId: number): Promise<number> {
   await requireAuth();

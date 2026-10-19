@@ -13,12 +13,15 @@ import type { EleicaoOpcao } from "@/app/actions/politico/intelEleitoral";
 import { CandFoto } from "@/components/politico/cand-foto";
 import {
   rankingCandidatos,
+  rankingCandidatosMun,
   resumoCandidato,
   drillCandidato,
   eleicaoTotal,
+  totalMunicipio,
   type CandidatoRank,
   type ResumoCandidato,
   type DrillLinha,
+  type MunicipioOpcao,
 } from "@/app/actions/politico/raioX";
 
 type DimInterna = "zona" | "bairro" | "local" | "secao";
@@ -36,8 +39,9 @@ function ehEleito(s: string | null): boolean {
   return !!s && /eleito/i.test(s) && !/não/i.test(s);
 }
 
-export default function RaioXClient({ eleicoes }: { eleicoes: EleicaoOpcao[] }) {
+export default function RaioXClient({ eleicoes, municipios: municipiosLista }: { eleicoes: EleicaoOpcao[]; municipios: MunicipioOpcao[] }) {
   const [eleicaoId, setEleicaoId] = useState(eleicoes[0]!.id);
+  const [munTse, setMunTse] = useState(""); // "" = todos (estadual)
   const [q, setQ] = useState("");
   const [ranking, setRanking] = useState<CandidatoRank[]>([]);
   const [totalEleicao, setTotalEleicao] = useState(0);
@@ -55,22 +59,28 @@ export default function RaioXClient({ eleicoes }: { eleicoes: EleicaoOpcao[] }) 
   const eleicaoAno = eleicoes.find((e) => e.id === eleicaoId)?.ano ?? 0;
 
   // carrega ranking + total ao trocar eleição ou busca (debounce)
-  function recarregarLista(id: number, termo: string) {
+  function recarregarLista(id: number, mun: string, termo: string) {
     iniciarLista(async () => {
-      const [r, t] = await Promise.all([rankingCandidatos(id, termo, 50), eleicaoTotal(id)]);
-      setRanking(r);
-      setTotalEleicao(t);
+      if (mun) {
+        const [r, t] = await Promise.all([rankingCandidatosMun(id, mun, termo, 50), totalMunicipio(id, mun)]);
+        setRanking(r);
+        setTotalEleicao(t);
+      } else {
+        const [r, t] = await Promise.all([rankingCandidatos(id, termo, 50), eleicaoTotal(id)]);
+        setRanking(r);
+        setTotalEleicao(t);
+      }
     });
   }
   useEffect(() => {
-    recarregarLista(eleicaoId, "");
+    recarregarLista(eleicaoId, munTse, q.trim());
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [eleicaoId]);
+  }, [eleicaoId, munTse]);
 
   function onBusca(v: string) {
     setQ(v);
     if (buscaRef.current) clearTimeout(buscaRef.current);
-    buscaRef.current = setTimeout(() => recarregarLista(eleicaoId, v.trim()), 350);
+    buscaRef.current = setTimeout(() => recarregarLista(eleicaoId, munTse, v.trim()), 350);
   }
 
   function abrirCandidato(sq: string) {
@@ -211,7 +221,16 @@ export default function RaioXClient({ eleicoes }: { eleicoes: EleicaoOpcao[] }) 
     <div className="space-y-4">
       <div className="flex flex-wrap items-end gap-3">
         {seletorEleicao}
-        <label className="flex min-w-[260px] flex-1 flex-col gap-1">
+        <label className="flex flex-col gap-1">
+          <span className="text-xs font-semibold" style={{ color: "var(--color-text-subtle)" }}>Município</span>
+          <select value={munTse} onChange={(e) => setMunTse(e.target.value)} className="wr-input min-w-[200px]">
+            <option value="">Todos (estadual)</option>
+            {municipiosLista.map((m) => (
+              <option key={m.tse} value={m.tse}>{m.nome}</option>
+            ))}
+          </select>
+        </label>
+        <label className="flex min-w-[220px] flex-1 flex-col gap-1">
           <span className="text-xs font-semibold" style={{ color: "var(--color-text-subtle)" }}>Buscar candidato</span>
           <div className="relative">
             <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2" aria-hidden style={{ color: "var(--color-text-subtle)" }} />
