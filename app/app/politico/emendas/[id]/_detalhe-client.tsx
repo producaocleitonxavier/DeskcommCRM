@@ -120,7 +120,7 @@ function rotulo(lista: Opcao[], id: string | null): string {
   return lista.find((o) => o.id === id)?.nome ?? id;
 }
 
-export default function DetalheEmendaClient({ emenda, liderancas, peso, mandatoNome, beneficiarios = 0 }: Props) {
+export default function DetalheEmendaClient({ emenda, liderancas, peso, mandatoNome, beneficiarios: beneficiariosCaptados = 0 }: Props) {
   const router = useRouter();
 
   const [e, setE] = useState<EmendaDetalhe>(emenda);
@@ -331,7 +331,7 @@ export default function DetalheEmendaClient({ emenda, liderancas, peso, mandatoN
         </section>
       )}
 
-      <CaptacaoEmendaCard emendaId={e.id} beneficiarios={beneficiarios} />
+      <CaptacaoEmendaCard emendaId={e.id} beneficiarios={beneficiariosCaptados} />
 
       <section className="wr-card p-6 sm:p-7">
         {editando ? (
