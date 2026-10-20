@@ -53,6 +53,8 @@ export interface Props {
   emenda: EmendaDetalhe;
   territorios: Opcao[];
   liderancas: Opcao[];
+  peso?: import("@/app/actions/politico/obras-actions").PesoBairro | null;
+  mandatoNome?: string | null;
 }
 
 const TIPOS: Opcao[] = [
@@ -116,7 +118,7 @@ function rotulo(lista: Opcao[], id: string | null): string {
   return lista.find((o) => o.id === id)?.nome ?? id;
 }
 
-export default function DetalheEmendaClient({ emenda, liderancas }: Props) {
+export default function DetalheEmendaClient({ emenda, liderancas, peso, mandatoNome }: Props) {
   const router = useRouter();
 
   const [e, setE] = useState<EmendaDetalhe>(emenda);
@@ -296,6 +298,20 @@ export default function DetalheEmendaClient({ emenda, liderancas }: Props) {
         <div role="alert" className="rounded-xl px-4 py-3 text-sm" style={{ background: "#FBE4E2", color: "#A3302A" }}>{erro}</div>
       )}
 
+      {peso && (peso.meusVotos > 0 || peso.leads > 0) && (
+        <section className="wr-card p-5" style={{ background: "linear-gradient(180deg, rgba(215,243,106,0.06), transparent)" }}>
+          <h2 className="font-heading text-base font-bold" style={{ color: "var(--color-text)" }}>Você investiu onde te elegeu?</h2>
+          <p className="mb-3 text-xs" style={{ color: "var(--color-text-subtle)" }}>
+            O que {mandatoNome || "você"} fez e tem no bairro <strong style={{ color: "var(--color-text)" }}>{emenda.bairro || "—"}</strong> — o retorno eleitoral deste recurso.
+          </p>
+          <div className="grid grid-cols-3 gap-3">
+            <PesoBox valor={peso.meusVotos.toLocaleString("pt-BR")} label="Seus votos ali" sub={peso.universo > 0 ? `${((peso.meusVotos / peso.universo) * 100).toFixed(1)}% do bairro` : "no último pleito"} accent="#D7F36A" />
+            <PesoBox valor={peso.universo.toLocaleString("pt-BR")} label="Votos do cargo" sub="tamanho eleitoral" />
+            <PesoBox valor={peso.leads.toLocaleString("pt-BR")} label="Sua base (CRM)" sub="contatos no bairro" accent="#7da9bf" />
+          </div>
+        </section>
+      )}
+
       <section className="wr-card p-6 sm:p-7">
         {editando ? (
           <div className="space-y-4">
@@ -357,6 +373,15 @@ export default function DetalheEmendaClient({ emenda, liderancas }: Props) {
   );
 }
 
+function PesoBox({ valor, label, sub, accent }: { valor: string; label: string; sub?: string; accent?: string }) {
+  return (
+    <div className="rounded-lg p-3" style={{ background: "rgba(255,255,255,0.03)", border: "1px solid var(--color-border)" }}>
+      <div className="font-heading text-xl font-bold tabular-nums" style={{ color: accent ?? "var(--color-text)" }}>{valor}</div>
+      <div className="text-[12px] font-medium" style={{ color: "var(--color-text-muted)" }}>{label}</div>
+      {sub && <div className="text-[11px]" style={{ color: "var(--color-text-subtle)" }}>{sub}</div>}
+    </div>
+  );
+}
 function Campo({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div>

@@ -8,6 +8,7 @@
 import { notFound, redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { requireAuth, resolveActiveOrg } from "@/lib/auth/server";
+import { obterMandatoTse, pesoBairro, type PesoBairro } from "@/app/actions/politico/obras-actions";
 import DetalheEmendaClient, { type EmendaDetalhe } from "./_detalhe-client";
 
 export const dynamic = "force-dynamic";
@@ -47,5 +48,15 @@ export default async function EmendaDetalhePage({
     nome: l.cidade ? `${l.nome} · ${l.cidade}` : l.nome,
   }));
 
-  return <DetalheEmendaClient emenda={emRes.data as unknown as EmendaDetalhe} territorios={territorios} liderancas={liderancas} />;
+  // Peso eleitoral do bairro da emenda (você investiu onde te elegeu?), via mandato TSE.
+  const em = emRes.data as { municipio?: string | null; bairro?: string | null };
+  const mandato = await obterMandatoTse();
+  let peso: PesoBairro | null = null;
+  if (mandato && em.municipio && em.bairro) {
+    const { data: mun } = await db.from("intel_municipios").select("tse_code").ilike("nome", em.municipio).limit(1).maybeSingle();
+    const tse = (mun as { tse_code?: string } | null)?.tse_code;
+    if (tse) peso = await pesoBairro(mandato.electionId, mandato.sq, tse, em.bairro);
+  }
+
+  return <DetalheEmendaClient emenda={emRes.data as unknown as EmendaDetalhe} territorios={territorios} liderancas={liderancas} peso={peso} mandatoNome={mandato?.nome ?? null} />;
 }
