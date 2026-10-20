@@ -17,8 +17,8 @@ import { CommandHero } from "@/components/politico/command-hero";
 import TerritorioClient, { type CidadeRow } from "./_territorio-client";
 import EleicoesClient from "./_eleicoes-client";
 import ProjecaoClient from "./_projecao-client";
-import { listarEleicoes, candidatosDaEleicao, mapaMunicipio, listarMunicipios } from "@/app/actions/politico/intelEleitoral";
-import { listarMunicipiosRaioX } from "@/app/actions/politico/raioX";
+import { listarEleicoes, mapaMunicipioSq, listarMunicipios } from "@/app/actions/politico/intelEleitoral";
+import { listarMunicipiosRaioX, rankingCandidatos } from "@/app/actions/politico/raioX";
 
 export const dynamic = "force-dynamic";
 
@@ -65,19 +65,20 @@ async function buscarOportunidades(organizationId: string): Promise<Oportunidade
 // Prioridade de cargo no seletor: Governador, Prefeito, Dep. Federal, Estadual, Vereador.
 const CARGO_PRIO: Record<number, number> = { 3: 0, 11: 1, 6: 2, 7: 3, 13: 4 };
 
-async function montarEleicoes(eleicaoParam?: string, candParam?: string) {
+async function montarEleicoes(eleicaoParam?: string) {
   const eleicoes = await listarEleicoes();
   if (eleicoes.length === 0) {
-    return { eleicoes: [], eleicaoInicial: 0, candidatos: [], candidatoInicial: "", pontos: [], nomes: {} as Record<string, string> };
+    return { eleicoes: [], eleicaoInicial: 0, candidatoInicial: null, pontos: [], nomes: {} as Record<string, string> };
   }
   eleicoes.sort(
     (a, b) => b.ano - a.ano || (CARGO_PRIO[a.cargo_cod] ?? 9) - (CARGO_PRIO[b.cargo_cod] ?? 9) || b.turno - a.turno,
   );
   const sel = eleicoes.find((e) => String(e.id) === eleicaoParam) ?? eleicoes[0]!;
-  const [candidatos, nomes] = await Promise.all([candidatosDaEleicao(sel.id), listarMunicipios()]);
-  const candidatoInicial = candidatos.find((c) => c.nr === candParam)?.nr ?? candidatos[0]?.nr ?? "";
-  const pontos = candidatoInicial ? await mapaMunicipio(sel.id, candidatoInicial) : [];
-  return { eleicoes, eleicaoInicial: sel.id, candidatos, candidatoInicial, pontos, nomes };
+  // Candidato inicial = mais votado da eleição (por SQ, correto). Busca refina depois.
+  const [top, nomes] = await Promise.all([rankingCandidatos(sel.id, "", 1), listarMunicipios()]);
+  const candidatoInicial = top[0] ?? null;
+  const pontos = candidatoInicial ? await mapaMunicipioSq(sel.id, candidatoInicial.sq) : [];
+  return { eleicoes, eleicaoInicial: sel.id, candidatoInicial, pontos, nomes };
 }
 
 // -- Componente principal ----------------------------------------------------
@@ -85,7 +86,7 @@ async function montarEleicoes(eleicaoParam?: string, candParam?: string) {
 export default async function TerritorioPage({
   searchParams,
 }: {
-  searchParams: Promise<{ camada?: string; eleicao?: string; cand?: string }>;
+  searchParams: Promise<{ camada?: string; eleicao?: string }>;
 }) {
   const user = await requireAuth();
 
@@ -99,7 +100,7 @@ export default async function TerritorioPage({
   const oportunidades = camada === "oportunidades" ? await buscarOportunidades(org.orgId) : [];
 
   // Camada "Eleições" (Inteligência/TSE): choropleth por município.
-  const eleicoesData = camada === "eleicoes" ? await montarEleicoes(params.eleicao, params.cand) : null;
+  const eleicoesData = camada === "eleicoes" ? await montarEleicoes(params.eleicao) : null;
 
   // Camada "Projeção" (dado vivo): universo de votos × base do CRM por zona.
   const projecaoData = camada === "projecao"
@@ -201,7 +202,6 @@ export default async function TerritorioPage({
           <EleicoesClient
             eleicoes={eleicoesData.eleicoes}
             eleicaoInicial={eleicoesData.eleicaoInicial}
-            candidatosIniciais={eleicoesData.candidatos}
             candidatoInicial={eleicoesData.candidatoInicial}
             pontosIniciais={eleicoesData.pontos}
             nomes={eleicoesData.nomes}

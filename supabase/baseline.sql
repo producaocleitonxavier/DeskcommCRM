@@ -56042,3 +56042,14 @@ language sql stable security invoker set search_path = public as $$
   select u.nr_zona, u.universo, coalesce(b.bairros, '{}'::text[]) from u left join b on b.nr_zona = u.nr_zona order by u.universo desc;
 $$;
 grant execute on function public.intel_universo_zona(bigint, int) to authenticated;
+
+-- ── 9026: Mapa de Votos por SQ_CANDIDATO (correto; o por NR somava o número entre candidatos). Ver migration 9026. ──
+create or replace function public.intel_mapa_municipio_sq(p_election bigint, p_sq bigint)
+returns table (ibge_code text, cand_votos bigint, total_votos bigint)
+language sql stable security invoker set search_path = public as $$
+  with cand as (select sv.cd_municipio, sum(sv.votos)::bigint v from public.intel_secao_votos sv where sv.election_id = p_election and sv.sq_candidato = p_sq group by sv.cd_municipio),
+  tot as (select st.cd_municipio, sum(st.total)::bigint t from public.intel_secao_total st where st.election_id = p_election group by st.cd_municipio)
+  select m.ibge_code, coalesce(c.v, 0)::bigint, t.t
+  from tot t join public.intel_municipios m on nullif(m.tse_code, '')::int = t.cd_municipio left join cand c on c.cd_municipio = t.cd_municipio;
+$$;
+grant execute on function public.intel_mapa_municipio_sq(bigint, bigint) to authenticated;

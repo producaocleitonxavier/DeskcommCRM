@@ -89,3 +89,20 @@ export async function mapaMunicipio(electionId: number, nr: string): Promise<Map
     total: Number(r.total_votos),
   }));
 }
+
+/**
+ * Choropleth por SQ_CANDIDATO (identificador único) — CORRETO. O por NR somava
+ * o número entre candidatos diferentes (números se repetem entre municípios),
+ * inflando o mapa (ex.: um vereador aparecendo "em 435 municípios").
+ */
+export async function mapaMunicipioSq(electionId: number, sq: string): Promise<MapaMunicipioPonto[]> {
+  await requireAuth();
+  const db = await createClient();
+  const { data, error } = await db.rpc("intel_mapa_municipio_sq", { p_election: electionId, p_sq: Number(sq) });
+  if (error || !data) return [];
+  return (data as { ibge_code: string; cand_votos: number; total_votos: number }[]).map((r) => ({
+    ibge: r.ibge_code,
+    cand: Number(r.cand_votos),
+    total: Number(r.total_votos),
+  }));
+}
