@@ -63,7 +63,7 @@ function Label({ children, obrig }: { children: React.ReactNode; obrig?: boolean
   );
 }
 
-export default function NovaEmendaForm({ territorios, liderancas }: NovaEmendaFormProps) {
+export default function NovaEmendaForm({ liderancas }: NovaEmendaFormProps) {
   const router = useRouter();
 
   const [numero, setNumero] = useState("");
@@ -75,9 +75,10 @@ export default function NovaEmendaForm({ territorios, liderancas }: NovaEmendaFo
   const [descricao, setDescricao] = useState("");
   const [objeto, setObjeto] = useState("");
   const [municipio, setMunicipio] = useState("");
+  const [bairro, setBairro] = useState("");
   const [entidade, setEntidade] = useState("");
   const [cnpj, setCnpj] = useState("");
-  const [territoryId, setTerritoryId] = useState("");
+  const [responsavel, setResponsavel] = useState("");
   const [liderancaId, setLiderancaId] = useState("");
   const [dataIndicacao, setDataIndicacao] = useState("");
   const [prazo, setPrazo] = useState("");
@@ -107,9 +108,10 @@ export default function NovaEmendaForm({ territorios, liderancas }: NovaEmendaFo
     if (numero.trim()) payload.numero = numero.trim();
     if (objeto.trim()) payload.objeto = objeto.trim();
     if (municipio.trim()) payload.municipio = municipio.trim();
+    if (bairro.trim()) payload.bairro = bairro.trim();
     if (entidade.trim()) payload.entidade_beneficiada = entidade.trim();
     if (cnpj.trim()) payload.cnpj_entidade = cnpj.trim();
-    if (territoryId) payload.territory_id = territoryId;
+    if (responsavel.trim()) payload.responsavel_nome = responsavel.trim();
     if (liderancaId) payload.lideranca_id = liderancaId;
     if (dataIndicacao) payload.data_indicacao = dataIndicacao;
     if (prazo) payload.prazo_execucao = prazo;
@@ -190,6 +192,10 @@ export default function NovaEmendaForm({ territorios, liderancas }: NovaEmendaFo
               <input type="text" value={municipio} onChange={(e) => setMunicipio(e.target.value)} className="wr-input w-full" />
             </div>
             <div>
+              <Label>Bairro</Label>
+              <input type="text" value={bairro} onChange={(e) => setBairro(e.target.value)} className="wr-input w-full" placeholder="O bairro liga a emenda ao voto do território" />
+            </div>
+            <div>
               <Label>Entidade beneficiada</Label>
               <input type="text" value={entidade} onChange={(e) => setEntidade(e.target.value)} className="wr-input w-full" />
             </div>
@@ -201,18 +207,13 @@ export default function NovaEmendaForm({ territorios, liderancas }: NovaEmendaFo
               <Label>Beneficiários estimados</Label>
               <input type="number" value={beneficiarios} onChange={(e) => setBeneficiarios(e.target.value)} className="wr-input w-full" />
             </div>
-            {territorios.length > 0 && (
-              <div>
-                <Label>Território</Label>
-                <select value={territoryId} onChange={(e) => setTerritoryId(e.target.value)} className="wr-input w-full">
-                  <option value="">—</option>
-                  {territorios.map((t) => <option key={t.id} value={t.id}>{t.nome}</option>)}
-                </select>
-              </div>
-            )}
+            <div>
+              <Label>Responsável pela emenda</Label>
+              <input type="text" value={responsavel} onChange={(e) => setResponsavel(e.target.value)} className="wr-input w-full" placeholder="Quem indicou/intermediou (nome livre)" />
+            </div>
             {liderancas.length > 0 && (
               <div>
-                <Label>Liderança que intermediou</Label>
+                <Label>Vincular liderança (opcional)</Label>
                 <select value={liderancaId} onChange={(e) => setLiderancaId(e.target.value)} className="wr-input w-full">
                   <option value="">—</option>
                   {liderancas.map((l) => <option key={l.id} value={l.id}>{l.nome}</option>)}

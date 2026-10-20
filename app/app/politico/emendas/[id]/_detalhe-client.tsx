@@ -30,9 +30,11 @@ export interface EmendaDetalhe {
   valor_liquidado_cents: number;
   valor_pago_cents: number;
   municipio: string | null;
+  bairro: string | null;
   entidade_beneficiada: string | null;
   cnpj_entidade: string | null;
   territory_id: string | null;
+  responsavel_nome: string | null;
   area_tematica: string;
   descricao: string;
   objeto: string | null;
@@ -114,7 +116,7 @@ function rotulo(lista: Opcao[], id: string | null): string {
   return lista.find((o) => o.id === id)?.nome ?? id;
 }
 
-export default function DetalheEmendaClient({ emenda, territorios, liderancas }: Props) {
+export default function DetalheEmendaClient({ emenda, liderancas }: Props) {
   const router = useRouter();
 
   const [e, setE] = useState<EmendaDetalhe>(emenda);
@@ -131,9 +133,10 @@ export default function DetalheEmendaClient({ emenda, territorios, liderancas }:
   const [descricao, setDescricao] = useState(e.descricao ?? "");
   const [objeto, setObjeto] = useState(e.objeto ?? "");
   const [municipio, setMunicipio] = useState(e.municipio ?? "");
+  const [bairro, setBairro] = useState(e.bairro ?? "");
   const [entidade, setEntidade] = useState(e.entidade_beneficiada ?? "");
   const [cnpj, setCnpj] = useState(e.cnpj_entidade ?? "");
-  const [territoryId, setTerritoryId] = useState(e.territory_id ?? "");
+  const [responsavel, setResponsavel] = useState(e.responsavel_nome ?? "");
   const [liderancaId, setLiderancaId] = useState(e.lideranca_id ?? "");
   const [status, setStatus] = useState(e.status);
   const [vIndicado, setVIndicado] = useState(centsParaReais(e.valor_indicado_cents));
@@ -180,9 +183,10 @@ export default function DetalheEmendaClient({ emenda, territorios, liderancas }:
       descricao: descricao.trim(),
       objeto: objeto.trim() || null,
       municipio: municipio.trim() || null,
+      bairro: bairro.trim() || null,
       entidade_beneficiada: entidade.trim() || null,
       cnpj_entidade: cnpj.trim() || null,
-      territory_id: territoryId || null,
+      responsavel_nome: responsavel.trim() || null,
       lideranca_id: liderancaId || null,
       status,
       valor_indicado_cents: reaisParaCents(vIndicado),
@@ -307,11 +311,12 @@ export default function DetalheEmendaClient({ emenda, territorios, liderancas }:
             <Campo label="Objeto"><input type="text" value={objeto} onChange={(ev) => setObjeto(ev.target.value)} className="wr-input w-full" /></Campo>
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <Campo label="Município"><input type="text" value={municipio} onChange={(ev) => setMunicipio(ev.target.value)} className="wr-input w-full" /></Campo>
+              <Campo label="Bairro"><input type="text" value={bairro} onChange={(ev) => setBairro(ev.target.value)} className="wr-input w-full" /></Campo>
               <Campo label="Entidade"><input type="text" value={entidade} onChange={(ev) => setEntidade(ev.target.value)} className="wr-input w-full" /></Campo>
               <Campo label="CNPJ"><input type="text" value={cnpj} onChange={(ev) => setCnpj(ev.target.value)} className="wr-input w-full" /></Campo>
               <Campo label="Beneficiários"><input type="number" value={beneficiarios} onChange={(ev) => setBeneficiarios(ev.target.value)} className="wr-input w-full" /></Campo>
-              {territorios.length > 0 && <Campo label="Território"><select value={territoryId} onChange={(ev) => setTerritoryId(ev.target.value)} className="wr-input w-full"><option value="">—</option>{territorios.map((o) => <option key={o.id} value={o.id}>{o.nome}</option>)}</select></Campo>}
-              {liderancas.length > 0 && <Campo label="Liderança"><select value={liderancaId} onChange={(ev) => setLiderancaId(ev.target.value)} className="wr-input w-full"><option value="">—</option>{liderancas.map((o) => <option key={o.id} value={o.id}>{o.nome}</option>)}</select></Campo>}
+              <Campo label="Responsável pela emenda"><input type="text" value={responsavel} onChange={(ev) => setResponsavel(ev.target.value)} className="wr-input w-full" placeholder="Nome livre" /></Campo>
+              {liderancas.length > 0 && <Campo label="Vincular liderança (opcional)"><select value={liderancaId} onChange={(ev) => setLiderancaId(ev.target.value)} className="wr-input w-full"><option value="">—</option>{liderancas.map((o) => <option key={o.id} value={o.id}>{o.nome}</option>)}</select></Campo>}
             </div>
             {/* Valores e datas por etapa */}
             <div className="rounded-xl p-4" style={{ background: "rgba(255,255,255,0.03)", border: "1px solid var(--color-border)" }}>
@@ -338,10 +343,10 @@ export default function DetalheEmendaClient({ emenda, territorios, liderancas }:
           <dl className="grid grid-cols-1 gap-x-6 gap-y-4 sm:grid-cols-2">
             <Info label="Objeto" valor={e.objeto ?? "—"} />
             <Info label="Município" valor={e.municipio ?? "—"} />
+            <Info label="Bairro" valor={e.bairro ?? "—"} />
             <Info label="Entidade beneficiada" valor={e.entidade_beneficiada ?? "—"} />
             <Info label="CNPJ" valor={e.cnpj_entidade ?? "—"} />
-            <Info label="Território" valor={rotulo(territorios, e.territory_id)} />
-            <Info label="Liderança" valor={rotulo(liderancas, e.lideranca_id)} />
+            <Info label="Responsável" valor={e.responsavel_nome || rotulo(liderancas, e.lideranca_id)} />
             <Info label="Beneficiários estimados" valor={e.beneficiarios_estimados ? e.beneficiarios_estimados.toLocaleString("pt-BR") : "—"} />
             <Info label="Prazo de execução" valor={fmtData(e.prazo_execucao)} />
             {e.observacoes && <div className="sm:col-span-2"><Info label="Observações" valor={e.observacoes} /></div>}

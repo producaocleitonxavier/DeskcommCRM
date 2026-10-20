@@ -27,7 +27,7 @@ export default async function EmendaDetalhePage({
     db
       .from("pol_emendas")
       .select(
-        "id, numero, ano, tipo, esfera, valor_indicado_cents, valor_empenhado_cents, valor_liquidado_cents, valor_pago_cents, municipio, entidade_beneficiada, cnpj_entidade, territory_id, area_tematica, descricao, objeto, status, data_indicacao, data_empenho, data_liquidacao, data_pagamento, prazo_execucao, beneficiarios_estimados, lideranca_id, observacoes",
+        "id, numero, ano, tipo, esfera, valor_indicado_cents, valor_empenhado_cents, valor_liquidado_cents, valor_pago_cents, municipio, bairro, entidade_beneficiada, cnpj_entidade, territory_id, responsavel_nome, area_tematica, descricao, objeto, status, data_indicacao, data_empenho, data_liquidacao, data_pagamento, prazo_execucao, beneficiarios_estimados, lideranca_id, observacoes",
       )
       .eq("organization_id", org.orgId)
       .eq("id", id)

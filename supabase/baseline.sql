@@ -56192,3 +56192,7 @@ begin
   select (select v from mv), (select v from uni), (select v from lds);
 end; $$;
 grant execute on function public.intel_peso_bairro(bigint, bigint, int, text) to authenticated;
+
+-- ── 9033: Emendas — bairro + responsavel_nome (destino sem município duplicado; responsável como texto livre). Ver migration 9033. ──
+alter table public.pol_emendas add column if not exists bairro text;
+alter table public.pol_emendas add column if not exists responsavel_nome text;
