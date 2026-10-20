@@ -1062,6 +1062,15 @@ export const NAV_CATALOG = [
     sidebar: true,
   },
   {
+    href: "/app/politico/obras",
+    label: "Obras & Fiscalização",
+    description: "Obras, serviços e contratos públicos por território — fiscalização (vistoria, checklist, fotos) ou execução (contrato, fornecedor, prazo).",
+    icon: "Buildings",
+    group: "gabinete",
+    minRole: "manager",
+    sidebar: true,
+  },
+  {
     href: "/app/politico/agenda",
     label: "Agenda",
     description: "Agenda do mandato — reuniões, visitas, audiências, eventos e compromissos.",
