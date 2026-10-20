@@ -139,8 +139,9 @@ export default function BriefingClient({ eleicoes, municipios }: { eleicoes: Ele
             </button>
           </div>
           <MiniMarkdown texto={dossie} />
-          <p className="mt-4 text-[11px]" style={{ color: "var(--color-text-subtle)" }}>
-            Gerado por IA a partir de dados reais do TSE e da sua base (CRM). Documento de apoio — confira antes de decidir.
+          <p className="mt-4 text-[11px] leading-relaxed" style={{ color: "var(--color-text-subtle)" }}>
+            Cruza o <strong>voto do candidato (TSE)</strong> com a <strong>base de contatos do SEU CRM</strong> — os contatos são da sua operação,
+            não do candidato analisado. Documento de apoio gerado por IA; confira antes de decidir.
           </p>
         </section>
       )}

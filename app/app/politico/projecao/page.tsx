@@ -12,5 +12,5 @@ import { redirect } from "next/navigation";
 export const dynamic = "force-dynamic";
 
 export default function ProjecaoRedirect() {
-  redirect("/app/politico/mapa-eleitoral?camada=projecao");
+  redirect("/app/politico/radar-zonal?view=projecao");
 }

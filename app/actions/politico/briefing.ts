@@ -55,24 +55,27 @@ export async function briefingEstrategico(
     .map((z) => `Zona ${z.zona} (${z.universo.toLocaleString("pt-BR")} votos, sua base ${z.base}${z.bairros.length ? `, bairros: ${z.bairros.slice(0, 4).join(", ")}` : ""})`);
 
   const fatos: string[] = [
-    `Candidato: ${nome} (nº ${resumo.nr}${resumo.partido ? `, ${resumo.partido}` : ""})${resumo.situacao ? ` — ${resumo.situacao}` : ""}`,
-    `Cargo/eleição: ${cargoAno}. Votos totais (MG): ${resumo.votos.toLocaleString("pt-BR")} (${pctEstado}% do estado).`,
+    `Candidato analisado (dados TSE): ${nome} (nº ${resumo.nr}${resumo.partido ? `, ${resumo.partido}` : ""})${resumo.situacao ? ` — ${resumo.situacao}` : ""}`,
+    `Cargo/eleição: ${cargoAno}. Votos totais do candidato (MG): ${resumo.votos.toLocaleString("pt-BR")} (${pctEstado}% do estado).`,
     `Município analisado: ${munNome}. Votos do candidato no município: ${votosNoMun.toLocaleString("pt-BR")}.`,
     `Redutos do candidato (bairros onde mais fez voto): ${redutos.length ? redutos.join("; ") : "sem bairros com voto"}.`,
-    `Projeção do município — universo total de votos do cargo: ${proj.universoTotal.toLocaleString("pt-BR")}; sua base no CRM: ${proj.baseTotal.toLocaleString("pt-BR")} contatos; cobertura média ${(proj.coberturaMedia * 100).toFixed(2)}%.`,
-    `Zonas de oportunidade (muito voto, pouca presença da sua base): ${oportunidades.length ? oportunidades.join("; ") : "—"}.`,
+    `BASE DE CRM DA OPERAÇÃO (contatos da campanha que usa a ferramenta — NÃO são eleitores nem a base do candidato analisado): ${proj.baseTotal.toLocaleString("pt-BR")} contatos em ${munNome}.`,
+    `Universo de VOTOS do cargo em ${munNome} (total de votos válidos, não eleitorado): ${proj.universoTotal.toLocaleString("pt-BR")}. Cobertura da base de CRM sobre esse volume: ${(proj.coberturaMedia * 100).toFixed(2)}%.`,
+    `Zonas de oportunidade (muito VOTO do cargo e pouca presença da base de CRM): ${oportunidades.length ? oportunidades.join("; ") : "—"}.`,
   ];
 
   const cerebro = await cerebroDaOrg(createAdminClient(), org.orgId);
   if ("erro" in cerebro) return { ok: false, erro: `IA indisponível (${cerebro.erro}). Configure em IA › Credenciais.` };
 
   const system =
-    "Você é chefe de inteligência de uma campanha eleitoral no Brasil. Recebe dados REAIS do TSE e do CRM da campanha e escreve um " +
-    "BRIEFING ESTRATÉGICO executivo, direto e acionável, em português do Brasil, para o candidato e a coordenação. " +
-    "Use APENAS os números fornecidos — nunca invente votos, pesquisas, nomes ou fatos. Distinga claramente o VOTO do candidato (TSE) da BASE da campanha (CRM). " +
-    "Não prometa resultado futuro: 'oportunidade' é volume de voto onde a base é fraca. Markdown com títulos: " +
+    "Você é chefe de inteligência de uma campanha eleitoral no Brasil. Recebe dados REAIS do TSE e a base de contatos (CRM) da operação que usa a ferramenta, e escreve um " +
+    "BRIEFING ESTRATÉGICO executivo, direto e acionável, em português do Brasil. " +
+    "Use APENAS os números fornecidos — nunca invente votos, pesquisas, nomes ou fatos. " +
+    "DISTINÇÃO CRÍTICA, nunca confunda: (a) o VOTO do candidato é dado do TSE; (b) a BASE DE CRM é da OPERAÇÃO que usa a ferramenta — NÃO é do candidato analisado nem é 'eleitorado'. Nunca escreva que os contatos do CRM são do candidato; chame-os de 'base de CRM da operação' ou 'sua base'. " +
+    "Chame o universo sempre de 'votos do cargo' (jamais 'eleitores'/'eleitorado'). " +
+    "Não prometa resultado futuro: 'oportunidade' é volume de voto onde a base de CRM é fraca. Markdown com títulos: " +
     "## Posição atual, ## Mapa de força (onde o candidato é forte), ## Onde crescer, ## Riscos, ## Plano de 90 dias. " +
-    "No plano, liste ações concretas por zona/bairro (cadastrar base, presença física, evento, lideranças).";
+    "No plano, liste ações concretas por zona/bairro (cadastrar base de CRM, presença física, evento, lideranças).";
 
   const prompt =
     `Escreva o briefing estratégico de campanha com base nos dados abaixo.\n\n` +

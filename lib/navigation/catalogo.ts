@@ -1003,15 +1003,16 @@ export const NAV_CATALOG = [
     sidebar: true,
   },
 
-  // ── Território — Mapa Eleitoral (sidebar) ─────────────────────────
+  // ── Território — Mapa Eleitoral: APOSENTADO, fundido no Radar Zonal.
+  // Fora da sidebar; a rota redireciona para /radar-zonal (não quebra links).
   {
     href: "/app/politico/mapa-eleitoral",
     label: "Mapa Eleitoral",
-    description: "Mapa interativo com territórios, rankings, evolução e ações territoriais.",
+    description: "Fundido no Radar Zonal (Minha Base e Projeção viraram visões do Radar).",
     icon: "MapPin",
     group: "territorio",
     minRole: "manager",
-    sidebar: true,
+    sidebar: false,
   },
   {
     href: "/app/politico/raio-x",
