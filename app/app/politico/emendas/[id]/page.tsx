@@ -58,5 +58,11 @@ export default async function EmendaDetalhePage({
     if (tse) peso = await pesoBairro(mandato.electionId, mandato.sq, tse, em.bairro);
   }
 
-  return <DetalheEmendaClient emenda={emRes.data as unknown as EmendaDetalhe} territorios={territorios} liderancas={liderancas} peso={peso} mandatoNome={mandato?.nome ?? null} />;
+  const { count: beneficiarios } = await db
+    .from("pol_leads")
+    .select("id", { count: "exact", head: true })
+    .eq("organization_id", org.orgId)
+    .eq("pol_emenda_id", id);
+
+  return <DetalheEmendaClient emenda={emRes.data as unknown as EmendaDetalhe} territorios={territorios} liderancas={liderancas} peso={peso} mandatoNome={mandato?.nome ?? null} beneficiarios={beneficiarios ?? 0} />;
 }

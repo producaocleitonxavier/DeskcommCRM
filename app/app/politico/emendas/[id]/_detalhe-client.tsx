@@ -10,9 +10,10 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, Check, Pencil, X } from "lucide-react";
+import { ArrowLeft, Check, Pencil, X, Users, Copy } from "lucide-react";
 
 import { atualizarRegistro } from "@/app/actions/politico/gabinete-actions";
+import { listarBeneficiariosEmenda, type BeneficiarioObra } from "@/app/actions/politico/obras-actions";
 
 interface Opcao {
   id: string;
@@ -55,6 +56,7 @@ export interface Props {
   liderancas: Opcao[];
   peso?: import("@/app/actions/politico/obras-actions").PesoBairro | null;
   mandatoNome?: string | null;
+  beneficiarios?: number;
 }
 
 const TIPOS: Opcao[] = [
@@ -118,7 +120,7 @@ function rotulo(lista: Opcao[], id: string | null): string {
   return lista.find((o) => o.id === id)?.nome ?? id;
 }
 
-export default function DetalheEmendaClient({ emenda, liderancas, peso, mandatoNome }: Props) {
+export default function DetalheEmendaClient({ emenda, liderancas, peso, mandatoNome, beneficiarios = 0 }: Props) {
   const router = useRouter();
 
   const [e, setE] = useState<EmendaDetalhe>(emenda);
@@ -329,6 +331,8 @@ export default function DetalheEmendaClient({ emenda, liderancas, peso, mandatoN
         </section>
       )}
 
+      <CaptacaoEmendaCard emendaId={e.id} beneficiarios={beneficiarios} />
+
       <section className="wr-card p-6 sm:p-7">
         {editando ? (
           <div className="space-y-4">
@@ -390,6 +394,55 @@ export default function DetalheEmendaClient({ emenda, liderancas, peso, mandatoN
   );
 }
 
+function CaptacaoEmendaCard({ emendaId, beneficiarios }: { emendaId: string; beneficiarios: number }) {
+  const [copiado, setCopiado] = useState(false);
+  const [verando, setVerando] = useState(false);
+  const [lista, setLista] = useState<BeneficiarioObra[] | null>(null);
+  const [carregando, setCarregando] = useState(false);
+  const link = typeof window !== "undefined" ? `${window.location.origin}/e/${emendaId}` : `/e/${emendaId}`;
+  async function copiar() { try { await navigator.clipboard.writeText(link); setCopiado(true); setTimeout(() => setCopiado(false), 2000); } catch { /* ignore */ } }
+  async function ver() { if (verando) { setVerando(false); return; } setVerando(true); if (lista === null) { setCarregando(true); setLista(await listarBeneficiariosEmenda(emendaId)); setCarregando(false); } }
+  return (
+    <section className="wr-card p-5">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="flex items-center gap-2.5">
+          <Users className="h-5 w-5 shrink-0" aria-hidden style={{ color: "#D7F36A" }} />
+          <div>
+            <h2 className="font-heading text-base font-bold" style={{ color: "var(--color-text)" }}>Captação de beneficiários</h2>
+            <p className="text-xs" style={{ color: "var(--color-text-subtle)" }}>Dê este link à entidade beneficiada: cada cadastro vira base sua, no bairro. O link aceita cadastros ilimitados.</p>
+          </div>
+        </div>
+        <div className="text-right">
+          <div className="font-heading text-2xl font-bold tabular-nums" style={{ color: "#D7F36A" }}>{beneficiarios.toLocaleString("pt-BR")}</div>
+          <div className="text-[11px]" style={{ color: "var(--color-text-subtle)" }}>cadastrados</div>
+        </div>
+      </div>
+      <div className="mt-3 flex flex-wrap items-center gap-2">
+        <input readOnly value={link} className="wr-input flex-1 text-xs" onFocus={(ev) => ev.currentTarget.select()} style={{ minWidth: 200 }} />
+        <button type="button" onClick={copiar} className="inline-flex items-center gap-1.5 rounded-full px-4 py-2 text-sm font-semibold" style={{ background: "#D7F36A", color: "#16181D" }}><Copy className="h-4 w-4" aria-hidden /> {copiado ? "Copiado!" : "Copiar link"}</button>
+        {beneficiarios > 0 && <button type="button" onClick={ver} className="inline-flex items-center gap-1.5 rounded-full px-4 py-2 text-sm font-semibold" style={{ border: "1px solid var(--color-border)", color: "var(--color-text-muted)" }}><Users className="h-4 w-4" aria-hidden /> {verando ? "Ocultar" : "Ver cadastros"}</button>}
+      </div>
+      {verando && (
+        <div className="mt-3 overflow-hidden rounded-lg" style={{ border: "1px solid var(--color-border)" }}>
+          {carregando ? <div className="p-4 text-center text-sm" style={{ color: "var(--color-text-subtle)" }}>Carregando…</div>
+            : (lista && lista.length > 0) ? (
+              <table className="w-full text-sm">
+                <thead><tr style={{ borderBottom: "1px solid var(--color-border)" }}>{["Nome", "WhatsApp", "Bairro", "Data"].map((h) => <th key={h} className="px-3 py-2 text-left text-[12px] font-medium" style={{ color: "var(--color-text-subtle)" }}>{h}</th>)}</tr></thead>
+                <tbody>{lista.map((b, i) => (
+                  <tr key={i} style={{ borderBottom: "1px solid var(--color-border)" }}>
+                    <td className="px-3 py-2 font-medium" style={{ color: "var(--color-text)" }}>{b.nome ?? "—"}</td>
+                    <td className="px-3 py-2 tabular-nums" style={{ color: "var(--color-text-muted)" }}>{b.telefone ?? "—"}</td>
+                    <td className="px-3 py-2" style={{ color: "var(--color-text-muted)" }}>{[b.bairro, b.cidade].filter(Boolean).join(" · ") || "—"}</td>
+                    <td className="px-3 py-2 text-[12px]" style={{ color: "var(--color-text-subtle)" }}>{new Date(b.created_at).toLocaleDateString("pt-BR")}</td>
+                  </tr>
+                ))}</tbody>
+              </table>
+            ) : <div className="p-4 text-center text-sm" style={{ color: "var(--color-text-subtle)" }}>Nenhum cadastro ainda.</div>}
+        </div>
+      )}
+    </section>
+  );
+}
 function PesoBox({ valor, label, sub, accent }: { valor: string; label: string; sub?: string; accent?: string }) {
   return (
     <div className="rounded-lg p-3" style={{ background: "rgba(255,255,255,0.03)", border: "1px solid var(--color-border)" }}>

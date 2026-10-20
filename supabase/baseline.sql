@@ -56193,6 +56193,10 @@ begin
 end; $$;
 grant execute on function public.intel_peso_bairro(bigint, bigint, int, text) to authenticated;
 
+-- ── 9035: Captação por emenda — pol_leads.pol_emenda_id (espelha a captação por obra). Ver migration 9035. ──
+alter table public.pol_leads add column if not exists pol_emenda_id uuid references public.pol_emendas(id) on delete set null;
+create index if not exists idx_pol_leads_emenda on public.pol_leads(pol_emenda_id) where pol_emenda_id is not null;
+
 -- ── 9033: Emendas — bairro + responsavel_nome (destino sem município duplicado; responsável como texto livre). Ver migration 9033. ──
 alter table public.pol_emendas add column if not exists bairro text;
 alter table public.pol_emendas add column if not exists responsavel_nome text;

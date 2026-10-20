@@ -16,6 +16,9 @@ export const PUBLIC_PATHS: RegExp[] = [
   // atribuído à obra. Org derivada SÓ da obra no servidor. Mesma natureza de /c/.
   /^\/o\/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i,
   /^\/api\/public\/captacao-obra\/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i,
+  // Captação pública por EMENDA (mesma natureza da obra acima).
+  /^\/e\/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i,
+  /^\/api\/public\/captacao-emenda\/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i,
   /^\/$/,
   /^\/login(\/.*)?$/,
   /^\/signup$/,

@@ -233,6 +233,26 @@ export async function listarBeneficiariosObra(obraId: string): Promise<Beneficia
   });
 }
 
+/** Beneficiários captados pelo link público da EMENDA (pol_leads.pol_emenda_id). */
+export async function listarBeneficiariosEmenda(emendaId: string): Promise<BeneficiarioObra[]> {
+  const user = await requireAuth();
+  const org = await resolveActiveOrg(user);
+  if (!org) return [];
+  const db = await createClient();
+  const { data } = await db
+    .from("pol_leads")
+    .select("created_at, contacts(name, phone_number, custom_fields)")
+    .eq("organization_id", org.orgId)
+    .eq("pol_emenda_id", emendaId)
+    .order("created_at", { ascending: false })
+    .limit(500);
+  return ((data ?? []) as { created_at: string; contacts: { name: string | null; phone_number: string | null; custom_fields: Record<string, unknown> | null } | null }[]).map((r) => {
+    const cf = (r.contacts?.custom_fields ?? {}) as { endereco_gip?: { cidade?: string; bairro?: string }; cidade?: string; bairro?: string };
+    const geo = cf.endereco_gip ?? {};
+    return { nome: r.contacts?.name ?? null, telefone: r.contacts?.phone_number ?? null, cidade: geo.cidade ?? cf.cidade ?? null, bairro: geo.bairro ?? cf.bairro ?? null, created_at: r.created_at };
+  });
+}
+
 export async function removerFotoObra(fotoId: string): Promise<AcaoResultado> {
   const user = await requireAuth();
   const org = await resolveActiveOrg(user);
