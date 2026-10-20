@@ -56073,3 +56073,11 @@ begin
   order by a.v desc;
 end; $$;
 grant execute on function public.intel_adversarios_reduto(bigint, int, bigint, int, int) to authenticated;
+
+-- ── 9028: intel_bairro_regional (bairro->regional administrativa por municipio; resolve a alucinacao da IA). Mapa por geografia (ponto-em-poligono: regionais do OSM x lat/long de intel_locais). Seed BH+Contagem por script. Ver migration 9028. ──
+create table if not exists public.intel_bairro_regional (cd_municipio int not null, bairro text not null, regional text not null, primary key (cd_municipio, bairro));
+alter table public.intel_bairro_regional enable row level security;
+drop policy if exists intel_bairro_regional_read on public.intel_bairro_regional;
+create policy intel_bairro_regional_read on public.intel_bairro_regional for select to authenticated using (true);
+grant select on public.intel_bairro_regional to authenticated;
+revoke all on public.intel_bairro_regional from anon;

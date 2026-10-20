@@ -42,14 +42,28 @@ export async function briefingEstrategico(
 
   const cdMun = Number(municipioTse);
   const db = await createClient();
-  const [resumo, bairros, proj, advRpc] = await Promise.all([
+  const [resumo, bairros, proj, advRpc, regRows] = await Promise.all([
     resumoCandidato(electionId, sq),
     drillCandidato(electionId, sq, "bairro", cdMun),
     projecaoZonal(electionId, municipioTse, ano),
     db.rpc("intel_adversarios_reduto", { p_election: electionId, p_municipio: cdMun, p_sq: Number(sq), p_nbairros: 5, p_nadv: 4 }),
+    db.from("intel_bairro_regional").select("bairro, regional").eq("cd_municipio", cdMun),
   ]);
 
   if (!resumo) return { ok: false, erro: "Candidato não encontrado." };
+
+  // Mapa bairro→regional (geográfico, verificado) para a IA não inventar regional.
+  const regionalDe = new Map<string, string>();
+  for (const r of (regRows.data ?? []) as { bairro: string; regional: string }[]) regionalDe.set(r.bairro, r.regional);
+  const temRegional = regionalDe.size > 0;
+  // Força do candidato por regional (soma dos votos dos bairros dele em cada regional).
+  const votosRegional = new Map<string, number>();
+  for (const b of bairros) {
+    const reg = regionalDe.get(b.rotulo);
+    if (reg && b.votos > 0) votosRegional.set(reg, (votosRegional.get(reg) ?? 0) + b.votos);
+  }
+  const forcaRegional = [...votosRegional.entries()].sort((a, b) => b[1] - a[1]).slice(0, 4)
+    .map(([reg, v]) => `${reg}: ${v.toLocaleString("pt-BR")} votos`);
 
   const advRows = (advRpc.data ?? []) as { nome_urna: string; partido_sigla: string | null; votos_reduto: number; votos_municipio: number; bairros: string | null }[];
   const adversarios: AdversarioReduto[] = advRows.map((a) => ({
@@ -67,7 +81,10 @@ export async function briefingEstrategico(
   const redutos = bairros
     .filter((b) => b.votos > 0)
     .slice(0, 8)
-    .map((b) => `${b.rotulo}: ${b.votos} votos (${b.universo > 0 ? ((b.votos / b.universo) * 100).toFixed(1) : "0"}% do bairro)`);
+    .map((b) => {
+      const reg = regionalDe.get(b.rotulo);
+      return `${b.rotulo}${reg ? ` [regional ${reg}]` : ""}: ${b.votos} votos (${b.universo > 0 ? ((b.votos / b.universo) * 100).toFixed(1) : "0"}% do bairro)`;
+    });
 
   // Zonas de oportunidade (muito voto, pouca presença da NOSSA base) e redutos da base.
   const oportunidades = proj.zonas
@@ -79,7 +96,8 @@ export async function briefingEstrategico(
     `Candidato analisado (dados TSE): ${nome} (nº ${resumo.nr}${resumo.partido ? `, ${resumo.partido}` : ""})${resumo.situacao ? ` — ${resumo.situacao}` : ""}`,
     `Cargo/eleição: ${cargoAno}. Votos totais do candidato (MG): ${resumo.votos.toLocaleString("pt-BR")} (${pctEstado}% do estado).`,
     `Município analisado: ${munNome}. Votos do candidato no município: ${votosNoMun.toLocaleString("pt-BR")}.`,
-    `Redutos do candidato (bairros onde mais fez voto): ${redutos.length ? redutos.join("; ") : "sem bairros com voto"}.`,
+    `Redutos do candidato (bairros onde mais fez voto, com a regional administrativa entre colchetes): ${redutos.length ? redutos.join("; ") : "sem bairros com voto"}.`,
+    ...(temRegional && forcaRegional.length ? [`Força do candidato POR REGIONAL administrativa (soma dos votos nos bairros de cada regional): ${forcaRegional.join("; ")}.`] : []),
     `BASE DE CRM DA OPERAÇÃO (contatos da campanha que usa a ferramenta — NÃO são eleitores nem a base do candidato analisado): ${proj.baseTotal.toLocaleString("pt-BR")} contatos em ${munNome}.`,
     `Universo de VOTOS do cargo em ${munNome} (total de votos válidos, não eleitorado): ${proj.universoTotal.toLocaleString("pt-BR")}. Cobertura da base de CRM sobre esse volume: ${(proj.coberturaMedia * 100).toFixed(2)}%.`,
     `Zonas de oportunidade (muito VOTO do cargo e pouca presença da base de CRM): ${oportunidades.length ? oportunidades.join("; ") : "—"}.`,
@@ -91,13 +109,17 @@ export async function briefingEstrategico(
   const cerebro = await cerebroDaOrg(createAdminClient(), org.orgId);
   if ("erro" in cerebro) return { ok: false, erro: `IA indisponível (${cerebro.erro}). Configure em IA › Credenciais.` };
 
+  const regraRegional = temRegional
+    ? "Você RECEBEU o mapa bairro→regional administrativa (verificado por geografia; a regional vem entre colchetes nos redutos e na 'força por regional'). Use as REGIONAIS para a leitura territorial, mas SOMENTE conforme esse mapa — NUNCA infira a regional pelo nome do bairro. "
+    : "NUNCA agrupe bairros em 'regional'/'região administrativa' nem cite o nome de uma regional — você NÃO recebeu esse dado e inferir pelo nome do bairro gera erro grave. Use só os nomes de BAIRRO e ZONA exatamente como fornecidos. ";
+
   const system =
     "Você é chefe de inteligência de uma campanha eleitoral no Brasil. Recebe dados REAIS do TSE e a base de contatos (CRM) da operação que usa a ferramenta, e escreve um " +
     "BRIEFING ESTRATÉGICO executivo, direto e acionável, em português do Brasil. " +
     "Use APENAS os números fornecidos — nunca invente votos, pesquisas, nomes ou fatos. " +
     "DISTINÇÃO CRÍTICA, nunca confunda: (a) o VOTO do candidato é dado do TSE; (b) a BASE DE CRM é da OPERAÇÃO que usa a ferramenta — NÃO é do candidato analisado nem é 'eleitorado'. Nunca escreva que os contatos do CRM são do candidato; chame-os de 'base de CRM da operação' ou 'sua base'. " +
     "Chame o universo sempre de 'votos do cargo' (jamais 'eleitores'/'eleitorado'). " +
-    "NUNCA agrupe bairros em 'regional'/'região administrativa' nem cite o nome de uma regional (ex.: 'Regional Barreiro') — você NÃO recebeu esse dado e inferir pelo nome do bairro gera erro grave. Trabalhe só com os nomes de BAIRRO e ZONA exatamente como fornecidos. " +
+    regraRegional +
     "Não prometa resultado futuro: 'oportunidade' é volume de voto onde a base de CRM é fraca. Markdown com títulos: " +
     "## Posição atual, ## Mapa de força (onde o candidato é forte), ## A batalha (quem disputa seus redutos), ## Onde crescer, ## Riscos, ## Plano de 90 dias. " +
     "Em 'A batalha', analise os adversários que mais fazem voto nos MESMOS bairros fortes do candidato: quem é a ameaça real ao território, quem apenas passa por ali, e o que isso exige. " +
