@@ -7,7 +7,12 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
-import { Info, Plus, MapPin, HardHat, ShieldCheck } from "lucide-react";
+import { Info, Plus, MapPin, HardHat, ShieldCheck, Search, Loader2, Target, X } from "lucide-react";
+
+import type { EleicaoOpcao } from "@/app/actions/politico/intelEleitoral";
+import { rankingCandidatos, type CandidatoRank } from "@/app/actions/politico/raioX";
+import { salvarMandatoTse, type MandatoTse } from "@/app/actions/politico/obras-actions";
+import { CandFoto } from "@/components/politico/cand-foto";
 
 export interface ObraRow {
   id: string;
@@ -40,7 +45,7 @@ function brl(cents: number): string {
   return (cents / 100).toLocaleString("pt-BR", { style: "currency", currency: "BRL", maximumFractionDigits: 0 });
 }
 
-export default function ObrasClient({ obras, executivo }: { obras: ObraRow[]; executivo: boolean }) {
+export default function ObrasClient({ obras, executivo, eleicoes, mandatoInicial }: { obras: ObraRow[]; executivo: boolean; eleicoes: EleicaoOpcao[]; mandatoInicial: MandatoTse | null }) {
   const [fNat, setFNat] = useState<"todas" | "execucao" | "fiscalizacao">("todas");
   const [fStatus, setFStatus] = useState<string>("todos");
 
@@ -56,6 +61,8 @@ export default function ObrasClient({ obras, executivo }: { obras: ObraRow[]; ex
 
   return (
     <div className="space-y-4">
+      <MandatoStrip eleicoes={eleicoes} inicial={mandatoInicial} />
+
       {/* Explicação didática */}
       <div className="flex items-start gap-2.5 rounded-xl p-3.5" style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.1)" }}>
         <Info className="mt-0.5 h-4 w-4 shrink-0" aria-hidden style={{ color: "#D7F36A" }} />
@@ -132,6 +139,71 @@ export default function ObrasClient({ obras, executivo }: { obras: ObraRow[]; ex
             );
           })}
         </div>
+      )}
+    </div>
+  );
+}
+
+// Faixa "Meu mandato": vincula a conta ao candidato TSE p/ ver votos por obra.
+function MandatoStrip({ eleicoes, inicial }: { eleicoes: EleicaoOpcao[]; inicial: MandatoTse | null }) {
+  const [mandato, setMandato] = useState<MandatoTse | null>(inicial);
+  const [abrir, setAbrir] = useState(false);
+  const [eleicaoId, setEleicaoId] = useState(eleicoes[0]?.id ?? 0);
+  const [q, setQ] = useState("");
+  const [res, setRes] = useState<CandidatoRank[]>([]);
+  const [buscando, setBuscando] = useState(false);
+  const ano = eleicoes.find((e) => e.id === eleicaoId)?.ano ?? 0;
+
+  async function buscar(termo: string) {
+    setQ(termo);
+    if (termo.trim().length < 2) { setRes([]); return; }
+    setBuscando(true);
+    setRes(await rankingCandidatos(eleicaoId, termo.trim(), 20));
+    setBuscando(false);
+  }
+  async function escolher(c: CandidatoRank) {
+    await salvarMandatoTse(eleicaoId, c.sq, c.nomeUrna);
+    setMandato({ electionId: eleicaoId, sq: c.sq, nome: c.nomeUrna });
+    setAbrir(false); setQ(""); setRes([]);
+  }
+
+  if (mandato && !abrir) {
+    return (
+      <div className="flex flex-wrap items-center gap-2 rounded-xl px-3.5 py-2.5" style={{ background: "rgba(215,243,106,0.08)", border: "1px solid rgba(215,243,106,0.3)" }}>
+        <Target className="h-4 w-4 shrink-0" aria-hidden style={{ color: "#D7F36A" }} />
+        <span className="text-[13px]" style={{ color: "rgba(255,255,255,0.8)" }}>Mandato vinculado: <strong style={{ color: "#fff" }}>{mandato.nome}</strong> — cada obra mostra os votos que você fez no bairro.</span>
+        <button type="button" onClick={() => setAbrir(true)} className="ml-auto text-xs font-semibold" style={{ color: "#D7F36A" }}>trocar</button>
+      </div>
+    );
+  }
+  return (
+    <div className="space-y-2 rounded-xl p-3.5" style={{ background: "rgba(215,243,106,0.06)", border: "1px dashed rgba(215,243,106,0.4)" }}>
+      <div className="flex items-center gap-2 text-[13px]" style={{ color: "rgba(255,255,255,0.8)" }}>
+        <Target className="h-4 w-4 shrink-0" aria-hidden style={{ color: "#D7F36A" }} />
+        <strong style={{ color: "#fff" }}>Vincule seu mandato (TSE)</strong> para ver, em cada obra, os votos que você fez naquele bairro — o ROI do recurso.
+        {mandato && <button type="button" onClick={() => setAbrir(false)} className="ml-auto"><X className="h-4 w-4" style={{ color: "var(--color-text-subtle)" }} /></button>}
+      </div>
+      <div className="flex flex-wrap items-end gap-2">
+        <select value={eleicaoId} onChange={(e) => { setEleicaoId(Number(e.target.value)); setRes([]); setQ(""); }} className="wr-input h-9 py-0 text-sm" style={{ minWidth: 180 }}>
+          {eleicoes.map((e) => <option key={e.id} value={e.id}>{e.label}</option>)}
+        </select>
+        <div className="relative min-w-[240px] flex-1">
+          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2" aria-hidden style={{ color: "var(--color-text-subtle)" }} />
+          <input value={q} onChange={(e) => buscar(e.target.value)} placeholder="Buscar seu nome na urna ou número" className="wr-input w-full pl-9" />
+        </div>
+        {buscando && <Loader2 className="mb-2 h-4 w-4 animate-spin" aria-hidden style={{ color: "var(--color-text-subtle)" }} />}
+      </div>
+      {res.length > 0 && (
+        <ul className="max-h-[260px] overflow-y-auto rounded-lg" style={{ border: "1px solid rgba(255,255,255,0.1)" }}>
+          {res.map((c) => (
+            <li key={c.sq}>
+              <button type="button" onClick={() => escolher(c)} className="flex w-full items-center gap-3 px-3 py-2 text-left transition-colors hover:bg-[rgba(255,255,255,0.06)]">
+                <CandFoto sq={c.sq} ano={ano} nome={c.nomeUrna} size={30} />
+                <div className="min-w-0 flex-1"><div className="truncate text-sm font-semibold" style={{ color: "#fff" }}>{c.nomeUrna}</div><div className="text-xs" style={{ color: "rgba(255,255,255,0.5)" }}>{c.nr}{c.partido ? ` · ${c.partido}` : ""} · {c.votos.toLocaleString("pt-BR")} votos</div></div>
+              </button>
+            </li>
+          ))}
+        </ul>
       )}
     </div>
   );

@@ -166,6 +166,45 @@ export async function listarFotosObra(obraId: string): Promise<FotoObra[]> {
   return out;
 }
 
+// ─── Mandato TSE (vínculo da conta ao candidato do parlamentar) ──────────────
+export interface MandatoTse { electionId: number; sq: string; nome: string }
+
+export async function obterMandatoTse(): Promise<MandatoTse | null> {
+  const user = await requireAuth();
+  const org = await resolveActiveOrg(user);
+  if (!org) return null;
+  const db = await createClient();
+  const { data } = await db.from("pol_gabinete_config").select("tse_election_id, tse_sq_candidato, tse_candidato_nome").eq("organization_id", org.orgId).maybeSingle();
+  const c = data as { tse_election_id?: number | null; tse_sq_candidato?: number | null; tse_candidato_nome?: string | null } | null;
+  if (!c?.tse_election_id || !c?.tse_sq_candidato) return null;
+  return { electionId: Number(c.tse_election_id), sq: String(c.tse_sq_candidato), nome: c.tse_candidato_nome ?? "" };
+}
+
+export async function salvarMandatoTse(electionId: number, sq: string, nome: string): Promise<AcaoResultado> {
+  const user = await requireAuth();
+  const org = await resolveActiveOrg(user);
+  if (!org) return { ok: false, erro: "Sessão ou organização inválida." };
+  const db = await createClient();
+  const { error } = await db.from("pol_gabinete_config").upsert(
+    { organization_id: org.orgId, tse_election_id: electionId, tse_sq_candidato: Number(sq), tse_candidato_nome: nome, updated_at: new Date().toISOString() },
+    { onConflict: "organization_id" },
+  );
+  if (error) return { ok: false, erro: traduzErro(error) };
+  return { ok: true };
+}
+
+export interface PesoBairro { meusVotos: number; universo: number; leads: number }
+
+/** Peso eleitoral de um bairro para o candidato do mandato: seus votos ali, universo e seus leads. */
+export async function pesoBairro(electionId: number, sq: string, municipioTse: string, bairro: string): Promise<PesoBairro | null> {
+  await requireAuth();
+  const db = await createClient();
+  const { data, error } = await db.rpc("intel_peso_bairro", { p_election: electionId, p_sq: Number(sq), p_municipio: Number(municipioTse), p_bairro: bairro });
+  if (error || !data || !Array.isArray(data) || data.length === 0) return null;
+  const r = data[0] as { meus_votos: number; universo: number; leads: number };
+  return { meusVotos: Number(r.meus_votos), universo: Number(r.universo), leads: Number(r.leads) };
+}
+
 export async function removerFotoObra(fotoId: string): Promise<AcaoResultado> {
   const user = await requireAuth();
   const org = await resolveActiveOrg(user);

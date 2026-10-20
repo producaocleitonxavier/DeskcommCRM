@@ -12,7 +12,7 @@ import { useRouter } from "next/navigation";
 import { ArrowLeft, Loader2, Plus, Trash2, MapPin, Camera, X, HardHat, ShieldCheck, ClipboardCheck, Pencil } from "lucide-react";
 
 import { atualizarRegistro, excluirRegistro } from "@/app/actions/politico/gabinete-actions";
-import { registrarVistoria, listarVistorias, uploadFotoObra, listarFotosObra, removerFotoObra, type VistoriaObra, type FotoObra, type ChecklistItem } from "@/app/actions/politico/obras-actions";
+import { registrarVistoria, listarVistorias, uploadFotoObra, listarFotosObra, removerFotoObra, type VistoriaObra, type FotoObra, type ChecklistItem, type PesoBairro } from "@/app/actions/politico/obras-actions";
 import { STATUS, TIPO } from "../_obras-client";
 
 type Obra = Record<string, unknown> & { id: string; titulo: string; natureza: "execucao" | "fiscalizacao"; tipo: string; status: string; percentual: number; valor_cents: number };
@@ -20,6 +20,9 @@ export interface ObraDetalheData {
   obra: Obra;
   emendaRotulo: string | null;
   regional: string | null;
+  peso: PesoBairro | null;
+  mandatoNome: string | null;
+  temBairro: boolean;
   vistorias: VistoriaObra[];
   fotos: FotoObra[];
   emendas: { id: string; numero: string | null; ano: number; descricao: string }[];
@@ -98,6 +101,29 @@ export default function ObraDetalhe({ data }: { data: ObraDetalheData }) {
           <button type="button" onClick={excluir} className="ml-auto inline-flex items-center gap-1 text-xs" style={{ color: "#A3302A" }}><Trash2 className="h-3.5 w-3.5" aria-hidden /> Excluir</button>
         </div>
       </section>
+
+      {/* Peso eleitoral do território — "você investiu onde te elegeu?" */}
+      {data.peso && (data.peso.meusVotos > 0 || data.peso.leads > 0) && (
+        <section className="wr-card p-5" style={{ background: "linear-gradient(180deg, rgba(215,243,106,0.06), transparent)" }}>
+          <div className="mb-2 flex items-center gap-2">
+            <MapPin className="h-4 w-4" aria-hidden style={{ color: "#D7F36A" }} />
+            <h2 className="font-heading text-base font-bold" style={{ color: "var(--color-text)" }}>Peso eleitoral do território</h2>
+          </div>
+          <p className="mb-3 text-xs" style={{ color: "var(--color-text-subtle)" }}>
+            O que {data.mandatoNome || "você"} fez e tem no bairro <strong style={{ color: "var(--color-text)" }}>{(obra.bairro as string) || "—"}</strong> — para saber se o recurso vai (ou foi) para onde há retorno.
+          </p>
+          <div className="grid grid-cols-3 gap-3">
+            <Peso valor={data.peso.meusVotos.toLocaleString("pt-BR")} label="Seus votos aqui" sub={data.peso.universo > 0 ? `${((data.peso.meusVotos / data.peso.universo) * 100).toFixed(1)}% do bairro` : "no último pleito"} accent="#D7F36A" />
+            <Peso valor={data.peso.universo.toLocaleString("pt-BR")} label="Votos do cargo" sub="tamanho eleitoral" />
+            <Peso valor={data.peso.leads.toLocaleString("pt-BR")} label="Sua base (CRM)" sub="contatos no bairro" accent="#7da9bf" />
+          </div>
+        </section>
+      )}
+      {!data.mandatoNome && data.temBairro && (
+        <Link href="/app/politico/obras?mandato=1" className="block rounded-xl p-3.5 text-[13px]" style={{ background: "rgba(215,243,106,0.06)", border: "1px dashed rgba(215,243,106,0.4)", color: "var(--color-text-muted)" }}>
+          💡 <strong style={{ color: "var(--color-text)" }}>Vincule seu mandato no TSE</strong> (na lista de Obras) para ver, em cada obra, os votos que você fez naquele bairro — o ROI eleitoral do recurso.
+        </Link>
+      )}
 
       <DadosCard obra={obra} emendas={data.emendas} onSalvar={(patch) => setObra((o) => ({ ...o, ...patch }))} />
 
@@ -315,4 +341,13 @@ function FotosCard({ obraId, fotos, onMudou }: { obraId: string; fotos: FotoObra
 
 function L({ l, children }: { l: string; children: React.ReactNode }) {
   return <label className="flex flex-col gap-1"><span className="text-xs font-semibold" style={{ color: "var(--color-text-subtle)" }}>{l}</span>{children}</label>;
+}
+function Peso({ valor, label, sub, accent }: { valor: string; label: string; sub?: string; accent?: string }) {
+  return (
+    <div className="rounded-lg p-3" style={{ background: "rgba(255,255,255,0.03)", border: "1px solid var(--color-border)" }}>
+      <div className="font-heading text-xl font-bold tabular-nums" style={{ color: accent ?? "var(--color-text)" }}>{valor}</div>
+      <div className="text-[12px] font-medium" style={{ color: "var(--color-text-muted)" }}>{label}</div>
+      {sub && <div className="text-[11px]" style={{ color: "var(--color-text-subtle)" }}>{sub}</div>}
+    </div>
+  );
 }
