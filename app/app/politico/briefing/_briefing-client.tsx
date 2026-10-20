@@ -11,7 +11,7 @@ import { Loader2, Search, X, Sparkles, Printer, FileText } from "lucide-react";
 
 import type { EleicaoOpcao } from "@/app/actions/politico/intelEleitoral";
 import { rankingCandidatos, type CandidatoRank, type MunicipioOpcao } from "@/app/actions/politico/raioX";
-import { briefingEstrategico } from "@/app/actions/politico/briefing";
+import { briefingEstrategico, type AdversarioReduto } from "@/app/actions/politico/briefing";
 import { CandFoto } from "@/components/politico/cand-foto";
 import { MiniMarkdown } from "@/components/politico/mini-markdown";
 
@@ -25,6 +25,8 @@ export default function BriefingClient({ eleicoes, municipios }: { eleicoes: Ele
   const [buscando, inicia] = useTransition();
   const [gerando, setGerando] = useState(false);
   const [dossie, setDossie] = useState<string | null>(null);
+  const [adv, setAdv] = useState<AdversarioReduto[]>([]);
+  const [redutos, setRedutos] = useState("");
   const [erro, setErro] = useState<string | null>(null);
   const boxRef = useRef<HTMLDivElement>(null);
 
@@ -38,7 +40,7 @@ export default function BriefingClient({ eleicoes, municipios }: { eleicoes: Ele
     return () => document.removeEventListener("mousedown", onDoc);
   }, []);
 
-  function limparSaida() { setDossie(null); setErro(null); }
+  function limparSaida() { setDossie(null); setErro(null); setAdv([]); setRedutos(""); }
   function buscar(termo: string) {
     setQ(termo);
     if (termo.trim().length < 2) { setResultados([]); setAberto(false); return; }
@@ -52,7 +54,7 @@ export default function BriefingClient({ eleicoes, municipios }: { eleicoes: Ele
     setGerando(true); setDossie(null); setErro(null);
     try {
       const r = await briefingEstrategico(eleicaoId, cand.sq, munTse, munNome, cargoAno, ano);
-      if (r.ok) setDossie(r.texto); else setErro(r.erro);
+      if (r.ok) { setDossie(r.texto); setAdv(r.adversarios); setRedutos(r.redutos); } else setErro(r.erro);
     } catch {
       setErro("Não consegui gerar agora. Tente novamente em instantes.");
     } finally {
@@ -138,6 +140,26 @@ export default function BriefingClient({ eleicoes, municipios }: { eleicoes: Ele
               <Printer className="h-3.5 w-3.5" aria-hidden /> Imprimir
             </button>
           </div>
+          {adv.length > 0 && (
+            <div className="mb-5 rounded-xl p-4" style={{ background: "rgba(163,48,42,0.06)", border: "1px solid rgba(163,48,42,0.25)" }}>
+              <h3 className="mb-0.5 font-heading text-sm font-bold" style={{ color: "var(--color-text)" }}>⚔️ A batalha — quem disputa seus redutos</h3>
+              <p className="mb-3 text-xs" style={{ color: "var(--color-text-muted)" }}>
+                Candidatos mais fortes nos seus bairros{redutos ? ` (${redutos})` : ""} — votos deles <strong>no seu reduto</strong> / no município.
+              </p>
+              <div className="space-y-1.5">
+                {adv.map((a, i) => (
+                  <div key={i} className="flex items-center gap-3 text-sm">
+                    <span className="w-4 shrink-0 text-right text-xs tabular-nums" style={{ color: "var(--color-text-subtle)" }}>{i + 1}</span>
+                    <span className="min-w-0 flex-1 truncate font-semibold" style={{ color: "var(--color-text)" }}>
+                      {a.nome}{a.partido ? <span className="font-normal" style={{ color: "var(--color-text-muted)" }}> · {a.partido}</span> : null}
+                    </span>
+                    <span className="shrink-0 tabular-nums font-bold" style={{ color: "#A3302A" }}>{a.votosReduto.toLocaleString("pt-BR")}</span>
+                    <span className="w-24 shrink-0 text-right text-xs tabular-nums" style={{ color: "var(--color-text-subtle)" }}>{a.votosMunicipio.toLocaleString("pt-BR")} no mun.</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
           <MiniMarkdown texto={dossie} />
           <p className="mt-4 text-[11px] leading-relaxed" style={{ color: "var(--color-text-subtle)" }}>
             Cruza o <strong>voto do candidato (TSE)</strong> com a <strong>base de contatos do SEU CRM</strong> — os contatos são da sua operação,
