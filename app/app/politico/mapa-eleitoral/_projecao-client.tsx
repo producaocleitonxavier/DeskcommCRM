@@ -9,11 +9,13 @@
  */
 
 import { useState, useTransition } from "react";
-import { Loader2, Info, TrendingUp } from "lucide-react";
+import { Loader2, Info, TrendingUp, Sparkles } from "lucide-react";
 
 import type { EleicaoOpcao } from "@/app/actions/politico/intelEleitoral";
 import type { MunicipioOpcao } from "@/app/actions/politico/raioX";
 import { projecaoZonal, type ProjecaoResumo, type ClasseZona } from "@/app/actions/politico/projecao";
+import { analiseProjecaoIA } from "@/app/actions/politico/analiseProjecao";
+import { MiniMarkdown } from "@/components/politico/mini-markdown";
 
 const CLASSE: Record<ClasseZona, { label: string; bg: string; color: string; dica: string }> = {
   reduto: { label: "Reduto", bg: "rgba(23,120,79,0.18)", color: "#58C08A", dica: "Você é forte aqui — defenda a base." },
@@ -31,13 +33,29 @@ export default function ProjecaoClient({ eleicoes, municipios }: { eleicoes: Ele
   const [munTse, setMunTse] = useState("");
   const [dados, setDados] = useState<ProjecaoResumo | null>(null);
   const [carregando, inicia] = useTransition();
+  const [gerandoIA, setGerandoIA] = useState(false);
+  const [analise, setAnalise] = useState<string | null>(null);
+  const [analiseErro, setAnaliseErro] = useState<string | null>(null);
   const ano = eleicoes.find((e) => e.id === eleicaoId)?.ano ?? 0;
   const munNome = municipios.find((m) => m.tse === munTse)?.nome ?? "";
 
   function carregar(id: number, mun: string) {
+    setAnalise(null); setAnaliseErro(null); // a leitura da IA vale para o estado anterior.
     if (!mun) { setDados(null); return; }
     const a = eleicoes.find((e) => e.id === id)?.ano ?? 0;
     inicia(async () => setDados(await projecaoZonal(id, mun, a)));
+  }
+
+  async function gerarAnalise() {
+    setGerandoIA(true); setAnalise(null); setAnaliseErro(null);
+    try {
+      const r = await analiseProjecaoIA(eleicaoId, munTse, munNome, eleicoes.find((e) => e.id === eleicaoId)?.label ?? "", ano);
+      if (r.ok) setAnalise(r.texto); else setAnaliseErro(r.erro);
+    } catch {
+      setAnaliseErro("Não consegui gerar agora. Tente novamente em instantes.");
+    } finally {
+      setGerandoIA(false);
+    }
   }
   function trocarEleicao(id: number) { setEleicaoId(id); carregar(id, munTse); }
   function trocarMun(mun: string) { setMunTse(mun); carregar(eleicaoId, mun); }
@@ -149,6 +167,33 @@ export default function ProjecaoClient({ eleicoes, municipios }: { eleicoes: Ele
                 </span>
               ))}
             </div>
+          </section>
+
+          {/* Leitura estratégica (IA) — onde focar */}
+          <section className="wr-card p-5">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div className="flex items-center gap-2.5">
+                <Sparkles className="h-5 w-5 shrink-0" style={{ color: "#D7F36A" }} aria-hidden />
+                <div>
+                  <h3 className="font-heading text-base font-bold" style={{ color: "#fff" }}>Leitura estratégica (IA)</h3>
+                  <p className="text-xs" style={{ color: "rgba(255,255,255,0.55)" }}>Onde focar em {munNome}: redutos a defender e oportunidades a conquistar.</p>
+                </div>
+              </div>
+              <button type="button" onClick={gerarAnalise} disabled={gerandoIA}
+                className="flex items-center gap-2 rounded-full px-4 py-2 text-sm font-semibold transition-opacity disabled:opacity-60"
+                style={{ background: "#D7F36A", color: "#16181D" }}>
+                {gerandoIA
+                  ? <><Loader2 className="h-4 w-4 animate-spin" aria-hidden /> Analisando…</>
+                  : <><Sparkles className="h-4 w-4" aria-hidden /> {analise ? "Refazer análise" : "Gerar análise"}</>}
+              </button>
+            </div>
+            {analiseErro && <p className="mt-3 text-sm" style={{ color: "#E08079" }}>{analiseErro}</p>}
+            {analise && (
+              <div className="mt-4 rounded-lg p-4" style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.1)" }}>
+                <MiniMarkdown texto={analise} />
+                <p className="mt-3 text-[11px]" style={{ color: "rgba(255,255,255,0.45)" }}>Gerado por IA a partir do universo de votos (TSE) e da sua base (CRM). Confira antes de decidir.</p>
+              </div>
+            )}
           </section>
         </>
       )}

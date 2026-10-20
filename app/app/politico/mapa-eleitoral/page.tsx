@@ -10,6 +10,7 @@
 
 import { redirect } from "next/navigation";
 import Link from "next/link";
+import { Info } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { requireAuth, resolveActiveOrg } from "@/lib/auth/server";
 import { CommandHero } from "@/components/politico/command-hero";
@@ -41,88 +42,6 @@ interface OportunidadeRow {
   classificacao: string;
 }
 
-interface PrioridadeRow {
-  territory_id: string;
-  name: string;
-  type: string;
-  state_code: string | null;
-  latitude: number | null;
-  longitude: number | null;
-  electorate: number | null;
-  strategic_status: string;
-  influence_score: number;
-  flags_ativas: number;
-  flags_criticas: number;
-  priority_score: number;
-}
-
-// -- Helpers (camada prioridade) ---------------------------------------------
-
-function statusLabel(status: string): string {
-  const mapa: Record<string, string> = {
-    critico: "Crítico",
-    prioritario: "Prioritário",
-    oportunidade: "Oportunidade",
-    normal: "Normal",
-  };
-  return mapa[status] ?? status;
-}
-
-function statusEstilo(status: string): { bg: string; color: string } {
-  const mapa: Record<string, { bg: string; color: string }> = {
-    critico: { bg: "#FBE4E2", color: "#A3302A" },
-    prioritario: { bg: "#FCF1DC", color: "#8A5A10" },
-    oportunidade: { bg: "#E4E7F8", color: "#2F3DA8" },
-    normal: { bg: "#F0F0EB", color: "var(--color-text-muted)" },
-  };
-  return mapa[status] ?? { bg: "#F0F0EB", color: "var(--color-text-muted)" };
-}
-
-function StatusPill({ status }: { status: string }) {
-  const s = statusEstilo(status);
-  return (
-    <span
-      className="inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold whitespace-nowrap"
-      style={{ background: s.bg, color: s.color }}
-    >
-      {statusLabel(status)}
-    </span>
-  );
-}
-
-function KpiCardSimples({
-  label,
-  value,
-  sub,
-  bg,
-  accent,
-}: {
-  label: string;
-  value: string | number;
-  sub?: string;
-  bg?: string;
-  accent?: string;
-}) {
-  return (
-    <div
-      className="flex-1 min-w-[140px] rounded-[20px] p-4"
-      style={{ background: bg ?? "var(--color-surface)", boxShadow: "var(--wr-card-shadow)" }}
-    >
-      <div className="text-[13px] font-medium" style={{ color: accent ?? "var(--color-text-muted)" }}>
-        {label}
-      </div>
-      <div className="font-heading text-[28px] font-bold mt-0.5 tabular-nums" style={{ color: accent ?? "var(--color-text)" }}>
-        {typeof value === "number" ? value.toLocaleString("pt-BR") : value}
-      </div>
-      {sub && (
-        <div className="text-[12px] mt-0.5" style={{ color: accent ?? "var(--color-text-subtle)" }}>
-          {sub}
-        </div>
-      )}
-    </div>
-  );
-}
-
 // -- Data fetching -----------------------------------------------------------
 
 async function buscarOportunidades(organizationId: string): Promise<OportunidadeRow[]> {
@@ -139,22 +58,6 @@ async function buscarOportunidades(organizationId: string): Promise<Oportunidade
     return [];
   }
   return (data ?? []) as unknown as OportunidadeRow[];
-}
-
-async function buscarPrioridades(organizationId: string): Promise<PrioridadeRow[]> {
-  const db = await createClient();
-  const { data, error } = await db
-    .from("pol_vw_mapa_prioridade")
-    .select("*")
-    .eq("organization_id", organizationId)
-    .order("priority_score", { ascending: false })
-    .limit(200);
-
-  if (error) {
-    console.error("Erro ao buscar prioridades:", error.message);
-    return [];
-  }
-  return (data ?? []) as unknown as PrioridadeRow[];
 }
 
 // -- Camada Eleições (Inteligência/TSE) --------------------------------------
@@ -193,10 +96,7 @@ export default async function TerritorioPage({
   // Entrada didática: o mapa de votos (TSE) é a primeira leitura; CRM e projeção na sequência.
   const camada = params.camada ?? "eleicoes";
 
-  const [oportunidades, prioridades] = await Promise.all([
-    camada === "oportunidades" ? buscarOportunidades(org.orgId) : Promise.resolve([]),
-    camada === "prioridade" ? buscarPrioridades(org.orgId) : Promise.resolve([]),
-  ]);
+  const oportunidades = camada === "oportunidades" ? await buscarOportunidades(org.orgId) : [];
 
   // Camada "Eleições" (Inteligência/TSE): choropleth por município.
   const eleicoesData = camada === "eleicoes" ? await montarEleicoes(params.eleicao, params.cand) : null;
@@ -229,17 +129,10 @@ export default async function TerritorioPage({
   const concentracaoTopPct =
     totalContatos > 0 && cidades[0] ? Math.round((cidades[0].total / totalContatos) * 100) : 0;
 
-  // -- Stats para a camada prioridade --
-  const zonasCriticas = prioridades.filter((p) => p.strategic_status === "critico").length;
-  const zonasPrioritarias = prioridades.filter((p) => p.strategic_status === "prioritario").length;
-  const zonasOportunidade = prioridades.filter((p) => p.strategic_status === "oportunidade").length;
-  const zonasNormais = prioridades.filter((p) => p.strategic_status === "normal").length;
-
   const tabs = [
     { value: "eleicoes", label: "Mapa de Votos", href: "/app/politico/mapa-eleitoral" },
     { value: "oportunidades", label: "Minha Força", href: "/app/politico/mapa-eleitoral?camada=oportunidades" },
     { value: "projecao", label: "Projeção", href: "/app/politico/mapa-eleitoral?camada=projecao" },
-    { value: "prioridade", label: "Prioridade", href: "/app/politico/mapa-eleitoral?camada=prioridade" },
   ];
 
   return (
@@ -274,109 +167,33 @@ export default async function TerritorioPage({
         }
       />
 
-      {/* ── Camada: Oportunidades (Zonas) ───────────────────────── */}
-      {camada === "oportunidades" &&
-        (cidades.length === 0 ? (
-          <div className="wr-card p-12 text-center">
-            <p className="text-sm" style={{ color: "var(--color-text-subtle)" }}>
-              Nenhuma cidade localizada ainda. Vincule os contatos a municípios com latitude e longitude.
+      {/* ── Camada: Minha Força (base do CRM por cidade) ────────── */}
+      {camada === "oportunidades" && (
+        <>
+          <div className="flex items-start gap-2.5 rounded-xl p-3.5" style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.1)" }}>
+            <Info className="mt-0.5 h-4 w-4 shrink-0" aria-hidden style={{ color: "#D7F36A" }} />
+            <p className="text-[13px] leading-relaxed" style={{ color: "rgba(255,255,255,0.72)" }}>
+              <strong style={{ color: "#fff" }}>Minha Força</strong> é a <strong style={{ color: "#fff" }}>sua base</strong>: os contatos do seu CRM distribuídos pelas cidades onde moram.
+              Cada bolha é uma cidade — o tamanho mostra <strong style={{ color: "#fff" }}>quantos contatos</strong> você tem lá e a cor, a <strong style={{ color: "#fff" }}>força</strong> (novos ×1, simpatizantes ×3, apoiadores ×6).
+              É o oposto do <strong style={{ color: "#fff" }}>Mapa de Votos</strong> (que mostra o voto do TSE): aqui é onde VOCÊ já tem gente.
             </p>
           </div>
-        ) : (
-          <TerritorioClient
-            cidades={cidades}
-            totalContatos={totalContatos}
-            cidadeTop={cidadeTop}
-            concentracaoTopPct={concentracaoTopPct}
-          />
-        ))}
-
-      {/* ── Camada: Prioridade ──────────────────────────────────── */}
-      {camada === "prioridade" &&
-        (prioridades.length === 0 ? (
-          <div className="wr-card p-12 text-center">
-            <p className="text-sm" style={{ color: "var(--color-text-subtle)" }}>
-              Nenhum território cadastrado. Cadastre territórios com latitude e longitude.
-            </p>
-          </div>
-        ) : (
-          <>
-            <section aria-label="Resumo de prioridade" className="flex flex-wrap gap-3">
-              <KpiCardSimples label="Crítico" value={zonasCriticas} sub="Ação imediata" bg="#FBE4E2" accent="#A3302A" />
-              <KpiCardSimples label="Prioritário" value={zonasPrioritarias} sub="Ação planejada" bg="#FCF1DC" accent="#8A5A10" />
-              <KpiCardSimples label="Oportunidade" value={zonasOportunidade} sub="Potencial" />
-              <KpiCardSimples label="Normal" value={zonasNormais} sub="Operação regular" />
-            </section>
-
-            <section aria-label="Territórios por prioridade" className="wr-card pt-2 pb-0 px-0">
-              <div className="px-5 pt-3 pb-2">
-                <h2 className="font-heading text-base font-semibold" style={{ color: "var(--color-text)" }}>
-                  Territórios por prioridade estratégica
-                </h2>
-              </div>
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm border-collapse">
-                  <thead>
-                    <tr>
-                      {["Território", "UF", "Status", "Score", "Influência", "Flags", "Flags críticas"].map((col) => (
-                        <th
-                          key={col}
-                          className={`font-medium text-[13px] px-4 py-3 whitespace-nowrap border-b ${
-                            ["Score", "Influência", "Flags", "Flags críticas"].includes(col) ? "text-right" : "text-left"
-                          }`}
-                          style={{ color: "var(--color-text-subtle)", borderColor: "var(--color-border)" }}
-                        >
-                          {col}
-                        </th>
-                      ))}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {prioridades.map((p) => (
-                      <tr key={p.territory_id} style={{ borderBottom: "1px solid var(--color-border)" }}>
-                        <td className="px-4 py-3.5 whitespace-nowrap font-semibold" style={{ color: "var(--color-text)" }}>
-                          {p.name}
-                        </td>
-                        <td className="px-4 py-3.5 whitespace-nowrap" style={{ color: "var(--color-text-muted)" }}>
-                          {p.state_code ?? "—"}
-                        </td>
-                        <td className="px-4 py-3.5 whitespace-nowrap">
-                          <StatusPill status={p.strategic_status} />
-                        </td>
-                        <td className="px-4 py-3.5 whitespace-nowrap text-right tabular-nums font-bold font-heading">
-                          {p.priority_score}
-                        </td>
-                        <td className="px-4 py-3.5 whitespace-nowrap text-right tabular-nums" style={{ color: "var(--color-text-muted)" }}>
-                          {p.influence_score}
-                        </td>
-                        <td className="px-4 py-3.5 whitespace-nowrap text-right tabular-nums">
-                          {p.flags_ativas > 0 ? (
-                            <span className="font-medium" style={{ color: "#8A5A10" }}>{p.flags_ativas}</span>
-                          ) : (
-                            <span style={{ color: "var(--color-text-subtle)" }}>0</span>
-                          )}
-                        </td>
-                        <td className="px-4 py-3.5 whitespace-nowrap text-right tabular-nums">
-                          {p.flags_criticas > 0 ? (
-                            <span className="font-medium" style={{ color: "#A3302A" }}>{p.flags_criticas}</span>
-                          ) : (
-                            <span style={{ color: "var(--color-text-subtle)" }}>0</span>
-                          )}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-              <div
-                className="flex justify-between items-center px-4 py-3 text-[13px]"
-                style={{ color: "var(--color-text-subtle)", borderTop: "1px solid var(--color-border)" }}
-              >
-                <span>{prioridades.length} territórios</span>
-              </div>
-            </section>
-          </>
-        ))}
+          {cidades.length === 0 ? (
+            <div className="wr-card p-12 text-center">
+              <p className="text-sm" style={{ color: "var(--color-text-subtle)" }}>
+                Nenhuma cidade localizada ainda. Vincule os contatos a municípios com latitude e longitude.
+              </p>
+            </div>
+          ) : (
+            <TerritorioClient
+              cidades={cidades}
+              totalContatos={totalContatos}
+              cidadeTop={cidadeTop}
+              concentracaoTopPct={concentracaoTopPct}
+            />
+          )}
+        </>
+      )}
 
       {/* ── Camada: Eleições (Inteligência/TSE) ──────────────────── */}
       {camada === "eleicoes" &&
