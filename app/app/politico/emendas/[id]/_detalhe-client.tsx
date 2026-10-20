@@ -125,6 +125,8 @@ export default function DetalheEmendaClient({ emenda, liderancas, peso, mandatoN
   const [editando, setEditando] = useState(false);
   const [salvando, setSalvando] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
+  const [avAberto, setAvAberto] = useState(false); // painel de "avançar etapa" (valor + data)
+  const [avValor, setAvValor] = useState("");
 
   // Campos de edição
   const [numero, setNumero] = useState(e.numero ?? "");
@@ -167,9 +169,12 @@ export default function DetalheEmendaClient({ emenda, liderancas, peso, mandatoN
     return true;
   }
 
-  async function avancar(novoStatus: string, dataKey: string) {
+  async function avancar(novoStatus: string, dataKey: string, valorKey?: string, valorStr?: string) {
     const hoje = new Date().toISOString().slice(0, 10);
-    await persistir({ status: novoStatus, [dataKey]: hoje }, { status: novoStatus, [dataKey]: hoje } as Partial<EmendaDetalhe>);
+    const patch: Record<string, unknown> = { status: novoStatus, [dataKey]: hoje };
+    if (valorKey && valorStr !== undefined) patch[valorKey] = reaisParaCents(valorStr);
+    const ok = await persistir(patch, patch as Partial<EmendaDetalhe>);
+    if (ok) { setAvAberto(false); setAvValor(""); }
   }
 
   async function salvarEdicao() {
@@ -215,11 +220,11 @@ export default function DetalheEmendaClient({ emenda, liderancas, peso, mandatoN
 
   const proximaAcao =
     e.status === "indicada"
-      ? { label: "Registrar empenho", novo: "empenhada", dataKey: "data_empenho" }
+      ? { label: "Registrar empenho", novo: "empenhada", dataKey: "data_empenho", valorKey: "valor_empenhado_cents", valorLabel: "Valor empenhado (R$)" }
       : e.status === "empenhada"
-        ? { label: "Registrar liquidação", novo: "liquidada", dataKey: "data_liquidacao" }
+        ? { label: "Registrar liquidação", novo: "liquidada", dataKey: "data_liquidacao", valorKey: "valor_liquidado_cents", valorLabel: "Valor liquidado (R$)" }
         : e.status === "liquidada"
-          ? { label: "Registrar pagamento", novo: "paga", dataKey: "data_pagamento" }
+          ? { label: "Registrar pagamento", novo: "paga", dataKey: "data_pagamento", valorKey: "valor_pago_cents", valorLabel: "Valor pago (R$)" }
           : null;
 
   return (
@@ -241,7 +246,7 @@ export default function DetalheEmendaClient({ emenda, liderancas, peso, mandatoN
           </div>
           <div className="flex items-center gap-2">
             {proximaAcao && !editando && (
-              <button type="button" disabled={salvando} onClick={() => avancar(proximaAcao.novo, proximaAcao.dataKey)} className="wr-btn-dark">
+              <button type="button" disabled={salvando} onClick={() => { setAvValor(""); setAvAberto((v) => !v); }} className="wr-btn-dark">
                 {proximaAcao.label}
               </button>
             )}
@@ -290,6 +295,18 @@ export default function DetalheEmendaClient({ emenda, liderancas, peso, mandatoN
             <span className="inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold" style={{ background: "#FBE4E2", color: "#A3302A" }}>
               {rotulo(STATUS_OPC, e.status)}
             </span>
+          </div>
+        )}
+        {/* Avançar etapa: captura VALOR + data juntos (resolve o valor que ficava 0). */}
+        {avAberto && proximaAcao && !editando && (
+          <div className="mt-4 flex flex-wrap items-end gap-2 rounded-xl p-3" style={{ background: "rgba(215,243,106,0.06)", border: "1px solid rgba(215,243,106,0.3)" }}>
+            <Campo label={proximaAcao.valorLabel}>
+              <input type="text" inputMode="decimal" value={avValor} onChange={(ev) => setAvValor(ev.target.value)} placeholder="0,00" className="wr-input" style={{ minWidth: 160 }} autoFocus />
+            </Campo>
+            <button type="button" disabled={salvando} onClick={() => avancar(proximaAcao.novo, proximaAcao.dataKey, proximaAcao.valorKey, avValor)} className="wr-btn-dark disabled:opacity-60">
+              {salvando ? "Salvando…" : "Confirmar"}
+            </button>
+            <button type="button" onClick={() => setAvAberto(false)} className="wr-btn">Cancelar</button>
           </div>
         )}
       </header>

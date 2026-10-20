@@ -12,7 +12,7 @@ import { useRouter } from "next/navigation";
 import { ArrowLeft, Loader2, Plus, Trash2, MapPin, Camera, X, HardHat, ShieldCheck, ClipboardCheck, Pencil, Users, Copy } from "lucide-react";
 
 import { atualizarRegistro, excluirRegistro } from "@/app/actions/politico/gabinete-actions";
-import { registrarVistoria, listarVistorias, uploadFotoObra, listarFotosObra, removerFotoObra, type VistoriaObra, type FotoObra, type ChecklistItem, type PesoBairro } from "@/app/actions/politico/obras-actions";
+import { registrarVistoria, listarVistorias, uploadFotoObra, listarFotosObra, removerFotoObra, listarBeneficiariosObra, type VistoriaObra, type FotoObra, type ChecklistItem, type PesoBairro, type BeneficiarioObra } from "@/app/actions/politico/obras-actions";
 import { STATUS, TIPO } from "../_obras-client";
 
 type Obra = Record<string, unknown> & { id: string; titulo: string; natureza: "execucao" | "fiscalizacao"; tipo: string; status: string; percentual: number; valor_cents: number };
@@ -140,9 +140,17 @@ export default function ObraDetalhe({ data }: { data: ObraDetalheData }) {
 // ─── Captação de beneficiários (Camada 2 do ROI de Emenda) ──────────────────
 function CaptacaoObraCard({ obraId, beneficiarios }: { obraId: string; beneficiarios: number }) {
   const [copiado, setCopiado] = useState(false);
+  const [verando, setVerando] = useState(false);
+  const [lista, setLista] = useState<BeneficiarioObra[] | null>(null);
+  const [carregando, setCarregando] = useState(false);
   const link = typeof window !== "undefined" ? `${window.location.origin}/o/${obraId}` : `/o/${obraId}`;
   async function copiar() {
     try { await navigator.clipboard.writeText(link); setCopiado(true); setTimeout(() => setCopiado(false), 2000); } catch { /* ignore */ }
+  }
+  async function verCadastros() {
+    if (verando) { setVerando(false); return; }
+    setVerando(true);
+    if (lista === null) { setCarregando(true); setLista(await listarBeneficiariosObra(obraId)); setCarregando(false); }
   }
   return (
     <section className="wr-card p-5">
@@ -151,7 +159,7 @@ function CaptacaoObraCard({ obraId, beneficiarios }: { obraId: string; beneficia
           <Users className="h-5 w-5 shrink-0" aria-hidden style={{ color: "#D7F36A" }} />
           <div>
             <h2 className="font-heading text-base font-bold" style={{ color: "var(--color-text)" }}>Captação de beneficiários</h2>
-            <p className="text-xs" style={{ color: "var(--color-text-subtle)" }}>Dê este link à entidade/projeto: cada beneficiário cadastrado vira base sua, no bairro — transformando o recurso em voto mensurável.</p>
+            <p className="text-xs" style={{ color: "var(--color-text-subtle)" }}>Dê este link à entidade/projeto: cada beneficiário cadastrado vira base sua, no bairro — transformando o recurso em voto mensurável. O link aceita quantos cadastros vierem.</p>
           </div>
         </div>
         <div className="text-right">
@@ -159,12 +167,42 @@ function CaptacaoObraCard({ obraId, beneficiarios }: { obraId: string; beneficia
           <div className="text-[11px]" style={{ color: "var(--color-text-subtle)" }}>cadastrados</div>
         </div>
       </div>
-      <div className="mt-3 flex items-center gap-2">
-        <input readOnly value={link} className="wr-input flex-1 text-xs" onFocus={(e) => e.currentTarget.select()} />
+      <div className="mt-3 flex flex-wrap items-center gap-2">
+        <input readOnly value={link} className="wr-input flex-1 text-xs" onFocus={(e) => e.currentTarget.select()} style={{ minWidth: 200 }} />
         <button type="button" onClick={copiar} className="inline-flex items-center gap-1.5 rounded-full px-4 py-2 text-sm font-semibold" style={{ background: "#D7F36A", color: "#16181D" }}>
           <Copy className="h-4 w-4" aria-hidden /> {copiado ? "Copiado!" : "Copiar link"}
         </button>
+        {beneficiarios > 0 && (
+          <button type="button" onClick={verCadastros} className="inline-flex items-center gap-1.5 rounded-full px-4 py-2 text-sm font-semibold" style={{ border: "1px solid var(--color-border)", color: "var(--color-text-muted)" }}>
+            <Users className="h-4 w-4" aria-hidden /> {verando ? "Ocultar" : "Ver cadastros"}
+          </button>
+        )}
       </div>
+      {verando && (
+        <div className="mt-3 overflow-hidden rounded-lg" style={{ border: "1px solid var(--color-border)" }}>
+          {carregando ? (
+            <div className="p-4 text-center text-sm" style={{ color: "var(--color-text-subtle)" }}>Carregando…</div>
+          ) : (lista && lista.length > 0) ? (
+            <table className="w-full text-sm">
+              <thead><tr style={{ borderBottom: "1px solid var(--color-border)" }}>
+                {["Nome", "WhatsApp", "Bairro", "Data"].map((h) => <th key={h} className="px-3 py-2 text-left text-[12px] font-medium" style={{ color: "var(--color-text-subtle)" }}>{h}</th>)}
+              </tr></thead>
+              <tbody>
+                {lista.map((b, i) => (
+                  <tr key={i} style={{ borderBottom: "1px solid var(--color-border)" }}>
+                    <td className="px-3 py-2 font-medium" style={{ color: "var(--color-text)" }}>{b.nome ?? "—"}</td>
+                    <td className="px-3 py-2 tabular-nums" style={{ color: "var(--color-text-muted)" }}>{b.telefone ?? "—"}</td>
+                    <td className="px-3 py-2" style={{ color: "var(--color-text-muted)" }}>{[b.bairro, b.cidade].filter(Boolean).join(" · ") || "—"}</td>
+                    <td className="px-3 py-2 text-[12px]" style={{ color: "var(--color-text-subtle)" }}>{new Date(b.created_at).toLocaleDateString("pt-BR")}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          ) : (
+            <div className="p-4 text-center text-sm" style={{ color: "var(--color-text-subtle)" }}>Nenhum cadastro ainda.</div>
+          )}
+        </div>
+      )}
     </section>
   );
 }
