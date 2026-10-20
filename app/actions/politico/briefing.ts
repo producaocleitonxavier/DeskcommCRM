@@ -97,6 +97,7 @@ export async function briefingEstrategico(
     "Use APENAS os números fornecidos — nunca invente votos, pesquisas, nomes ou fatos. " +
     "DISTINÇÃO CRÍTICA, nunca confunda: (a) o VOTO do candidato é dado do TSE; (b) a BASE DE CRM é da OPERAÇÃO que usa a ferramenta — NÃO é do candidato analisado nem é 'eleitorado'. Nunca escreva que os contatos do CRM são do candidato; chame-os de 'base de CRM da operação' ou 'sua base'. " +
     "Chame o universo sempre de 'votos do cargo' (jamais 'eleitores'/'eleitorado'). " +
+    "NUNCA agrupe bairros em 'regional'/'região administrativa' nem cite o nome de uma regional (ex.: 'Regional Barreiro') — você NÃO recebeu esse dado e inferir pelo nome do bairro gera erro grave. Trabalhe só com os nomes de BAIRRO e ZONA exatamente como fornecidos. " +
     "Não prometa resultado futuro: 'oportunidade' é volume de voto onde a base de CRM é fraca. Markdown com títulos: " +
     "## Posição atual, ## Mapa de força (onde o candidato é forte), ## A batalha (quem disputa seus redutos), ## Onde crescer, ## Riscos, ## Plano de 90 dias. " +
     "Em 'A batalha', analise os adversários que mais fazem voto nos MESMOS bairros fortes do candidato: quem é a ameaça real ao território, quem apenas passa por ali, e o que isso exige. " +

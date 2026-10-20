@@ -15,6 +15,52 @@ import { briefingEstrategico, type AdversarioReduto } from "@/app/actions/politi
 import { CandFoto } from "@/components/politico/cand-foto";
 import { MiniMarkdown } from "@/components/politico/mini-markdown";
 
+// ── Impressão dedicada: documento limpo (papel branco, texto preto) ──────────
+function escHtml(s: string): string {
+  return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+}
+function mdParaHtml(texto: string): string {
+  const inline = (s: string) => escHtml(s).replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>");
+  let html = "";
+  let emLista = false;
+  for (const l of texto.split("\n")) {
+    const h = l.match(/^\s*(#{1,3})\s+(.*)$/);
+    const bullet = /^\s*[-*]\s+/.test(l);
+    if (bullet) {
+      if (!emLista) { html += "<ul>"; emLista = true; }
+      html += `<li>${inline(l.replace(/^\s*[-*]\s+/, ""))}</li>`;
+      continue;
+    }
+    if (emLista) { html += "</ul>"; emLista = false; }
+    if (h) { html += h[1]!.length === 1 ? `<h2>${inline(h[2]!)}</h2>` : `<h3>${inline(h[2]!)}</h3>`; continue; }
+    if (l.trim() === "") continue;
+    html += `<p>${inline(l)}</p>`;
+  }
+  if (emLista) html += "</ul>";
+  return html;
+}
+const CSS_IMPRESSAO = `
+*{box-sizing:border-box}
+body{margin:0;font-family:-apple-system,Segoe UI,Roboto,Arial,sans-serif;color:#1a1a1a;background:#fff;line-height:1.5}
+.doc{max-width:720px;margin:0 auto;padding:32px 28px}
+.head{border-bottom:2px solid #3d5a1f;padding-bottom:12px;margin-bottom:18px}
+.brand{font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:#5C7F23;font-weight:700}
+h1{font-size:22px;margin:4px 0 2px}
+.meta{font-size:13px;color:#666}
+h2{font-size:15px;color:#3d5a1f;margin:20px 0 6px;border-bottom:1px solid #e3e3df;padding-bottom:3px}
+h3{font-size:14px;margin:14px 0 4px}
+p{margin:6px 0;font-size:13.5px}
+ul{margin:6px 0;padding-left:20px}li{font-size:13.5px;margin:3px 0}
+.batalha{border:1px solid #d9b3b0;background:#fbf4f3;border-radius:8px;padding:12px 14px;margin:14px 0}
+.batalha h3{margin:0 0 2px;font-size:14px}
+.batalha .sub{font-size:12px;color:#555;margin:0 0 8px}
+.advrow{display:flex;justify-content:space-between;font-size:13.5px;padding:2px 0}
+.advrow .r{font-weight:700;color:#A3302A;white-space:nowrap}
+.advrow .r small{color:#777;font-weight:400}
+.foot{margin-top:20px;padding-top:10px;border-top:1px solid #e3e3df;font-size:10.5px;color:#777}
+@media print{.doc{max-width:none;padding:0 4px}@page{margin:14mm}}
+`;
+
 export default function BriefingClient({ eleicoes, municipios }: { eleicoes: EleicaoOpcao[]; municipios: MunicipioOpcao[] }) {
   const [eleicaoId, setEleicaoId] = useState(eleicoes[0]!.id);
   const [munTse, setMunTse] = useState("");
@@ -60,6 +106,31 @@ export default function BriefingClient({ eleicoes, municipios }: { eleicoes: Ele
     } finally {
       setGerando(false);
     }
+  }
+
+  function imprimir() {
+    if (!dossie || !cand) return;
+    const win = window.open("", "_blank", "width=840,height=1000");
+    if (!win) return;
+    const advHtml = adv.length
+      ? `<div class="batalha"><h3>&#9876;&#65039; A batalha &mdash; quem disputa seus redutos</h3>` +
+        `<p class="sub">Candidatos mais fortes nos seus bairros${redutos ? ` (${escHtml(redutos)})` : ""} &mdash; votos deles no seu reduto / no munic&iacute;pio.</p>` +
+        adv.map((a, i) => `<div class="advrow"><span>${i + 1}. <b>${escHtml(a.nome)}</b>${a.partido ? ` &middot; ${escHtml(a.partido)}` : ""}</span><span class="r">${a.votosReduto.toLocaleString("pt-BR")} <small>/ ${a.votosMunicipio.toLocaleString("pt-BR")} mun.</small></span></div>`).join("") +
+        `</div>`
+      : "";
+    const html =
+      `<!doctype html><html lang="pt-BR"><head><meta charset="utf-8">` +
+      `<title>Dossiê — ${escHtml(cand.nomeUrna)} · ${escHtml(munNome)}</title><style>${CSS_IMPRESSAO}</style></head><body>` +
+      `<div class="doc"><div class="head"><div class="brand">Intelig&ecirc;ncia &middot; IA Estrat&eacute;gica</div>` +
+      `<h1>Dossi&ecirc; &mdash; ${escHtml(cand.nomeUrna)} &middot; ${escHtml(munNome)}</h1>` +
+      `<div class="meta">${escHtml(cargoAno)}</div></div>` +
+      advHtml + mdParaHtml(dossie) +
+      `<p class="foot">Cruza o voto do candidato (TSE) com a base de contatos do SEU CRM &mdash; os contatos s&atilde;o da sua opera&ccedil;&atilde;o, n&atilde;o do candidato analisado. Documento de apoio gerado por IA; confira antes de decidir.</p>` +
+      `</div></body></html>`;
+    win.document.write(html);
+    win.document.close();
+    win.focus();
+    setTimeout(() => win.print(), 350);
   }
 
   const pronto = cand && munTse;
@@ -134,7 +205,7 @@ export default function BriefingClient({ eleicoes, municipios }: { eleicoes: Ele
                 Dossiê — {cand?.nomeUrna} · {munNome}
               </h2>
             </div>
-            <button type="button" onClick={() => window.print()}
+            <button type="button" onClick={imprimir}
               className="flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold"
               style={{ border: "1px solid var(--color-border)", color: "var(--color-text-muted)" }}>
               <Printer className="h-3.5 w-3.5" aria-hidden /> Imprimir

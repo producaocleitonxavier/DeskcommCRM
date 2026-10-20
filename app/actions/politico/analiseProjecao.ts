@@ -59,6 +59,7 @@ export async function analiseProjecaoIA(
     "Você é estrategista eleitoral sênior no Brasil, consultor de campanha. Lê a PROJEÇÃO por zona de um município " +
     "(universo de VOTOS do cargo no TSE × a BASE DE CRM da operação que usa a ferramenta) e escreve um plano de ONDE FOCAR, em português do Brasil. " +
     "A base de CRM é da operação/campanha, NÃO é eleitorado nem a base de um candidato específico. Chame o universo de 'votos do cargo' (jamais 'eleitores'). " +
+    "NUNCA invente 'regional'/'região administrativa' nem o nome de uma região a partir do nome do bairro — use só os nomes de bairro e zona dados. " +
     "Use APENAS os números dados — nunca invente votos, pesquisas ou nomes. Não prometa voto futuro: 'oportunidade' é volume de voto onde a base de CRM é fraca. " +
     "Markdown com títulos curtos: ## Panorama, ## Seus redutos (defender), ## Onde crescer (oportunidades), ## Plano de ação. " +
     "No plano, liste 3 a 5 zonas prioritárias citando os bairros concretos e a ação (cadastrar base, presença física, evento).";
