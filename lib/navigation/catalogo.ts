@@ -934,7 +934,16 @@ export const NAV_CATALOG = [
     sidebar: true,
   },
 
-  // ── Estratégia — Monitoramento (3 no sidebar) ─────────────────────
+  // ── Estratégia — Monitoramento (no sidebar) ───────────────────────
+  {
+    href: "/app/politico/briefing",
+    label: "Dossiê Estratégico",
+    description: "Briefing de campanha por IA: cruza voto (TSE), redutos e sua base (CRM) e escreve o plano para um candidato num município.",
+    icon: "FileText",
+    group: "inteligencia",
+    minRole: "manager",
+    sidebar: true,
+  },
   {
     href: "/app/politico/alertas",
     label: "Alertas",
