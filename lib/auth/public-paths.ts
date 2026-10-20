@@ -11,6 +11,11 @@ export const PUBLIC_PATHS: RegExp[] = [
   // Âncora `$` + forma de UUID de propósito — nenhum sub-path nasce público.
   /^\/c\/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i,
   /^\/api\/public\/captacao\/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i,
+  // CAPTAÇÃO PÚBLICA POR OBRA/ENTIDADE (Camada 2 do ROI de Emenda). A entidade
+  // beneficiada compartilha /o/<uuid>; quem se cadastra entra na base da org JÁ
+  // atribuído à obra. Org derivada SÓ da obra no servidor. Mesma natureza de /c/.
+  /^\/o\/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i,
+  /^\/api\/public\/captacao-obra\/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i,
   /^\/$/,
   /^\/login(\/.*)?$/,
   /^\/signup$/,

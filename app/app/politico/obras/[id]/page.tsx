@@ -45,8 +45,15 @@ export default async function ObraDetalhePage({ params }: { params: Promise<{ id
     db.from("pol_emendas").select("id, numero, ano, descricao").eq("organization_id", org.orgId).order("ano", { ascending: false }).limit(200),
   ]);
 
+  const { count: beneficiarios } = await db
+    .from("pol_leads")
+    .select("id", { count: "exact", head: true })
+    .eq("organization_id", org.orgId)
+    .eq("pol_obra_id", id);
+
   const data: ObraDetalheData = {
     obra: o as ObraDetalheData["obra"],
+    beneficiarios: beneficiarios ?? 0,
     emendaRotulo: emenda ? `${(emenda as { numero?: string }).numero ?? "Emenda"}/${(emenda as { ano?: number }).ano} — ${((emenda as { descricao?: string }).descricao ?? "").slice(0, 60)}` : null,
     regional,
     peso,

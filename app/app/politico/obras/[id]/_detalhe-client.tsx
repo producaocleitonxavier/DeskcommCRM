@@ -9,7 +9,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, Loader2, Plus, Trash2, MapPin, Camera, X, HardHat, ShieldCheck, ClipboardCheck, Pencil } from "lucide-react";
+import { ArrowLeft, Loader2, Plus, Trash2, MapPin, Camera, X, HardHat, ShieldCheck, ClipboardCheck, Pencil, Users, Copy } from "lucide-react";
 
 import { atualizarRegistro, excluirRegistro } from "@/app/actions/politico/gabinete-actions";
 import { registrarVistoria, listarVistorias, uploadFotoObra, listarFotosObra, removerFotoObra, type VistoriaObra, type FotoObra, type ChecklistItem, type PesoBairro } from "@/app/actions/politico/obras-actions";
@@ -18,6 +18,7 @@ import { STATUS, TIPO } from "../_obras-client";
 type Obra = Record<string, unknown> & { id: string; titulo: string; natureza: "execucao" | "fiscalizacao"; tipo: string; status: string; percentual: number; valor_cents: number };
 export interface ObraDetalheData {
   obra: Obra;
+  beneficiarios: number;
   emendaRotulo: string | null;
   regional: string | null;
   peso: PesoBairro | null;
@@ -129,8 +130,42 @@ export default function ObraDetalhe({ data }: { data: ObraDetalheData }) {
 
       <VistoriasCard obraId={obra.id} vistorias={vistorias} onMudou={async () => setVistorias(await listarVistorias(obra.id))} onPercentual={(p) => setObra((o) => ({ ...o, percentual: p }))} />
 
+      <CaptacaoObraCard obraId={obra.id} beneficiarios={data.beneficiarios} />
+
       <FotosCard obraId={obra.id} fotos={fotos} onMudou={async () => setFotos(await listarFotosObra(obra.id))} />
     </div>
+  );
+}
+
+// ─── Captação de beneficiários (Camada 2 do ROI de Emenda) ──────────────────
+function CaptacaoObraCard({ obraId, beneficiarios }: { obraId: string; beneficiarios: number }) {
+  const [copiado, setCopiado] = useState(false);
+  const link = typeof window !== "undefined" ? `${window.location.origin}/o/${obraId}` : `/o/${obraId}`;
+  async function copiar() {
+    try { await navigator.clipboard.writeText(link); setCopiado(true); setTimeout(() => setCopiado(false), 2000); } catch { /* ignore */ }
+  }
+  return (
+    <section className="wr-card p-5">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="flex items-center gap-2.5">
+          <Users className="h-5 w-5 shrink-0" aria-hidden style={{ color: "#D7F36A" }} />
+          <div>
+            <h2 className="font-heading text-base font-bold" style={{ color: "var(--color-text)" }}>Captação de beneficiários</h2>
+            <p className="text-xs" style={{ color: "var(--color-text-subtle)" }}>Dê este link à entidade/projeto: cada beneficiário cadastrado vira base sua, no bairro — transformando o recurso em voto mensurável.</p>
+          </div>
+        </div>
+        <div className="text-right">
+          <div className="font-heading text-2xl font-bold tabular-nums" style={{ color: "#D7F36A" }}>{beneficiarios.toLocaleString("pt-BR")}</div>
+          <div className="text-[11px]" style={{ color: "var(--color-text-subtle)" }}>cadastrados</div>
+        </div>
+      </div>
+      <div className="mt-3 flex items-center gap-2">
+        <input readOnly value={link} className="wr-input flex-1 text-xs" onFocus={(e) => e.currentTarget.select()} />
+        <button type="button" onClick={copiar} className="inline-flex items-center gap-1.5 rounded-full px-4 py-2 text-sm font-semibold" style={{ background: "#D7F36A", color: "#16181D" }}>
+          <Copy className="h-4 w-4" aria-hidden /> {copiado ? "Copiado!" : "Copiar link"}
+        </button>
+      </div>
+    </section>
   );
 }
 
