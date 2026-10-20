@@ -76,6 +76,64 @@ export async function projecaoZonal(electionId: number, municipioTse: string, an
   return { universoTotal, baseTotal, coberturaMedia: universoTotal > 0 ? baseTotal / universoTotal : 0, zonas };
 }
 
+export interface ProjecaoRegiao {
+  regional: string;
+  universo: number;
+  base: number;
+  cobertura: number;
+  oportunidade: number;
+  classe: ClasseZona;
+  bairros: string[];
+}
+
+export interface ProjecaoRegionalResumo {
+  universoTotal: number;
+  baseTotal: number;
+  coberturaMedia: number;
+  regioes: ProjecaoRegiao[];
+}
+
+/** Projeção agregada por REGIONAL administrativa (só para municípios com o mapa, ex.: BH, Contagem). */
+export async function projecaoRegional(electionId: number, municipioTse: string, ano: number): Promise<ProjecaoRegionalResumo> {
+  await requireAuth();
+  const db = await createClient();
+  const cd = Number(municipioTse);
+
+  const [{ data: universo }, { data: leadsRows }] = await Promise.all([
+    db.rpc("intel_universo_regional", { p_election: electionId, p_municipio: cd }),
+    db.rpc("intel_regional_leads", { p_municipio: cd, p_ano: ano }),
+  ]);
+
+  const leadsPorReg = new Map<string, number>();
+  for (const r of (leadsRows ?? []) as { regional: string; leads: number }[]) leadsPorReg.set(r.regional, Number(r.leads));
+
+  const linhas = ((universo ?? []) as { regional: string; universo: number; bairros: string[] | null }[]).map((u) => {
+    const uni = Number(u.universo);
+    const base = leadsPorReg.get(u.regional) ?? 0;
+    return { regional: u.regional, universo: uni, base, cobertura: uni > 0 ? base / uni : 0, bairros: u.bairros ?? [] };
+  });
+
+  const universoTotal = linhas.reduce((s, l) => s + l.universo, 0);
+  const baseTotal = linhas.reduce((s, l) => s + l.base, 0);
+  const medUniverso = mediana(linhas.map((l) => l.universo));
+  const medCobertura = mediana(linhas.filter((l) => l.base > 0).map((l) => l.cobertura));
+
+  const regioes: ProjecaoRegiao[] = linhas
+    .map((l) => {
+      const faltaPresenca = medCobertura > 0 ? Math.max(0, 1 - l.cobertura / medCobertura) : 1;
+      const oportunidade = Math.round(l.universo * faltaPresenca);
+      let classe: ClasseZona;
+      if (l.base === 0) classe = "deserto";
+      else if (l.cobertura >= medCobertura) classe = "reduto";
+      else if (l.universo >= medUniverso) classe = "oportunidade";
+      else classe = "consolidar";
+      return { ...l, oportunidade, classe };
+    })
+    .sort((a, b) => b.universo - a.universo);
+
+  return { universoTotal, baseTotal, coberturaMedia: universoTotal > 0 ? baseTotal / universoTotal : 0, regioes };
+}
+
 function mediana(arr: number[]): number {
   if (arr.length === 0) return 0;
   const s = [...arr].sort((a, b) => a - b);

@@ -13,7 +13,7 @@ import { Loader2, Info, TrendingUp, Sparkles } from "lucide-react";
 
 import type { EleicaoOpcao } from "@/app/actions/politico/intelEleitoral";
 import type { MunicipioOpcao } from "@/app/actions/politico/raioX";
-import { projecaoZonal, type ProjecaoResumo, type ClasseZona } from "@/app/actions/politico/projecao";
+import { projecaoZonal, projecaoRegional, type ProjecaoResumo, type ProjecaoRegionalResumo, type ClasseZona } from "@/app/actions/politico/projecao";
 import { analiseProjecaoIA } from "@/app/actions/politico/analiseProjecao";
 import { MiniMarkdown } from "@/components/politico/mini-markdown";
 
@@ -31,7 +31,9 @@ function pct(f: number): string {
 export default function ProjecaoClient({ eleicoes, municipios }: { eleicoes: EleicaoOpcao[]; municipios: MunicipioOpcao[] }) {
   const [eleicaoId, setEleicaoId] = useState(eleicoes[0]!.id);
   const [munTse, setMunTse] = useState("");
+  const [gran, setGran] = useState<"zona" | "regional">("zona");
   const [dados, setDados] = useState<ProjecaoResumo | null>(null);
+  const [dadosReg, setDadosReg] = useState<ProjecaoRegionalResumo | null>(null);
   const [carregando, inicia] = useTransition();
   const [gerandoIA, setGerandoIA] = useState(false);
   const [analise, setAnalise] = useState<string | null>(null);
@@ -39,12 +41,14 @@ export default function ProjecaoClient({ eleicoes, municipios }: { eleicoes: Ele
   const ano = eleicoes.find((e) => e.id === eleicaoId)?.ano ?? 0;
   const munNome = municipios.find((m) => m.tse === munTse)?.nome ?? "";
 
-  function carregar(id: number, mun: string) {
+  function carregar(id: number, mun: string, g: "zona" | "regional") {
     setAnalise(null); setAnaliseErro(null); // a leitura da IA vale para o estado anterior.
-    if (!mun) { setDados(null); return; }
+    if (!mun) { setDados(null); setDadosReg(null); return; }
     const a = eleicoes.find((e) => e.id === id)?.ano ?? 0;
-    inicia(async () => setDados(await projecaoZonal(id, mun, a)));
+    if (g === "regional") inicia(async () => setDadosReg(await projecaoRegional(id, mun, a)));
+    else inicia(async () => setDados(await projecaoZonal(id, mun, a)));
   }
+  function trocarGran(g: "zona" | "regional") { setGran(g); carregar(eleicaoId, munTse, g); }
 
   async function gerarAnalise() {
     setGerandoIA(true); setAnalise(null); setAnaliseErro(null);
@@ -57,10 +61,17 @@ export default function ProjecaoClient({ eleicoes, municipios }: { eleicoes: Ele
       setGerandoIA(false);
     }
   }
-  function trocarEleicao(id: number) { setEleicaoId(id); carregar(id, munTse); }
-  function trocarMun(mun: string) { setMunTse(mun); carregar(eleicaoId, mun); }
+  function trocarEleicao(id: number) { setEleicaoId(id); carregar(id, munTse, gran); }
+  function trocarMun(mun: string) { setMunTse(mun); carregar(eleicaoId, mun, gran); }
 
-  const maxUniverso = dados ? Math.max(1, ...dados.zonas.map((z) => z.universo)) : 1;
+  // Visão ativa unificada (zona ou regional) para renderizar a mesma tabela.
+  const emRegional = gran === "regional";
+  const resumoAtivo = emRegional ? dadosReg : dados;
+  const itens = emRegional
+    ? (dadosReg?.regioes ?? []).map((r) => ({ rotulo: r.regional, universo: r.universo, base: r.base, cobertura: r.cobertura, classe: r.classe, bairros: r.bairros }))
+    : (dados?.zonas ?? []).map((z) => ({ rotulo: `Zona ${z.zona}`, universo: z.universo, base: z.base, cobertura: z.cobertura, classe: z.classe, bairros: z.bairros }));
+  const maxUniverso = Math.max(1, ...itens.map((i) => i.universo));
+  const unidade = emRegional ? "regional" : "zona";
 
   return (
     <div className="space-y-4">
@@ -79,6 +90,18 @@ export default function ProjecaoClient({ eleicoes, municipios }: { eleicoes: Ele
             {municipios.map((m) => <option key={m.tse} value={m.tse}>{m.nome}</option>)}
           </select>
         </label>
+        <div className="flex flex-col gap-1">
+          <span className="text-xs font-semibold" style={{ color: "rgba(255,255,255,0.6)" }}>Agrupar por</span>
+          <div className="flex gap-1 rounded-full p-0.5" style={{ border: "1px solid rgba(255,255,255,0.18)" }}>
+            {(["zona", "regional"] as const).map((g) => (
+              <button key={g} type="button" onClick={() => trocarGran(g)}
+                className="rounded-full px-3.5 py-1.5 text-xs font-semibold capitalize transition-colors"
+                style={gran === g ? { background: "#D7F36A", color: "#14181F" } : { color: "rgba(255,255,255,0.75)" }}>
+                {g}
+              </button>
+            ))}
+          </div>
+        </div>
         {carregando && <Loader2 className="mb-2 h-4 w-4 animate-spin" aria-hidden style={{ color: "rgba(255,255,255,0.6)" }} />}
       </div>
 
@@ -86,17 +109,21 @@ export default function ProjecaoClient({ eleicoes, municipios }: { eleicoes: Ele
       <div className="flex items-start gap-2.5 rounded-xl p-3.5" style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.1)" }}>
         <Info className="mt-0.5 h-4 w-4 shrink-0" aria-hidden style={{ color: "#D7F36A" }} />
         <p className="text-[13px] leading-relaxed" style={{ color: "rgba(255,255,255,0.72)" }}>
-          <strong style={{ color: "#fff" }}>Como ler:</strong> <strong style={{ color: "#fff" }}>Universo</strong> = votos que o cargo teve na zona (o tamanho do mercado eleitoral ali).{" "}
-          <strong style={{ color: "#fff" }}>Sua base</strong> = contatos do seu CRM mapeados naquela zona. <strong style={{ color: "#fff" }}>Cobertura</strong> = sua presença frente ao volume de voto.
+          <strong style={{ color: "#fff" }}>Como ler:</strong> <strong style={{ color: "#fff" }}>Universo</strong> = votos que o cargo teve na {unidade} (o tamanho do mercado eleitoral ali).{" "}
+          <strong style={{ color: "#fff" }}>Sua base</strong> = contatos do seu CRM mapeados nessa {unidade}. <strong style={{ color: "#fff" }}>Cobertura</strong> = sua presença frente ao volume de voto.
           A <strong style={{ color: "#fff" }}>classificação</strong> aponta onde defender (Reduto), reforçar (Consolidar) e, principalmente, <strong style={{ color: "#D7F36A" }}>onde crescer</strong> (Oportunidade/Deserto: muito voto, pouca presença sua).
         </p>
       </div>
 
       {!munTse ? (
         <div className="wr-card p-10 text-center text-sm" style={{ color: "rgba(255,255,255,0.6)" }}>
-          Selecione um município para ver a projeção por zona.
+          Selecione um município para ver a projeção por {unidade}.
         </div>
-      ) : !dados || dados.zonas.length === 0 ? (
+      ) : emRegional && dadosReg && dadosReg.regioes.length === 0 ? (
+        <div className="wr-card p-10 text-center text-sm" style={{ color: "rgba(255,255,255,0.6)" }}>
+          {carregando ? "Carregando…" : `O mapa de regionais ainda não cobre ${munNome}. Use “Agrupar por: zona”. (Disponível hoje em Belo Horizonte e Contagem.)`}
+        </div>
+      ) : !resumoAtivo || itens.length === 0 ? (
         <div className="wr-card p-10 text-center text-sm" style={{ color: "rgba(255,255,255,0.6)" }}>
           {carregando ? "Carregando…" : "Sem dados de votação para esse município."}
         </div>
@@ -104,51 +131,51 @@ export default function ProjecaoClient({ eleicoes, municipios }: { eleicoes: Ele
         <>
           {/* KPIs */}
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-            <Kpi label="Universo de votos" value={dados.universoTotal.toLocaleString("pt-BR")} sub={`cargo em ${munNome}`} />
-            <Kpi label="Sua base (CRM)" value={dados.baseTotal.toLocaleString("pt-BR")} sub="contatos mapeados" accent="#D7F36A" />
-            <Kpi label="Cobertura média" value={pct(dados.coberturaMedia)} sub="base / universo" />
-            <Kpi label="Zonas" value={String(dados.zonas.length)} sub="no município" />
+            <Kpi label="Universo de votos" value={resumoAtivo.universoTotal.toLocaleString("pt-BR")} sub={`cargo em ${munNome}`} />
+            <Kpi label="Sua base (CRM)" value={resumoAtivo.baseTotal.toLocaleString("pt-BR")} sub="contatos mapeados" accent="#D7F36A" />
+            <Kpi label="Cobertura média" value={pct(resumoAtivo.coberturaMedia)} sub="base / universo" />
+            <Kpi label={emRegional ? "Regionais" : "Zonas"} value={String(itens.length)} sub="no município" />
           </div>
 
-          {/* Tabela por zona */}
+          {/* Tabela por zona/regional */}
           <section className="wr-card p-0">
             <div className="flex items-center gap-2 px-5 pt-4 pb-2">
               <TrendingUp className="h-4 w-4" aria-hidden style={{ color: "#D7F36A" }} />
-              <h3 className="font-heading text-base font-bold" style={{ color: "#fff" }}>Projeção por zona — {munNome}</h3>
+              <h3 className="font-heading text-base font-bold" style={{ color: "#fff" }}>Projeção por {unidade} — {munNome}</h3>
             </div>
             <div className="overflow-auto" style={{ maxHeight: 560 }}>
               <table className="w-full border-collapse text-sm">
                 <thead className="sticky top-0 z-10" style={{ background: "#1a1d24" }}>
                   <tr>
-                    {["Zona", "Universo de votos", "Sua base", "Cobertura", "Classificação"].map((c, i) => (
+                    {[emRegional ? "Regional" : "Zona", "Universo de votos", "Sua base", "Cobertura", "Classificação"].map((c, i) => (
                       <th key={c} className={`px-4 py-2.5 text-[12px] font-medium ${i === 0 ? "text-left" : i === 4 ? "text-left" : "text-right"}`}
                         style={{ color: "rgba(255,255,255,0.55)", borderBottom: "1px solid rgba(255,255,255,0.1)" }}>{c}</th>
                     ))}
                   </tr>
                 </thead>
                 <tbody>
-                  {dados.zonas.map((z) => {
-                    const cl = CLASSE[z.classe];
+                  {itens.map((it) => {
+                    const cl = CLASSE[it.classe];
                     return (
-                      <tr key={z.zona} style={{ borderBottom: "1px solid rgba(255,255,255,0.07)" }}>
+                      <tr key={it.rotulo} style={{ borderBottom: "1px solid rgba(255,255,255,0.07)" }}>
                         <td className="px-4 py-3 align-top">
-                          <div className="font-semibold" style={{ color: "#fff" }}>Zona {z.zona}</div>
-                          {z.bairros.length > 0 && (
+                          <div className="font-semibold" style={{ color: "#fff" }}>{it.rotulo}</div>
+                          {it.bairros.length > 0 && (
                             <div className="mt-0.5 text-[11px] leading-snug" style={{ color: "rgba(255,255,255,0.45)" }}>
-                              {z.bairros.slice(0, 4).join(" · ")}{z.bairros.length > 4 ? ` +${z.bairros.length - 4}` : ""}
+                              {it.bairros.slice(0, emRegional ? 6 : 4).join(" · ")}{it.bairros.length > (emRegional ? 6 : 4) ? ` +${it.bairros.length - (emRegional ? 6 : 4)}` : ""}
                             </div>
                           )}
                         </td>
                         <td className="px-4 py-3 text-right align-top tabular-nums">
-                          <div className="font-bold" style={{ color: "#fff" }}>{z.universo.toLocaleString("pt-BR")}</div>
+                          <div className="font-bold" style={{ color: "#fff" }}>{it.universo.toLocaleString("pt-BR")}</div>
                           <div className="mt-1 h-1.5 w-full overflow-hidden rounded-full" style={{ background: "rgba(255,255,255,0.08)" }}>
-                            <div className="h-full rounded-full" style={{ width: `${(z.universo / maxUniverso) * 100}%`, background: "#D7F36A" }} />
+                            <div className="h-full rounded-full" style={{ width: `${(it.universo / maxUniverso) * 100}%`, background: "#D7F36A" }} />
                           </div>
                         </td>
-                        <td className="px-4 py-3 text-right align-top tabular-nums font-semibold" style={{ color: z.base > 0 ? "#fff" : "rgba(255,255,255,0.4)" }}>
-                          {z.base.toLocaleString("pt-BR")}
+                        <td className="px-4 py-3 text-right align-top tabular-nums font-semibold" style={{ color: it.base > 0 ? "#fff" : "rgba(255,255,255,0.4)" }}>
+                          {it.base.toLocaleString("pt-BR")}
                         </td>
-                        <td className="px-4 py-3 text-right align-top tabular-nums" style={{ color: "rgba(255,255,255,0.8)" }}>{pct(z.cobertura)}</td>
+                        <td className="px-4 py-3 text-right align-top tabular-nums" style={{ color: "rgba(255,255,255,0.8)" }}>{pct(it.cobertura)}</td>
                         <td className="px-4 py-3 align-top">
                           <span className="inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold" style={{ background: cl.bg, color: cl.color }}>{cl.label}</span>
                         </td>

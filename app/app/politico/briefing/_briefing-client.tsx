@@ -55,6 +55,8 @@ ul{margin:6px 0;padding-left:20px}li{font-size:13.5px;margin:3px 0}
 .batalha h3{margin:0 0 2px;font-size:14px}
 .batalha .sub{font-size:12px;color:#555;margin:0 0 8px}
 .advrow{display:flex;justify-content:space-between;font-size:13.5px;padding:2px 0}
+.advrow.me{background:#f3f8e4;border-radius:6px;padding:3px 7px;margin-bottom:3px}
+.advrow .r.me{color:#17784f}
 .advrow .r{font-weight:700;color:#A3302A;white-space:nowrap}
 .advrow .r small{color:#777;font-weight:400}
 .foot{margin-top:20px;padding-top:10px;border-top:1px solid #e3e3df;font-size:10.5px;color:#777}
@@ -73,6 +75,7 @@ export default function BriefingClient({ eleicoes, municipios }: { eleicoes: Ele
   const [dossie, setDossie] = useState<string | null>(null);
   const [adv, setAdv] = useState<AdversarioReduto[]>([]);
   const [redutos, setRedutos] = useState("");
+  const [meuReduto, setMeuReduto] = useState(0);
   const [erro, setErro] = useState<string | null>(null);
   const boxRef = useRef<HTMLDivElement>(null);
 
@@ -86,7 +89,7 @@ export default function BriefingClient({ eleicoes, municipios }: { eleicoes: Ele
     return () => document.removeEventListener("mousedown", onDoc);
   }, []);
 
-  function limparSaida() { setDossie(null); setErro(null); setAdv([]); setRedutos(""); }
+  function limparSaida() { setDossie(null); setErro(null); setAdv([]); setRedutos(""); setMeuReduto(0); }
   function buscar(termo: string) {
     setQ(termo);
     if (termo.trim().length < 2) { setResultados([]); setAberto(false); return; }
@@ -100,7 +103,7 @@ export default function BriefingClient({ eleicoes, municipios }: { eleicoes: Ele
     setGerando(true); setDossie(null); setErro(null);
     try {
       const r = await briefingEstrategico(eleicaoId, cand.sq, munTse, munNome, cargoAno, ano);
-      if (r.ok) { setDossie(r.texto); setAdv(r.adversarios); setRedutos(r.redutos); } else setErro(r.erro);
+      if (r.ok) { setDossie(r.texto); setAdv(r.adversarios); setRedutos(r.redutos); setMeuReduto(r.votosCandidatoReduto); } else setErro(r.erro);
     } catch {
       setErro("Não consegui gerar agora. Tente novamente em instantes.");
     } finally {
@@ -115,6 +118,7 @@ export default function BriefingClient({ eleicoes, municipios }: { eleicoes: Ele
     const advHtml = adv.length
       ? `<div class="batalha"><h3>&#9876;&#65039; A batalha &mdash; quem disputa seus redutos</h3>` +
         `<p class="sub">Candidatos mais fortes nos seus bairros${redutos ? ` (${escHtml(redutos)})` : ""} &mdash; votos deles no seu reduto / no munic&iacute;pio.</p>` +
+        `<div class="advrow me"><span>&#9733; <b>${escHtml(cand.nomeUrna)}</b> &middot; voc&ecirc;</span><span class="r me">${meuReduto.toLocaleString("pt-BR")} <small>nos seus redutos</small></span></div>` +
         adv.map((a, i) => `<div class="advrow"><span>${i + 1}. <b>${escHtml(a.nome)}</b>${a.partido ? ` &middot; ${escHtml(a.partido)}` : ""}</span><span class="r">${a.votosReduto.toLocaleString("pt-BR")} <small>/ ${a.votosMunicipio.toLocaleString("pt-BR")} mun.</small></span></div>`).join("") +
         `</div>`
       : "";
@@ -123,7 +127,7 @@ export default function BriefingClient({ eleicoes, municipios }: { eleicoes: Ele
       `<title>Dossiê — ${escHtml(cand.nomeUrna)} · ${escHtml(munNome)}</title><style>${CSS_IMPRESSAO}</style></head><body>` +
       `<div class="doc"><div class="head"><div class="brand">Intelig&ecirc;ncia &middot; IA Estrat&eacute;gica</div>` +
       `<h1>Dossi&ecirc; &mdash; ${escHtml(cand.nomeUrna)} &middot; ${escHtml(munNome)}</h1>` +
-      `<div class="meta">${escHtml(cargoAno)}</div></div>` +
+      `<div class="meta">${escHtml(cargoAno)} &middot; Fonte: TSE (resultados oficiais) &middot; Base: CRM da operação</div></div>` +
       advHtml + mdParaHtml(dossie) +
       `<p class="foot">Cruza o voto do candidato (TSE) com a base de contatos do SEU CRM &mdash; os contatos s&atilde;o da sua opera&ccedil;&atilde;o, n&atilde;o do candidato analisado. Documento de apoio gerado por IA; confira antes de decidir.</p>` +
       `</div></body></html>`;
@@ -218,13 +222,22 @@ export default function BriefingClient({ eleicoes, municipios }: { eleicoes: Ele
                 Candidatos mais fortes nos seus bairros{redutos ? ` (${redutos})` : ""} — votos deles <strong>no seu reduto</strong> / no município.
               </p>
               <div className="space-y-1.5">
+                {/* Linha do próprio candidato — confronto direto */}
+                <div className="flex items-center gap-3 rounded-md px-1.5 py-1 text-sm" style={{ background: "rgba(215,243,106,0.14)" }}>
+                  <span className="w-4 shrink-0 text-right text-xs" aria-hidden>★</span>
+                  <span className="min-w-0 flex-1 truncate font-bold" style={{ color: "var(--color-text)" }}>
+                    {cand?.nomeUrna} <span className="font-normal" style={{ color: "var(--color-text-muted)" }}>· você</span>
+                  </span>
+                  <span className="shrink-0 tabular-nums font-bold" style={{ color: "#17784F" }}>{meuReduto.toLocaleString("pt-BR")}</span>
+                  <span className="w-24 shrink-0 text-right text-xs" style={{ color: "var(--color-text-subtle)" }}>nos seus redutos</span>
+                </div>
                 {adv.map((a, i) => (
                   <div key={i} className="flex items-center gap-3 text-sm">
                     <span className="w-4 shrink-0 text-right text-xs tabular-nums" style={{ color: "var(--color-text-subtle)" }}>{i + 1}</span>
                     <span className="min-w-0 flex-1 truncate font-semibold" style={{ color: "var(--color-text)" }}>
                       {a.nome}{a.partido ? <span className="font-normal" style={{ color: "var(--color-text-muted)" }}> · {a.partido}</span> : null}
                     </span>
-                    <span className="shrink-0 tabular-nums font-bold" style={{ color: "#A3302A" }}>{a.votosReduto.toLocaleString("pt-BR")}</span>
+                    <span className="shrink-0 tabular-nums font-bold" style={{ color: a.votosReduto > meuReduto ? "#A3302A" : "var(--color-text)" }}>{a.votosReduto.toLocaleString("pt-BR")}</span>
                     <span className="w-24 shrink-0 text-right text-xs tabular-nums" style={{ color: "var(--color-text-subtle)" }}>{a.votosMunicipio.toLocaleString("pt-BR")} no mun.</span>
                   </div>
                 ))}

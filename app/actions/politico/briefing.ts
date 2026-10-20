@@ -25,7 +25,7 @@ export interface AdversarioReduto {
 }
 
 export type ResultadoBriefing =
-  | { ok: true; texto: string; candidato: string; adversarios: AdversarioReduto[]; redutos: string }
+  | { ok: true; texto: string; candidato: string; adversarios: AdversarioReduto[]; redutos: string; votosCandidatoReduto: number }
   | { ok: false; erro: string };
 
 export async function briefingEstrategico(
@@ -77,6 +77,8 @@ export async function briefingEstrategico(
   const nome = resumo.nomeUrna;
   const pctEstado = resumo.totalEleicao > 0 ? ((resumo.votos / resumo.totalEleicao) * 100).toFixed(2) : "0";
   const votosNoMun = bairros.reduce((s, b) => s + b.votos, 0);
+  // Votos do candidato nos seus 5 maiores redutos (mesma base dos adversários) — para o confronto direto.
+  const votosCandidatoReduto = bairros.filter((b) => b.votos > 0).slice(0, 5).reduce((s, b) => s + b.votos, 0);
 
   const redutos = bairros
     .filter((b) => b.votos > 0)
@@ -101,6 +103,7 @@ export async function briefingEstrategico(
     `BASE DE CRM DA OPERAÇÃO (contatos da campanha que usa a ferramenta — NÃO são eleitores nem a base do candidato analisado): ${proj.baseTotal.toLocaleString("pt-BR")} contatos em ${munNome}.`,
     `Universo de VOTOS do cargo em ${munNome} (total de votos válidos, não eleitorado): ${proj.universoTotal.toLocaleString("pt-BR")}. Cobertura da base de CRM sobre esse volume: ${(proj.coberturaMedia * 100).toFixed(2)}%.`,
     `Zonas de oportunidade (muito VOTO do cargo e pouca presença da base de CRM): ${oportunidades.length ? oportunidades.join("; ") : "—"}.`,
+    `Votos do PRÓPRIO candidato nesses 5 redutos: ${votosCandidatoReduto.toLocaleString("pt-BR")} (compare diretamente com cada adversário abaixo).`,
     `ADVERSÁRIOS que mais disputam os redutos do candidato (${redutosNome || "bairros fortes"}) — votos deles NESSES bairros / votos totais no município: ${
       adversarios.length ? adversarios.map((a) => `${a.nome}${a.partido ? ` (${a.partido})` : ""} — ${a.votosReduto.toLocaleString("pt-BR")} no reduto / ${a.votosMunicipio.toLocaleString("pt-BR")} no município`).join("; ") : "—"
     }.`,
@@ -134,7 +137,7 @@ export async function briefingEstrategico(
     const { text } = await generateText({ model: modeloDoCerebro(cerebro), system, prompt, maxOutputTokens: 1300 });
     const texto = text.trim();
     if (!texto) return { ok: false, erro: "A IA não retornou texto. Tente novamente." };
-    return { ok: true, texto, candidato: nome, adversarios, redutos: redutosNome };
+    return { ok: true, texto, candidato: nome, adversarios, redutos: redutosNome, votosCandidatoReduto };
   } catch {
     return { ok: false, erro: "Não consegui gerar agora. Tente novamente em instantes." };
   }
