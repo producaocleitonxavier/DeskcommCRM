@@ -56031,3 +56031,14 @@ language sql stable security invoker set search_path = public as $$
   select 'bairro'::text, b.bairro from (select distinct l.bairro from public.intel_locais l join e on true where l.ano = e.ano and l.cd_municipio = p_municipio and l.bairro is not null and l.bairro <> '') b;
 $$;
 grant execute on function public.intel_recortes_municipio(bigint, int) to authenticated;
+
+-- ── 9025: Projecao VIVA — intel_universo_zona (universo de votos por zona, do dado vivo intel_*, p/ cruzar com leads via intel_zona_leads). Ver migration 9025. ──
+create or replace function public.intel_universo_zona(p_election bigint, p_municipio int)
+returns table (nr_zona smallint, universo bigint, bairros text[])
+language sql stable security invoker set search_path = public as $$
+  with e as (select ano from public.intel_elections where id = p_election),
+  u as (select st.nr_zona, sum(st.total)::bigint as universo from public.intel_secao_total st where st.election_id = p_election and st.cd_municipio = p_municipio group by st.nr_zona),
+  b as (select l.nr_zona, array_agg(distinct l.bairro order by l.bairro) filter (where l.bairro is not null and l.bairro <> '') as bairros from public.intel_locais l join e on true where l.ano = e.ano and l.cd_municipio = p_municipio group by l.nr_zona)
+  select u.nr_zona, u.universo, coalesce(b.bairros, '{}'::text[]) from u left join b on b.nr_zona = u.nr_zona order by u.universo desc;
+$$;
+grant execute on function public.intel_universo_zona(bigint, int) to authenticated;

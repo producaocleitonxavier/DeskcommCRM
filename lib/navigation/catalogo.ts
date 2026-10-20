@@ -1090,13 +1090,15 @@ export const NAV_CATALOG = [
     sidebar: true,
   },
   {
+    // Fundida no Território (camada "Projeção", dado vivo). Fora da sidebar; a
+    // rota redireciona para /mapa-eleitoral?camada=projecao (não quebra links).
     href: "/app/politico/projecao",
     label: "Projeção",
-    description: "Projeção eleitoral por cenário a partir da base e do histórico de votos.",
+    description: "Projeção eleitoral (fundida no Território): universo de votos × base do CRM por zona.",
     icon: "ChartLineUp",
     group: "territorio",
     minRole: "manager",
-    sidebar: true,
+    sidebar: false,
   },
   {
     href: "/app/politico/comparativo",

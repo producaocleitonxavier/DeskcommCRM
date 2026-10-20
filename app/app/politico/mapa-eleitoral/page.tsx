@@ -15,7 +15,9 @@ import { requireAuth, resolveActiveOrg } from "@/lib/auth/server";
 import { CommandHero } from "@/components/politico/command-hero";
 import TerritorioClient, { type CidadeRow } from "./_territorio-client";
 import EleicoesClient from "./_eleicoes-client";
+import ProjecaoClient from "./_projecao-client";
 import { listarEleicoes, candidatosDaEleicao, mapaMunicipio, listarMunicipios } from "@/app/actions/politico/intelEleitoral";
+import { listarMunicipiosRaioX } from "@/app/actions/politico/raioX";
 
 export const dynamic = "force-dynamic";
 
@@ -188,7 +190,8 @@ export default async function TerritorioPage({
   if (!org) redirect("/app/onboarding");
 
   const params = await searchParams;
-  const camada = params.camada ?? "oportunidades";
+  // Entrada didática: o mapa de votos (TSE) é a primeira leitura; CRM e projeção na sequência.
+  const camada = params.camada ?? "eleicoes";
 
   const [oportunidades, prioridades] = await Promise.all([
     camada === "oportunidades" ? buscarOportunidades(org.orgId) : Promise.resolve([]),
@@ -197,6 +200,11 @@ export default async function TerritorioPage({
 
   // Camada "Eleições" (Inteligência/TSE): choropleth por município.
   const eleicoesData = camada === "eleicoes" ? await montarEleicoes(params.eleicao, params.cand) : null;
+
+  // Camada "Projeção" (dado vivo): universo de votos × base do CRM por zona.
+  const projecaoData = camada === "projecao"
+    ? await Promise.all([listarEleicoes(), listarMunicipiosRaioX()])
+    : null;
 
   // -- Camada oportunidades: cidades geolocalizadas + força --
   const cidades: CidadeRow[] = oportunidades
@@ -228,9 +236,10 @@ export default async function TerritorioPage({
   const zonasNormais = prioridades.filter((p) => p.strategic_status === "normal").length;
 
   const tabs = [
-    { value: "oportunidades", label: "Zonas", href: "/app/politico/mapa-eleitoral" },
+    { value: "eleicoes", label: "Mapa de Votos", href: "/app/politico/mapa-eleitoral" },
+    { value: "oportunidades", label: "Minha Força", href: "/app/politico/mapa-eleitoral?camada=oportunidades" },
+    { value: "projecao", label: "Projeção", href: "/app/politico/mapa-eleitoral?camada=projecao" },
     { value: "prioridade", label: "Prioridade", href: "/app/politico/mapa-eleitoral?camada=prioridade" },
-    { value: "eleicoes", label: "Eleições", href: "/app/politico/mapa-eleitoral?camada=eleicoes" },
   ];
 
   return (
@@ -380,6 +389,18 @@ export default async function TerritorioPage({
             pontosIniciais={eleicoesData.pontos}
             nomes={eleicoesData.nomes}
           />
+        ) : (
+          <div className="wr-card p-12 text-center">
+            <p className="text-sm" style={{ color: "var(--color-text-subtle)" }}>
+              Dados eleitorais ainda não carregados nesta instalação.
+            </p>
+          </div>
+        ))}
+
+      {/* ── Camada: Projeção (dado vivo — universo × base por zona) ── */}
+      {camada === "projecao" &&
+        (projecaoData && projecaoData[0].length > 0 ? (
+          <ProjecaoClient eleicoes={projecaoData[0]} municipios={projecaoData[1]} />
         ) : (
           <div className="wr-card p-12 text-center">
             <p className="text-sm" style={{ color: "var(--color-text-subtle)" }}>
