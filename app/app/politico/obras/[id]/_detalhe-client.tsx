@@ -192,7 +192,7 @@ function DadosCard({ obra, emendas, onSalvar }: { obra: Obra; emendas: ObraDetal
             <L l="Previsão de entrega"><input type="date" className="wr-input w-full" value={f.data_prevista} onChange={set("data_prevista")} /></L>
             <L l="Responsável"><input className="wr-input w-full" value={f.responsavel_interno} onChange={set("responsavel_interno")} /></L>
           </div>
-          <L l="Vincular emenda"><select className="wr-input w-full" value={f.emenda_id} onChange={set("emenda_id")}><option value="">— nenhuma —</option>{emendas.map((e) => <option key={e.id} value={e.id}>{e.numero ? `${e.numero}/${e.ano}` : `Emenda ${e.ano}`} — {e.descricao.slice(0, 40)}</option>)}</select></L>
+          <L l="Vincular emenda"><select className="wr-input w-full" value={f.emenda_id} onChange={set("emenda_id")} disabled={emendas.length === 0}><option value="">{emendas.length === 0 ? "— nenhuma emenda cadastrada (cadastre em Emendas) —" : "— nenhuma —"}</option>{emendas.map((e) => <option key={e.id} value={e.id}>{e.numero ? `${e.numero}/${e.ano}` : `Emenda ${e.ano}`} — {e.descricao.slice(0, 40)}</option>)}</select></L>
           <L l="Observações"><textarea className="wr-input w-full" rows={2} value={f.observacoes} onChange={set("observacoes")} /></L>
           <div className="flex gap-2">
             <button type="button" onClick={salvar} disabled={salv} className="rounded-full px-4 py-2 text-sm font-semibold disabled:opacity-60" style={{ background: "#D7F36A", color: "#16181D" }}>{salv ? "Salvando…" : "Salvar"}</button>

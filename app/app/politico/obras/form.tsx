@@ -85,10 +85,15 @@ export default function ObraForm({ emendas, naturezaInicial }: { emendas: Emenda
           <Campo label="Fonte do recurso"><input className="wr-input w-full" value={f.fonte_recurso} onChange={set("fonte_recurso")} placeholder="Ex.: Emenda, Tesouro, Convênio federal" /></Campo>
         </div>
         <Campo label="Vincular à emenda (opcional)">
-          <select className="wr-input w-full" value={f.emenda_id} onChange={set("emenda_id")}>
-            <option value="">— nenhuma —</option>
+          <select className="wr-input w-full" value={f.emenda_id} onChange={set("emenda_id")} disabled={emendas.length === 0}>
+            <option value="">{emendas.length === 0 ? "— nenhuma emenda cadastrada —" : "— nenhuma —"}</option>
             {emendas.map((e) => <option key={e.id} value={e.id}>{e.numero ? `${e.numero}/${e.ano}` : `Emenda ${e.ano}`} — {e.descricao.slice(0, 50)}</option>)}
           </select>
+          <span className="text-[11px]" style={{ color: "var(--color-text-subtle)" }}>
+            {emendas.length === 0
+              ? "A emenda é o recurso que você destinou (cadastre em Gabinete › Emendas). Vincular aqui amarra o dinheiro à obra — e ao voto do bairro."
+              : "Amarra o recurso (emenda) a esta obra: o dinheiro que você destinou virando entrega no território."}
+          </span>
         </Campo>
       </section>
 
