@@ -28,6 +28,7 @@ interface Contact {
   social_identity: string | null;
   last_activity_at: string | null;
   created_at: string;
+  custom_fields: Record<string, unknown> | null;
 }
 
 interface PolLead {
@@ -42,8 +43,17 @@ interface PolLead {
   community_role: string | null;
   mobilizer_id: string | null;
   territory_id: string | null;
+  pol_obra_id: string | null;
+  pol_emenda_id: string | null;
   created_at: string;
   updated_at: string;
+}
+
+/** Procedência da captação, resolvida a partir da obra/emenda vinculada. */
+interface OrigemCaptacao {
+  tipo: "obra" | "emenda";
+  label: string; // ex.: "Reforma do campo União"
+  href: string; // link para a ficha da obra/emenda
 }
 
 interface FunnelTransition {
@@ -185,7 +195,7 @@ async function buscarLead(organizationId: string, leadId: string) {
   // Buscar contato
   const { data: contact } = await db
     .from("contacts")
-    .select("id, name, phone_number, email, birthdate, source, tags, social_identity, last_activity_at, created_at")
+    .select("id, name, phone_number, email, birthdate, source, tags, social_identity, last_activity_at, created_at, custom_fields")
     .eq("id", (lead as PolLead).contact_id)
     .single();
 
@@ -220,12 +230,45 @@ async function buscarLead(organizationId: string, leadId: string) {
     mobilizadorNome = mob?.name ?? null;
   }
 
+  // Procedência: se o lead foi captado por um link de obra ou emenda, mostra a
+  // fonte real ("Reforma do campo União") em vez do genérico "Formulário".
+  const pl = lead as PolLead;
+  let origemCaptacao: OrigemCaptacao | null = null;
+  if (pl.pol_obra_id) {
+    const { data: obra } = await db
+      .from("pol_obras")
+      .select("titulo")
+      .eq("organization_id", organizationId)
+      .eq("id", pl.pol_obra_id)
+      .maybeSingle();
+    const titulo = (obra as { titulo?: string } | null)?.titulo;
+    if (titulo) {
+      origemCaptacao = { tipo: "obra", label: titulo, href: `/app/politico/obras/${pl.pol_obra_id}` };
+    }
+  } else if (pl.pol_emenda_id) {
+    const { data: emenda } = await db
+      .from("pol_emendas")
+      .select("entidade_beneficiada, descricao, numero, ano")
+      .eq("organization_id", organizationId)
+      .eq("id", pl.pol_emenda_id)
+      .maybeSingle();
+    const em = emenda as { entidade_beneficiada?: string | null; descricao?: string | null; numero?: string | null; ano?: number | null } | null;
+    const label =
+      em?.entidade_beneficiada ||
+      em?.descricao ||
+      (em?.numero ? `Emenda ${em.numero}${em.ano ? `/${em.ano}` : ""}` : null);
+    if (label) {
+      origemCaptacao = { tipo: "emenda", label, href: `/app/politico/emendas/${pl.pol_emenda_id}` };
+    }
+  }
+
   return {
-    lead: lead as PolLead,
+    lead: pl,
     contact: contact as Contact,
     transitions: (transitions ?? []) as FunnelTransition[],
     demandas: (demandas ?? []) as Demanda[],
     mobilizadorNome,
+    origemCaptacao,
   };
 }
 
@@ -320,7 +363,7 @@ export default async function FichaPage({
 
   if (!dados) notFound();
 
-  const { lead, contact, transitions, demandas, mobilizadorNome } = dados;
+  const { lead, contact, transitions, demandas, mobilizadorNome, origemCaptacao } = dados;
 
   const tempS = tempEstilo(lead.temperature);
   const telefone = contact.phone_number ?? "";
@@ -399,6 +442,24 @@ export default async function FichaPage({
             <InfoRow label="Email" value={contact.email} />
             <InfoRow label="Nascimento" value={contact.birthdate ? formatarData(contact.birthdate) : null} />
             <InfoRow label="Origem" value={sourceLabel(contact.source)} />
+            {origemCaptacao && (
+              <InfoRow
+                label="Captado via"
+                value={
+                  <Link
+                    href={origemCaptacao.href}
+                    className="inline-flex items-center gap-1 hover:opacity-70 transition-opacity"
+                    style={{ color: "#4352C4" }}
+                  >
+                    <span className="truncate max-w-[220px]">
+                      {origemCaptacao.tipo === "obra" ? "Obra · " : "Emenda · "}
+                      {origemCaptacao.label}
+                    </span>
+                    <ArrowUpRight style={{ width: 13, height: 13 }} className="shrink-0" />
+                  </Link>
+                }
+              />
+            )}
             {contact.social_identity && <InfoRow label="Social" value={contact.social_identity} />}
           </InfoCard>
 
