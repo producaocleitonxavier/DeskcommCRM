@@ -10,6 +10,7 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { requireAuth, resolveActiveOrg } from "@/lib/auth/server";
 import AdversariosClient, { type AdversarioItem } from "./_adversarios-client";
+import MonitoramentoTabs from "@/components/politico/monitoramento-tabs";
 
 export const dynamic = "force-dynamic";
 
@@ -58,10 +59,13 @@ export default async function AdversariosPage() {
     .map((a) => ({ name: a.name, value: Math.round(a.threatScore * 10) / 10, fill: RISCO_COR[a.riskLevel] ?? "#4352C4" }));
 
   return (
-    <AdversariosClient
-      kpis={{ total: total.count ?? 0, riscoAlto: riscoAlto.count ?? 0, sinaisAtivos: sinaisAtivos.count ?? 0 }}
-      comparativo={comparativo}
-      adversarios={adversarios}
-    />
+    <>
+      <MonitoramentoTabs active="adversarios" />
+      <AdversariosClient
+        kpis={{ total: total.count ?? 0, riscoAlto: riscoAlto.count ?? 0, sinaisAtivos: sinaisAtivos.count ?? 0 }}
+        comparativo={comparativo}
+        adversarios={adversarios}
+      />
+    </>
   );
 }

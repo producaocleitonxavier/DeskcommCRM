@@ -10,6 +10,7 @@ import { redirect } from "next/navigation";
 import { requireAuth, resolveActiveOrg } from "@/lib/auth/server";
 import { obterConfigMonitor, resumoOpiniao, listarMencoes } from "@/app/actions/politico/opiniaoPublica";
 import OpiniaoPublicaClient from "./_social-client";
+import MonitoramentoTabs from "@/components/politico/monitoramento-tabs";
 
 export const dynamic = "force-dynamic";
 
@@ -20,5 +21,10 @@ export default async function OpiniaoPublicaPage() {
 
   const [config, resumo, mencoes] = await Promise.all([obterConfigMonitor(), resumoOpiniao(), listarMencoes(50)]);
 
-  return <OpiniaoPublicaClient config={config} resumo={resumo} mencoes={mencoes} />;
+  return (
+    <>
+      <MonitoramentoTabs active="escuta" />
+      <OpiniaoPublicaClient config={config} resumo={resumo} mencoes={mencoes} />
+    </>
+  );
 }

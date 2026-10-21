@@ -11,6 +11,7 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { requireAuth, resolveActiveOrg } from "@/lib/auth/server";
 import AlertasClient from "./_alertas-client";
+import MonitoramentoTabs from "@/components/politico/monitoramento-tabs";
 
 export const dynamic = "force-dynamic";
 
@@ -87,5 +88,10 @@ export default async function AlertasPage({
     contarCriticos(org.orgId),
   ]);
 
-  return <AlertasClient alertas={alertas} filtros={filtros} criticosAtivos={criticosAtivos} />;
+  return (
+    <>
+      <MonitoramentoTabs active="alertas" />
+      <AlertasClient alertas={alertas} filtros={filtros} criticosAtivos={criticosAtivos} />
+    </>
+  );
 }

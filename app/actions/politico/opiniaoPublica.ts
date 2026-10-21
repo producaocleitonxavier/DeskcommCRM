@@ -176,6 +176,9 @@ export async function atualizarMencoes(): Promise<{ ok: boolean; novas: number; 
   // Classifica sentimento/tópico via IA, em um único lote.
   await classificar(org.orgId, linhas.map((l) => ({ id: l.id, titulo: l.titulo })), cfg);
 
+  // Motor de sinais: a escuta vira Alertas + Decisão automaticamente.
+  await gerarSinaisDaOpiniao(db, org.orgId);
+
   return { ok: true, novas: linhas.length };
 }
 
@@ -221,7 +224,73 @@ export async function reavaliarSentimento(limite = 40): Promise<{ ok: boolean; n
   const itens = ((data ?? []) as { id: string; titulo: string | null }[]).filter((r) => r.titulo).map((r) => ({ id: r.id, titulo: r.titulo as string }));
   if (itens.length === 0) return { ok: true, n: 0 };
   await classificar(org.orgId, itens, cfg);
+  await gerarSinaisDaOpiniao(db, org.orgId);
   return { ok: true, n: itens.length };
+}
+
+// ── Motor de sinais (escuta → Alertas + Decisão) ─────────────────────────────
+
+/**
+ * A partir das menções classificadas, gera ALERTAS (pico de negativo por tópico)
+ * e SINAIS DE DECISÃO (pauta defensiva/ofensiva). Dedup por título em janela de
+ * 7 dias. Chamado automaticamente após atualizarMencoes; também exposto p/ botão.
+ */
+async function gerarSinaisDaOpiniao(db: Awaited<ReturnType<typeof createClient>>, orgId: string): Promise<{ alertas: number; sinais: number }> {
+  const desde = new Date(Date.now() - 14 * 86_400_000).toISOString();
+  const { data } = await db.from("intel_mentions").select("sentimento, topico").eq("organization_id", orgId).gte("created_at", desde).limit(3000);
+  const rows = (data ?? []) as { sentimento: string | null; topico: string | null }[];
+  const porTopico = new Map<string, { neg: number; pos: number }>();
+  for (const r of rows) {
+    if (!r.topico) continue;
+    const t = porTopico.get(r.topico) ?? { neg: 0, pos: 0 };
+    if (r.sentimento === "negativo") t.neg++;
+    else if (r.sentimento === "positivo") t.pos++;
+    porTopico.set(r.topico, t);
+  }
+
+  // Dedup: títulos de alertas abertos e de sinais recentes (7d).
+  const desde7 = new Date(Date.now() - 7 * 86_400_000).toISOString();
+  const [alAbertos, sinRec] = await Promise.all([
+    db.from("pol_alerts").select("title").eq("organization_id", orgId).eq("status", "open").gte("created_at", desde7),
+    db.from("pol_decision_signals").select("data").eq("organization_id", orgId).gte("created_at", desde7),
+  ]);
+  const titulosAlerta = new Set(((alAbertos.data ?? []) as { title: string }[]).map((a) => a.title));
+  const titulosSinal = new Set(((sinRec.data ?? []) as { data: { title?: string } }[]).map((s) => s.data?.title).filter(Boolean));
+
+  const novosAlertas: Record<string, unknown>[] = [];
+  const novosSinais: Record<string, unknown>[] = [];
+  for (const [topico, c] of porTopico) {
+    if (c.neg >= 3) {
+      const severity = c.neg >= 8 ? "high" : c.neg >= 5 ? "medium" : "low";
+      const titA = `Menções negativas em alta: ${topico}`;
+      if (!titulosAlerta.has(titA)) {
+        novosAlertas.push({ organization_id: orgId, alert_type: "sentiment", severity, source_type: "opiniao_publica", title: titA, description: `${c.neg} menções negativas sobre "${topico}" nos últimos dias. Pauta sensível — avalie responder antes que escale.`, status: "open" });
+      }
+      const titS = `Responder sobre ${topico}`;
+      if (!titulosSinal.has(titS)) {
+        novosSinais.push({ organization_id: orgId, signal_type: "sentiment_shift", source: "opiniao_publica", severity, data: { title: titS, descricao: `${c.neg} menções negativas sobre ${topico} na imprensa/redes.`, acao: `Preparar nota/pauta sobre ${topico} e acionar lideranças da área. Monitorar a evolução.` } });
+      }
+    }
+    if (c.pos >= 4) {
+      const titS = `Capitalizar: ${topico}`;
+      if (!titulosSinal.has(titS)) {
+        novosSinais.push({ organization_id: orgId, signal_type: "media_coverage", source: "opiniao_publica", severity: "low", data: { title: titS, descricao: `${c.pos} menções positivas sobre ${topico}.`, acao: `Amplificar nas redes e, se for entrega sua, no Portal da Transparência.` } });
+      }
+    }
+  }
+  if (novosAlertas.length) await db.from("pol_alerts").insert(novosAlertas);
+  if (novosSinais.length) await db.from("pol_decision_signals").insert(novosSinais);
+  return { alertas: novosAlertas.length, sinais: novosSinais.length };
+}
+
+/** Gera sinais sob demanda (botão). */
+export async function gerarSinais(): Promise<{ ok: boolean; alertas: number; sinais: number; erro?: string }> {
+  const user = await requireAuth();
+  const org = await resolveActiveOrg(user);
+  if (!org) return { ok: false, alertas: 0, sinais: 0, erro: "Sessão inválida." };
+  const db = await createClient();
+  const r = await gerarSinaisDaOpiniao(db, org.orgId);
+  return { ok: true, ...r };
 }
 
 // ── Leitura ──────────────────────────────────────────────────────────────────

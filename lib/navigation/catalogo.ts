@@ -960,7 +960,7 @@ export const NAV_CATALOG = [
     icon: "Bell",
     group: "inteligencia",
     minRole: "manager",
-    sidebar: true,
+    sidebar: false, // aba de Monitoramento (dentro de Opinião Pública)
   },
   {
     href: "/app/politico/adversarios",
@@ -969,7 +969,7 @@ export const NAV_CATALOG = [
     icon: "ShieldCheck",
     group: "inteligencia",
     minRole: "manager",
-    sidebar: true,
+    sidebar: false, // aba de Monitoramento (dentro de Opinião Pública)
   },
   {
     href: "/app/politico/social",
@@ -987,7 +987,7 @@ export const NAV_CATALOG = [
     icon: "Lightbulb",
     group: "inteligencia",
     minRole: "manager",
-    sidebar: true,
+    sidebar: false, // aba de Monitoramento (dentro de Opinião Pública)
   },
 
   // ── Motor Viral — OCULTO (decisão de produto 2026-10-21): o método/geração de

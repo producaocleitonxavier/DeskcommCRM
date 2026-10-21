@@ -10,6 +10,7 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { requireAuth, resolveActiveOrg } from "@/lib/auth/server";
 import DecisaoClient, { type AlertaItem, type SinalItem } from "./_decisao-client";
+import MonitoramentoTabs from "@/components/politico/monitoramento-tabs";
 
 export const dynamic = "force-dynamic";
 
@@ -24,7 +25,7 @@ export default async function DecisaoPage() {
   const [sinaisRes, alertasRes] = await Promise.all([
     db
       .from("pol_decision_signals")
-      .select("id, signal_type, title, description, severity, status, recommended_action, created_at")
+      .select("id, signal_type, severity, data, processed_at, created_at")
       .eq("organization_id", org.orgId)
       .order("created_at", { ascending: false })
       .limit(30),
@@ -37,16 +38,19 @@ export default async function DecisaoPage() {
       .limit(10),
   ]);
 
-  const sinais: SinalItem[] = ((sinaisRes.data ?? []) as Record<string, unknown>[]).map((s) => ({
-    id: String(s.id),
-    title: String(s.title ?? ""),
-    description: (s.description as string | null) ?? null,
-    signalType: String(s.signal_type ?? ""),
-    severity: String(s.severity ?? "medium"),
-    status: String(s.status ?? ""),
-    recommendedAction: (s.recommended_action as string | null) ?? null,
-    createdAt: String(s.created_at),
-  }));
+  const sinais: SinalItem[] = ((sinaisRes.data ?? []) as Record<string, unknown>[]).map((s) => {
+    const d = (s.data ?? {}) as { title?: string; descricao?: string; acao?: string };
+    return {
+      id: String(s.id),
+      title: d.title ?? String(s.signal_type ?? "Sinal"),
+      description: d.descricao ?? null,
+      signalType: String(s.signal_type ?? ""),
+      severity: String(s.severity ?? "medium"),
+      status: s.processed_at ? "resolved" : "pending",
+      recommendedAction: d.acao ?? null,
+      createdAt: String(s.created_at),
+    };
+  });
 
   const alertas: AlertaItem[] = ((alertasRes.data ?? []) as Record<string, unknown>[]).map((a) => ({
     id: String(a.id),
@@ -60,10 +64,13 @@ export default async function DecisaoPage() {
   const criticos = sinais.filter((s) => ["high", "critical"].includes(s.severity)).length;
 
   return (
-    <DecisaoClient
-      kpis={{ total: sinais.length, pendentes, criticos, alertas: alertas.length }}
-      sinais={sinais}
-      alertas={alertas}
-    />
+    <>
+      <MonitoramentoTabs active="decisao" />
+      <DecisaoClient
+        kpis={{ total: sinais.length, pendentes, criticos, alertas: alertas.length }}
+        sinais={sinais}
+        alertas={alertas}
+      />
+    </>
   );
 }
