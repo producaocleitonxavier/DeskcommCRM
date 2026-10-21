@@ -56223,3 +56223,43 @@ begin
   select (select v from mv), (select v from uni), (select v from lds);
 end; $$;
 grant execute on function public.intel_peso_bairro(bigint, bigint, int, text) to authenticated;
+
+-- ── 9037: Narrativas Territoriais (Pilar 3) — tabela + RPC de adversários por bairro. Ver migration 9037. ──
+create table if not exists public.intel_territorial_narratives (
+  id uuid primary key default gen_random_uuid(),
+  organization_id uuid not null references public.organizations(id) on delete cascade,
+  election_id bigint, cd_municipio int, municipio_nome text, bairro text not null, regional text,
+  narrative_text text not null,
+  risks jsonb not null default '[]', opportunities jsonb not null default '[]', recommended_actions jsonb not null default '[]',
+  data_sources jsonb not null default '{}', ai_model text, prompt_tokens int, completion_tokens int, cost_cents int,
+  generated_at timestamptz not null default now()
+);
+create index if not exists idx_intel_narratives_org_bairro on public.intel_territorial_narratives(organization_id, bairro, generated_at desc);
+alter table public.intel_territorial_narratives enable row level security;
+drop policy if exists tenant_isolation_intel_narratives_all on public.intel_territorial_narratives;
+create policy tenant_isolation_intel_narratives_all on public.intel_territorial_narratives for all
+  using (organization_id in (select public.fn_user_org_ids())) with check (organization_id in (select public.fn_user_org_ids()));
+grant select, insert, update, delete on public.intel_territorial_narratives to authenticated;
+create or replace function public.intel_adversarios_bairro(p_election bigint, p_municipio int, p_bairro text, p_limit int default 8)
+returns table (sq_candidato bigint, nome text, partido text, votos bigint)
+language plpgsql stable security invoker set search_path = public set plan_cache_mode = 'force_custom_plan' as $$
+declare v_ano smallint; v_bnorm text;
+begin
+  select e.ano into v_ano from public.intel_elections e where e.id = p_election;
+  v_bnorm := upper(unaccent(coalesce(p_bairro, '')));
+  return query
+  with secs as (select l.nr_zona, l.nr_secao from public.intel_locais l where l.ano = v_ano and l.cd_municipio = p_municipio and upper(unaccent(l.bairro)) = v_bnorm),
+  votos as (select sv.sq_candidato as sq, sum(sv.votos)::bigint as v from public.intel_secao_votos sv join secs s on s.nr_zona = sv.nr_zona and s.nr_secao = sv.nr_secao where sv.election_id = p_election and sv.cd_municipio = p_municipio group by sv.sq_candidato)
+  select vt.sq, coalesce(c.nome_urna, c.nome), c.partido_sigla, vt.v from votos vt join public.intel_candidatos c on c.election_id = p_election and c.sq_candidato = vt.sq order by vt.v desc limit p_limit;
+end; $$;
+grant execute on function public.intel_adversarios_bairro(bigint, int, text, int) to authenticated;
+
+-- ── 9038: Narrativas Territoriais (Pilar 3) — RPC intel_bairro_crm (base da org por bairro: leads por temperatura/estágio + demandas, RLS). Ver migration 9038. ──
+create or replace function public.intel_bairro_crm(p_cidade text, p_bairro text)
+returns table (leads_total bigint, leads_quente bigint, leads_morno bigint, leads_frio bigint, leads_forte bigint, dem_abertas bigint, dem_resolvidas bigint)
+language sql stable security invoker set search_path = public as $$
+  with b as (select pl.temperature as temp, pl.support_level as sl from public.pol_leads pl join public.contacts ct on ct.id = pl.contact_id where upper(unaccent(coalesce(ct.custom_fields->'endereco_gip'->>'bairro', ct.custom_fields->>'bairro'))) = upper(unaccent(p_bairro)) and upper(unaccent(coalesce(ct.custom_fields->'endereco_gip'->>'cidade', ct.custom_fields->>'cidade'))) = upper(unaccent(p_cidade))),
+  d as (select dm.estado as estado from public.demandas dm join public.contacts ct on ct.id = dm.contact_id where upper(unaccent(coalesce(ct.custom_fields->'endereco_gip'->>'bairro', ct.custom_fields->>'bairro'))) = upper(unaccent(p_bairro)) and upper(unaccent(coalesce(ct.custom_fields->'endereco_gip'->>'cidade', ct.custom_fields->>'cidade'))) = upper(unaccent(p_cidade)))
+  select (select count(*) from b)::bigint, (select count(*) from b where temp='quente')::bigint, (select count(*) from b where temp='morno')::bigint, (select count(*) from b where temp='frio')::bigint, (select count(*) from b where sl in ('apoiador','militante','voto_certo'))::bigint, (select count(*) from d where estado not in ('resolvida','encerrada'))::bigint, (select count(*) from d where estado='resolvida')::bigint;
+$$;
+grant execute on function public.intel_bairro_crm(text, text) to authenticated;

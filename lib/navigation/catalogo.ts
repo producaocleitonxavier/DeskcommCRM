@@ -1110,8 +1110,8 @@ export const NAV_CATALOG = [
   },
   {
     href: "/app/politico/narrativas",
-    label: "Narrativas",
-    description: "Monitoramento de narrativas e contra-narrativa — menções, enquadramento e resposta.",
+    label: "Narrativas Territoriais",
+    description: "A IA lê um bairro inteiro (voto, base, demandas, lideranças, disputa) e escreve a estratégia do território com riscos, oportunidades e ações.",
     icon: "ChatsCircle",
     group: "inteligencia",
     minRole: "manager",
