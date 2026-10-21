@@ -10,7 +10,9 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { requireAuth, resolveActiveOrg } from "@/lib/auth/server";
 import AdversariosClient, { type AdversarioItem } from "./_adversarios-client";
+import AdversariosGestao from "./_adversarios-gestao";
 import MonitoramentoTabs from "@/components/politico/monitoramento-tabs";
+import { listarSinaisAdversarios } from "@/app/actions/politico/adversarios";
 
 export const dynamic = "force-dynamic";
 
@@ -58,9 +60,15 @@ export default async function AdversariosPage() {
     .slice(0, 8)
     .map((a) => ({ name: a.name, value: Math.round(a.threatScore * 10) / 10, fill: RISCO_COR[a.riskLevel] ?? "#4352C4" }));
 
+  const sinais = await listarSinaisAdversarios(30);
+
   return (
     <>
       <MonitoramentoTabs active="adversarios" />
+      <AdversariosGestao
+        adversarios={adversarios.map((a) => ({ id: a.id, name: a.name, threatScore: a.threatScore, riskLevel: a.riskLevel }))}
+        sinais={sinais}
+      />
       <AdversariosClient
         kpis={{ total: total.count ?? 0, riscoAlto: riscoAlto.count ?? 0, sinaisAtivos: sinaisAtivos.count ?? 0 }}
         comparativo={comparativo}

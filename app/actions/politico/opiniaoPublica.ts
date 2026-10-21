@@ -14,6 +14,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { cerebroDaOrg, modeloDoCerebro } from "@/lib/ai/cerebro";
 import { requireAuth, resolveActiveOrg } from "@/lib/auth/server";
+import { gerarSinaisAdversarios } from "@/app/actions/politico/adversarios";
 
 export interface MonitorConfig {
   termosNome: string[];
@@ -176,8 +177,9 @@ export async function atualizarMencoes(): Promise<{ ok: boolean; novas: number; 
   // Classifica sentimento/tópico via IA, em um único lote.
   await classificar(org.orgId, linhas.map((l) => ({ id: l.id, titulo: l.titulo })), cfg);
 
-  // Motor de sinais: a escuta vira Alertas + Decisão automaticamente.
+  // Motor de sinais: a escuta vira Alertas + Decisão + sinais de Adversário.
   await gerarSinaisDaOpiniao(db, org.orgId);
+  await gerarSinaisAdversarios(db, org.orgId);
 
   return { ok: true, novas: linhas.length };
 }
@@ -225,6 +227,7 @@ export async function reavaliarSentimento(limite = 40): Promise<{ ok: boolean; n
   if (itens.length === 0) return { ok: true, n: 0 };
   await classificar(org.orgId, itens, cfg);
   await gerarSinaisDaOpiniao(db, org.orgId);
+  await gerarSinaisAdversarios(db, org.orgId);
   return { ok: true, n: itens.length };
 }
 
