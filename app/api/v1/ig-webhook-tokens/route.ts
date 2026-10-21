@@ -40,7 +40,7 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
 
   let query = db
     .from("ig_webhook_tokens")
-    .select("id, path_token, descricao, ativo, ultimo_ping_at, created_at, channel_session_id")
+    .select("id, path_token, verify_token, descricao, ativo, ultimo_ping_at, created_at, channel_session_id")
     .eq("organization_id", authz.org.orgId)
     .order("created_at", { ascending: false });
 

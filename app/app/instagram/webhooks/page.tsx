@@ -22,6 +22,7 @@ export const dynamic = "force-dynamic";
 interface WebhookToken {
   id: string;
   path_token: string;
+  verify_token: string | null;
   descricao: string | null;
   ativo: boolean;
   ultimo_ping_at: string | null;
@@ -257,7 +258,7 @@ export default function WebhooksInstagramPage() {
             </a>
             , vá em seu App → Instagram → Webhooks
           </li>
-          <li>Cole a URL como Callback URL e use qualquer string como Verify Token</li>
+          <li>Cole a URL como <strong>Callback URL</strong> e o <strong>Verify Token</strong> abaixo (copie o do token). Objeto <strong>Instagram</strong> — não &quot;User&quot;.</li>
           <li>
             Assine os campos:{" "}
             <code
@@ -411,6 +412,28 @@ export default function WebhooksInstagramPage() {
                     {url}
                   </code>
                 </div>
+
+                {/* Verify Token */}
+                {token.verify_token && (
+                  <div>
+                    <div className="mb-1 text-[11px] font-semibold" style={{ color: "#9A9D8F" }}>
+                      Verify Token — cole no Meta (objeto Instagram)
+                    </div>
+                    <div className="flex items-center gap-2 rounded-[12px] px-3.5 py-2.5" style={{ background: "#F0F0EB" }}>
+                      <code className="flex-1 min-w-0 truncate text-xs select-all font-mono" style={{ color: "#4A4F59" }}>
+                        {token.verify_token}
+                      </code>
+                      <button
+                        type="button"
+                        onClick={() => { navigator.clipboard?.writeText(token.verify_token!).catch(() => {}); }}
+                        className="inline-flex h-7 items-center rounded-full px-3 text-[11px] font-semibold shrink-0"
+                        style={{ border: "1px solid #DCDCD5", background: "#FFFFFF", color: "#4A4F59" }}
+                      >
+                        Copiar
+                      </button>
+                    </div>
+                  </div>
+                )}
 
                 {/* Meta */}
                 <div className="flex items-center gap-4 text-[11px]" style={{ color: "#9A9D8F" }}>

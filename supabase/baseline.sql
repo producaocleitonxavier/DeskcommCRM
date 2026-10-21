@@ -56288,3 +56288,15 @@ alter table public.intel_mentions enable row level security;
 drop policy if exists tenant_isolation_intel_mentions_all on public.intel_mentions;
 create policy tenant_isolation_intel_mentions_all on public.intel_mentions for all using (organization_id in (select public.fn_user_org_ids())) with check (organization_id in (select public.fn_user_org_ids()));
 grant select, insert, update, delete on public.intel_mentions to authenticated;
+
+-- ── 9040: Webhook IG — verify_token real em ig_webhook_tokens + RPC retorna verify_token/ativo. Ver migration 9040. ──
+alter table public.ig_webhook_tokens add column if not exists verify_token text;
+update public.ig_webhook_tokens set verify_token = replace(gen_random_uuid()::text, '-', '') where verify_token is null;
+alter table public.ig_webhook_tokens alter column verify_token set default replace(gen_random_uuid()::text, '-', '');
+alter table public.ig_webhook_tokens alter column verify_token set not null;
+drop function if exists public.fn_ig_webhook_token_por_path(text);
+create or replace function public.fn_ig_webhook_token_por_path(p_path_token text)
+returns table(organization_id uuid, channel_session_id uuid, verify_token text, ativo boolean)
+language sql stable security definer as $$
+  select organization_id, channel_session_id, verify_token, ativo from public.ig_webhook_tokens where path_token = p_path_token and ativo = true limit 1;
+$$;
