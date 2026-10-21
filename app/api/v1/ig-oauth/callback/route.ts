@@ -14,6 +14,7 @@
  */
 
 import { NextResponse, type NextRequest } from "next/server";
+import { randomBytes } from "node:crypto";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { encryptWebhookSecret } from "@/lib/webhooks/secrets";
 import { audit } from "@/lib/audit";
@@ -161,11 +162,25 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
   }
 
   if (!atualizadas || atualizadas.length === 0) {
+    // channel_sessions exige webhook_secret_encrypted NOT NULL. O fluxo OAuth do
+    // IG não usa esse segredo (o webhook do IG verifica via ig_webhook_tokens +
+    // app secret), mas a coluna é obrigatória — geramos um valor cifrado válido.
+    const webhookSecretEnc = await encryptWebhookSecret(admin, randomBytes(24).toString("hex"));
+    if (!webhookSecretEnc) {
+      void audit({
+        action: "instagram.oauth_failed",
+        organizationId: state.orgId,
+        metadata: { reason: "encryption_failed" },
+      });
+      return redirectTo(`${UI_PATH}?error=encryption_failed`, baseUrl);
+    }
+
     const { error: insertError } = await admin.from("channel_sessions").insert({
       organization_id: state.orgId,
       provider: "instagram",
       ig_business_account_id: igUserId,
       ig_page_id: null,
+      webhook_secret_encrypted: webhookSecretEnc,
       ...campos,
     });
 
