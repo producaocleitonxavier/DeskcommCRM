@@ -42,6 +42,8 @@ export interface GabineteHoje {
   }[];
   agenda: { id: string; titulo: string; dataISO: string; diaInteiro: boolean; local: string | null }[];
   aniversariantes: { id: string; nome: string; cidade: string | null }[];
+  /** Obras que pedem ação: paralisadas, com prazo vencido ou sem vistoria há +30d. */
+  obras: { id: string; titulo: string; categoria: "paralisada" | "prazo_vencido" | "sem_vistoria"; infoISO: string | null }[];
   resumo: {
     totalDemandas: number;
     resolvidas: number;
@@ -86,7 +88,7 @@ async function buscarGabineteHoje(organizationId: string): Promise<GabineteHoje>
   inicioMes.setDate(1);
   inicioMes.setHours(0, 0, 0, 0);
 
-  const [demRes, agendaRes, aniRes, cfgRes] = await Promise.all([
+  const [demRes, agendaRes, aniRes, cfgRes, obrasRes, vistoriasRes] = await Promise.all([
     db
       .from("demandas")
       .select("id, assunto, estado, pol_prioridade, prazo_em, pol_tipo, aberta_em, fechada_em")
@@ -110,6 +112,21 @@ async function buscarGabineteHoje(organizationId: string): Promise<GabineteHoje>
       .not("aniversario", "is", null)
       .limit(1000),
     db.from("pol_gabinete_config").select("nome_parlamentar").eq("organization_id", organizationId).maybeSingle(),
+    // Obras ativas (nem concluídas nem canceladas) para o card de atenção.
+    db
+      .from("pol_obras")
+      .select("id, titulo, status, data_prevista, created_at")
+      .eq("organization_id", organizationId)
+      .not("status", "in", "(concluida,cancelada)")
+      .order("created_at", { ascending: false })
+      .limit(500),
+    // Datas de vistoria (a mais recente por obra sai do order desc + primeiro visto).
+    db
+      .from("pol_obra_vistorias")
+      .select("obra_id, data")
+      .eq("organization_id", organizationId)
+      .order("data", { ascending: false })
+      .limit(5000),
   ]);
 
   const demandas = (demRes.data ?? []) as {
@@ -205,10 +222,40 @@ async function buscarGabineteHoje(organizationId: string): Promise<GabineteHoje>
 
   const nomeParlamentar = (cfgRes.data as { nome_parlamentar?: string | null } | null)?.nome_parlamentar ?? null;
 
+  // Obras que pedem ação. Prioridade: paralisada > prazo vencido > sem vistoria +30d.
+  const obrasData = (obrasRes.data ?? []) as { id: string; titulo: string; status: string; data_prevista: string | null; created_at: string }[];
+  const vistoriaData = (vistoriasRes.data ?? []) as { obra_id: string; data: string }[];
+  const ultimaVistoria = new Map<string, string>(); // obra_id → data mais recente (vem ordenado desc)
+  for (const v of vistoriaData) {
+    if (!ultimaVistoria.has(v.obra_id)) ultimaVistoria.set(v.obra_id, v.data);
+  }
+  const trintaDiasMs = 30 * 86_400_000;
+  const ordemObra: Record<GabineteHoje["obras"][number]["categoria"], number> = { paralisada: 0, prazo_vencido: 1, sem_vistoria: 2 };
+  const obras: GabineteHoje["obras"] = [];
+  for (const o of obrasData) {
+    let categoria: GabineteHoje["obras"][number]["categoria"] | null = null;
+    let infoISO: string | null = null;
+    if (o.status === "paralisada") {
+      categoria = "paralisada";
+    } else if (o.data_prevista && new Date(`${o.data_prevista}T23:59:59`) < hojeIni) {
+      categoria = "prazo_vencido";
+      infoISO = o.data_prevista;
+    } else if (o.status === "em_andamento") {
+      const ref = ultimaVistoria.get(o.id) ?? o.created_at;
+      if (agora.getTime() - new Date(ref).getTime() > trintaDiasMs) {
+        categoria = "sem_vistoria";
+        infoISO = ultimaVistoria.get(o.id) ?? null;
+      }
+    }
+    if (categoria) obras.push({ id: o.id, titulo: o.titulo, categoria, infoISO });
+  }
+  obras.sort((a, b) => ordemObra[a.categoria] - ordemObra[b.categoria]);
+
   return {
     atencao: atencao.slice(0, 8),
     agenda,
     aniversariantes,
+    obras: obras.slice(0, 8),
     resumo: { totalDemandas, resolvidas, taxaResolucao, abertas, resolvidasMes, tempoMedioDias, nomeParlamentar },
     lifecycle,
     porArea,

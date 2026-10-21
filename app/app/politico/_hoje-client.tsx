@@ -12,6 +12,7 @@ import {
   Calendar,
   CheckCircle2,
   Clock,
+  Construction,
   Gift,
   Inbox,
   Users,
@@ -57,6 +58,16 @@ function badgeAtencao(a: GabineteHoje["atencao"][number]): { label: string; tipo
 
 function horaDe(iso: string): string {
   return new Date(iso).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
+}
+
+function diaMes(iso: string): string {
+  return new Date(`${iso}T12:00:00`).toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" });
+}
+
+function badgeObra(o: GabineteHoje["obras"][number]): { label: string; tipo: Tipo } {
+  if (o.categoria === "paralisada") return { label: "Paralisada", tipo: "risk" };
+  if (o.categoria === "prazo_vencido") return { label: o.infoISO ? `Prazo venceu ${diaMes(o.infoISO)}` : "Prazo vencido", tipo: "risk" };
+  return { label: "Sem vistoria +30d", tipo: "warn" };
 }
 
 /** Medidor circular (donut SVG) da taxa de resolução de demandas. */
@@ -260,6 +271,38 @@ export default function HojeClient({
           )}
         </div>
       </section>
+
+      {/* ── 1c. Obras que pedem ação (só quando há) ─────────────── */}
+      {g.obras.length > 0 && (
+        <section aria-label="Obras que pedem ação" className="wr-card p-5 sm:p-6">
+          <div className="mb-3 flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2">
+              <span className="flex h-8 w-8 items-center justify-center rounded-full" style={{ background: "rgba(245,158,11,0.16)", color: "#B45309" }} aria-hidden>
+                <Construction className="h-4 w-4" />
+              </span>
+              <h2 className="font-heading text-base font-bold" style={{ color: "var(--color-text)" }}>Obras que pedem ação</h2>
+            </div>
+            <Link href="/app/politico/obras" className="text-xs font-medium" style={{ color: "var(--color-text-muted)" }}>ver tudo</Link>
+          </div>
+          <p className="mb-3 text-xs" style={{ color: "var(--color-text-subtle)" }}>
+            Paralisadas, com prazo vencido ou sem vistoria há mais de 30 dias — o que não pode ficar parado hoje.
+          </p>
+          <ul className="grid grid-cols-1 gap-1.5 sm:grid-cols-2">
+            {g.obras.map((o) => {
+              const b = badgeObra(o);
+              const c = TIPO_CORES[b.tipo];
+              return (
+                <li key={o.id}>
+                  <Link href={`/app/politico/obras/${o.id}`} className="flex items-center gap-2 rounded-lg px-2 py-1.5 transition-colors hover:bg-[var(--color-surface-elevated)]">
+                    <span className="shrink-0 rounded-full px-2 py-0.5 text-[10px] font-bold" style={{ background: c.soft, color: c.strong }}>{b.label}</span>
+                    <span className="truncate text-sm" style={{ color: "var(--color-text)" }}>{o.titulo}</span>
+                  </Link>
+                </li>
+              );
+            })}
+          </ul>
+        </section>
+      )}
 
       {/* ── 2. KPIs do gabinete ─────────────────────────────────── */}
       <section aria-label="Números principais" className="grid grid-cols-2 gap-4 lg:grid-cols-4">
