@@ -170,11 +170,11 @@ export function SidebarContent({
           // War Room 2.0 logo: bloco escuro (token wr-btn-dark-bg) + texto lime (token wr-nav-active)
           collapsed ? (
             <div className="flex h-8 w-8 items-center justify-center rounded-lg" style={{ background: "var(--wr-btn-dark-bg)" }}>
-              <span className="text-sm font-bold" style={{ color: "var(--wr-nav-active)" }}>WR</span>
+              <span className="text-sm font-bold" style={{ color: "var(--wr-nav-active)" }}>GIP</span>
             </div>
           ) : (
             <div className="flex h-8 items-center gap-2 rounded-lg px-3" style={{ background: "var(--wr-btn-dark-bg)" }}>
-              <span className="text-sm font-bold tracking-tight" style={{ color: "var(--wr-nav-active)" }}>WAR ROOM</span>
+              <span className="text-sm font-bold tracking-tight" style={{ color: "var(--wr-nav-active)" }}>GIP</span>
             </div>
           )
         ) : (
