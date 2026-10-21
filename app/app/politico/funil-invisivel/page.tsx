@@ -10,6 +10,12 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
+import PageTabs from "@/components/politico/page-tabs";
+
+const FUNIL_TABS = [
+  { id: "funil", label: "Funil", href: "/app/politico/funil" },
+  { id: "invisivel", label: "Funil Invisível", href: "/app/politico/funil-invisivel" },
+];
 import { requireAuth, resolveActiveOrg } from "@/lib/auth/server";
 
 export const dynamic = "force-dynamic";
@@ -101,13 +107,9 @@ export default async function FunilInvisivelPage({
 
   return (
     <div className="mx-auto max-w-5xl px-4 py-8 space-y-6">
-      {/* Voltar */}
-      <Link
-        href="/app/politico"
-        className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors"
-      >
-        &larr; GIP
-      </Link>
+      <div className="-mx-4 -mt-8">
+        <PageTabs abas={FUNIL_TABS} active="invisivel" maxW="100%" />
+      </div>
 
       {/* Cabecalho */}
       <div>

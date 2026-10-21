@@ -11,6 +11,12 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { requireAuth, resolveActiveOrg } from "@/lib/auth/server";
 import FunilClient from "./_funil-client";
+import PageTabs from "@/components/politico/page-tabs";
+
+const FUNIL_TABS = [
+  { id: "funil", label: "Funil", href: "/app/politico/funil" },
+  { id: "invisivel", label: "Funil Invisível", href: "/app/politico/funil-invisivel" },
+];
 
 export const dynamic = "force-dynamic";
 
@@ -106,13 +112,16 @@ export default async function FunilPoliticoPage() {
   const taxaConversao = total > 0 ? Math.round(((contagem.voto_certo ?? 0) / total) * 1000) / 10 : 0;
 
   return (
-    <FunilClient
-      contagem={contagem}
-      transicoes={transicoes}
-      total={total}
-      taxaAtivacao={taxaAtivacao}
-      taxaConversao={taxaConversao}
-      velocidadeDias={velocidadeDias}
-    />
+    <>
+      <PageTabs abas={FUNIL_TABS} active="funil" maxW="1140px" />
+      <FunilClient
+        contagem={contagem}
+        transicoes={transicoes}
+        total={total}
+        taxaAtivacao={taxaAtivacao}
+        taxaConversao={taxaConversao}
+        velocidadeDias={velocidadeDias}
+      />
+    </>
   );
 }

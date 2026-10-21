@@ -13,6 +13,12 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { requireAuth, resolveActiveOrg } from "@/lib/auth/server";
 import HojeClient from "./_hoje-client";
+import PageTabs from "@/components/politico/page-tabs";
+
+const COMANDO_TABS = [
+  { id: "hoje", label: "Hoje", href: "/app/politico" },
+  { id: "painel", label: "Painel", href: "/app/politico/dashboard" },
+];
 
 export const dynamic = "force-dynamic";
 
@@ -428,13 +434,16 @@ export default async function HojePage() {
   const [metrics, gabineteHoje] = await Promise.all([buscarMetricas(org.orgId), buscarGabineteHoje(org.orgId)]);
 
   return (
-    <HojeClient
-      metrics={metrics}
-      gabineteHoje={gabineteHoje}
-      nome={primeiroNome(user.full_name)}
-      saudacao={saudacao()}
-      dataFormatada={dataFormatada()}
-      horaAtualizacao={horaAgora()}
-    />
+    <>
+      <PageTabs abas={COMANDO_TABS} active="hoje" maxW="1140px" />
+      <HojeClient
+        metrics={metrics}
+        gabineteHoje={gabineteHoje}
+        nome={primeiroNome(user.full_name)}
+        saudacao={saudacao()}
+        dataFormatada={dataFormatada()}
+        horaAtualizacao={horaAgora()}
+      />
+    </>
   );
 }

@@ -1011,7 +1011,7 @@ export const NAV_CATALOG = [
     icon: "Eye",
     group: "inteligencia",
     minRole: "manager",
-    sidebar: true,
+    sidebar: false, // aba do Funil
   },
 
   // ── Território — Mapa Eleitoral: APOSENTADO, fundido no Radar Zonal.
@@ -1106,7 +1106,7 @@ export const NAV_CATALOG = [
     icon: "IdentificationCard",
     group: "gabinete",
     minRole: "manager",
-    sidebar: true,
+    sidebar: false, // aba de Portal da Transparência (config do gabinete)
   },
 
   // ── Rotas políticas que existiam sem porta no menu (Prompt 6) ────────
@@ -1117,7 +1117,7 @@ export const NAV_CATALOG = [
     icon: "ChartBar",
     group: "comando",
     minRole: "manager",
-    sidebar: true,
+    sidebar: false, // aba "Painel" dentro de Hoje
   },
   {
     href: "/app/politico/narrativas",

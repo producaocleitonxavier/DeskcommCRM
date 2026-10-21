@@ -13,6 +13,12 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { requireAuth, resolveActiveOrg } from "@/lib/auth/server";
 import DashboardClient from "./_dashboard-client";
+import PageTabs from "@/components/politico/page-tabs";
+
+const COMANDO_TABS = [
+  { id: "hoje", label: "Hoje", href: "/app/politico" },
+  { id: "painel", label: "Painel", href: "/app/politico/dashboard" },
+];
 
 export const dynamic = "force-dynamic";
 
@@ -119,5 +125,10 @@ export default async function DashboardPage() {
 
   const { dash, funil, calls } = await buscarDashboard(org.orgId);
 
-  return <DashboardClient dash={dash} funil={funil} calls={calls} />;
+  return (
+    <>
+      <PageTabs abas={COMANDO_TABS} active="painel" maxW="1140px" />
+      <DashboardClient dash={dash} funil={funil} calls={calls} />
+    </>
+  );
 }
