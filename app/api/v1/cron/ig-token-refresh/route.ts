@@ -80,7 +80,7 @@ export async function GET(req: NextRequest): Promise<Response> {
 
   const { data: sessions, error: queryError } = await admin
     .from("channel_sessions")
-    .select("id, organization_id, ig_business_account_id, ig_access_token_encrypted, ig_token_expires_at, label")
+    .select("id, organization_id, ig_business_account_id, ig_access_token_encrypted, ig_token_expires_at")
     .eq("provider", "instagram")
     .eq("status", "connected")
     .is("archived_at", null)

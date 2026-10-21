@@ -141,7 +141,7 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
         ig_page_id: null,
         ig_access_token_encrypted: encrypted,
         ig_token_expires_at: expiresAt,
-        label: `Instagram @${username}`,
+        display_name: `Instagram @${username}`,
         status: "connected",
       },
       {
@@ -158,7 +158,7 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
         .update({
           ig_access_token_encrypted: encrypted,
           ig_token_expires_at: expiresAt,
-          label: `Instagram @${username}`,
+          display_name: `Instagram @${username}`,
           status: "connected",
           archived_at: null,
         })

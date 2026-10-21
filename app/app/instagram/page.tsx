@@ -30,7 +30,7 @@ interface MetricasCanal {
 
 interface SessaoInstagram {
   ig_business_account_id: string;
-  label: string | null;
+  display_name: string | null;
   status: string;
   ig_token_expires_at: string | null;
 }
@@ -82,7 +82,7 @@ async function buscarSessao(organizationId: string): Promise<SessaoInstagram | n
   const db = await createClient();
   const { data } = await db
     .from("channel_sessions")
-    .select("ig_business_account_id, label, status, ig_token_expires_at")
+    .select("ig_business_account_id, display_name, status, ig_token_expires_at")
     .eq("organization_id", organizationId)
     .eq("provider", "instagram")
     .is("archived_at", null)
@@ -294,7 +294,7 @@ export default async function InstagramHubPage() {
 
   const conectado = sessao !== null && sessao.status !== "disconnected";
   const dias = conectado ? diasAteExpirar(sessao!.ig_token_expires_at) : null;
-  const contaLabel = sessao?.label ?? sessao?.ig_business_account_id ?? null;
+  const contaLabel = sessao?.display_name ?? sessao?.ig_business_account_id ?? null;
 
   const secoes = [
     {

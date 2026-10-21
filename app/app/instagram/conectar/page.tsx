@@ -20,7 +20,7 @@ interface SessaoInstagram {
   id: string;
   ig_business_account_id: string;
   ig_page_id: string | null;
-  label: string | null;
+  display_name: string | null;
   status: string;
   ig_token_expires_at: string | null;
   created_at: string;
@@ -34,7 +34,7 @@ async function buscarSessao(organizationId: string): Promise<SessaoInstagram | n
   const { data } = await db
     .from("channel_sessions")
     .select(
-      "id, ig_business_account_id, ig_page_id, label, status, ig_token_expires_at, created_at, updated_at",
+      "id, ig_business_account_id, ig_page_id, display_name, status, ig_token_expires_at, created_at, updated_at",
     )
     .eq("organization_id", organizationId)
     .eq("provider", "instagram")
@@ -184,7 +184,7 @@ export default async function ConectarInstagramPage({
                 Conta
               </div>
               <div className="mt-1 text-sm font-medium">
-                {sessao.label ?? sessao.ig_business_account_id}
+                {sessao.display_name ?? sessao.ig_business_account_id}
               </div>
             </div>
             <div>
