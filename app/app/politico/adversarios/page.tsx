@@ -66,7 +66,7 @@ export default async function AdversariosPage() {
     <>
       <MonitoramentoTabs active="adversarios" />
       <AdversariosGestao
-        adversarios={adversarios.map((a) => ({ id: a.id, name: a.name, threatScore: a.threatScore, riskLevel: a.riskLevel }))}
+        adversarios={adversarios.map((a) => ({ id: a.id, name: a.name, username: a.username, threatScore: a.threatScore, riskLevel: a.riskLevel }))}
         sinais={sinais}
       />
       <AdversariosClient

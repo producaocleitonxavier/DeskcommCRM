@@ -20,16 +20,18 @@ export interface SinalAdversario {
   createdAt: string;
 }
 
-export async function registrarAdversario(nome: string): Promise<{ ok: boolean; erro?: string }> {
+export async function registrarAdversario(nome: string, handle?: string): Promise<{ ok: boolean; erro?: string }> {
   const user = await requireAuth();
   const org = await resolveActiveOrg(user);
   if (!org) return { ok: false, erro: "Sessão inválida." };
   if (!nome.trim()) return { ok: false, erro: "Informe o nome do adversário." };
+  const username = (handle ?? "").trim().replace(/^@+/, "").toLowerCase() || null; // @ do Instagram, sem o @
   const db = await createClient();
   const { error } = await db.from("pol_opponents").insert({
     organization_id: org.orgId,
     name: nome.trim(),
-    platform: "website",
+    platform: username ? "instagram" : "website",
+    username,
     risk_level: "medium",
     threat_score: 0,
     active: true,

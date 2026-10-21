@@ -11,7 +11,7 @@ import { UserPlus, Swords, X, ExternalLink } from "lucide-react";
 
 import { registrarAdversario, removerAdversario, gerarSinaisAdversariosAcao, type SinalAdversario } from "@/app/actions/politico/adversarios";
 
-interface AdvLite { id: string; name: string; threatScore: number; riskLevel: string }
+interface AdvLite { id: string; name: string; username: string | null; threatScore: number; riskLevel: string }
 
 const RISCO = {
   low: { label: "Baixo", cor: "#22C55E" },
@@ -27,6 +27,7 @@ function fmt(iso: string): string {
 export default function AdversariosGestao({ adversarios, sinais }: { adversarios: AdvLite[]; sinais: SinalAdversario[] }) {
   const router = useRouter();
   const [nome, setNome] = useState("");
+  const [handle, setHandle] = useState("");
   const [msg, setMsg] = useState<string | null>(null);
   const [addPend, startAdd] = useTransition();
   const [sinPend, startSin] = useTransition();
@@ -35,9 +36,9 @@ export default function AdversariosGestao({ adversarios, sinais }: { adversarios
     if (!nome.trim()) return;
     setMsg(null);
     startAdd(async () => {
-      const r = await registrarAdversario(nome);
+      const r = await registrarAdversario(nome, handle);
       if (!r.ok) { setMsg(r.erro ?? "Falha."); return; }
-      setNome("");
+      setNome(""); setHandle("");
       router.refresh();
     });
   }
@@ -61,7 +62,8 @@ export default function AdversariosGestao({ adversarios, sinais }: { adversarios
           <Swords className="h-4 w-4" style={{ color: "#F87171" }} aria-hidden /> Meus adversários
         </div>
         <div className="flex flex-wrap items-end gap-2">
-          <input value={nome} onChange={(e) => setNome(e.target.value)} onKeyDown={(e) => e.key === "Enter" && adicionar()} placeholder="Nome do adversário (ex.: Fulano de Tal)" className="wr-input min-w-[220px] flex-1" />
+          <input value={nome} onChange={(e) => setNome(e.target.value)} onKeyDown={(e) => e.key === "Enter" && adicionar()} placeholder="Nome do adversário (ex.: Fulano de Tal)" className="wr-input min-w-[200px] flex-1" />
+          <input value={handle} onChange={(e) => setHandle(e.target.value)} onKeyDown={(e) => e.key === "Enter" && adicionar()} placeholder="@instagram (opcional)" className="wr-input min-w-[150px]" style={{ flex: "0 1 180px" }} />
           <button type="button" onClick={adicionar} disabled={addPend || !nome.trim()} className="inline-flex items-center gap-1.5 rounded-full px-4 py-2 text-sm font-semibold disabled:opacity-50" style={{ background: "#D7F36A", color: "#16181D" }}>
             <UserPlus className="h-4 w-4" aria-hidden /> Adicionar
           </button>
@@ -77,6 +79,7 @@ export default function AdversariosGestao({ adversarios, sinais }: { adversarios
               return (
                 <span key={a.id} className="inline-flex items-center gap-2 rounded-full py-1 pl-3 pr-1.5 text-sm" style={{ background: "rgba(255,255,255,0.04)", border: "1px solid var(--color-border)" }}>
                   <span style={{ color: "var(--color-text)" }}>{a.name}</span>
+                  {a.username && <span style={{ color: "#60A5FA" }}>@{a.username}</span>}
                   <span className="rounded-full px-1.5 py-0.5 text-[10px] font-bold" style={{ background: `${r.cor}22`, color: r.cor }}>{r.label} · {a.threatScore}</span>
                   <button type="button" onClick={() => remover(a.id)} className="flex h-5 w-5 items-center justify-center rounded-full hover:bg-[rgba(255,255,255,0.08)]" aria-label={`Remover ${a.name}`} style={{ color: "var(--color-text-subtle)" }}><X className="h-3 w-3" /></button>
                 </span>
