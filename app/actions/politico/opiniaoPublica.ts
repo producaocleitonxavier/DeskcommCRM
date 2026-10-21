@@ -128,7 +128,10 @@ async function buscarNoticias(query: string, maxItens = 15): Promise<ItemRss[]> 
  */
 async function importarComentariosIg(db: Awaited<ReturnType<typeof createClient>>, orgId: string, cfg: MonitorConfig): Promise<{ id: string; titulo: string }[]> {
   const desde = new Date(Date.now() - 30 * 86_400_000).toISOString();
-  const { data: eventos } = await db
+  // ig_comment_events tem RLS sem policy (deny-all p/ usuário); o webhook grava
+  // via service role. Lemos via admin e filtramos pela org explicitamente.
+  const admin = createAdminClient();
+  const { data: eventos } = await admin
     .from("ig_comment_events")
     .select("instagram_comment_id, from_username, texto, received_at")
     .eq("organization_id", orgId)
