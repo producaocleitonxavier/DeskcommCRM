@@ -106,7 +106,7 @@ export default async function FunilInvisivelPage({
         href="/app/politico"
         className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors"
       >
-        &larr; War Room
+        &larr; GIP
       </Link>
 
       {/* Cabecalho */}

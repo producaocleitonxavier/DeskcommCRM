@@ -186,10 +186,12 @@ async function classificar(orgId: string, itens: { id: string; titulo: string }[
   const alvo = cfg.termosNome[0] || cfg.cidade || "o candidato";
   const lista = itens.slice(0, 40).map((it, i) => `${i}: ${it.titulo}`).join("\n");
   const system =
-    `Você classifica menções da imprensa para uma campanha eleitoral. O alvo monitorado é "${alvo}". ` +
-    "Para cada item, diga o sentimento EM RELAÇÃO ao alvo/campanha: 'positivo', 'neutro' ou 'negativo'; a polaridade (-1.0 a 1.0); e um tópico curto (1-2 palavras, ex.: 'saúde', 'segurança', 'obras'). " +
-    'Responda SOMENTE um array JSON: [{"i":0,"sentimento":"neutro","polaridade":0.0,"topico":"..."}]. Sem texto fora do JSON.';
-  const prompt = `Itens:\n${lista}`;
+    "Você é analista de inteligência de uma campanha eleitoral local. Classifique cada MANCHETE pelo TOM para a leitura política, não por neutralidade jornalística. Regras:\n" +
+    `• Se a manchete cita diretamente "${alvo}", classifique em relação a ele (elogio/avanço = positivo; crítica/escândalo = negativo).\n` +
+    "• Se NÃO cita o alvo, classifique o tom do FATO para a cidade: problema/dor/crise (crime, violência, obra parada, reclamação, falta de serviço, tragédia) = 'negativo' (pauta a atacar/responder); conquista/entrega/elogio/avanço (prêmio, inauguração, melhoria, aprovação de projeto) = 'positivo' (pauta a capitalizar); apenas factual sem carga = 'neutro'.\n" +
+    "Dê polaridade de -1.0 (dor forte) a +1.0 (conquista forte) e um tópico curto (1-2 palavras: 'segurança', 'saúde', 'obras', 'educação'…). Evite 'neutro' quando houver claramente dor ou conquista.\n" +
+    'Responda SOMENTE um array JSON: [{"i":0,"sentimento":"negativo","polaridade":-0.6,"topico":"segurança"}]. Sem texto fora do JSON.';
+  const prompt = `Manchetes:\n${lista}`;
   try {
     const { text } = await generateText({ model: modeloDoCerebro(cerebro), system, prompt, maxOutputTokens: 1500 });
     const ini = text.indexOf("["); const fim = text.lastIndexOf("]");
@@ -206,6 +208,20 @@ async function classificar(orgId: string, itens: { id: string; titulo: string }[
   } catch {
     /* classificação é best-effort */
   }
+}
+
+/** Reavalia o sentimento das menções recentes com a lógica atual (uso pontual). */
+export async function reavaliarSentimento(limite = 40): Promise<{ ok: boolean; n: number; erro?: string }> {
+  const user = await requireAuth();
+  const org = await resolveActiveOrg(user);
+  if (!org) return { ok: false, n: 0, erro: "Sessão inválida." };
+  const cfg = await obterConfigMonitor();
+  const db = await createClient();
+  const { data } = await db.from("intel_mentions").select("id, titulo").eq("organization_id", org.orgId).order("publicado_em", { ascending: false, nullsFirst: false }).limit(limite);
+  const itens = ((data ?? []) as { id: string; titulo: string | null }[]).filter((r) => r.titulo).map((r) => ({ id: r.id, titulo: r.titulo as string }));
+  if (itens.length === 0) return { ok: true, n: 0 };
+  await classificar(org.orgId, itens, cfg);
+  return { ok: true, n: itens.length };
 }
 
 // ── Leitura ──────────────────────────────────────────────────────────────────

@@ -147,7 +147,7 @@ export default function HojeClient({
         <div className="relative flex flex-wrap items-center justify-between gap-6">
           <div className="min-w-0">
             <span className="text-[11px] font-bold uppercase tracking-[0.2em]" style={{ color: "#D7F36A" }}>
-              Centro de Comando · Gabinete
+              GIP · Centro de Comando
             </span>
             <h1 className="font-heading mt-1.5 text-3xl font-bold leading-tight sm:text-4xl" style={{ color: "#FFFFFF" }}>
               {saudacao}

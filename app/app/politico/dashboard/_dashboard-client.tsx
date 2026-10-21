@@ -65,11 +65,11 @@ export default function DashboardClient({ dash, funil, calls }: DashboardClientP
           className="inline-flex items-center gap-1 text-sm text-muted-foreground transition-colors hover:text-foreground"
         >
           <ArrowLeft className="h-4 w-4" aria-hidden />
-          War Room
+          GIP
         </Link>
         <div className="mt-3">
           <CommandHero
-            eyebrow="War Room · Painel"
+            eyebrow="GIP · Painel"
             titulo="Dashboard"
             subtitulo="Panorama central da campanha."
             extra={

@@ -138,7 +138,7 @@ export default function AlertasClient({ alertas, filtros, criticosAtivos }: Aler
   return (
     <div className="mx-auto max-w-[1140px] px-4 py-7 space-y-6" style={{ background: "var(--color-bg)" }}>
       <CommandHero
-        eyebrow="War Room · Monitoramento"
+        eyebrow="GIP · Monitoramento"
         titulo="Central de Alertas"
         subtitulo="Sentimento, adversários, crises e fake news."
         extra={
