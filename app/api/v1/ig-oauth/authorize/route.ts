@@ -11,15 +11,15 @@ import { audit } from "@/lib/audit";
 import {
   generateIgOAuthState,
   getIgAuthorizationUrl,
+  resolvePublicBaseUrl,
   type IgOAuthConfig,
 } from "@/lib/channels/instagram/oauth";
 
 export const dynamic = "force-dynamic";
 
-function getOAuthConfig(): IgOAuthConfig | null {
+function getOAuthConfig(baseUrl: string): IgOAuthConfig | null {
   const appId = process.env.IG_APP_ID ?? process.env.META_APP_ID;
   const appSecret = process.env.IG_APP_SECRET ?? process.env.META_APP_SECRET;
-  const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
   if (!appId || !appSecret) return null;
   return {
     appId,
@@ -28,10 +28,10 @@ function getOAuthConfig(): IgOAuthConfig | null {
   };
 }
 
-export async function GET(_req: NextRequest): Promise<NextResponse> {
-  const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
+export async function GET(req: NextRequest): Promise<NextResponse> {
+  const baseUrl = resolvePublicBaseUrl(req.headers);
 
-  const config = getOAuthConfig();
+  const config = getOAuthConfig(baseUrl);
   if (!config) {
     return NextResponse.redirect(
       new URL("/app/instagram/conectar?error=not_configured", baseUrl),

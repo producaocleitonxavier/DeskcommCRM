@@ -80,6 +80,34 @@ export function verifyIgOAuthState(state: string | null): IgOAuthState | null {
 }
 
 /**
+ * Resolve a URL pública base EM RUNTIME.
+ *
+ * Não usar `NEXT_PUBLIC_APP_URL` para o redirect do OAuth: ela é inlinada em
+ * tempo de build pelo Next (o Dockerfile assa `https://placeholder.invalid`),
+ * então o valor real do `.env` em runtime é ignorado e o Facebook recebe um
+ * redirect_uri inválido ("URL bloqueada").
+ *
+ * Ordem de precedência:
+ *  1. `APP_PUBLIC_URL` — env de runtime (não-public), determinístico por install
+ *  2. headers `x-forwarded-proto` + `x-forwarded-host`/`host` (preenchidos pelo
+ *     proxy Traefik) — resolve sozinho para qualquer domínio de cliente
+ *  3. `NEXT_PUBLIC_APP_URL` / localhost — último recurso (pode estar assado)
+ */
+export function resolvePublicBaseUrl(headers: Headers): string {
+  const envUrl = process.env.APP_PUBLIC_URL;
+  if (envUrl && envUrl.trim()) return envUrl.trim().replace(/\/+$/, "");
+
+  const host = headers.get("x-forwarded-host") ?? headers.get("host");
+  if (host) {
+    const proto = headers.get("x-forwarded-proto") ?? "https";
+    return `${proto}://${host}`.replace(/\/+$/, "");
+  }
+
+  const fallback = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
+  return fallback.replace(/\/+$/, "");
+}
+
+/**
  * URL de autorização do Facebook/Instagram OAuth.
  */
 export function getIgAuthorizationUrl(config: IgOAuthConfig, state: string): string {

@@ -22,6 +22,7 @@ import {
   exchangeIgCode,
   exchangeIgLongLivedToken,
   fetchIgBusinessAccounts,
+  resolvePublicBaseUrl,
   type IgOAuthConfig,
 } from "@/lib/channels/instagram/oauth";
 
@@ -29,15 +30,13 @@ export const dynamic = "force-dynamic";
 
 const UI_PATH = "/app/instagram/conectar";
 
-function redirectTo(path: string): NextResponse {
-  const base = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
+function redirectTo(path: string, base: string): NextResponse {
   return NextResponse.redirect(new URL(path, base));
 }
 
-function getOAuthConfig(): IgOAuthConfig | null {
+function getOAuthConfig(baseUrl: string): IgOAuthConfig | null {
   const appId = process.env.IG_APP_ID ?? process.env.META_APP_ID;
   const appSecret = process.env.IG_APP_SECRET ?? process.env.META_APP_SECRET;
-  const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
   if (!appId || !appSecret) return null;
   return {
     appId,
@@ -51,9 +50,11 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
   const code = url.searchParams.get("code");
   const stateParam = url.searchParams.get("state");
 
-  const config = getOAuthConfig();
+  const baseUrl = resolvePublicBaseUrl(req.headers);
+
+  const config = getOAuthConfig(baseUrl);
   if (!config) {
-    return redirectTo(`${UI_PATH}?error=not_configured`);
+    return redirectTo(`${UI_PATH}?error=not_configured`, baseUrl);
   }
 
   // 1. Validar state
@@ -63,7 +64,7 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
       action: "instagram.oauth_failed",
       metadata: { reason: "invalid_state" },
     });
-    return redirectTo(`${UI_PATH}?error=invalid_state`);
+    return redirectTo(`${UI_PATH}?error=invalid_state`, baseUrl);
   }
 
   if (!code) {
@@ -74,7 +75,7 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
       organizationId: state.orgId,
       metadata: { reason: errorReason },
     });
-    return redirectTo(`${UI_PATH}?error=${errorReason}`);
+    return redirectTo(`${UI_PATH}?error=${errorReason}`, baseUrl);
   }
 
   const admin = createAdminClient();
@@ -87,7 +88,7 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
       organizationId: state.orgId,
       metadata: { reason: "code_exchange_failed" },
     });
-    return redirectTo(`${UI_PATH}?error=code_exchange_failed`);
+    return redirectTo(`${UI_PATH}?error=code_exchange_failed`, baseUrl);
   }
 
   // 3. Trocar por long-lived token (60 dias)
@@ -98,7 +99,7 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
       organizationId: state.orgId,
       metadata: { reason: "long_lived_exchange_failed" },
     });
-    return redirectTo(`${UI_PATH}?error=long_lived_exchange_failed`);
+    return redirectTo(`${UI_PATH}?error=long_lived_exchange_failed`, baseUrl);
   }
 
   // 4. Buscar Pages e contas IG Business
@@ -109,7 +110,7 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
       organizationId: state.orgId,
       metadata: { reason: "no_ig_business_account" },
     });
-    return redirectTo(`${UI_PATH}?error=no_ig_business_account`);
+    return redirectTo(`${UI_PATH}?error=no_ig_business_account`, baseUrl);
   }
 
   // Usar a primeira conta IG Business encontrada
@@ -124,7 +125,7 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
       organizationId: state.orgId,
       metadata: { reason: "encryption_failed" },
     });
-    return redirectTo(`${UI_PATH}?error=encryption_failed`);
+    return redirectTo(`${UI_PATH}?error=encryption_failed`, baseUrl);
   }
 
   // 6. Upsert em channel_sessions
@@ -171,7 +172,7 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
           organizationId: state.orgId,
           metadata: { reason: "update_failed", error: updateError.message },
         });
-        return redirectTo(`${UI_PATH}?error=save_failed`);
+        return redirectTo(`${UI_PATH}?error=save_failed`, baseUrl);
       }
     } else {
       void audit({
@@ -179,7 +180,7 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
         organizationId: state.orgId,
         metadata: { reason: "upsert_failed", error: upsertError.message },
       });
-      return redirectTo(`${UI_PATH}?error=save_failed`);
+      return redirectTo(`${UI_PATH}?error=save_failed`, baseUrl);
     }
   }
 
@@ -194,5 +195,5 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
     },
   });
 
-  return redirectTo(`${UI_PATH}?ok=1&account=${encodeURIComponent(account.pageName)}`);
+  return redirectTo(`${UI_PATH}?ok=1&account=${encodeURIComponent(account.pageName)}`, baseUrl);
 }
