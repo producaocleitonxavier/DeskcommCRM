@@ -964,8 +964,8 @@ export const NAV_CATALOG = [
   },
   {
     href: "/app/politico/social",
-    label: "Social",
-    description: "Perfis monitorados, snapshots de métricas e posts coletados das redes sociais.",
+    label: "Opinião Pública",
+    description: "Escuta social: o que falam do seu nome, cidade e pautas — menções da imprensa e redes, com sentimento, pautas quentes e origem.",
     icon: "Globe",
     group: "inteligencia",
     minRole: "manager",

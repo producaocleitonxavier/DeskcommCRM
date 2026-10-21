@@ -56263,3 +56263,28 @@ language sql stable security invoker set search_path = public as $$
   select (select count(*) from b)::bigint, (select count(*) from b where temp='quente')::bigint, (select count(*) from b where temp='morno')::bigint, (select count(*) from b where temp='frio')::bigint, (select count(*) from b where sl in ('apoiador','militante','voto_certo'))::bigint, (select count(*) from d where estado not in ('resolvida','encerrada'))::bigint, (select count(*) from d where estado='resolvida')::bigint;
 $$;
 grant execute on function public.intel_bairro_crm(text, text) to authenticated;
+
+-- ── 9039: Opinião Pública / escuta social (Pilar 2) — intel_monitor_config (termos) + intel_mentions (menções c/ polaridade/tópico/território). Ver migration 9039. ──
+create table if not exists public.intel_monitor_config (
+  organization_id uuid primary key references public.organizations(id) on delete cascade,
+  termos_nome text[] not null default '{}', cidade text, bairros text[] not null default '{}', temas text[] not null default '{}',
+  updated_at timestamptz not null default now()
+);
+alter table public.intel_monitor_config enable row level security;
+drop policy if exists tenant_isolation_intel_monitor_config_all on public.intel_monitor_config;
+create policy tenant_isolation_intel_monitor_config_all on public.intel_monitor_config for all using (organization_id in (select public.fn_user_org_ids())) with check (organization_id in (select public.fn_user_org_ids()));
+grant select, insert, update, delete on public.intel_monitor_config to authenticated;
+create table if not exists public.intel_mentions (
+  id uuid primary key default gen_random_uuid(),
+  organization_id uuid not null references public.organizations(id) on delete cascade,
+  canal text not null, fonte text, autor text, autor_seguidores int, titulo text, conteudo text, url text, publicado_em timestamptz,
+  polaridade real, sentimento text, topico text, municipio text, bairro text, termo text, processado boolean not null default false,
+  created_at timestamptz not null default now()
+);
+create unique index if not exists uq_intel_mentions_org_url on public.intel_mentions(organization_id, url) where url is not null;
+create index if not exists idx_intel_mentions_org_data on public.intel_mentions(organization_id, publicado_em desc);
+create index if not exists idx_intel_mentions_org_sent on public.intel_mentions(organization_id, sentimento);
+alter table public.intel_mentions enable row level security;
+drop policy if exists tenant_isolation_intel_mentions_all on public.intel_mentions;
+create policy tenant_isolation_intel_mentions_all on public.intel_mentions for all using (organization_id in (select public.fn_user_org_ids())) with check (organization_id in (select public.fn_user_org_ids()));
+grant select, insert, update, delete on public.intel_mentions to authenticated;
