@@ -215,7 +215,7 @@ export async function listarBeneficiariosObra(obraId: string): Promise<Beneficia
   const db = await createClient();
   const { data } = await db
     .from("pol_leads")
-    .select("created_at, contacts(name, phone_number, custom_fields)")
+    .select("created_at, contacts!contact_id(name, phone_number, custom_fields)")
     .eq("organization_id", org.orgId)
     .eq("pol_obra_id", obraId)
     .order("created_at", { ascending: false })
@@ -241,7 +241,7 @@ export async function listarBeneficiariosEmenda(emendaId: string): Promise<Benef
   const db = await createClient();
   const { data } = await db
     .from("pol_leads")
-    .select("created_at, contacts(name, phone_number, custom_fields)")
+    .select("created_at, contacts!contact_id(name, phone_number, custom_fields)")
     .eq("organization_id", org.orgId)
     .eq("pol_emenda_id", emendaId)
     .order("created_at", { ascending: false })

@@ -2,14 +2,14 @@
  * /app/politico/leads/[id] — Ficha do Lead (War Room 2.0)
  *
  * Detalhe completo de um lead político: dados de contato, posição no funil,
- * engajamento, timeline de transições e demandas vinculadas.
+ * engajamento e timeline de transições.
  *
  * Acesso: manager+
  */
 
 import { redirect, notFound } from "next/navigation";
 import Link from "next/link";
-import { ArrowUpRight, GitBranch, MessageCircle, Pencil, Phone } from "lucide-react";
+import { ArrowUpRight, GitBranch, MessageCircle, Pencil } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { requireAuth, resolveActiveOrg } from "@/lib/auth/server";
 
@@ -64,15 +64,6 @@ interface FunnelTransition {
   reason: string | null;
 }
 
-interface Demanda {
-  id: string;
-  assunto: string | null;
-  estado: string;
-  pol_prioridade: string | null;
-  aberta_em: string;
-  prazo_em: string | null;
-}
-
 // -- Helpers -----------------------------------------------------------------
 
 const ETAPAS_FUNIL = [
@@ -125,28 +116,6 @@ function tempEstilo(temp: string): { bg: string; color: string } {
     quente: { bg: "#FBE4E2", color: "#A3302A" },
   };
   return m[temp] ?? { bg: "#F0F0EB", color: "var(--color-text-muted)" };
-}
-
-function estadoDemandaEstilo(estado: string): { bg: string; color: string } {
-  const m: Record<string, { bg: string; color: string }> = {
-    aberta: { bg: "#F0F0EB", color: "var(--color-text-muted)" },
-    em_atendimento: { bg: "#E4E7F8", color: "#2F3DA8" },
-    aguardando_cliente: { bg: "#FCF1DC", color: "#8A5A10" },
-    resolvida: { bg: "#E2F5EC", color: "#17784F" },
-    encerrada: { bg: "#F0F0EB", color: "var(--color-text-subtle)" },
-  };
-  return m[estado] ?? { bg: "#F0F0EB", color: "var(--color-text-muted)" };
-}
-
-function estadoDemandaLabel(estado: string): string {
-  const m: Record<string, string> = {
-    aberta: "Nova",
-    em_atendimento: "Em atendimento",
-    aguardando_cliente: "Aguardando",
-    resolvida: "Resolvida",
-    encerrada: "Encerrada",
-  };
-  return m[estado] ?? estado;
 }
 
 function formatarData(data: string): string {
@@ -210,15 +179,6 @@ async function buscarLead(organizationId: string, leadId: string) {
     .order("changed_at", { ascending: false })
     .limit(20);
 
-  // Buscar demandas vinculadas (por contact_id em demandas)
-  // Demandas podem ter um campo de vínculo — tentamos pelo dono_kind/contato
-  const { data: demandas } = await db
-    .from("demandas")
-    .select("id, assunto, estado, pol_prioridade, aberta_em, prazo_em")
-    .eq("organization_id", organizationId)
-    .order("aberta_em", { ascending: false })
-    .limit(5);
-
   // Buscar mobilizador se existir
   let mobilizadorNome: string | null = null;
   if ((lead as PolLead).mobilizer_id) {
@@ -266,7 +226,6 @@ async function buscarLead(organizationId: string, leadId: string) {
     lead: pl,
     contact: contact as Contact,
     transitions: (transitions ?? []) as FunnelTransition[],
-    demandas: (demandas ?? []) as Demanda[],
     mobilizadorNome,
     origemCaptacao,
   };
@@ -363,7 +322,7 @@ export default async function FichaPage({
 
   if (!dados) notFound();
 
-  const { lead, contact, transitions, demandas, mobilizadorNome, origemCaptacao } = dados;
+  const { lead, contact, transitions, mobilizadorNome, origemCaptacao } = dados;
 
   const tempS = tempEstilo(lead.temperature);
   const telefone = contact.phone_number ?? "";
@@ -435,7 +394,7 @@ export default async function FichaPage({
 
       {/* ── Layout 2 colunas ────────────────────────────────────── */}
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
-        {/* Coluna esquerda (2/3): dados, timeline, demandas */}
+        {/* Coluna esquerda (2/3): dados, território, timeline */}
         <div className="space-y-4 lg:col-span-2">
           <InfoCard titulo="Contato">
             <InfoRow label="Telefone" value={contact.phone_number} />
@@ -504,54 +463,6 @@ export default async function FichaPage({
               </div>
             )}
           </InfoCard>
-
-          {/* Demandas recentes */}
-          <section className="wr-card wr-hover pt-4 pb-0 px-0">
-            <div className="flex items-center justify-between px-5 pb-3">
-              <h3 className="text-[11px] font-semibold uppercase tracking-[.08em]" style={{ color: "var(--color-text-subtle)" }}>
-                Demandas recentes
-              </h3>
-              <Link href="/app/politico/demandas" className="text-xs font-medium hover:opacity-70 transition-colors" style={{ color: "#4352C4" }}>
-                Ver todas →
-              </Link>
-            </div>
-            {demandas.length === 0 ? (
-              <div className="px-5 pb-5">
-                <p className="text-sm" style={{ color: "var(--color-text-subtle)" }}>Nenhuma demanda registrada.</p>
-              </div>
-            ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm border-collapse">
-                  <thead>
-                    <tr>
-                      {["Demanda", "Status", "Prioridade", "Prazo"].map((col) => (
-                        <th key={col} className="text-left font-medium text-[13px] px-5 py-2.5 whitespace-nowrap border-b" style={{ color: "var(--color-text-subtle)", borderColor: "var(--color-border)" }}>
-                          {col}
-                        </th>
-                      ))}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {demandas.map((d) => {
-                      const sE = estadoDemandaEstilo(d.estado);
-                      return (
-                        <tr key={d.id} className="hover:bg-[var(--color-surface-elevated)] transition-colors" style={{ borderBottom: "1px solid var(--color-border)" }}>
-                          <td className="px-5 py-3 font-medium max-w-[260px] truncate" style={{ color: "var(--color-text)" }}>{d.assunto || "Sem assunto"}</td>
-                          <td className="px-5 py-3 whitespace-nowrap">
-                            <span className="inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold" style={{ background: sE.bg, color: sE.color }}>
-                              {estadoDemandaLabel(d.estado)}
-                            </span>
-                          </td>
-                          <td className="px-5 py-3 whitespace-nowrap" style={{ color: "var(--color-text-muted)" }}>{d.pol_prioridade ?? "Normal"}</td>
-                          <td className="px-5 py-3 whitespace-nowrap tabular-nums" style={{ color: "var(--color-text-muted)" }}>{d.prazo_em ? formatarDataCurta(d.prazo_em) : "—"}</td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </section>
         </div>
 
         {/* Coluna direita (1/3): ações, KPIs, funil, tags */}
@@ -560,11 +471,6 @@ export default async function FichaPage({
           <div className="wr-card p-5">
             <h3 className="text-[11px] font-semibold uppercase tracking-[.08em] mb-3" style={{ color: "var(--color-text-subtle)" }}>Ações rápidas</h3>
             <div className="flex flex-col gap-2.5">
-              {telefone && (
-                <a href={`tel:${telefone}`} className="wr-btn-dark w-full justify-center">
-                  <Phone style={{ width: 16, height: 16 }} /> Ligar
-                </a>
-              )}
               {whatsDigits && (
                 <a href={`https://wa.me/${whatsDigits}`} target="_blank" rel="noopener noreferrer" className="wr-btn w-full justify-center">
                   <MessageCircle style={{ width: 16, height: 16 }} /> Enviar WhatsApp
