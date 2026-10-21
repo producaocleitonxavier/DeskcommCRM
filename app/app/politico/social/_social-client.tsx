@@ -230,15 +230,20 @@ export default function OpiniaoPublicaClient({ config, resumo, mencoes }: { conf
             <ul className="flex flex-col gap-2">
               {mencoes.map((m) => {
                 const s = SENT[(m.sentimento as keyof typeof SENT)] ?? SENT.neutro;
+                const href = m.canal === "instagram" ? (m.autor ? `https://www.instagram.com/${m.autor}/` : null) : (m.url && m.url.startsWith("http") ? m.url : null);
                 return (
                   <li key={m.id} className="overflow-hidden rounded-lg" style={{ background: "rgba(255,255,255,0.02)", border: "1px solid var(--color-border)" }}>
                     <div className="flex items-stretch">
                       <span className="w-1 shrink-0" style={{ background: s.cor }} aria-hidden />
                       <div className="min-w-0 flex-1 p-3">
-                        <a href={m.url ?? "#"} target="_blank" rel="noopener noreferrer" className="flex items-start gap-1 text-sm font-medium hover:opacity-70" style={{ color: "var(--color-text)" }}>
-                          <span className="min-w-0">{m.titulo}</span>
-                          <ExternalLink className="mt-0.5 h-3 w-3 shrink-0" aria-hidden style={{ color: "var(--color-text-subtle)" }} />
-                        </a>
+                        {href ? (
+                          <a href={href} target="_blank" rel="noopener noreferrer" className="flex items-start gap-1 text-sm font-medium hover:opacity-70" style={{ color: "var(--color-text)" }}>
+                            <span className="min-w-0">{m.titulo}</span>
+                            <ExternalLink className="mt-0.5 h-3 w-3 shrink-0" aria-hidden style={{ color: "var(--color-text-subtle)" }} />
+                          </a>
+                        ) : (
+                          <span className="text-sm font-medium" style={{ color: "var(--color-text)" }}>{m.titulo}</span>
+                        )}
                         <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-[11px]" style={{ color: "var(--color-text-subtle)" }}>
                           <span className="rounded-full px-1.5 py-0.5 font-semibold" style={{ background: s.bg, color: s.cor }}>{s.label}</span>
                           {m.topico && <span className="capitalize">{m.topico}</span>}

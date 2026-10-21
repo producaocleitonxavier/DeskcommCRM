@@ -118,6 +118,51 @@ async function buscarNoticias(query: string, maxItens = 15): Promise<ItemRss[]> 
   }
 }
 
+// ── Instagram: comentários (ig_comment_events) → intel_mentions ──────────────
+
+/**
+ * Importa os comentários do Instagram já recebidos (ig_comment_events, do webhook
+ * nativo do Meta) para a escuta (intel_mentions, canal='instagram'). "Aguardando
+ * conexão": sem Instagram conectado, ig_comment_events está vazio → no-op.
+ * Dedup por url = igc:<comment_id>. Devolve as novas linhas para classificar.
+ */
+async function importarComentariosIg(db: Awaited<ReturnType<typeof createClient>>, orgId: string, cfg: MonitorConfig): Promise<{ id: string; titulo: string }[]> {
+  const desde = new Date(Date.now() - 30 * 86_400_000).toISOString();
+  const { data: eventos } = await db
+    .from("ig_comment_events")
+    .select("instagram_comment_id, from_username, texto, received_at")
+    .eq("organization_id", orgId)
+    .not("texto", "is", null)
+    .gte("received_at", desde)
+    .order("received_at", { ascending: false })
+    .limit(500);
+  const comentarios = ((eventos ?? []) as { instagram_comment_id: string; from_username: string | null; texto: string; received_at: string | null }[]).filter((e) => (e.texto ?? "").trim());
+  if (comentarios.length === 0) return [];
+
+  const { data: existentes } = await db.from("intel_mentions").select("url").eq("organization_id", orgId).eq("canal", "instagram").like("url", "igc:%").limit(5000);
+  const urlsExistentes = new Set(((existentes ?? []) as { url: string | null }[]).map((r) => r.url).filter(Boolean));
+
+  const termoBase = cfg.termosNome[0] || cfg.cidade || "instagram";
+  const novos = comentarios
+    .filter((e) => !urlsExistentes.has(`igc:${e.instagram_comment_id}`))
+    .map((e) => ({
+      organization_id: orgId,
+      canal: "instagram",
+      fonte: e.from_username ? `@${e.from_username}` : "Instagram",
+      autor: e.from_username,
+      titulo: e.texto.slice(0, 280),
+      conteudo: e.texto,
+      url: `igc:${e.instagram_comment_id}`,
+      publicado_em: e.received_at,
+      municipio: cfg.cidade,
+      termo: termoBase,
+      processado: false,
+    }));
+  if (novos.length === 0) return [];
+  const { data: inseridas } = await db.from("intel_mentions").insert(novos).select("id, titulo");
+  return ((inseridas ?? []) as { id: string; titulo: string }[]);
+}
+
 // ── Atualização (ingestão + classificação) ──────────────────────────────────
 
 export async function atualizarMencoes(): Promise<{ ok: boolean; novas: number; erro?: string }> {
@@ -129,6 +174,9 @@ export async function atualizarMencoes(): Promise<{ ok: boolean; novas: number; 
     return { ok: false, novas: 0, erro: "Configure ao menos um termo (nome, cidade ou tema) antes de atualizar." };
   }
   const db = await createClient();
+
+  // Instagram: importa comentários já recebidos (vazio até conectar o IG).
+  const igLinhas = await importarComentariosIg(db, org.orgId, cfg);
 
   // Monta as buscas: nome do candidato; cada tema combinado com a cidade.
   const buscas: { q: string; termo: string }[] = [];
@@ -142,7 +190,6 @@ export async function atualizarMencoes(): Promise<{ ok: boolean; novas: number; 
   // Busca RSS (em paralelo, cap de 8 buscas por atualização).
   const lotes = await Promise.all(buscas.slice(0, 8).map((b) => buscarNoticias(b.q).then((itens) => itens.map((i) => ({ ...i, termo: b.termo })))));
   const itens = lotes.flat();
-  if (itens.length === 0) return { ok: true, novas: 0 };
 
   // Dedupe contra o que já existe (urls recentes da org).
   const { data: existentes } = await db.from("intel_mentions").select("url").eq("organization_id", org.orgId).order("created_at", { ascending: false }).limit(2000);
@@ -169,19 +216,23 @@ export async function atualizarMencoes(): Promise<{ ok: boolean; novas: number; 
       processado: false,
     });
   }
-  if (novos.length === 0) return { ok: true, novas: 0 };
+  let linhasPress: { id: string; titulo: string }[] = [];
+  if (novos.length > 0) {
+    const { data: inseridas } = await db.from("intel_mentions").insert(novos).select("id, titulo");
+    linhasPress = (inseridas ?? []) as { id: string; titulo: string }[];
+  }
 
-  const { data: inseridas } = await db.from("intel_mentions").insert(novos).select("id, titulo");
-  const linhas = (inseridas ?? []) as { id: string; titulo: string }[];
+  const todas = [...linhasPress, ...igLinhas];
+  if (todas.length === 0) return { ok: true, novas: 0 };
 
-  // Classifica sentimento/tópico via IA, em um único lote.
-  await classificar(org.orgId, linhas.map((l) => ({ id: l.id, titulo: l.titulo })), cfg);
+  // Classifica sentimento/tópico via IA (imprensa + comentários do Instagram).
+  await classificar(org.orgId, todas.map((l) => ({ id: l.id, titulo: l.titulo })), cfg);
 
   // Motor de sinais: a escuta vira Alertas + Decisão + sinais de Adversário.
   await gerarSinaisDaOpiniao(db, org.orgId);
   await gerarSinaisAdversarios(db, org.orgId);
 
-  return { ok: true, novas: linhas.length };
+  return { ok: true, novas: todas.length };
 }
 
 async function classificar(orgId: string, itens: { id: string; titulo: string }[], cfg: MonitorConfig) {
