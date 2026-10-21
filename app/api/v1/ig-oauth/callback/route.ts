@@ -128,56 +128,52 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
     return redirectTo(`${UI_PATH}?error=encryption_failed`, baseUrl);
   }
 
-  // 6. Upsert em channel_sessions (ig_page_id fica null — não há Page)
+  // 6. Gravar em channel_sessions (ig_page_id fica null — não há Page).
+  // O índice único é PARCIAL (WHERE ig_business_account_id IS NOT NULL AND
+  // archived_at IS NULL), e `ON CONFLICT (cols)` não casa com índice parcial
+  // (erro 42P10). Então fazemos UPDATE-depois-INSERT manual, que independe de
+  // constraint — evita o falso "sucesso" de um UPDATE que afeta 0 linhas.
   const expiresAt = new Date(Date.now() + longLived.expiresIn * 1000).toISOString();
 
-  const { error: upsertError } = await admin
+  const campos = {
+    ig_access_token_encrypted: encrypted,
+    ig_token_expires_at: expiresAt,
+    display_name: `Instagram @${username}`,
+    status: "connected",
+    archived_at: null,
+  };
+
+  const { data: atualizadas, error: updateError } = await admin
     .from("channel_sessions")
-    .upsert(
-      {
-        organization_id: state.orgId,
-        provider: "instagram",
-        ig_business_account_id: igUserId,
-        ig_page_id: null,
-        ig_access_token_encrypted: encrypted,
-        ig_token_expires_at: expiresAt,
-        display_name: `Instagram @${username}`,
-        status: "connected",
-      },
-      {
-        onConflict: "organization_id,ig_business_account_id",
-        ignoreDuplicates: false,
-      },
-    );
+    .update(campos)
+    .eq("organization_id", state.orgId)
+    .eq("provider", "instagram")
+    .eq("ig_business_account_id", igUserId)
+    .select("id");
 
-  if (upsertError) {
-    // Se o unique index não tem ON CONFLICT exato, tentar INSERT + UPDATE
-    if (upsertError.code === "42P10" || upsertError.code === "23505") {
-      const { error: updateError } = await admin
-        .from("channel_sessions")
-        .update({
-          ig_access_token_encrypted: encrypted,
-          ig_token_expires_at: expiresAt,
-          display_name: `Instagram @${username}`,
-          status: "connected",
-          archived_at: null,
-        })
-        .eq("organization_id", state.orgId)
-        .eq("ig_business_account_id", igUserId);
+  if (updateError) {
+    void audit({
+      action: "instagram.oauth_failed",
+      organizationId: state.orgId,
+      metadata: { reason: "update_failed", error: updateError.message },
+    });
+    return redirectTo(`${UI_PATH}?error=save_failed`, baseUrl);
+  }
 
-      if (updateError) {
-        void audit({
-          action: "instagram.oauth_failed",
-          organizationId: state.orgId,
-          metadata: { reason: "update_failed", error: updateError.message },
-        });
-        return redirectTo(`${UI_PATH}?error=save_failed`, baseUrl);
-      }
-    } else {
+  if (!atualizadas || atualizadas.length === 0) {
+    const { error: insertError } = await admin.from("channel_sessions").insert({
+      organization_id: state.orgId,
+      provider: "instagram",
+      ig_business_account_id: igUserId,
+      ig_page_id: null,
+      ...campos,
+    });
+
+    if (insertError) {
       void audit({
         action: "instagram.oauth_failed",
         organizationId: state.orgId,
-        metadata: { reason: "upsert_failed", error: upsertError.message },
+        metadata: { reason: "insert_failed", error: insertError.message },
       });
       return redirectTo(`${UI_PATH}?error=save_failed`, baseUrl);
     }
