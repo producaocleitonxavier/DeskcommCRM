@@ -1161,7 +1161,7 @@ export const NAV_CATALOG = [
     href: "/app/politico/cadeiras",
     label: "Projeção de Cadeiras",
     description: "Simulador de quociente eleitoral/partidário (vereador, dep. estadual/federal): quantos votos pegam a cadeira e quanto falta para você entrar.",
-    icon: "Scales",
+    icon: "ScalesSimple",
     group: "territorio",
     minRole: "manager",
     sidebar: true,
