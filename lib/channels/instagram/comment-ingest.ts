@@ -48,12 +48,11 @@ export async function ingestIgComment(
       organization_id: organizationId,
       channel_session_id: channelSessionId,
       instagram_comment_id: event.commentId,
-      instagram_post_id: event.mediaId,       // post = media
-      instagram_media_id: event.mediaId,
+      instagram_media_id: event.mediaId,       // schema atual não tem instagram_post_id
       from_instagram_id: event.fromId,
       from_username: event.fromUsername,
       texto: event.texto,
-      payload_raw: payloadRaw,
+      raw_payload: payloadRaw,                 // coluna real é raw_payload (não payload_raw)
       processado: false,
     })
     .select("id")
