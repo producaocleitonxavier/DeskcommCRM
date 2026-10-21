@@ -1149,6 +1149,15 @@ export const NAV_CATALOG = [
     sidebar: true,
   },
   {
+    href: "/app/politico/cadeiras",
+    label: "Projeção de Cadeiras",
+    description: "Simulador de quociente eleitoral/partidário (vereador, dep. estadual/federal): quantos votos pegam a cadeira e quanto falta para você entrar.",
+    icon: "Scales",
+    group: "territorio",
+    minRole: "manager",
+    sidebar: true,
+  },
+  {
     href: "/app/politico/territorios",
     label: "Territórios",
     description: "Cadastro hierárquico de territórios eleitorais com dados do TSE.",
