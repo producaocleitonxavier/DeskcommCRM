@@ -929,7 +929,7 @@ export const NAV_CATALOG = [
     label: "Pesquisas",
     description: "Pesquisas de campo com formulários públicos via token e respostas geolocalizadas.",
     icon: "ClipboardText",
-    group: "engajamento",
+    group: "inteligencia",
     minRole: "manager",
     sidebar: true,
   },
@@ -981,7 +981,9 @@ export const NAV_CATALOG = [
     sidebar: true,
   },
 
-  // ── Estratégia — Motor Viral (sidebar, junto com Alertas e Adversários) ──
+  // ── Motor Viral — OCULTO (decisão de produto 2026-10-21): o método/geração de
+  // conteúdo é IP da agência (mentoria paga), não vai dentro do software para não
+  // ser commoditizado/vazado. Rota mantida; fora do menu. Reversível.
   {
     href: "/app/politico/motor-viral",
     label: "Motor Viral",
@@ -989,7 +991,7 @@ export const NAV_CATALOG = [
     icon: "ShareNetwork",
     group: "engajamento",
     minRole: "manager",
-    sidebar: true,
+    sidebar: false,
   },
 
   // ── Execução (itens internos, sem sidebar) ─────────────────────────
