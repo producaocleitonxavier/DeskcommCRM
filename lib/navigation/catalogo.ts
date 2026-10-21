@@ -936,6 +936,15 @@ export const NAV_CATALOG = [
 
   // ── Estratégia — Monitoramento (no sidebar) ───────────────────────
   {
+    href: "/app/politico/gip",
+    label: "Pergunte ao GIP",
+    description: "Assistente de inteligência em linguagem natural: cruza voto (TSE), território, cadeiras, opinião pública e a sua base, e responde ancorado nos seus dados reais.",
+    icon: "Brain",
+    group: "inteligencia",
+    minRole: "manager",
+    sidebar: true,
+  },
+  {
     href: "/app/politico/briefing",
     label: "Dossiê Estratégico",
     description: "Briefing de campanha por IA: cruza voto (TSE), redutos e sua base (CRM) e escreve o plano para um candidato num município.",
