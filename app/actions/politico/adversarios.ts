@@ -8,7 +8,69 @@
  */
 
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { requireAuth, resolveActiveOrg } from "@/lib/auth/server";
+import { resolveIgCreds, type IgCredentials } from "@/lib/channels/instagram/credentials";
+import { businessDiscovery } from "@/lib/channels/instagram/business-discovery";
+
+/** Credenciais do Instagram da org (channel_sessions). null = Instagram não conectado. */
+async function credsIgDaOrg(orgId: string): Promise<IgCredentials | null> {
+  const admin = createAdminClient();
+  const { data } = await admin
+    .from("channel_sessions")
+    .select("ig_business_account_id")
+    .eq("organization_id", orgId)
+    .eq("provider", "instagram")
+    .not("ig_business_account_id", "is", null)
+    .limit(1)
+    .maybeSingle();
+  const baid = (data as { ig_business_account_id?: string } | null)?.ig_business_account_id;
+  if (!baid) return null;
+  return resolveIgCreds(admin, { organizationId: orgId, businessAccountId: baid });
+}
+
+/**
+ * Monitora o Instagram dos adversários cadastrados com @ (business_discovery):
+ * atualiza seguidores + engajamento e registra o post mais viral como sinal.
+ * "Aguardando conexão": sem Instagram conectado, retorna semConexao=true.
+ */
+export async function atualizarAdversariosInstagram(): Promise<{ ok: boolean; n: number; erro?: string; semConexao?: boolean }> {
+  const user = await requireAuth();
+  const org = await resolveActiveOrg(user);
+  if (!org) return { ok: false, n: 0, erro: "Sessão inválida." };
+  const creds = await credsIgDaOrg(org.orgId);
+  if (!creds) return { ok: false, n: 0, semConexao: true, erro: "Conecte o Instagram (Canais › Instagram) para ler as redes dos adversários. O cadastro do @ já fica salvo." };
+
+  const db = await createClient();
+  const { data: opps } = await db.from("pol_opponents").select("id, name, username").eq("organization_id", org.orgId).eq("active", true).not("username", "is", null).limit(100);
+  const lista = (opps ?? []) as { id: string; name: string; username: string }[];
+
+  const desde7 = new Date(Date.now() - 7 * 86_400_000).toISOString();
+  const { data: sinRec } = await db.from("pol_opponent_signals").select("metadata").eq("organization_id", org.orgId).gte("created_at", desde7);
+  const permsVistos = new Set(((sinRec ?? []) as { metadata: { permalink?: string } }[]).map((s) => s.metadata?.permalink).filter(Boolean));
+
+  let n = 0;
+  const sinais: Record<string, unknown>[] = [];
+  for (const o of lista) {
+    const bd = await businessDiscovery(creds, o.username);
+    if (!bd) continue;
+    await db.from("pol_opponents").update({ followers: bd.followers, engagement_rate: bd.engajamento, platform: "instagram" }).eq("id", o.id).eq("organization_id", org.orgId);
+    n++;
+    const top = [...bd.midias].sort((a, b) => (b.likes + b.comments) - (a.likes + a.comments))[0];
+    if (top && top.permalink && !permsVistos.has(top.permalink)) {
+      const eng = top.likes + top.comments;
+      const taxa = bd.followers > 0 ? eng / bd.followers : 0;
+      const sev = taxa > 0.05 ? "high" : taxa > 0.02 ? "medium" : "low";
+      sinais.push({
+        organization_id: org.orgId, opponent_id: o.id, signal_type: "viral_content", severity: sev,
+        description: `Post de @${o.username}: ${eng.toLocaleString("pt-BR")} de engajamento (${top.likes.toLocaleString("pt-BR")} curtidas · ${top.comments.toLocaleString("pt-BR")} comentários)`,
+        metadata: { permalink: top.permalink, timestamp: top.timestamp, followers: bd.followers },
+      });
+    }
+  }
+  if (sinais.length) await db.from("pol_opponent_signals").insert(sinais);
+  return { ok: true, n };
+}
 
 export interface SinalAdversario {
   id: string;
@@ -117,7 +179,7 @@ export async function listarSinaisAdversarios(limit = 30): Promise<SinalAdversar
     .order("created_at", { ascending: false })
     .limit(limit);
   return ((data ?? []) as Record<string, unknown>[]).map((s) => {
-    const meta = (s.metadata ?? {}) as { url?: string; sentimento?: string };
+    const meta = (s.metadata ?? {}) as { url?: string; permalink?: string; sentimento?: string };
     const opp = s.pol_opponents as { name?: string } | null;
     return {
       id: String(s.id),
@@ -125,7 +187,7 @@ export async function listarSinaisAdversarios(limit = 30): Promise<SinalAdversar
       descricao: String(s.description ?? ""),
       severity: String(s.severity ?? "medium"),
       sentimento: meta.sentimento ?? null,
-      url: meta.url ?? null,
+      url: meta.url ?? meta.permalink ?? null,
       createdAt: String(s.created_at),
     };
   });

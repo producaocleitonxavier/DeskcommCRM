@@ -7,9 +7,9 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { UserPlus, Swords, X, ExternalLink } from "lucide-react";
+import { UserPlus, Swords, X, ExternalLink, Instagram } from "lucide-react";
 
-import { registrarAdversario, removerAdversario, gerarSinaisAdversariosAcao, type SinalAdversario } from "@/app/actions/politico/adversarios";
+import { registrarAdversario, removerAdversario, gerarSinaisAdversariosAcao, atualizarAdversariosInstagram, type SinalAdversario } from "@/app/actions/politico/adversarios";
 
 interface AdvLite { id: string; name: string; username: string | null; threatScore: number; riskLevel: string }
 
@@ -31,6 +31,8 @@ export default function AdversariosGestao({ adversarios, sinais }: { adversarios
   const [msg, setMsg] = useState<string | null>(null);
   const [addPend, startAdd] = useTransition();
   const [sinPend, startSin] = useTransition();
+  const [igPend, startIg] = useTransition();
+  const temHandle = adversarios.some((a) => a.username);
 
   function adicionar() {
     if (!nome.trim()) return;
@@ -53,6 +55,14 @@ export default function AdversariosGestao({ adversarios, sinais }: { adversarios
       if (r.ok) router.refresh();
     });
   }
+  function atualizarIg() {
+    setMsg(null);
+    startIg(async () => {
+      const r = await atualizarAdversariosInstagram();
+      setMsg(r.ok ? `Instagram atualizado em ${r.n} adversário(s).` : r.erro ?? "Falha.");
+      if (r.ok) router.refresh();
+    });
+  }
 
   return (
     <div className="mx-auto max-w-[1040px] px-4 space-y-4">
@@ -69,6 +79,9 @@ export default function AdversariosGestao({ adversarios, sinais }: { adversarios
           </button>
           <button type="button" onClick={varrer} disabled={sinPend || adversarios.length === 0} className="inline-flex items-center gap-1.5 rounded-full px-4 py-2 text-sm font-semibold disabled:opacity-50" style={{ border: "1px solid var(--color-border)", color: "var(--color-text-muted)" }}>
             {sinPend ? "Varrendo…" : "Varrer menções"}
+          </button>
+          <button type="button" onClick={atualizarIg} disabled={igPend || !temHandle} title={temHandle ? "Puxa seguidores, engajamento e post viral do Instagram" : "Cadastre um @ do Instagram primeiro"} className="inline-flex items-center gap-1.5 rounded-full px-4 py-2 text-sm font-semibold disabled:opacity-50" style={{ border: "1px solid var(--color-border)", color: "var(--color-text-muted)" }}>
+            <Instagram className="h-4 w-4" aria-hidden /> {igPend ? "Lendo…" : "Atualizar do Instagram"}
           </button>
         </div>
         {msg && <p className="mt-2 text-xs" style={{ color: "var(--color-text-subtle)" }}>{msg}</p>}
