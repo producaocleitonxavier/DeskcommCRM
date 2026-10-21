@@ -1080,6 +1080,15 @@ export const NAV_CATALOG = [
     sidebar: true,
   },
   {
+    href: "/app/politico/transparencia",
+    label: "Portal da Transparência",
+    description: "Vitrine pública do mandato — obras e emendas marcadas como públicas, com valores e mapa de entregas.",
+    icon: "Globe",
+    group: "gabinete",
+    minRole: "manager",
+    sidebar: true,
+  },
+  {
     href: "/app/politico/identidade",
     label: "Identidade",
     description: "Logo, assinatura e dados do parlamentar no timbre dos ofícios.",

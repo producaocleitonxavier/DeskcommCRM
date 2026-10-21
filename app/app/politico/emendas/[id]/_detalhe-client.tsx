@@ -48,6 +48,7 @@ export interface EmendaDetalhe {
   beneficiarios_estimados: number | null;
   lideranca_id: string | null;
   observacoes: string | null;
+  publica: boolean;
 }
 
 export interface Props {
@@ -169,6 +170,7 @@ export default function DetalheEmendaClient({ emenda, liderancas, peso, mandatoN
   const [prazo, setPrazo] = useState(e.prazo_execucao ?? "");
   const [beneficiarios, setBeneficiarios] = useState(e.beneficiarios_estimados ? String(e.beneficiarios_estimados) : "");
   const [observacoes, setObservacoes] = useState(e.observacoes ?? "");
+  const [publica, setPublica] = useState(!!e.publica);
 
   async function persistir(patch: Record<string, unknown>, otim: Partial<EmendaDetalhe>) {
     setErro(null);
@@ -222,6 +224,7 @@ export default function DetalheEmendaClient({ emenda, liderancas, peso, mandatoN
       prazo_execucao: prazo || null,
       beneficiarios_estimados: beneficiarios.trim() && Number(beneficiarios) ? Number(beneficiarios) : null,
       observacoes: observacoes.trim() || null,
+      publica,
     };
     const ok = await persistir(patch, patch as unknown as Partial<EmendaDetalhe>);
     if (ok) setEditando(false);
@@ -384,6 +387,13 @@ export default function DetalheEmendaClient({ emenda, liderancas, peso, mandatoN
               </div>
             </div>
             <Campo label="Observações"><textarea value={observacoes} onChange={(ev) => setObservacoes(ev.target.value)} rows={2} className="wr-input w-full" /></Campo>
+            <label className="flex items-start gap-3 rounded-xl p-3 cursor-pointer select-none" style={{ background: "rgba(215,243,106,0.06)", border: "1px solid rgba(215,243,106,0.25)" }}>
+              <input type="checkbox" checked={publica} onChange={(ev) => setPublica(ev.target.checked)} className="mt-0.5 h-5 w-5 rounded accent-[#7E8F2B]" />
+              <span>
+                <span className="block text-sm font-semibold" style={{ color: "var(--color-text)" }}>Mostrar no Portal da Transparência</span>
+                <span className="block text-xs" style={{ color: "var(--color-text-subtle)" }}>Esta emenda (entidade, valor aplicado e objeto) fica visível na vitrine pública do mandato.</span>
+              </span>
+            </label>
             <div className="flex items-center gap-3 pt-1">
               <button type="button" disabled={salvando} onClick={salvarEdicao} className="wr-btn-dark disabled:opacity-60">{salvando ? "Salvando…" : "Salvar alterações"}</button>
               <button type="button" onClick={() => setEditando(false)} className="wr-btn inline-flex items-center gap-1.5"><X className="h-4 w-4" aria-hidden /> Cancelar</button>

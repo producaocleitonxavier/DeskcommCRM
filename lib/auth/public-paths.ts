@@ -19,6 +19,12 @@ export const PUBLIC_PATHS: RegExp[] = [
   // Captação pública por EMENDA (mesma natureza da obra acima).
   /^\/e\/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i,
   /^\/api\/public\/captacao-emenda\/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i,
+  // PORTAL DA TRANSPARÊNCIA público do mandato (/transparencia/<orgId>). Vitrine
+  // read-only de obras/emendas que o gabinete marcou como públicas; a org vem SÓ
+  // do UUID na URL e o portal só responde se portal_ativo=true (resolvido no
+  // servidor). Sem dado pessoal de cidadão. Âncora `$` + forma de UUID: nenhum
+  // sub-path nasce público de carona.
+  /^\/transparencia\/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i,
   /^\/$/,
   /^\/login(\/.*)?$/,
   /^\/signup$/,

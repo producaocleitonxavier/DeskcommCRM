@@ -56204,6 +56204,9 @@ alter table public.pol_emendas add column if not exists responsavel_nome text;
 -- ── 9034: Captação por obra (Camada 2 ROI de Emenda) — pol_leads.pol_obra_id + intel_peso_bairro conta os 2 formatos de bairro (endereco_gip + custom_fields.bairro). Ver migration 9034. ──
 alter table public.pol_leads add column if not exists pol_obra_id uuid references public.pol_obras(id) on delete set null;
 create index if not exists idx_pol_leads_obra on public.pol_leads(pol_obra_id) where pol_obra_id is not null;
+-- ── 9036: Portal da Transparência — pol_emendas.publica (opt-in por emenda) + pol_gabinete_config.portal_ativo (liga o portal público). Obras usam visibilidade='publica' (9030). Ver migration 9036. ──
+alter table public.pol_emendas add column if not exists publica boolean not null default false;
+alter table public.pol_gabinete_config add column if not exists portal_ativo boolean not null default false;
 create or replace function public.intel_peso_bairro(p_election bigint, p_sq bigint, p_municipio int, p_bairro text)
 returns table (meus_votos bigint, universo bigint, leads bigint)
 language plpgsql stable security invoker set search_path = public set plan_cache_mode = 'force_custom_plan' as $$

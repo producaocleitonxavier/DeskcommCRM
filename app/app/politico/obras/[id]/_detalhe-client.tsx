@@ -232,6 +232,7 @@ function DadosCard({ obra, emendas, onSalvar }: { obra: Obra; emendas: ObraDetal
     empresa_cnpj: (obra.empresa_cnpj as string) ?? "", numero_referencia: (obra.numero_referencia as string) ?? "", valor: obra.valor_cents ? String(obra.valor_cents / 100) : "",
     fonte_recurso: (obra.fonte_recurso as string) ?? "", emenda_id: (obra.emenda_id as string) ?? "", data_prevista: (obra.data_prevista as string) ?? "",
     responsavel_interno: (obra.responsavel_interno as string) ?? "", observacoes: (obra.observacoes as string) ?? "",
+    visibilidade: (obra.visibilidade as string) ?? "restrita",
   });
   const [salv, setSalv] = useState(false);
   const set = (k: string) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => setF((s) => ({ ...s, [k]: e.target.value }));
@@ -242,7 +243,8 @@ function DadosCard({ obra, emendas, onSalvar }: { obra: Obra; emendas: ObraDetal
       objeto: f.objeto || null, orgao_responsavel: f.orgao_responsavel || null, empresa_nome: f.empresa_nome || null, empresa_cnpj: f.empresa_cnpj || null,
       numero_referencia: f.numero_referencia || null, valor_cents: reaisParaCents(f.valor),
       fonte_recurso: f.fonte_recurso || null, emenda_id: f.emenda_id || null, data_prevista: f.data_prevista || null,
-      responsavel_interno: f.responsavel_interno || null, observacoes: f.observacoes || null, updated_at: new Date().toISOString(),
+      responsavel_interno: f.responsavel_interno || null, observacoes: f.observacoes || null,
+      visibilidade: f.visibilidade === "publica" ? "publica" : "restrita", updated_at: new Date().toISOString(),
     };
     const r = await atualizarRegistro("pol_obras", obra.id, patch);
     if (r.ok) { onSalvar(patch); setEditando(false); }
@@ -268,6 +270,7 @@ function DadosCard({ obra, emendas, onSalvar }: { obra: Obra; emendas: ObraDetal
           <Info l="Previsão de entrega" v={(obra.data_prevista as string) ?? ""} />
           <Info l="Responsável" v={(obra.responsavel_interno as string) ?? ""} />
           <Info l="Observações" v={(obra.observacoes as string) ?? ""} />
+          <Info l="Portal da Transparência" v={obra.visibilidade === "publica" ? "Pública" : ""} />
         </div>
       ) : (
         <div className="space-y-3">
@@ -284,6 +287,13 @@ function DadosCard({ obra, emendas, onSalvar }: { obra: Obra; emendas: ObraDetal
           </div>
           <L l="Vincular emenda"><select className="wr-input w-full" value={f.emenda_id} onChange={set("emenda_id")} disabled={emendas.length === 0}><option value="">{emendas.length === 0 ? "— nenhuma emenda cadastrada (cadastre em Emendas) —" : "— nenhuma —"}</option>{emendas.map((e) => <option key={e.id} value={e.id}>{e.numero ? `${e.numero}/${e.ano}` : `Emenda ${e.ano}`} — {e.descricao.slice(0, 40)}</option>)}</select></L>
           <L l="Observações"><textarea className="wr-input w-full" rows={2} value={f.observacoes} onChange={set("observacoes")} /></L>
+          <label className="flex items-start gap-3 rounded-xl p-3 cursor-pointer select-none" style={{ background: "rgba(215,243,106,0.06)", border: "1px solid rgba(215,243,106,0.25)" }}>
+            <input type="checkbox" checked={f.visibilidade === "publica"} onChange={(e) => setF((s) => ({ ...s, visibilidade: e.target.checked ? "publica" : "restrita" }))} className="mt-0.5 h-5 w-5 rounded accent-[#7E8F2B]" />
+            <span>
+              <span className="block text-sm font-semibold" style={{ color: "var(--color-text)" }}>Mostrar no Portal da Transparência</span>
+              <span className="block text-xs" style={{ color: "var(--color-text-subtle)" }}>A obra aparece na vitrine pública; com latitude/longitude, entra no mapa de entregas.</span>
+            </span>
+          </label>
           <div className="flex gap-2">
             <button type="button" onClick={salvar} disabled={salv} className="rounded-full px-4 py-2 text-sm font-semibold disabled:opacity-60" style={{ background: "#D7F36A", color: "#16181D" }}>{salv ? "Salvando…" : "Salvar"}</button>
             <button type="button" onClick={() => setEditando(false)} className="rounded-full px-4 py-2 text-sm font-semibold" style={{ border: "1px solid var(--color-border)", color: "var(--color-text-muted)" }}>Cancelar</button>
