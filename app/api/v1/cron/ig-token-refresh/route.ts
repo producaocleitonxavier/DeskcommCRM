@@ -26,7 +26,6 @@ import { logger } from "@/lib/logger";
 
 export const dynamic = "force-dynamic";
 
-const GRAPH_VERSION = "v21.0";
 const DIAS_ANTES_DE_RENOVAR = 7;
 
 interface TokenRefreshResult {
@@ -37,14 +36,12 @@ interface TokenRefreshResult {
 
 async function renovarToken(
   currentToken: string,
-  appId: string,
-  appSecret: string,
 ): Promise<TokenRefreshResult | null> {
-  const url = new URL(`https://graph.facebook.com/${GRAPH_VERSION}/oauth/access_token`);
-  url.searchParams.set("grant_type", "fb_exchange_token");
-  url.searchParams.set("client_id", appId);
-  url.searchParams.set("client_secret", appSecret);
-  url.searchParams.set("fb_exchange_token", currentToken);
+  // Instagram Login: renova o long-lived com ig_refresh_token (não usa
+  // client_id/secret). Dura mais 60 dias a partir da troca.
+  const url = new URL(`https://graph.instagram.com/refresh_access_token`);
+  url.searchParams.set("grant_type", "ig_refresh_token");
+  url.searchParams.set("access_token", currentToken);
 
   try {
     const res = await fetch(url.toString());
@@ -120,8 +117,8 @@ export async function GET(req: NextRequest): Promise<Response> {
         continue;
       }
 
-      // Renovar via Graph API
-      const result = await renovarToken(currentToken, appId, appSecret);
+      // Renovar via Graph API do Instagram
+      const result = await renovarToken(currentToken);
       if (!result) {
         logger.warn("[ig-token-refresh] refresh failed", {
           sessionId: session.id,

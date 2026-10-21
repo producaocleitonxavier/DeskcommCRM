@@ -257,15 +257,15 @@ export default async function ConectarInstagramPage({
             </li>
             <li className="flex items-start gap-2">
               <span className="mt-0.5 text-xs">●</span>
-              Página do Facebook vinculada à conta Instagram
+              Login direto pelo Instagram — não precisa de Página do Facebook
             </li>
             <li className="flex items-start gap-2">
               <span className="mt-0.5 text-xs">●</span>
-              Permissão de administrador na Página do Facebook
+              Enquanto o app estiver em desenvolvimento, você precisa ser admin ou testador dele
             </li>
             <li className="flex items-start gap-2">
               <span className="mt-0.5 text-xs">●</span>
-              App do Facebook configurado no servidor (IG_APP_ID e IG_APP_SECRET)
+              App do Instagram configurado no servidor (IG_APP_ID e IG_APP_SECRET)
             </li>
           </ul>
         </div>

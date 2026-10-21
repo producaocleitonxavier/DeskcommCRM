@@ -22,15 +22,19 @@
 import { createHmac, randomBytes } from "node:crypto";
 import { logger } from "@/lib/logger";
 
-const OAUTH_BASE = "https://www.facebook.com/v21.0/dialog/oauth";
-const TOKEN_URL = "https://graph.facebook.com/v21.0/oauth/access_token";
+// ── API do Instagram com Instagram Login (Business Login) ────────────────────
+// Endpoints PRÓPRIOS do Instagram — não são os do Facebook/Graph clássico.
+// O authorize é em instagram.com; a troca de código é em api.instagram.com; o
+// long-lived e as chamadas de dados são em graph.instagram.com. As credenciais
+// (IG_APP_ID/IG_APP_SECRET) são as do app do Instagram, não as do app Facebook.
+const OAUTH_BASE = "https://www.instagram.com/oauth/authorize";
+const TOKEN_URL = "https://api.instagram.com/oauth/access_token";
+const IG_GRAPH = "https://graph.instagram.com";
 
 const SCOPES = [
-  "instagram_basic",
-  "instagram_manage_comments",
-  "instagram_manage_messages",
-  "pages_show_list",
-  "pages_read_engagement",
+  "instagram_business_basic",
+  "instagram_business_manage_comments",
+  "instagram_business_manage_messages",
 ].join(",");
 
 export interface IgOAuthConfig {
@@ -123,11 +127,15 @@ export function getIgAuthorizationUrl(config: IgOAuthConfig, state: string): str
 
 /**
  * Troca o authorization code por um short-lived token.
+ *
+ * No Instagram Login, a resposta traz `user_id` — o ID da conta Instagram
+ * Business conectada, que é o que gravamos em `ig_business_account_id`.
+ * O token aqui é de curta duração (~1h); troque por long-lived em seguida.
  */
 export async function exchangeIgCode(
   config: IgOAuthConfig,
   code: string,
-): Promise<{ accessToken: string; expiresIn: number } | null> {
+): Promise<{ accessToken: string; userId: string } | null> {
   try {
     const res = await fetch(TOKEN_URL, {
       method: "POST",
@@ -149,7 +157,7 @@ export async function exchangeIgCode(
 
     return {
       accessToken: json.access_token as string,
-      expiresIn: typeof json.expires_in === "number" ? json.expires_in : 3600,
+      userId: String(json.user_id ?? ""),
     };
   } catch (err) {
     logger.error("[ig-oauth] fetch falhou ao trocar código", {
@@ -161,6 +169,9 @@ export async function exchangeIgCode(
 
 /**
  * Troca um short-lived token por um long-lived token (60 dias).
+ *
+ * Instagram Login: GET graph.instagram.com/access_token?grant_type=ig_exchange_token
+ * (só client_secret + access_token; NÃO usa client_id nem fb_exchange_token).
  */
 export async function exchangeIgLongLivedToken(
   config: IgOAuthConfig,
@@ -168,13 +179,12 @@ export async function exchangeIgLongLivedToken(
 ): Promise<{ accessToken: string; expiresIn: number } | null> {
   try {
     const params = new URLSearchParams({
-      grant_type: "fb_exchange_token",
-      client_id: config.appId,
+      grant_type: "ig_exchange_token",
       client_secret: config.appSecret,
-      fb_exchange_token: shortLivedToken,
+      access_token: shortLivedToken,
     });
 
-    const res = await fetch(`${TOKEN_URL}?${params.toString()}`);
+    const res = await fetch(`${IG_GRAPH}/access_token?${params.toString()}`);
     const json = (await res.json()) as Record<string, unknown>;
 
     if (!res.ok || !json.access_token) {
@@ -195,41 +205,36 @@ export async function exchangeIgLongLivedToken(
 }
 
 /**
- * Busca as Pages do Facebook que o token alcança, com as contas Instagram vinculadas.
+ * Busca o perfil da conta Instagram conectada (Instagram Login).
  *
- * Retorna um array de { pageId, pageName, igBusinessAccountId }.
+ * Não há Pages do Facebook neste fluxo: a conta IG vem direto do token. Usamos
+ * o `/me` da graph.instagram.com para pegar o `user_id` (confirma o da troca de
+ * código) e o `username` (vira o rótulo amigável da conexão).
  */
-export async function fetchIgBusinessAccounts(
+export async function fetchIgProfile(
   accessToken: string,
-): Promise<Array<{ pageId: string; pageName: string; igBusinessAccountId: string }>> {
+  version = "v21.0",
+): Promise<{ igUserId: string; username: string } | null> {
   try {
     const res = await fetch(
-      `https://graph.facebook.com/v21.0/me/accounts?fields=id,name,instagram_business_account&access_token=${accessToken}`,
+      `${IG_GRAPH}/${version}/me?fields=user_id,username&access_token=${accessToken}`,
     );
     const json = (await res.json()) as Record<string, unknown>;
 
-    if (!res.ok || !Array.isArray(json.data)) {
-      logger.error("[ig-oauth] busca de pages falhou", { status: res.status, json });
-      return [];
+    if (!res.ok) {
+      logger.error("[ig-oauth] busca de perfil IG falhou", { status: res.status, json });
+      return null;
     }
 
-    const results: Array<{ pageId: string; pageName: string; igBusinessAccountId: string }> = [];
-    for (const page of json.data as Array<Record<string, unknown>>) {
-      const igBiz = page.instagram_business_account as Record<string, unknown> | undefined;
-      if (igBiz?.id) {
-        results.push({
-          pageId: page.id as string,
-          pageName: (page.name as string) ?? "",
-          igBusinessAccountId: igBiz.id as string,
-        });
-      }
-    }
+    const igUserId = String(json.user_id ?? json.id ?? "");
+    const username = String(json.username ?? "");
+    if (!igUserId) return null;
 
-    return results;
+    return { igUserId, username };
   } catch (err) {
-    logger.error("[ig-oauth] fetch falhou ao buscar pages", {
+    logger.error("[ig-oauth] fetch falhou ao buscar perfil IG", {
       error: err instanceof Error ? err.message : String(err),
     });
-    return [];
+    return null;
   }
 }

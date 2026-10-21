@@ -11,7 +11,9 @@
 
 import type { IgCredentials } from "@/lib/channels/instagram/credentials";
 
-const GRAPH_BASE = "https://graph.facebook.com";
+// API do Instagram com Instagram Login: os tokens valem no graph.instagram.com
+// (não no graph.facebook.com). business_discovery é suportado aqui.
+const GRAPH_BASE = "https://graph.instagram.com";
 
 export interface PerfilConcorrente {
   username: string;

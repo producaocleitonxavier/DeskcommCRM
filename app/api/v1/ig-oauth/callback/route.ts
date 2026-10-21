@@ -21,7 +21,7 @@ import {
   verifyIgOAuthState,
   exchangeIgCode,
   exchangeIgLongLivedToken,
-  fetchIgBusinessAccounts,
+  fetchIgProfile,
   resolvePublicBaseUrl,
   type IgOAuthConfig,
 } from "@/lib/channels/instagram/oauth";
@@ -102,9 +102,12 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
     return redirectTo(`${UI_PATH}?error=long_lived_exchange_failed`, baseUrl);
   }
 
-  // 4. Buscar Pages e contas IG Business
-  const accounts = await fetchIgBusinessAccounts(longLived.accessToken);
-  if (accounts.length === 0) {
+  // 4. Identificar a conta Instagram conectada.
+  // No Instagram Login não há Pages: a conta vem do próprio token (user_id) e
+  // confirmamos o username pelo /me da graph.instagram.com.
+  const profile = await fetchIgProfile(longLived.accessToken);
+  const igUserId = profile?.igUserId || shortLived.userId;
+  if (!igUserId) {
     void audit({
       action: "instagram.oauth_failed",
       organizationId: state.orgId,
@@ -112,10 +115,7 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
     });
     return redirectTo(`${UI_PATH}?error=no_ig_business_account`, baseUrl);
   }
-
-  // Usar a primeira conta IG Business encontrada
-  // (se houver múltiplas, uma tela futura pode listar para o usuário escolher)
-  const account = accounts[0]!;
+  const username = profile?.username || igUserId;
 
   // 5. Cifrar o token
   const encrypted = await encryptWebhookSecret(admin, longLived.accessToken);
@@ -128,7 +128,7 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
     return redirectTo(`${UI_PATH}?error=encryption_failed`, baseUrl);
   }
 
-  // 6. Upsert em channel_sessions
+  // 6. Upsert em channel_sessions (ig_page_id fica null — não há Page)
   const expiresAt = new Date(Date.now() + longLived.expiresIn * 1000).toISOString();
 
   const { error: upsertError } = await admin
@@ -137,11 +137,11 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
       {
         organization_id: state.orgId,
         provider: "instagram",
-        ig_business_account_id: account.igBusinessAccountId,
-        ig_page_id: account.pageId,
+        ig_business_account_id: igUserId,
+        ig_page_id: null,
         ig_access_token_encrypted: encrypted,
         ig_token_expires_at: expiresAt,
-        label: `Instagram @${account.pageName || account.igBusinessAccountId}`,
+        label: `Instagram @${username}`,
         status: "connected",
       },
       {
@@ -156,15 +156,14 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
       const { error: updateError } = await admin
         .from("channel_sessions")
         .update({
-          ig_page_id: account.pageId,
           ig_access_token_encrypted: encrypted,
           ig_token_expires_at: expiresAt,
-          label: `Instagram @${account.pageName || account.igBusinessAccountId}`,
+          label: `Instagram @${username}`,
           status: "connected",
           archived_at: null,
         })
         .eq("organization_id", state.orgId)
-        .eq("ig_business_account_id", account.igBusinessAccountId);
+        .eq("ig_business_account_id", igUserId);
 
       if (updateError) {
         void audit({
@@ -189,11 +188,10 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
     organizationId: state.orgId,
     actorUserId: state.userId,
     metadata: {
-      ig_business_account_id: account.igBusinessAccountId,
-      page_id: account.pageId,
-      page_name: account.pageName,
+      ig_business_account_id: igUserId,
+      username,
     },
   });
 
-  return redirectTo(`${UI_PATH}?ok=1&account=${encodeURIComponent(account.pageName)}`, baseUrl);
+  return redirectTo(`${UI_PATH}?ok=1&account=${encodeURIComponent(username)}`, baseUrl);
 }
