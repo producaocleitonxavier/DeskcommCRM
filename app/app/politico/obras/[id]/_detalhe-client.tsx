@@ -38,6 +38,23 @@ const AVANCA: Record<string, { para: string; label: string }[]> = {
 };
 const SIT_VISTORIA = [["conforme", "Conforme"], ["em_andamento", "Em andamento"], ["irregular", "Irregular"], ["paralisada", "Paralisada"], ["concluida", "Concluída"]] as const;
 const brl = (c: number) => (c / 100).toLocaleString("pt-BR", { style: "currency", currency: "BRL", maximumFractionDigits: 0 });
+function reaisParaCents(v: string): number {
+  if (!v) return 0;
+  let s = v.replace(/[^\d,.-]/g, "").trim();
+  if (!s) return 0;
+  const neg = s.startsWith("-");
+  s = s.replace(/-/g, "");
+  // O separador decimal é o último "." ou "," seguido de 1–2 dígitos no fim;
+  // tudo mais (ponto OU vírgula) é separador de milhar e é removido. Assim
+  // "400.000,00", "400000,00" e "400,000,00" viram todos 40000000.
+  const m = s.match(/[.,](\d{1,2})$/);
+  const centsStr = m ? (m[1] + "0").slice(0, 2) : "00";
+  const intStr = (m ? s.slice(0, -m[0].length) : s).replace(/[.,]/g, "");
+  const reais = Number(intStr || "0");
+  if (!Number.isFinite(reais)) return 0;
+  const total = reais * 100 + Number(centsStr);
+  return neg ? -total : total;
+}
 
 export default function ObraDetalhe({ data }: { data: ObraDetalheData }) {
   const router = useRouter();
@@ -223,7 +240,7 @@ function DadosCard({ obra, emendas, onSalvar }: { obra: Obra; emendas: ObraDetal
     setSalv(true);
     const patch: Record<string, unknown> = {
       objeto: f.objeto || null, orgao_responsavel: f.orgao_responsavel || null, empresa_nome: f.empresa_nome || null, empresa_cnpj: f.empresa_cnpj || null,
-      numero_referencia: f.numero_referencia || null, valor_cents: Math.round((Number(f.valor.replace(/\./g, "").replace(",", ".")) || 0) * 100),
+      numero_referencia: f.numero_referencia || null, valor_cents: reaisParaCents(f.valor),
       fonte_recurso: f.fonte_recurso || null, emenda_id: f.emenda_id || null, data_prevista: f.data_prevista || null,
       responsavel_interno: f.responsavel_interno || null, observacoes: f.observacoes || null, updated_at: new Date().toISOString(),
     };

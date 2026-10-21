@@ -50,8 +50,21 @@ const AREAS: Opcao[] = [
 ];
 
 function reaisParaCents(v: string): number {
-  const n = Number(v.replace(/[^\d,.-]/g, "").replace(/\./g, "").replace(",", "."));
-  return Number.isFinite(n) ? Math.round(n * 100) : 0;
+  if (!v) return 0;
+  let s = v.replace(/[^\d,.-]/g, "").trim();
+  if (!s) return 0;
+  const neg = s.startsWith("-");
+  s = s.replace(/-/g, "");
+  // O separador decimal é o último "." ou "," seguido de 1–2 dígitos no fim;
+  // tudo mais (ponto OU vírgula) é separador de milhar e é removido. Assim
+  // "400.000,00", "400000,00" e "400,000,00" viram todos 40000000.
+  const m = s.match(/[.,](\d{1,2})$/);
+  const centsStr = m ? (m[1] + "0").slice(0, 2) : "00";
+  const intStr = (m ? s.slice(0, -m[0].length) : s).replace(/[.,]/g, "");
+  const reais = Number(intStr || "0");
+  if (!Number.isFinite(reais)) return 0;
+  const total = reais * 100 + Number(centsStr);
+  return neg ? -total : total;
 }
 
 function Label({ children, obrig }: { children: React.ReactNode; obrig?: boolean }) {
