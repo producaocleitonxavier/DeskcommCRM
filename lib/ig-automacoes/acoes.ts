@@ -15,6 +15,7 @@
 
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { logger } from "@/lib/logger";
+import { lerCaptacaoConfig } from "@/lib/politico/captacao-config";
 
 export interface AcaoCtx {
   /** ID interno do comentário em ig_comment_events */
@@ -378,24 +379,15 @@ async function executarAddFunilPolitico(
 async function executarCaptarInstagram(
   db: SupabaseClient,
   ctx: AcaoCtx,
-  config: AcaoConfig,
+  _config: AcaoConfig,
 ): Promise<ResultadoAcao> {
   const tipo = "captar_instagram";
-  const estagioInicial =
-    typeof config.estagio === "string" && config.estagio ? config.estagio : "interagiu";
-
-  const camposCaptacao = {
-    origem_captacao: "instagram",
-    captacao_estagio: estagioInicial,
-    ig_handle: ctx.fromUsername ?? null,
-    ig_id: ctx.fromInstagramId,
-    captado_em: new Date().toISOString(),
-    post_id: ctx.mediaId,
-  };
-
-  // Identidade social no padrão do schema real (como wa_identity = "phone:+55…").
   const igIdentity = `instagram:${ctx.fromInstagramId}`;
 
+  // ── DEDUP / NÃO-REPETIR ──────────────────────────────────────────────────
+  // Se a pessoa JÁ está no funil (tem captacao_estagio), NÃO re-engaja, NÃO
+  // duplica e NÃO reenvia a pesquisa — ela comenta em 5 vídeos e continua UM só
+  // card. (Foi o erro do Gabinete Digital: mesma pessoa várias vezes no Kanban.)
   const { data: existente } = await db
     .from("contacts")
     .select("id, custom_fields")
@@ -403,33 +395,77 @@ async function executarCaptarInstagram(
     .eq("social_identity", igIdentity)
     .maybeSingle();
 
+  if (existente && (existente.custom_fields as Record<string, unknown>)?.captacao_estagio) {
+    return { tipo, status: "skipped", detail: "ja_no_funil" };
+  }
+
+  const cfg = await lerCaptacaoConfig(db, ctx.organizationId);
+  if (!cfg.ativo) return { tipo, status: "skipped", detail: "captacao_inativa" };
+
   const nome = ctx.fromUsername ? `@${ctx.fromUsername}` : `IG ${ctx.fromInstagramId}`;
+  const camposCaptacao = {
+    origem_captacao: "instagram",
+    captacao_estagio: "em_conversa", // pesquisa enviada agora, aguardando a cidade
+    ig_handle: ctx.fromUsername ?? null,
+    ig_id: ctx.fromInstagramId,
+    captado_em: new Date().toISOString(),
+    post_id: ctx.mediaId,
+  };
 
   if (existente) {
     const cf = (existente.custom_fields as Record<string, unknown>) ?? {};
-    if (cf.captacao_estagio) {
-      return { tipo, status: "skipped", detail: "ja_no_funil" };
-    }
     const { error } = await db
       .from("contacts")
       .update({ custom_fields: { ...cf, ...camposCaptacao } })
       .eq("id", existente.id)
       .eq("organization_id", ctx.organizationId);
     if (error) return { tipo, status: "error", detail: error.message };
-    return { tipo, status: "ok", detail: "contato_existente_captado" };
+  } else {
+    const { error } = await db.from("contacts").insert({
+      organization_id: ctx.organizationId,
+      name: nome,
+      social_identity: igIdentity,
+      source: "instagram",
+      kind: "person",
+      tags: ["instagram", "captacao"],
+      custom_fields: camposCaptacao,
+    });
+    if (error) return { tipo, status: "error", detail: error.message };
   }
 
-  const { error } = await db.from("contacts").insert({
-    organization_id: ctx.organizationId,
-    name: nome,
-    social_identity: igIdentity,
-    source: "instagram",
-    kind: "person",
-    tags: ["instagram", "captacao"],
-    custom_fields: camposCaptacao,
-  });
+  // ── Resposta pública ao comentário + DM da pesquisa (textos da Personalização).
+  const resp = cfg.textoRespostaComentario.replace(/\{\{username\}\}/gi, `@${ctx.fromUsername ?? ""}`);
+  const dm = cfg.textoDmPesquisa.replace(/\{\{username\}\}/gi, ctx.fromUsername ?? "");
 
-  if (error) return { tipo, status: "error", detail: error.message };
+  if (resp) {
+    await db.from("event_log").insert({
+      organization_id: ctx.organizationId,
+      event_type: "ig.comment_reply_outbound",
+      entity_kind: "ig_comment_events",
+      entity_id: ctx.commentEventId,
+      payload: {
+        instagram_comment_id: ctx.instagramCommentId,
+        media_id: ctx.mediaId,
+        texto: resp,
+        flow_id: ctx.flowId,
+      },
+    });
+  }
+  if (dm && ctx.channelSessionId) {
+    await db.from("event_log").insert({
+      organization_id: ctx.organizationId,
+      event_type: "ig.dm_outbound",
+      entity_kind: "ig_comment_events",
+      entity_id: ctx.commentEventId,
+      payload: {
+        channel_session_id: ctx.channelSessionId,
+        to_instagram_id: ctx.fromInstagramId,
+        texto: dm,
+        flow_id: ctx.flowId,
+      },
+    });
+  }
+
   return { tipo, status: "ok" };
 }
 

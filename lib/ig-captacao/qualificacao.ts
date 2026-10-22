@@ -88,15 +88,20 @@ async function extrairLocalidade(
 }
 
 /**
- * Extrai um telefone BR do texto e devolve em E.164 (+55DDDNUMERO) — o formato
- * exigido pelo CHECK `contacts_phone_e164_format` (phone ~ '^\+\d{8,15}$').
- * null se não achar um número plausível.
+ * Extrai um telefone BR do texto. DDD é OBRIGATÓRIO (a maioria manda só o número
+ * ou "31 número" — não prestam atenção). Devolve:
+ *  - { fone }   → E.164 (+55DDDNUMERO), formato do CHECK contacts_phone_e164_format
+ *  - "sem_ddd"  → veio um número (8-9 dígitos) mas SEM DDD → repetir pedindo DDD
+ *  - "invalido" → não parece telefone → repetir a pergunta padrão
  */
-function extrairTelefone(texto: string): string | null {
+type ResultadoTelefone = { fone: string } | "sem_ddd" | "invalido";
+
+function extrairTelefone(texto: string): ResultadoTelefone {
   let d = texto.replace(/\D/g, "");
   if (d.length >= 12 && d.startsWith("55")) d = d.slice(2); // tira o 55 se veio
-  if (d.length === 10 || d.length === 11) return `+55${d}`; // DDD + número
-  return null;
+  if (d.length === 10 || d.length === 11) return { fone: `+55${d}` }; // DDD + número
+  if (d.length === 8 || d.length === 9) return "sem_ddd"; // número sem DDD
+  return "invalido";
 }
 
 async function emitirDm(
@@ -210,11 +215,16 @@ export async function qualificarPorDm(
 
   // ── Etapa WHATSAPP: qualificado, aguardando o número ─────────────────────
   if (estagio === "qualificado_mgbh" && !cf.whatsapp) {
-    const fone = extrairTelefone(texto);
-    if (!fone) {
+    const tel = extrairTelefone(texto);
+    if (tel === "sem_ddd") {
+      await emitir("Quase! 📱 Preciso do DDD também. Me manda assim: (31) 99999-9999");
+      return { status: "ok", detail: "sem_ddd_reperguntou" };
+    }
+    if (tel === "invalido") {
       await emitir(config.textoDmWhatsapp);
       return { status: "ok", detail: "telefone_nao_entendido_reperguntou" };
     }
+    const fone = tel.fone;
 
     const cidade = (cf.cidade as string) ?? null;
     const uf = (cf.uf as string) ?? null;
