@@ -6,7 +6,7 @@
  * 1. Webhook (`ig-webhooks/route.ts`) recebe DM do Meta e emite
  *    `ig.dm_received` no event_log
  * 2. ESTE handler consome o evento:
- *    a) Resolve ou cria contato pelo `instagram_id`
+ *    a) Resolve ou cria contato pelo `social_identity` ("instagram:<id>")
  *    b) Resolve ou cria conversa `channel = 'instagram'`
  *    c) Grava a mensagem em `messages`
  *    d) Atualiza `last_inbound_at` e `last_message_preview` na conversa
@@ -55,26 +55,30 @@ export const igInboundDmHandler: EventHandler = {
     const text = typeof payload.text === "string" ? payload.text : null;
 
     // ── 1. Resolver ou criar contato ──────────────────────────────────
+    // Identidade social no padrão do schema real (contacts não tem instagram_id;
+    // usa social_identity = "instagram:<id>", como wa_identity = "phone:+55…").
+    const igIdentity = `instagram:${senderId}`;
     let contactId: string;
 
     const { data: existingContact } = await admin
       .from("contacts")
       .select("id")
       .eq("organization_id", organization_id)
-      .eq("instagram_id", senderId)
+      .eq("social_identity", igIdentity)
       .maybeSingle();
 
     if (existingContact) {
       contactId = existingContact.id;
     } else {
-      // Criar contato com o instagram_id
+      // Criar contato com o social_identity (padrão do schema real)
       const { data: newContact, error: contactError } = await admin
         .from("contacts")
         .insert({
           organization_id,
           name: `IG ${senderId}`,
-          instagram_id: senderId,
-          origem: "ig_dm",
+          social_identity: igIdentity,
+          source: "ig_dm",
+          kind: "person",
           tags: [],
         })
         .select("id")
@@ -87,7 +91,7 @@ export const igInboundDmHandler: EventHandler = {
             .from("contacts")
             .select("id")
             .eq("organization_id", organization_id)
-            .eq("instagram_id", senderId)
+            .eq("social_identity", igIdentity)
             .maybeSingle();
           if (!refetch) {
             return {
@@ -118,10 +122,12 @@ export const igInboundDmHandler: EventHandler = {
             if (creds) {
               const perfil = await buscarPerfilInstagram(creds, senderId);
               if (perfil) {
+                // contacts não tem instagram_username/avatar_url: o nome vai em
+                // `name` e o @ vai em custom_fields.ig_handle (contato recém-criado,
+                // custom_fields = {}, então não precisa ler antes).
                 const updates: Record<string, unknown> = {};
                 if (perfil.name) updates.name = perfil.name;
-                if (perfil.username) updates.instagram_username = `@${perfil.username}`;
-                if (perfil.profilePictureUrl) updates.avatar_url = perfil.profilePictureUrl;
+                if (perfil.username) updates.custom_fields = { ig_handle: `@${perfil.username}` };
                 if (Object.keys(updates).length > 0) {
                   await admin
                     .from("contacts")
