@@ -209,6 +209,54 @@ export default async function PrivacyPage() {
           .
         </p>
       </section>
+
+      {/* Seção exigida pela Plataforma da Meta para qualquer app que acessa dados
+          do Instagram. Cada frase descreve o que o código faz com cada permissão
+          (lib/channels/instagram/*). Acrescentar acesso novo ao Instagram sem a
+          frase correspondente aqui descumpre os Termos da Plataforma da Meta. */}
+      <section className="space-y-2" id="dados-do-instagram">
+        <h2 className="text-base font-semibold">{t("10. Dados do Instagram (Meta)")}</h2>
+        <p>
+          {t(
+            "Quando uma pessoa autorizada da organização conecta uma conta Instagram Profissional (Business ou Creator) a este sistema, os dados recebidos da API do Instagram são usados somente para as funções que ela pediu:",
+          )}
+        </p>
+        <ul className="list-disc space-y-1 pl-5">
+          <li>
+            <strong>{t("Perfil e publicações")}</strong> (instagram_business_basic):{" "}
+            {t(
+              "nome de usuário, foto, número de seguidores, publicações e métricas públicas (curtidas, comentários), para mostrar a performance da própria conta ao operador.",
+            )}
+          </li>
+          <li>
+            <strong>{t("Comentários")}</strong> (instagram_business_manage_comments):{" "}
+            {t(
+              "ler e responder comentários nas publicações da conta conectada, para atendimento e para medir a opinião pública. O texto do comentário pode ser enviado ao provedor de inteligência artificial contratado pelo operador apenas para classificar o sentimento, como descrito na seção 4.",
+            )}
+          </li>
+          <li>
+            <strong>{t("Mensagens diretas")}</strong> (instagram_business_manage_messages):{" "}
+            {t(
+              "ler e enviar mensagens diretas (DM) da conta conectada, para atender quem escreve e organizar esse contato.",
+            )}
+          </li>
+        </ul>
+        <p>
+          {t(
+            "Os dados do Instagram ficam no servidor do operador, não são vendidos, não são usados para publicidade de terceiros e não são usados para treinar modelos de inteligência artificial. O uso das informações segue os Termos da Plataforma da Meta.",
+          )}
+        </p>
+        <p>
+          {t(
+            "A conexão pode ser desfeita a qualquer momento pelo operador em Canais → Instagram, e a eliminação dos dados já tratados segue a página de",
+          )}{" "}
+          <a className="underline underline-offset-2" href="/legal/exclusao-de-dados">
+            {t("Exclusão de dados do usuário")}
+          </a>
+          . {t("A pessoa também pode remover o app diretamente em")}{" "}
+          <span className="whitespace-nowrap">Instagram → {t("Configurações")} → {t("Apps e sites")}</span>.
+        </p>
+      </section>
     </>
   );
 }
