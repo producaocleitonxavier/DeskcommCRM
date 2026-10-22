@@ -9,6 +9,7 @@ import { redirect } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { requireAuth, resolveActiveOrg } from "@/lib/auth/server";
+import { ROLE_RANK, type Role } from "@/lib/auth/types";
 import { lerCaptacaoConfig } from "@/lib/politico/captacao-config";
 import ConfigForm from "./_config-form";
 
@@ -18,6 +19,10 @@ export default async function PersonalizacaoCaptacaoPage() {
   const user = await requireAuth();
   const org = await resolveActiveOrg(user);
   if (!org) redirect("/app/onboarding");
+
+  // O "molho secreto" da GIP: só administrador configura. O time do cliente
+  // (manager/viewer) vê o resultado no Kanban, nunca a máquina.
+  if (ROLE_RANK[org.role as Role] < ROLE_RANK.admin) redirect("/403");
 
   const db = await createClient();
   const config = await lerCaptacaoConfig(db, org.orgId);

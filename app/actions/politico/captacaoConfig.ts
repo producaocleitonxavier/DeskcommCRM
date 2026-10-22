@@ -8,6 +8,7 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { requireAuth, resolveActiveOrg } from "@/lib/auth/server";
+import { ROLE_RANK, type Role } from "@/lib/auth/types";
 import type { Abrangencia } from "@/lib/politico/captacao-config";
 
 export interface SalvarCaptacaoInput {
@@ -29,6 +30,11 @@ export async function salvarCaptacaoConfig(
   const user = await requireAuth();
   const org = await resolveActiveOrg(user);
   if (!org) return { ok: false, erro: "Sessão inválida." };
+
+  // Só admin personaliza (o método é segredo da GIP) — trava no servidor.
+  if (ROLE_RANK[org.role as Role] < ROLE_RANK.admin) {
+    return { ok: false, erro: "Apenas administradores podem personalizar a captação." };
+  }
 
   const abr: Abrangencia = ["cidade", "cidade_rm", "estado"].includes(input.abrangencia)
     ? input.abrangencia

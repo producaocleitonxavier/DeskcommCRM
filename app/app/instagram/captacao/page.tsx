@@ -15,6 +15,7 @@ import { redirect } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { requireAuth, resolveActiveOrg } from "@/lib/auth/server";
+import { ROLE_RANK, type Role } from "@/lib/auth/types";
 import { lerCaptacaoConfig, rotuloAlvo } from "@/lib/politico/captacao-config";
 
 export const dynamic = "force-dynamic";
@@ -191,6 +192,8 @@ export default async function CaptacaoInstagramPage() {
   const org = await resolveActiveOrg(user);
   if (!org) redirect("/app/onboarding");
 
+  const ehAdmin = ROLE_RANK[org.role as Role] >= ROLE_RANK.admin;
+
   const db = await createClient();
   const config = await lerCaptacaoConfig(db, org.orgId);
   const alvoLabel = rotuloAlvo(config);
@@ -237,13 +240,15 @@ export default async function CaptacaoInstagramPage() {
           <p className="text-[15px] mt-0.5" style={{ color: "var(--color-text-muted)" }}>
             De quem interage a lead pronto pra 2028 — qualificado por {alvoLabel}, com WhatsApp.
           </p>
-          <Link
-            href="/app/instagram/captacao/config"
-            className="inline-flex items-center gap-1.5 text-sm font-semibold mt-2"
-            style={{ color: "var(--color-accent)" }}
-          >
-            ⚙ Personalizar (região-alvo e mensagens)
-          </Link>
+          {ehAdmin && (
+            <Link
+              href="/app/instagram/captacao/config"
+              className="inline-flex items-center gap-1.5 text-sm font-semibold mt-2"
+              style={{ color: "var(--color-accent)" }}
+            >
+              ⚙ Personalizar (região-alvo e mensagens)
+            </Link>
+          )}
         </div>
         <div className="flex gap-3">
           {[
