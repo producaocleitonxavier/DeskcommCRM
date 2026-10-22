@@ -111,6 +111,13 @@ function Icon({ name, className }: { name: string; className?: string }) {
       </>
     ),
     zap: <path d="M13 2 3 14h9l-1 8 10-12h-9l1-8z" />,
+    chart: (
+      <>
+        <line x1="18" y1="20" x2="18" y2="10" />
+        <line x1="12" y1="20" x2="12" y2="4" />
+        <line x1="6" y1="20" x2="6" y2="14" />
+      </>
+    ),
     message: <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z" />,
     send: (
       <>
@@ -298,6 +305,14 @@ export default async function InstagramHubPage() {
   const contaLabel = sessao?.display_name ?? sessao?.ig_business_account_id ?? null;
 
   const secoes = [
+    {
+      href: "/app/instagram/performance",
+      titulo: "Minha Performance",
+      descricao:
+        "Seguidores, posts e engajamento da sua conta — dados oficiais da API do Instagram.",
+      icon: "chart",
+      badge: conectado ? "ao vivo" : null,
+    },
     {
       href: "/app/instagram/automacoes",
       titulo: "Automações",
