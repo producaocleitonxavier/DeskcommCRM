@@ -87,11 +87,15 @@ async function extrairLocalidade(
   return { cidade: null, uf: null };
 }
 
-/** Extrai um telefone BR (DDD + número) do texto. null se não achar. */
+/**
+ * Extrai um telefone BR do texto e devolve em E.164 (+55DDDNUMERO) — o formato
+ * exigido pelo CHECK `contacts_phone_e164_format` (phone ~ '^\+\d{8,15}$').
+ * null se não achar um número plausível.
+ */
 function extrairTelefone(texto: string): string | null {
   let d = texto.replace(/\D/g, "");
-  if (d.length >= 12 && d.startsWith("55")) d = d.slice(2);
-  if (d.length === 10 || d.length === 11) return d;
+  if (d.length >= 12 && d.startsWith("55")) d = d.slice(2); // tira o 55 se veio
+  if (d.length === 10 || d.length === 11) return `+55${d}`; // DDD + número
   return null;
 }
 
@@ -216,8 +220,9 @@ export async function qualificarPorDm(
     const uf = (cf.uf as string) ?? null;
 
     // UMA escrita só do custom_fields (inclui endereco_gip pra inteligência
-    // territorial) — evita 2ª escrita correndo com esta.
-    await db
+    // territorial) — evita 2ª escrita correndo com esta. Checa o erro: o
+    // phone_number tem CHECK E.164 e unique por org.
+    const { error: updErr } = await db
       .from("contacts")
       .update({
         phone_number: contato.phone_number ?? fone,
@@ -233,6 +238,29 @@ export async function qualificarPorDm(
       })
       .eq("id", contato.id)
       .eq("organization_id", orgId);
+
+    if (updErr) {
+      // Telefone já existe em outro contato (unique) ou formato inesperado:
+      // grava só o custom_fields (sem phone_number) pra não perder a captação.
+      logger.warn("[captacao-qualificacao] update com phone falhou, salvando sem phone", {
+        error: updErr.message,
+      });
+      await db
+        .from("contacts")
+        .update({
+          custom_fields: {
+            ...cf,
+            whatsapp: fone,
+            consentimento: true,
+            consentimento_em: new Date().toISOString(),
+            captacao_estagio: "apoiador_whatsapp",
+            endereco_gip: { ...((cf.endereco_gip as Record<string, unknown>) ?? {}), cidade, uf },
+            origem_captacao: "instagram",
+          },
+        })
+        .eq("id", contato.id)
+        .eq("organization_id", orgId);
+    }
 
     await emitir(config.textoDmEntrega);
     await graduar(db, orgId, contato.id); // só cria o pol_lead
