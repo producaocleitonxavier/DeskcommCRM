@@ -21,6 +21,7 @@ export interface CaptacaoConfig {
   textoDmPesquisa: string;
   textoDmWhatsapp: string;
   textoDmEntrega: string;
+  textoDmRetorno: string;
   pedirWhatsappSoAlvo: boolean;
 }
 
@@ -34,6 +35,7 @@ export const CAPTACAO_DEFAULTS: Omit<CaptacaoConfig, "organizationId"> = {
   textoDmPesquisa: "Valeu por interagir! 🙌 De qual cidade você fala?",
   textoDmWhatsapp: "Quer receber as novidades da campanha em primeira mão? Me passa seu WhatsApp (com DDD) 👇",
   textoDmEntrega: "Prontinho! 🎁 Aqui estão os e-books gratuitos: [COLE O LINK AQUI]. Qualquer coisa, é só chamar!",
+  textoDmRetorno: "Que bom te ver de novo por aqui! 🙏 Muito obrigado pelo apoio de sempre. Se quiser, baixa o material aqui: [COLE O LINK]",
   pedirWhatsappSoAlvo: true,
 };
 
@@ -66,6 +68,7 @@ export async function lerCaptacaoConfig(
     textoDmPesquisa: str("texto_dm_pesquisa", CAPTACAO_DEFAULTS.textoDmPesquisa)!,
     textoDmWhatsapp: str("texto_dm_whatsapp", CAPTACAO_DEFAULTS.textoDmWhatsapp)!,
     textoDmEntrega: str("texto_dm_entrega", CAPTACAO_DEFAULTS.textoDmEntrega)!,
+    textoDmRetorno: str("texto_dm_retorno", CAPTACAO_DEFAULTS.textoDmRetorno)!,
     pedirWhatsappSoAlvo: d.pedir_whatsapp_so_alvo !== false,
   };
 }

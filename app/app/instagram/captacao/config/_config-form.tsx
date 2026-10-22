@@ -43,6 +43,7 @@ export default function ConfigForm({ inicial }: { inicial: CaptacaoConfig }) {
   const [textoDmPesquisa, setTextoDmPesquisa] = useState(inicial.textoDmPesquisa);
   const [textoDmWhatsapp, setTextoDmWhatsapp] = useState(inicial.textoDmWhatsapp);
   const [textoDmEntrega, setTextoDmEntrega] = useState(inicial.textoDmEntrega);
+  const [textoDmRetorno, setTextoDmRetorno] = useState(inicial.textoDmRetorno);
   const [pedirWhatsappSoAlvo, setPedirWhatsappSoAlvo] = useState(inicial.pedirWhatsappSoAlvo);
 
   function salvar() {
@@ -58,6 +59,7 @@ export default function ConfigForm({ inicial }: { inicial: CaptacaoConfig }) {
         textoDmPesquisa,
         textoDmWhatsapp,
         textoDmEntrega,
+        textoDmRetorno,
         pedirWhatsappSoAlvo,
       });
       if (r.ok) {
@@ -148,6 +150,9 @@ export default function ConfigForm({ inicial }: { inicial: CaptacaoConfig }) {
         </Campo>
         <Campo label="DM — entrega da isca (e-book)" hint="Enviada após capturar os dados. COLE O LINK do e-book aqui dentro do texto.">
           <input className={inputCls} style={inputStyle} value={textoDmEntrega} onChange={(e) => setTextoDmEntrega(e.target.value)} />
+        </Campo>
+        <Campo label="DM — retorno (fã que interage de novo)" hint="Enviada a quem JÁ está no funil e comenta outra vez — CTA caloroso + link do material. Não cria card novo (limite 1x/12h).">
+          <input className={inputCls} style={inputStyle} value={textoDmRetorno} onChange={(e) => setTextoDmRetorno(e.target.value)} />
         </Campo>
         <label className="flex items-center gap-2 text-sm cursor-pointer" style={{ color: "var(--color-text-muted)" }}>
           <input type="checkbox" checked={pedirWhatsappSoAlvo} onChange={(e) => setPedirWhatsappSoAlvo(e.target.checked)} />
