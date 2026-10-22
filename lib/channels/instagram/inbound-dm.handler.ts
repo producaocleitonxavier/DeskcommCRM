@@ -201,17 +201,19 @@ export const igInboundDmHandler: EventHandler = {
     const { error: msgError } = await admin.from("messages").insert({
       organization_id,
       conversation_id: conversationId,
-      external_id: messageId,
+      channel_session_id: channelSessionId,
+      contact_id: contactId,
+      type: "text",
       direction: "inbound",
-      channel: "instagram",
-      content: text ?? "",
+      external_id: messageId,
+      body: text ?? "",
       status: "received",
+      sent_at: now,
       metadata: {
         sender_id: senderId,
         attachments: Array.isArray(payload.attachments) ? payload.attachments : [],
         ig_timestamp: typeof payload.timestamp === "number" ? payload.timestamp : null,
       },
-      received_at: now,
     });
 
     if (msgError) {
