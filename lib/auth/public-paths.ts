@@ -215,12 +215,14 @@ export const PUBLIC_PATHS: RegExp[] = [
   // Âncorado nos dois nomes: `/^\/email-templates\//` deixaria qualquer
   // sub-path futuro nascer público de carona.
   /^\/email-templates\/(confirmation|recovery)$/,
-  // Documentos legais. O checkbox obrigatório de `/onboarding/welcome` linka os
-  // dois, e o aceite acontece antes de a pessoa ter qualquer coisa no sistema —
-  // exigir sessão para LER o que se está aceitando inverte a ordem. Âncorado nos
-  // dois nomes de propósito: `/^\/legal/` deixaria qualquer sub-path futuro
-  // nascer público de carona.
-  /^\/legal\/(terms|privacy)$/,
+  // Documentos legais. O checkbox obrigatório de `/onboarding/welcome` linka
+  // termos e privacidade, e o aceite acontece antes de a pessoa ter qualquer
+  // coisa no sistema — exigir sessão para LER o que se está aceitando inverte a
+  // ordem. `exclusao-de-dados` é a Data Deletion Instructions URL exigida pela
+  // Plataforma da Meta (e pelo direito de eliminação da LGPD): a Meta e qualquer
+  // titular leem SEM sessão. Âncorado nos nomes de propósito: `/^\/legal/`
+  // deixaria qualquer sub-path futuro nascer público de carona.
+  /^\/legal\/(terms|privacy|exclusao-de-dados)$/,
 ];
 
 export function isPublicPath(pathname: string): boolean {
