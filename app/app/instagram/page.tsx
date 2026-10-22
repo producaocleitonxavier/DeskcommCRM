@@ -292,7 +292,8 @@ export default async function InstagramHubPage() {
     buscarSessao(org.orgId),
   ]);
 
-  const conectado = sessao !== null && sessao.status !== "disconnected";
+  // status segue o vocabulário do WAHA (channel_sessions compartilhada): WORKING = ativo.
+  const conectado = sessao !== null && sessao.status === "WORKING";
   const dias = conectado ? diasAteExpirar(sessao!.ig_token_expires_at) : null;
   const contaLabel = sessao?.display_name ?? sessao?.ig_business_account_id ?? null;
 

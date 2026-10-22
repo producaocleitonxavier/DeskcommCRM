@@ -82,7 +82,7 @@ export async function GET(req: NextRequest): Promise<Response> {
     .from("channel_sessions")
     .select("id, organization_id, ig_business_account_id, ig_access_token_encrypted, ig_token_expires_at")
     .eq("provider", "instagram")
-    .eq("status", "connected")
+    .eq("status", "WORKING")
     .is("archived_at", null)
     .not("ig_access_token_encrypted", "is", null)
     .lte("ig_token_expires_at", limiteRenovacao);
@@ -129,7 +129,7 @@ export async function GET(req: NextRequest): Promise<Response> {
         if (session.ig_token_expires_at && new Date(session.ig_token_expires_at) < new Date()) {
           await admin
             .from("channel_sessions")
-            .update({ status: "disconnected" })
+            .update({ status: "STOPPED" })
             .eq("id", session.id);
         }
 
@@ -155,7 +155,7 @@ export async function GET(req: NextRequest): Promise<Response> {
         .update({
           ig_access_token_encrypted: encrypted,
           ig_token_expires_at: newExpiresAt,
-          status: "connected",
+          status: "WORKING",
         })
         .eq("id", session.id);
 

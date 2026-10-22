@@ -136,11 +136,13 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
   // constraint — evita o falso "sucesso" de um UPDATE que afeta 0 linhas.
   const expiresAt = new Date(Date.now() + longLived.expiresIn * 1000).toISOString();
 
+  // channel_sessions é compartilhada com o WAHA: o CHECK de status só aceita
+  // STARTING/SCAN_QR_CODE/WORKING/STOPPED/FAILED. "WORKING" = sessão ativa.
   const campos = {
     ig_access_token_encrypted: encrypted,
     ig_token_expires_at: expiresAt,
     display_name: `Instagram @${username}`,
-    status: "connected",
+    status: "WORKING",
     archived_at: null,
   };
 

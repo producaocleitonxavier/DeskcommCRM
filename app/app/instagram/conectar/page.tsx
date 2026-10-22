@@ -50,9 +50,14 @@ async function buscarSessao(organizationId: string): Promise<SessaoInstagram | n
 
 function StatusBadge({ status }: { status: string }) {
   const configs: Record<string, { bg: string; color: string; text: string }> = {
-    connected: { bg: "#D7F36A", color: "#2E3410", text: "Conectado" },
-    disconnected: { bg: "#FEE2E2", color: "#991B1B", text: "Desconectado" },
+    // status real segue o vocabulário do WAHA (channel_sessions compartilhada)
+    WORKING: { bg: "#D7F36A", color: "#2E3410", text: "Conectado" },
+    STOPPED: { bg: "#FEE2E2", color: "#991B1B", text: "Desconectado" },
+    FAILED: { bg: "#FEE2E2", color: "#991B1B", text: "Falha" },
+    STARTING: { bg: "#FEF3C7", color: "#92400E", text: "Conectando" },
+    // sintético (calculado pela expiração do token) / compat
     expired: { bg: "#FEF3C7", color: "#92400E", text: "Token expirado" },
+    connected: { bg: "#D7F36A", color: "#2E3410", text: "Conectado" },
   };
   const c = configs[status] ?? { bg: "#E5E7EB", color: "#374151", text: status };
   return (
