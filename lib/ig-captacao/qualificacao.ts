@@ -118,14 +118,12 @@ async function emitirDm(
   });
 }
 
-/** Cria o lead político (graduação) — SÓ quando qualificado. Idempotente. */
-async function graduar(
-  db: SupabaseClient,
-  orgId: string,
-  contactId: string,
-  cidade: string | null,
-  uf: string | null,
-): Promise<void> {
+/**
+ * Cria o lead político (graduação) — SÓ quando qualificado. Idempotente.
+ * NÃO toca em custom_fields (o caller já grava endereco_gip na mesma escrita do
+ * contato, pra não haver 2ª escrita correndo com a 1ª e clobberando-a).
+ */
+async function graduar(db: SupabaseClient, orgId: string, contactId: string): Promise<void> {
   const { data: existe } = await db
     .from("pol_leads")
     .select("id")
@@ -133,30 +131,16 @@ async function graduar(
     .eq("contact_id", contactId)
     .maybeSingle();
 
-  if (!existe) {
-    const { error } = await db.from("pol_leads").insert({
-      organization_id: orgId,
-      contact_id: contactId,
-      support_level: "simpatizante",
-    });
-    if (error && error.code !== "23505") {
-      logger.error("[captacao-qualificacao] falha ao graduar pol_lead", { error: error.message });
-    }
-  }
+  if (existe) return;
 
-  // Grava cidade/uf em endereco_gip + marca origem (inteligência territorial).
-  const { data: c } = await db
-    .from("contacts")
-    .select("custom_fields")
-    .eq("id", contactId)
-    .maybeSingle();
-  const cf = (c?.custom_fields as Record<string, unknown>) ?? {};
-  const endereco = { ...((cf.endereco_gip as Record<string, unknown>) ?? {}), cidade, uf };
-  await db
-    .from("contacts")
-    .update({ custom_fields: { ...cf, endereco_gip: endereco, origem_captacao: "instagram" } })
-    .eq("id", contactId)
-    .eq("organization_id", orgId);
+  const { error } = await db.from("pol_leads").insert({
+    organization_id: orgId,
+    contact_id: contactId,
+    support_level: "simpatizante",
+  });
+  if (error && error.code !== "23505") {
+    logger.error("[captacao-qualificacao] falha ao graduar pol_lead", { error: error.message });
+  }
 }
 
 /**
@@ -228,6 +212,11 @@ export async function qualificarPorDm(
       return { status: "ok", detail: "telefone_nao_entendido_reperguntou" };
     }
 
+    const cidade = (cf.cidade as string) ?? null;
+    const uf = (cf.uf as string) ?? null;
+
+    // UMA escrita só do custom_fields (inclui endereco_gip pra inteligência
+    // territorial) — evita 2ª escrita correndo com esta.
     await db
       .from("contacts")
       .update({
@@ -238,13 +227,15 @@ export async function qualificarPorDm(
           consentimento: true,
           consentimento_em: new Date().toISOString(),
           captacao_estagio: "apoiador_whatsapp",
+          endereco_gip: { ...((cf.endereco_gip as Record<string, unknown>) ?? {}), cidade, uf },
+          origem_captacao: "instagram",
         },
       })
       .eq("id", contato.id)
       .eq("organization_id", orgId);
 
     await emitir(config.textoDmEntrega);
-    await graduar(db, orgId, contato.id, (cf.cidade as string) ?? null, (cf.uf as string) ?? null);
+    await graduar(db, orgId, contato.id); // só cria o pol_lead
     return { status: "ok", detail: "apoiador_graduado" };
   }
 
