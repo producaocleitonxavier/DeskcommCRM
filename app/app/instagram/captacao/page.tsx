@@ -15,6 +15,7 @@ import { redirect } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { requireAuth, resolveActiveOrg } from "@/lib/auth/server";
+import { lerCaptacaoConfig, rotuloAlvo } from "@/lib/politico/captacao-config";
 
 export const dynamic = "force-dynamic";
 
@@ -83,7 +84,7 @@ function dataCurta(ts: string | null): string {
 
 // ── Sub-componentes ──────────────────────────────────────────────────────────
 
-function CardLead({ card, destaque }: { card: Card; destaque?: boolean }) {
+function CardLead({ card, destaque, vinculoLabel }: { card: Card; destaque?: boolean; vinculoLabel: string }) {
   return (
     <div
       className="wr-card-dark p-3 flex flex-col gap-2"
@@ -117,7 +118,7 @@ function CardLead({ card, destaque }: { card: Card; destaque?: boolean }) {
         <div className="flex flex-wrap gap-1">
           {card.vinculoBh && (
             <span className="text-[10px] font-bold rounded-full px-2 py-0.5" style={{ background: "color-mix(in srgb, var(--color-accent) 20%, transparent)", color: "var(--color-accent)" }}>
-              família BH
+              {vinculoLabel}
             </span>
           )}
           {card.tags.slice(0, 3).map((t) => (
@@ -143,7 +144,7 @@ function CardLead({ card, destaque }: { card: Card; destaque?: boolean }) {
   );
 }
 
-function Coluna({ estagio, cards }: { estagio: EstagioDef; cards: Card[] }) {
+function Coluna({ estagio, cards, vinculoLabel }: { estagio: EstagioDef; cards: Card[]; vinculoLabel: string }) {
   return (
     <div
       className="flex-1 min-w-[230px] rounded-[18px] p-3 flex flex-col"
@@ -176,7 +177,7 @@ function Coluna({ estagio, cards }: { estagio: EstagioDef; cards: Card[] }) {
             vazio
           </div>
         ) : (
-          cards.map((card) => <CardLead key={card.id} card={card} destaque={estagio.destaque} />)
+          cards.map((card) => <CardLead key={card.id} card={card} destaque={estagio.destaque} vinculoLabel={vinculoLabel} />)
         )}
       </div>
     </div>
@@ -191,6 +192,15 @@ export default async function CaptacaoInstagramPage() {
   if (!org) redirect("/app/onboarding");
 
   const db = await createClient();
+  const config = await lerCaptacaoConfig(db, org.orgId);
+  const alvoLabel = rotuloAlvo(config);
+  const vinculoLabel = config.cidadeAlvo ? `vínculo ${config.cidadeAlvo}` : "no alvo";
+
+  // Rótulos dinâmicos por candidato: a coluna de qualificados usa o alvo da org.
+  const estagios: EstagioDef[] = ESTAGIOS.map((e) =>
+    e.slug === "qualificado_mgbh" ? { ...e, titulo: `Qualificado ${alvoLabel}` } : e,
+  );
+
   const { data } = await db
     .from("contacts")
     .select("id, name, phone_number, tags, custom_fields, created_at")
@@ -203,7 +213,7 @@ export default async function CaptacaoInstagramPage() {
   const cards = contatos.map(toCard);
 
   const porEstagio: Record<string, Card[]> = {};
-  for (const e of ESTAGIOS) porEstagio[e.slug] = [];
+  for (const e of estagios) porEstagio[e.slug] = [];
   for (let i = 0; i < contatos.length; i++) {
     const estagio = (contatos[i].custom_fields?.["captacao_estagio"] as string) ?? "interagiu";
     (porEstagio[estagio] ?? (porEstagio.interagiu ||= [])).push(cards[i]);
@@ -225,8 +235,15 @@ export default async function CaptacaoInstagramPage() {
             Captação do Instagram
           </h1>
           <p className="text-[15px] mt-0.5" style={{ color: "var(--color-text-muted)" }}>
-            De quem interage a lead pronto pra 2028 — qualificado por MG/BH, com WhatsApp.
+            De quem interage a lead pronto pra 2028 — qualificado por {alvoLabel}, com WhatsApp.
           </p>
+          <Link
+            href="/app/instagram/captacao/config"
+            className="inline-flex items-center gap-1.5 text-sm font-semibold mt-2"
+            style={{ color: "var(--color-accent)" }}
+          >
+            ⚙ Personalizar (região-alvo e mensagens)
+          </Link>
         </div>
         <div className="flex gap-3">
           {[
@@ -265,8 +282,8 @@ export default async function CaptacaoInstagramPage() {
         </section>
       ) : (
         <section className="flex gap-3 overflow-x-auto pb-2" style={{ minWidth: 0 }}>
-          {ESTAGIOS.map((e) => (
-            <Coluna key={e.slug} estagio={e} cards={porEstagio[e.slug] ?? []} />
+          {estagios.map((e) => (
+            <Coluna key={e.slug} estagio={e} cards={porEstagio[e.slug] ?? []} vinculoLabel={vinculoLabel} />
           ))}
         </section>
       )}
