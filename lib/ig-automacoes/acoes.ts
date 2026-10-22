@@ -360,6 +360,74 @@ async function executarAddFunilPolitico(
   return { tipo, status: "ok" };
 }
 
+// ── Executor: captar_instagram ─────────────────────────────────────────────────
+
+/**
+ * Coloca o comentador no FUNIL DE CAPTAÇÃO do Instagram (o Kanban de leads do IG).
+ *
+ * Diferente de `criar_contato` (genérico) e de `add_funil_politico` (etiqueta de
+ * nível): aqui gravamos a jornada de captação em `custom_fields`:
+ *   - origem_captacao: "instagram"
+ *   - captacao_estagio: estágio da jornada (começa em "interagiu")
+ *   - ig_handle, captado_em, post_id
+ *
+ * Idempotente: se o contato já está no funil (tem captacao_estagio), NÃO rebaixa
+ * o estágio — só retorna skipped. A qualificação (cidade/UF, WhatsApp) e o avanço
+ * de estágio ficam a cargo do handler de resposta de DM (peça 2).
+ */
+async function executarCaptarInstagram(
+  db: SupabaseClient,
+  ctx: AcaoCtx,
+  config: AcaoConfig,
+): Promise<ResultadoAcao> {
+  const tipo = "captar_instagram";
+  const estagioInicial =
+    typeof config.estagio === "string" && config.estagio ? config.estagio : "interagiu";
+
+  const camposCaptacao = {
+    origem_captacao: "instagram",
+    captacao_estagio: estagioInicial,
+    ig_handle: ctx.fromUsername ?? null,
+    captado_em: new Date().toISOString(),
+    post_id: ctx.mediaId,
+  };
+
+  const { data: existente } = await db
+    .from("contacts")
+    .select("id, custom_fields")
+    .eq("organization_id", ctx.organizationId)
+    .eq("instagram_id", ctx.fromInstagramId)
+    .maybeSingle();
+
+  const nome = ctx.fromUsername ? `@${ctx.fromUsername}` : `IG ${ctx.fromInstagramId}`;
+
+  if (existente) {
+    const cf = (existente.custom_fields as Record<string, unknown>) ?? {};
+    if (cf.captacao_estagio) {
+      return { tipo, status: "skipped", detail: "ja_no_funil" };
+    }
+    const { error } = await db
+      .from("contacts")
+      .update({ custom_fields: { ...cf, ...camposCaptacao } })
+      .eq("id", existente.id)
+      .eq("organization_id", ctx.organizationId);
+    if (error) return { tipo, status: "error", detail: error.message };
+    return { tipo, status: "ok", detail: "contato_existente_captado" };
+  }
+
+  const { error } = await db.from("contacts").insert({
+    organization_id: ctx.organizationId,
+    name: nome,
+    instagram_id: ctx.fromInstagramId,
+    origem: "instagram",
+    tags: ["instagram", "captacao"],
+    custom_fields: camposCaptacao,
+  });
+
+  if (error) return { tipo, status: "error", detail: error.message };
+  return { tipo, status: "ok" };
+}
+
 // ── Registry de executores ─────────────────────────────────────────────────────
 
 type Executor = (
@@ -375,6 +443,7 @@ const EXECUTORES: Record<string, Executor> = {
   criar_contato: executarCriarContato,
   notificar_equipe: executarNotificarEquipe,
   add_funil_politico: executarAddFunilPolitico,
+  captar_instagram: executarCaptarInstagram,
 };
 
 // ── Executor principal ──────────────────────────────────────────────────────────
