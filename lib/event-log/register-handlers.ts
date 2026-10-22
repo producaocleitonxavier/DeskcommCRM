@@ -37,6 +37,7 @@ import { igAutomacaoHandler } from "@/lib/ig-automacoes/motor.handler";
 import { igInboundCommentHandler } from "@/lib/channels/instagram/inbound-comment.handler";
 import { igInboundMentionHandler } from "@/lib/channels/instagram/inbound-mention.handler";
 import { igInboundDmHandler } from "@/lib/channels/instagram/inbound-dm.handler";
+import { igCaptacaoDmHandler } from "@/lib/channels/instagram/captacao-dm.handler";
 import { igDmOutboundHandler } from "@/lib/channels/instagram/send-dm.handler";
 import { igCommentReplyHandler } from "@/lib/channels/instagram/reply-comment.handler";
 import { registerHandler } from "@/lib/event-log/dispatcher";
@@ -76,6 +77,10 @@ export function ensureHandlersRegistered(): void {
   // Ingestão de DM Instagram: cria/atualiza contato, conversa e mensagem no
   // CRM. Escrita pura no banco, sem rede de terceiro.
   registerHandler(igInboundDmHandler);
+  // Qualificação da captação (peça 2): na mesma DM recebida, avança a jornada do
+  // funil (cidade → qualifica pelo alvo → pede WhatsApp → gradua). Consumer_key
+  // distinto do persister acima (fan-out). Emite DMs via event_log, nunca HTTP.
+  registerHandler(igCaptacaoDmHandler);
   // Motor de automação do Instagram (ManyChat próprio): avalia flows e emite
   // side-effects para event_log — nunca faz HTTP direto. Fica ao lado do motor
   // de automação de atendimento, que tem o mesmo perfil (só banco + event_log).

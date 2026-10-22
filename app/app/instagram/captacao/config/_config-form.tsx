@@ -42,6 +42,7 @@ export default function ConfigForm({ inicial }: { inicial: CaptacaoConfig }) {
   const [textoRespostaComentario, setTextoResposta] = useState(inicial.textoRespostaComentario);
   const [textoDmPesquisa, setTextoDmPesquisa] = useState(inicial.textoDmPesquisa);
   const [textoDmWhatsapp, setTextoDmWhatsapp] = useState(inicial.textoDmWhatsapp);
+  const [textoDmEntrega, setTextoDmEntrega] = useState(inicial.textoDmEntrega);
   const [pedirWhatsappSoAlvo, setPedirWhatsappSoAlvo] = useState(inicial.pedirWhatsappSoAlvo);
 
   function salvar() {
@@ -56,6 +57,7 @@ export default function ConfigForm({ inicial }: { inicial: CaptacaoConfig }) {
         textoRespostaComentario,
         textoDmPesquisa,
         textoDmWhatsapp,
+        textoDmEntrega,
         pedirWhatsappSoAlvo,
       });
       if (r.ok) {
@@ -143,6 +145,9 @@ export default function ConfigForm({ inicial }: { inicial: CaptacaoConfig }) {
         </Campo>
         <Campo label="DM — pedido de WhatsApp" hint="Enviada a quem confirma estar no alvo.">
           <input className={inputCls} style={inputStyle} value={textoDmWhatsapp} onChange={(e) => setTextoDmWhatsapp(e.target.value)} />
+        </Campo>
+        <Campo label="DM — entrega da isca (e-book)" hint="Enviada após capturar os dados. COLE O LINK do e-book aqui dentro do texto.">
+          <input className={inputCls} style={inputStyle} value={textoDmEntrega} onChange={(e) => setTextoDmEntrega(e.target.value)} />
         </Campo>
         <label className="flex items-center gap-2 text-sm cursor-pointer" style={{ color: "var(--color-text-muted)" }}>
           <input type="checkbox" checked={pedirWhatsappSoAlvo} onChange={(e) => setPedirWhatsappSoAlvo(e.target.checked)} />
