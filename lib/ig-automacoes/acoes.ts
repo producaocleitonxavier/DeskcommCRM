@@ -388,15 +388,19 @@ async function executarCaptarInstagram(
     origem_captacao: "instagram",
     captacao_estagio: estagioInicial,
     ig_handle: ctx.fromUsername ?? null,
+    ig_id: ctx.fromInstagramId,
     captado_em: new Date().toISOString(),
     post_id: ctx.mediaId,
   };
+
+  // Identidade social no padrão do schema real (como wa_identity = "phone:+55…").
+  const igIdentity = `instagram:${ctx.fromInstagramId}`;
 
   const { data: existente } = await db
     .from("contacts")
     .select("id, custom_fields")
     .eq("organization_id", ctx.organizationId)
-    .eq("instagram_id", ctx.fromInstagramId)
+    .eq("social_identity", igIdentity)
     .maybeSingle();
 
   const nome = ctx.fromUsername ? `@${ctx.fromUsername}` : `IG ${ctx.fromInstagramId}`;
@@ -418,8 +422,9 @@ async function executarCaptarInstagram(
   const { error } = await db.from("contacts").insert({
     organization_id: ctx.organizationId,
     name: nome,
-    instagram_id: ctx.fromInstagramId,
-    origem: "instagram",
+    social_identity: igIdentity,
+    source: "instagram",
+    kind: "person",
     tags: ["instagram", "captacao"],
     custom_fields: camposCaptacao,
   });
