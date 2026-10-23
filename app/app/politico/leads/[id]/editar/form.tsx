@@ -61,9 +61,14 @@ function Label({ children }: { children: ReactNode }) {
 }
 
 function formatarTelefone(value: string): string {
-  const limpo = value.replace(/[^\d+]/g, "");
-  if (limpo && !limpo.startsWith("+")) return `+55${limpo}`;
-  return limpo;
+  // Lê PELO DDD, ignorando "+"/código de país: um "+31..." (DDD 31 de BH) era
+  // gravado como +31 e o WhatsApp não entregava. Tira tudo que não é dígito e
+  // reaplica +55.
+  const d = value.replace(/\D/g, "").replace(/^0+/, "");
+  if (!d) return "";
+  if (d.startsWith("55") && (d.length === 12 || d.length === 13)) return `+${d}`;
+  if (d.length === 10 || d.length === 11) return `+55${d}`;
+  return `+${d}`;
 }
 
 export default function EditarLeadForm({ inicial, territorios }: { inicial: LeadParaEdicao; territorios: Territorio[] }) {

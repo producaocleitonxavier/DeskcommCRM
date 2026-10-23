@@ -203,6 +203,8 @@ export default function DetalheDemandaClient({ demanda, territorios, liderancas,
           setAvisoMsg(`Cidadão avisado da resolução no WhatsApp (protocolo ${aviso.protocolo}).`);
         } else if (aviso.ok && !aviso.enviado && aviso.motivo === "sem_telefone") {
           setAvisoMsg("Demanda resolvida. O cidadão não tem telefone cadastrado — avise por outro meio quando puder.");
+        } else if (aviso.ok && !aviso.enviado && aviso.motivo === "numero_invalido") {
+          setErro("Demanda resolvida, mas o número do cidadão não é um WhatsApp BR válido (+55 + DDD). Corrija o cadastro para conseguir avisar.");
         }
       }
       router.refresh();

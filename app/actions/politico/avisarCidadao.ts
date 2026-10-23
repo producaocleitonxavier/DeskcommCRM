@@ -30,6 +30,14 @@ export type AvisoResultado = { ok: true; protocolo: string; comOficio: boolean }
  * — por isso vive numa constante, não como literal solto nos dois lugares. */
 const AVISO_RESOLUCAO_DESCRICAO = "Cidadão avisado da resolução por WhatsApp";
 
+/** É um WhatsApp BR plausível para envio? +55 + DDD (11–99) + número local (8/9).
+ * Pega o número malformado (+31… = DDD de BH sem o 55) antes de "enviar" para
+ * um número que o WhatsApp não entrega — era o que mostrava ✓ falso. */
+function isWhatsappBRPlausivel(phone: string): boolean {
+  const d = phone.replace(/\D/g, "");
+  return phone.trim().startsWith("+55") && (d.length === 12 || d.length === 13) && /^[1-9][0-9]$/.test(d.slice(2, 4));
+}
+
 interface DemandaParaAviso {
   id: string;
   estado: string;
@@ -69,6 +77,12 @@ export async function avisarCidadao(demandaId: string): Promise<AvisoResultado> 
   const contato = d.contacts;
   if (!contato?.phone_number) {
     return { ok: false, erro: "O cidadão não tem telefone cadastrado — não há como avisar por WhatsApp." };
+  }
+  if (!isWhatsappBRPlausivel(contato.phone_number)) {
+    return {
+      ok: false,
+      erro: `O número ${contato.phone_number} não é um WhatsApp brasileiro válido (precisa de +55 + DDD). Corrija o cadastro do cidadão com DDD + número (ex.: 31 99999-9999).`,
+    };
   }
 
   // Resolve/abre a conversa no canal de WhatsApp pronto (escolhe sozinho).
@@ -193,7 +207,7 @@ export async function avisarCidadao(demandaId: string): Promise<AvisoResultado> 
  */
 export type AvisoAutoResultado =
   | { ok: true; enviado: true; protocolo: string }
-  | { ok: true; enviado: false; motivo: "sem_telefone" | "ja_avisado" | "nao_resolvida" | "desligado" }
+  | { ok: true; enviado: false; motivo: "sem_telefone" | "numero_invalido" | "ja_avisado" | "nao_resolvida" | "desligado" }
   | { ok: false; erro: string };
 
 export async function avisarResolucaoAutomatica(demandaId: string): Promise<AvisoAutoResultado> {
@@ -217,6 +231,7 @@ export async function avisarResolucaoAutomatica(demandaId: string): Promise<Avis
 
   if (d.estado !== "resolvida") return { ok: true, enviado: false, motivo: "nao_resolvida" };
   if (!d.contacts?.phone_number) return { ok: true, enviado: false, motivo: "sem_telefone" };
+  if (!isWhatsappBRPlausivel(d.contacts.phone_number)) return { ok: true, enviado: false, motivo: "numero_invalido" };
 
   // Idempotência: o aviso de resolução já saiu? (manual e automático gravam o
   // mesmo evento, então o botão "Avisar cidadão" clicado antes também conta.)

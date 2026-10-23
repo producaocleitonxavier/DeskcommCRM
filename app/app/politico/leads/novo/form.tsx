@@ -242,11 +242,14 @@ export default function NovoCadastroForm({ territorios, liderancas }: Props) {
   /* ── formatação de telefone ─────────────────────────────────────────────── */
 
   function formatarTelefone(value: string): string {
-    const limpo = value.replace(/[^\d+]/g, "");
-    if (limpo && !limpo.startsWith("+")) {
-      return `+55${limpo}`;
-    }
-    return limpo;
+    // Lê PELO DDD, ignorando "+"/código de país. Um "+31..." (DDD 31 de BH que
+    // entrou como se fosse código da Holanda) era gravado como +31 e o WhatsApp
+    // não entregava. Aqui tiramos tudo que não é dígito e reaplicamos +55.
+    const d = value.replace(/\D/g, "").replace(/^0+/, "");
+    if (!d) return "";
+    if (d.startsWith("55") && (d.length === 12 || d.length === 13)) return `+${d}`;
+    if (d.length === 10 || d.length === 11) return `+55${d}`;
+    return `+${d}`;
   }
 
   /* ── busca CEP via ViaCEP ───────────────────────────────────────────────── */
