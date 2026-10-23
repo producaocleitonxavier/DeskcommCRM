@@ -107,6 +107,9 @@ export async function previewGateContext(
     lastInbound = last ? new Date(last.sent_at) : null;
     p.result.restrictions.push('contact_state_is_scenario');
   }
+  // Uma leitura só das camadas da org, compartilhada pelos gates opcionais abaixo
+  // (clínica e promessa de campanha) — ler duas vezes seriam duas queries para o mesmo dado.
+  const camadasDaOrg = await lerCamadasDaOrg(db, org);
   return {
     now,
     body: '',
@@ -156,7 +159,10 @@ export async function previewGateContext(
     // A MESMA decisão do turno real: a camada de afirmação clínica é da organização.
     // Um Testar que arma diferente da produção faz quem afina o prompt testar contra
     // outro sistema — o mesmo motivo do `agenda` logo acima.
-    clinicalClaimEnforced: camadaLigada((await lerCamadasDaOrg(db, org)).afirmacao_clinica, false),
+    clinicalClaimEnforced: camadaLigada(camadasDaOrg.afirmacao_clinica, false),
+    // Idem a clínica: a camada de promessa de campanha é da organização. O Testar arma
+    // igual à produção para quem afina o prompt não testar contra outro sistema.
+    campaignPromiseEnforced: camadaLigada(camadasDaOrg.promessa_de_campanha, false),
   };
 }
 export const SCENARIO_READS = new Set([

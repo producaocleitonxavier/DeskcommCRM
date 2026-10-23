@@ -35,20 +35,33 @@ describe("padrão das camadas fora do worker", () => {
       promessa_semantica: null,
       jailbreak: false,
       afirmacao_clinica: null,
+      promessa_de_campanha: null,
     });
     expect(
-      camadasEfetivas(linhas, { promessa_semantica: true, jailbreak: true, afirmacao_clinica: false }),
+      camadasEfetivas(linhas, {
+        promessa_semantica: true,
+        jailbreak: true,
+        afirmacao_clinica: false,
+        promessa_de_campanha: false,
+      }),
     ).toEqual({
       promessa_semantica: true,
       jailbreak: false,
       afirmacao_clinica: false,
+      promessa_de_campanha: false,
     });
     expect(
-      camadasEfetivas([], { promessa_semantica: false, jailbreak: true, afirmacao_clinica: false }),
+      camadasEfetivas([], {
+        promessa_semantica: false,
+        jailbreak: true,
+        afirmacao_clinica: false,
+        promessa_de_campanha: false,
+      }),
     ).toEqual({
       promessa_semantica: false,
       jailbreak: true,
       afirmacao_clinica: false,
+      promessa_de_campanha: false,
     });
   });
 
@@ -56,5 +69,11 @@ describe("padrão das camadas fora do worker", () => {
     // Nenhuma variável liga a camada — nem uma que pareça ser dela.
     expect(padraoDasCamadasNoAmbiente({ PROMISE_SEMANTIC_ENABLED: "true" }).afirmacao_clinica).toBe(false);
     expect(camadasEfetivas([{ layer: "afirmacao_clinica", enabled: true }]).afirmacao_clinica).toBe(true);
+  });
+
+  it("a promessa de campanha nasce desligada e sem variável de ambiente: só a organização liga", () => {
+    // Mesma regra da clínica: nenhuma variável de ambiente liga — é escolha da org (risco de TSE).
+    expect(padraoDasCamadasNoAmbiente({ PROMISE_SEMANTIC_ENABLED: "true" }).promessa_de_campanha).toBe(false);
+    expect(camadasEfetivas([{ layer: "promessa_de_campanha", enabled: true }]).promessa_de_campanha).toBe(true);
   });
 });

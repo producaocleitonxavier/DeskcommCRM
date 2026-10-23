@@ -70,6 +70,7 @@ import type { LgpdInput } from './lgpd/legal-basis';
 import { detectHumanPromise } from './human-promise';
 import { detectarVazamentoInterno, renderVetoDeVazamento } from './vazamento-interno';
 import { detectarAfirmacaoClinica, renderVetoDeAfirmacaoClinica } from './afirmacao-clinica';
+import { detectarPromessaDeCampanha, renderVetoDePromessaDeCampanha } from './promessa-de-campanha';
 // Módulo PURO de propósito (`capabilities`, não `index`): o seam não arrasta o
 // adapter — e com ele o cliente HTTP do canal — para dentro do worker.
 import { capabilitiesOf, DEFAULT_CHANNEL_PROVIDER } from '@/lib/channels/capabilities';
@@ -241,6 +242,15 @@ export interface GateContext {
    *    quando a organização ligou a camada.
    */
   clinicalClaimEnforced?: boolean;
+  /**
+   * Arma o `campaignPromiseGate` (captação de sufrágio, promessa de benefício pessoal,
+   * garantia eleitoral — `./promessa-de-campanha.ts`). Ausente = DESARMADO, pelas MESMAS
+   * razões do `clinicalClaimEnforced`: no caminho determinístico veto é drop silencioso, e
+   * a camada é OPCIONAL por organização (`promessa_de_campanha` em `org_guardrail_layers`,
+   * padrão desligado). Fora da política, "te garanto a entrega" é frase normal de loja.
+   * Quem arma é o turno do agente, e só quando a organização ligou a camada.
+   */
+  campaignPromiseEnforced?: boolean;
   /**
    * Arma o `spinningGate`. **Ausente = ARMADO** — a direção segura aqui é a
    * oposta do `internalVocabularyEnforced` logo acima, e a assimetria é
@@ -543,6 +553,34 @@ export const clinicalClaimGate: Gate = {
       // detail é LOGADO e persistido: só as CATEGORIAS (rótulos nossos, fechados),
       // nunca o trecho — a frase barrada pode conter o nome da doença do paciente.
       detail: { clinical_kinds: achado.categorias.join(',') },
+    };
+  },
+};
+
+/**
+ * Gate de PROMESSA DE CAMPANHA — barra a mensagem em que o assistente oferece algo em
+ * troca do voto (captação ilícita de sufrágio, Lei 9.504/97 art. 41-A), promete conseguir
+ * um benefício pessoal ("vou conseguir sua aposentadoria") ou garante um resultado de
+ * campanha. Só arma quando a organização ligou a camada `promessa_de_campanha` e o corpo é
+ * do modelo (ver `GateContext.campaignPromiseEnforced`).
+ *
+ * Posição 6.85 de `BEFORE_SEND_GATES`: logo depois do `clinical_claim` e antes do
+ * `agenda_stall` e do `disclosure`, pela mesma razão dos vizinhos — inspeciona o texto que
+ * o MODELO escreveu, antes de o disclosure poder emendá-lo.
+ */
+export const campaignPromiseGate: Gate = {
+  name: 'campaign_promise',
+  evaluate: (ctx) => {
+    if (ctx.campaignPromiseEnforced !== true) return { pass: true };
+    const achado = detectarPromessaDeCampanha(ctx.body);
+    if (!achado.achou) return { pass: true };
+    return {
+      pass: false,
+      code: 'campaign_promise',
+      reason: renderVetoDePromessaDeCampanha(achado.categorias),
+      // detail é LOGADO e persistido: só as CATEGORIAS (rótulos nossos, fechados), nunca o
+      // trecho — a frase barrada pode conter dado do cidadão (benefício, pedido, opinião).
+      detail: { campaign_kinds: achado.categorias.join(',') },
     };
   },
 };
@@ -907,8 +945,14 @@ const spinningGate: Gate = {
  * assistente. Nasce DESARMADO (ver `GateContext.clinicalClaimEnforced`): só arma no turno
  * do agente de uma organização que ligou a camada `afirmacao_clinica`, então a v8 não
  * muda o destino de nenhum envio de quem não ligou.
+ * v9 = insere `campaignPromiseGate` entre `clinical_claim` e `agenda_stall` — a rede
+ * contra promessa de campanha na boca do assistente (captação de sufrágio, promessa de
+ * benefício pessoal, garantia eleitoral). Nasce DESARMADO (ver
+ * `GateContext.campaignPromiseEnforced`): só arma no turno do agente de uma organização que
+ * ligou a camada `promessa_de_campanha`, então a v9 não muda o destino de nenhum envio de
+ * quem não ligou — como a v8, muda o TRACE onde há política e modelo para ensinar.
  */
-export const BEFORE_SEND_CHAIN_VERSION = 9;
+export const BEFORE_SEND_CHAIN_VERSION = 10;
 
 /**
  * Gate 6.3 — CONFERÊNCIA DE FATO (#2231): a afirmação de FATO da resposta
@@ -958,6 +1002,8 @@ export const factualClaimGate: Gate = {
  *         `separacao-fala-e-operacao.md`); antes do disclosure porque ele pode emendar o corpo;
  *   (6.8) clinical_claim — diagnóstico, prescrição, promessa de resultado ou afirmação de
  *         câncer escritos pelo modelo; só arma com a camada `afirmacao_clinica` ligada;
+ *   (6.85) campaign_promise — captação de sufrágio, promessa de benefício pessoal ou garantia
+ *         eleitoral escritas pelo modelo; só arma com a camada `promessa_de_campanha` ligada;
  *   (6.9) agenda_stall — "vou verificar/confirmar horário" sem ter chamado a ferramenta de
  *         agenda neste turno; antes do disclosure pelo mesmo motivo do internal_vocabulary;
  *   (8) disclosure — 1ª mensagem se apresenta como assistente virtual (F4-05).
@@ -975,6 +1021,7 @@ export const BEFORE_SEND_GATES: readonly Gate[] = [
   casePromiseGate,
   internalVocabularyGate,
   clinicalClaimGate,
+  campaignPromiseGate,
   agendaStallGate,
   disclosureGate,
 ];
@@ -1100,6 +1147,12 @@ export interface RunBeforeSendArgs {
    * (`camadaLigada(camadas.afirmacao_clinica, false)`).
    */
   enforceClinicalClaim?: boolean;
+  /**
+   * Arma o `campaignPromiseGate` — ver `GateContext.campaignPromiseEnforced`. Ausente
+   * (default) = no-op. O turno do agente passa a escolha da organização
+   * (`camadaLigada(camadas.promessa_de_campanha, false)`).
+   */
+  enforceCampaignPromise?: boolean;
   /**
    * Desarma o `spinningGate` para ESTA tentativa. Ausente = armado (ver
    * `GateContext.spinningEnforced` para a razão da assimetria e para a conta que
@@ -1424,6 +1477,7 @@ export async function runBeforeSend(args: RunBeforeSendArgs): Promise<BeforeSend
         : {}),
       internalVocabularyEnforced: args.enforceInternalVocabulary ?? false,
       clinicalClaimEnforced: args.enforceClinicalClaim ?? false,
+      campaignPromiseEnforced: args.enforceCampaignPromise ?? false,
       ...(args.agenda !== undefined ? { agenda: args.agenda } : {}),
       ...(args.followup !== undefined ? { followup: args.followup } : {}),
     };

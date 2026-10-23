@@ -572,6 +572,15 @@ export const MAX_VETOS_DE_VOCABULARIO_INTERNO = 2;
 export const MAX_VETOS_DE_AFIRMACAO_CLINICA = 2;
 
 /**
+ * Quantos vetos de `campaign_promise` o turno tolera antes do fail-safe. Mesma saída da
+ * afirmação clínica — e por razão mais forte: uma oferta em troca de voto é captação
+ * ilícita de sufrágio (crime eleitoral), e uma promessa de benefício obriga quem não pode
+ * cumprir. O fail-safe NUNCA solta o envio: na insistência, chama a equipe (abre um caso) e
+ * o modelo passa a ter a saída honesta — dizer que a equipe vai acompanhar, sem prometer.
+ */
+export const MAX_VETOS_DE_PROMESSA_DE_CAMPANHA = 2;
+
+/**
  * O mesmo degrau para o veto de `false_empty_inbound`, e pela mesma assimetria.
  *
  * Sem teto, o contador só subia: um falso positivo teimoso da detecção calava o
@@ -2881,6 +2890,9 @@ async function executarTurnoDoAgente(
   // Contador do fail-safe do gate de afirmação clínica (`clinical_claim`): 1º veto ensina;
   // persistir abre caso para a equipe — e o envio continua barrado. Por turno (closure).
   let clinicalClaimVetoCount = 0;
+  // Contador do fail-safe do gate de promessa de campanha (`campaign_promise`): mesmo
+  // desenho da clínica — 1º veto ensina; persistir abre caso e o envio continua barrado.
+  let campaignPromiseVetoCount = 0;
   // Uma recusa deste tipo devolve o texto confirmado ao modelo para que ele
   // reescreva antes de falar com o cliente. Não gasta envio nem toca no canal.
   let falseEmptyInboundVetoCount = 0;
@@ -3423,6 +3435,10 @@ async function executarTurnoDoAgente(
             // `GateContext.clinicalClaimEnforced`. Sem linha, desligada: não há padrão de
             // ambiente para uma proteção que só faz sentido em saúde.
             enforceClinicalClaim: camadaLigada(camadas.afirmacao_clinica, false),
+            // Promessa de campanha: mesma razão da clínica (só o corpo do MODELO, só a org
+            // que ligou a camada) — ver `GateContext.campaignPromiseEnforced`. Sem linha,
+            // desligada: a proteção só faz sentido em gabinete/campanha (risco de TSE).
+            enforceCampaignPromise: camadaLigada(camadas.promessa_de_campanha, false),
             // Mesmo padrão do vocabulário interno: só o `send_message` arma — é o único
             // corpo escrito pelo modelo. `active` é ter QUALQUER ferramenta de agenda:
             // um agente que só CONSULTA promete "vou verificar" igual, e enquanto a
@@ -3642,6 +3658,54 @@ async function executarTurnoDoAgente(
                       'A mensagem continua barrada. A equipe já foi acionada: diga à pessoa, ' +
                       'em uma frase, que um profissional da equipe vai falar com ela, sem ' +
                       'repetir nada sobre diagnóstico, remédio ou resultado.',
+                  },
+                };
+              }
+            }
+            return { ok: false, error: { code: chain.code, message: chain.message } };
+          }
+          if (chain.status === 'vetoed' && chain.code === 'campaign_promise') {
+            // Fail-safe do gate de promessa de campanha. Como o clínico, este NUNCA solta o
+            // envio: não existe "promessa eleitoral, mas melhor que silêncio" — uma oferta
+            // em troca de voto é captação ilícita de sufrágio. Na insistência o sistema chama
+            // a equipe (abre um caso com a frase barrada) e o erro devolvido ao modelo passa
+            // a dizer que a equipe foi acionada, para ele acolher sem repetir a promessa. A
+            // resposta seguinte passa pelo `case_promise` porque o caso agora existe.
+            campaignPromiseVetoCount += 1;
+            if (
+              campaignPromiseVetoCount >= MAX_VETOS_DE_PROMESSA_DE_CAMPANHA &&
+              agentConfig?.casesEnabled === true &&
+              !openedCaseThisTurn &&
+              !hasOpenCase
+            ) {
+              const auto = await openCase(
+                pool,
+                {
+                  tenantId,
+                  conversationId: input.conversationId,
+                  agentId: agentConfig?.agentId ?? null,
+                },
+                {
+                  title: 'Pedido que o gabinete precisa tratar sem prometer',
+                  summary: body, // a mensagem que o assistente tentou enviar e foi barrada
+                  blocker:
+                    'Aberto automaticamente: o assistente insistiu numa promessa de campanha ' +
+                    '(troca por voto, benefício pessoal ou garantia eleitoral) e o envio foi barrado.',
+                  source: 'guardrail_autofallback',
+                  contextSnapshot: buildCaseContextSnapshot(),
+                },
+              );
+              if (auto.ok) {
+                openedCaseThisTurn = true;
+                moverParaHandoffBestEffort('campaign_promise_autofallback');
+                return {
+                  ok: false,
+                  error: {
+                    code: chain.code,
+                    message:
+                      'A mensagem continua barrada. A equipe do gabinete já foi acionada: diga ' +
+                      'à pessoa, em uma frase, que a equipe vai acompanhar o pedido dela, sem ' +
+                      'prometer resultado, benefício nem ligar nada a voto.',
                   },
                 };
               }

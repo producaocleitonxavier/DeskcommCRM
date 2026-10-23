@@ -125,8 +125,8 @@ describe("TAREFAS_DO_JEV", () => {
   });
 
   it("tarefaSemCamada: só a camada desligada para a organização para a tarefa", () => {
-    const ligadas = { jailbreak: true, promessa_semantica: false, afirmacao_clinica: false };
-    const semManipulacao = { jailbreak: false, promessa_semantica: true, afirmacao_clinica: false };
+    const ligadas = { jailbreak: true, promessa_semantica: false, afirmacao_clinica: false, promessa_de_campanha: false };
+    const semManipulacao = { jailbreak: false, promessa_semantica: true, afirmacao_clinica: false, promessa_de_campanha: false };
     expect(tarefaSemCamada(TAREFA_DA_MANIPULACAO, ligadas)).toBe(false);
     expect(tarefaSemCamada(TAREFA_DA_MANIPULACAO, semManipulacao)).toBe(true);
     // O clima não acompanha camada nenhuma.

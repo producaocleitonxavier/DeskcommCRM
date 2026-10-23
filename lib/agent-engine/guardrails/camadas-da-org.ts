@@ -43,7 +43,12 @@ import type pg from 'pg';
  * quebraria o `update.sh` dele se houvesse constraint. Em troca, o emissor usa
  * esta constante e nunca string literal.
  */
-export const CAMADAS_SEMANTICAS = ['promessa_semantica', 'jailbreak', 'afirmacao_clinica'] as const;
+export const CAMADAS_SEMANTICAS = [
+  'promessa_semantica',
+  'jailbreak',
+  'afirmacao_clinica',
+  'promessa_de_campanha',
+] as const;
 
 export type CamadaSemantica = (typeof CAMADAS_SEMANTICAS)[number];
 
@@ -55,6 +60,7 @@ export const SEM_ESCOLHA: EscolhaDeCamadas = {
   promessa_semantica: null,
   jailbreak: null,
   afirmacao_clinica: null,
+  promessa_de_campanha: null,
 };
 
 /**
@@ -122,6 +128,10 @@ export function escolhaDasLinhas(rows: ReadonlyArray<{ layer: string; enabled: b
  *  - `afirmacao_clinica`: desligada. Não há variável de ambiente — a camada só faz
  *    sentido em negócio de saúde, então quem decide é a organização, nunca a instalação.
  *
+ *  - `promessa_de_campanha`: desligada, pela MESMA razão da clínica — não custa modelo e só
+ *    faz sentido em gabinete/campanha, onde promessa eleitoral é risco de TSE (captação de
+ *    sufrágio). Fora da política, "te garanto a entrega" é frase normal. Quem é de política liga.
+ *
  * ⚠️ O worker é outro processo, com o SEU `.env`: fora dele, isto é a melhor
  * leitura disponível. Assim que a organização escolhe, a linha vence.
  */
@@ -132,6 +142,7 @@ export function padraoDasCamadasNoAmbiente(
     promessa_semantica: env.PROMISE_SEMANTIC_ENABLED === 'true',
     jailbreak: true,
     afirmacao_clinica: false,
+    promessa_de_campanha: false,
   };
 }
 
@@ -145,5 +156,6 @@ export function camadasEfetivas(
     promessa_semantica: camadaLigada(escolha.promessa_semantica, padrao.promessa_semantica),
     jailbreak: camadaLigada(escolha.jailbreak, padrao.jailbreak),
     afirmacao_clinica: camadaLigada(escolha.afirmacao_clinica, padrao.afirmacao_clinica),
+    promessa_de_campanha: camadaLigada(escolha.promessa_de_campanha, padrao.promessa_de_campanha),
   };
 }

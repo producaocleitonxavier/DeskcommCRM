@@ -72,7 +72,7 @@ export interface ConferenciaDeSaida {
    * a tela deixa de encontrar o estado e mostra "carregando…" para sempre —
    * aconteceu ao escrever isto, e o teste de componente pegou.
    */
-  camada: "promessa_semantica" | "jailbreak" | "afirmacao_clinica" | null;
+  camada: "promessa_semantica" | "jailbreak" | "afirmacao_clinica" | "promessa_de_campanha" | null;
 }
 
 /**
@@ -192,6 +192,22 @@ export const CONFERENCIAS_DE_SAIDA: readonly ConferenciaDeSaida[] = [
     },
     porQueNaoSeDesliga: "",
     camada: "afirmacao_clinica",
+  },
+  {
+    nome: "campaign_promise",
+    rotulo: "Não fazer promessa de campanha",
+    oQueProtege:
+      "Barra a mensagem em que o assistente oferece algo em troca do voto, promete conseguir " +
+      "um benefício pessoal (vaga, auxílio, consulta) ou garante um resultado de campanha.",
+    escolha: {
+      custo:
+        "Não custa nada. Só serve para gabinete e campanha: oferecer favor por voto é crime " +
+        "eleitoral (captação de sufrágio). Em outros negócios pode barrar frases normais, como " +
+        '"te garanto a entrega".',
+      consultaModelo: false,
+    },
+    porQueNaoSeDesliga: "",
+    camada: "promessa_de_campanha",
   },
   {
     nome: "agenda_stall",

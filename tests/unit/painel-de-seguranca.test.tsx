@@ -95,14 +95,14 @@ describe("painel de segurança — o que se confere antes de enviar", () => {
     // contrário, deixando entrar uma camada paga nova sem ninguém olhar.
     //
     // A contagem de camadas PAGAS continua dois, e é ela que guarda a regra acima. A
-    // afirmação clínica é o terceiro interruptor de conferência, mas não é paga — é
-    // escolha porque só serve a saúde —, e por isso é contada à parte: assim uma camada
-    // paga nova ainda reprova aqui.
+    // afirmação clínica e a promessa de campanha são interruptores de conferência que NÃO
+    // são pagos — são escolha porque só servem a um nicho (saúde; gabinete/campanha) —, e
+    // por isso são contados à parte: assim uma camada paga nova ainda reprova aqui.
     const { container } = renderPainel();
     await waitFor(() =>
       expect(
         container.querySelectorAll('[data-testid^="conferencia-"][role="switch"]'),
-      ).toHaveLength(3),
+      ).toHaveLength(4),
     );
     const pagas = [...CONFERENCIAS_DE_SAIDA, CONFERENCIA_DE_ENTRADA].filter(
       (c) => c.escolha?.consultaModelo === true,
@@ -111,6 +111,7 @@ describe("painel de segurança — o que se confere antes de enviar", () => {
     expect(screen.getByTestId("conferencia-semantic_promise-liga")).toBeTruthy();
     expect(screen.getByTestId("conferencia-jailbreak_detect-liga")).toBeTruthy();
     expect(screen.getByTestId("conferencia-clinical_claim-liga")).toBeTruthy();
+    expect(screen.getByTestId("conferencia-campaign_promise-liga")).toBeTruthy();
 
     // E o interruptor do estilo existe, FORA do cartão das conferências: se ele
     // migrar para dentro da lista, a contagem acima volta a três e reprova.
