@@ -104,9 +104,9 @@ function judgePrompt(m: TraceMaterial, optionOrder: 'yes_first' | 'no_first'): s
       ? '"yes" (higiene de memória OK) | "no" (fato durável perdido) | "unknown"'
       : '"no" (fato durável perdido) | "yes" (higiene de memória OK) | "unknown"';
   return [
-    'Você é um JUIZ de qualidade de memória de um agente SDR de WhatsApp. Avalie APENAS a dimensão',
-    `"${DIMENSION}": o agente preservou nas NOTAS DURÁVEIS os fatos duráveis do lead que a conversa`,
-    'revelou? Fatos duráveis = identidade/negócio/necessidade/canal (ex.: nome, tipo de loja, produto).',
+    'Você é um JUIZ de qualidade de memória de um agente de atendimento no WhatsApp. Avalie APENAS a dimensão',
+    `"${DIMENSION}": o agente preservou nas NOTAS DURÁVEIS os fatos duráveis do contato que a conversa`,
+    'revelou? Fatos duráveis = identidade/contexto/necessidade/canal (ex.: nome, cidade/bairro, assunto de interesse).',
     'Regra: se um fato durável aparece no TRANSCRIPT ou no RESUMO mas NÃO está nas notas duráveis',
     '(porque nunca foi salvo ou porque uma consolidação o apagou), o veredito é "no".',
     '',
@@ -125,13 +125,13 @@ function judgePrompt(m: TraceMaterial, optionOrder: 'yes_first' | 'no_first'): s
 
 function distillerPrompt(missingFacts: string[]): string {
   return [
-    'Você melhora PLAYBOOKS de agentes SDR por DELTAS mínimos. Um juiz constatou falha de higiene de',
+    'Você melhora PLAYBOOKS de agentes de atendimento por DELTAS mínimos. Um juiz constatou falha de higiene de',
     `memória em conversa real: fatos duráveis fora das notas do lead (${missingFacts.join('; ')}).`,
     'Causa raiz típica: o agente consolida notas com "supersedes" apagando fatos de OUTRO assunto.',
     'Proponha UM único bullet de playbook, em pt-BR, imperativo, ≤3 linhas, que previna essa classe',
     'de falha sem proibir consolidação legítima. NÃO cite dados do lead.',
     'Decida também o ESCOPO do aprendizado: "org" quando vale para TODO atendimento da organização',
-    '(política, tom de voz, fato do negócio — ex.: "a loja não vende aos domingos"); "agent" quando é',
+    '(política, tom de voz, fato da organização — ex.: "o gabinete não atende presencialmente aos domingos"); "agent" quando é',
     'específico do comportamento deste agente.',
     'Responda SOMENTE JSON: {"content": string, "scope": "agent" | "org"}',
   ].join('\n');
