@@ -20,6 +20,7 @@ import { openSharedContactConversation } from "@/lib/messaging/open-shared-conta
 import { sendMessageHandler } from "@/app/api/v1/messages/_handler";
 import { gerarOficioDemanda } from "@/app/actions/politico/gerarOficio";
 import { ApiError } from "@/lib/api/types";
+import { avisoDeResolucaoLigado } from "@/lib/politico/aviso-de-resolucao";
 import type { SendMessageInput } from "@/lib/schemas";
 
 export type AvisoResultado = { ok: true; protocolo: string; comOficio: boolean } | { ok: false; erro: string };
@@ -192,7 +193,7 @@ export async function avisarCidadao(demandaId: string): Promise<AvisoResultado> 
  */
 export type AvisoAutoResultado =
   | { ok: true; enviado: true; protocolo: string }
-  | { ok: true; enviado: false; motivo: "sem_telefone" | "ja_avisado" | "nao_resolvida" }
+  | { ok: true; enviado: false; motivo: "sem_telefone" | "ja_avisado" | "nao_resolvida" | "desligado" }
   | { ok: false; erro: string };
 
 export async function avisarResolucaoAutomatica(demandaId: string): Promise<AvisoAutoResultado> {
@@ -200,6 +201,10 @@ export async function avisarResolucaoAutomatica(demandaId: string): Promise<Avis
   const org = await resolveActiveOrg(user);
   if (!org) return { ok: false, erro: "Sessão ou organização inválida." };
   const db = await createClient();
+
+  // Interruptor da org (default LIGADO). Desligado = resolve sem avisar.
+  const { data: orgRow } = await db.from("organizations").select("settings").eq("id", org.orgId).maybeSingle();
+  if (!avisoDeResolucaoLigado(orgRow?.settings)) return { ok: true, enviado: false, motivo: "desligado" };
 
   const { data, error } = await db
     .from("demandas")

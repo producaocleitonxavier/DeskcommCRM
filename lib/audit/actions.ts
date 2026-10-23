@@ -1134,6 +1134,8 @@ export const AUDIT_ACTIONS = [
   "pol_emendas.create",
   "pol_emendas.update",
   "pol_emendas.delete",
+  // Ciclo da demanda: interruptor do aviso automático ao cidadão na resolução.
+  "pol_gabinete.aviso_resolucao_updated",
 ] as const;
 
 /** Um código de auditoria. Derivado de `AUDIT_ACTIONS` — não redigite a lista. */

@@ -11,7 +11,10 @@ import { redirect } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { requireAuth, resolveActiveOrg } from "@/lib/auth/server";
+import { ROLE_RANK } from "@/lib/auth/types";
+import { avisoDeResolucaoLigado } from "@/lib/politico/aviso-de-resolucao";
 import DemandasCharts from "./_demandas-charts";
+import AvisoAutoToggle from "./_aviso-auto-toggle";
 import { RelatorioPdfButton } from "@/components/politico/relatorio-pdf-button";
 
 export const dynamic = "force-dynamic";
@@ -188,6 +191,15 @@ export default async function GabinetePage({
   const org = await resolveActiveOrg(user);
   if (!org) redirect("/app/onboarding");
 
+  // Interruptor do ciclo da demanda — só o admin vê e decide (default LIGADO).
+  const ehAdmin = ROLE_RANK[org.role] >= ROLE_RANK.admin;
+  let avisoLigado = true;
+  if (ehAdmin) {
+    const dbOrg = await createClient();
+    const { data: orgRow } = await dbOrg.from("organizations").select("settings").eq("id", org.orgId).maybeSingle();
+    avisoLigado = avisoDeResolucaoLigado(orgRow?.settings);
+  }
+
   const params = await searchParams;
   const pagina = Math.max(1, Number(params.pagina) || 1);
   const filtroEstado = typeof params.estado === "string" ? params.estado : undefined;
@@ -246,6 +258,7 @@ export default async function GabinetePage({
           </p>
         </div>
         <div className="flex items-center gap-2">
+          {ehAdmin && <AvisoAutoToggle ligadoInicial={avisoLigado} />}
           <RelatorioPdfButton filtroEstado={filtroEstado} />
           <Link href="/app/politico/demandas/nova" className="wr-btn-dark">
             + Nova demanda
