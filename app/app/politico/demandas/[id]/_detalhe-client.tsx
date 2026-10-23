@@ -13,7 +13,7 @@ import { ArrowLeft, Clock, Flag, MessageCircle, Pencil, Printer, Sparkles, Trash
 
 import { gerarEncaminhamento } from "@/app/actions/politico/gerarEncaminhamento";
 import { gerarOficioDemanda } from "@/app/actions/politico/gerarOficio";
-import { avisarCidadao } from "@/app/actions/politico/avisarCidadao";
+import { avisarCidadao, avisarResolucaoAutomatica } from "@/app/actions/politico/avisarCidadao";
 import { atualizarRegistro, excluirRegistro, registrarEventoDemanda } from "@/app/actions/politico/gabinete-actions";
 import DemandaAnexos from "@/components/politico/demanda-anexos";
 
@@ -193,6 +193,18 @@ export default function DetalheDemandaClient({ demanda, territorios, liderancas,
     const ok = await persistir(patch, otim);
     if (ok) {
       void registrarEventoDemanda(d.id, "estado_alterado", `Status alterado para "${ESTADO_LABEL[novo] ?? novo}"`);
+      // Ciclo da demanda: resolveu, o cidadão é avisado sozinho ("resolvemos o
+      // que você pediu"). Idempotente e com guarda de telefone no servidor — aqui
+      // só mostramos o que aconteceu. Nunca bloqueia a resolução.
+      if (novo === "resolvida") {
+        setAvisoMsg(null);
+        const aviso = await avisarResolucaoAutomatica(d.id);
+        if (aviso.ok && aviso.enviado) {
+          setAvisoMsg(`Cidadão avisado da resolução no WhatsApp (protocolo ${aviso.protocolo}).`);
+        } else if (aviso.ok && !aviso.enviado && aviso.motivo === "sem_telefone") {
+          setAvisoMsg("Demanda resolvida. O cidadão não tem telefone cadastrado — avise por outro meio quando puder.");
+        }
+      }
       router.refresh();
     }
   }

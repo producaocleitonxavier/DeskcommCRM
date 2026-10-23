@@ -24,6 +24,11 @@ import type { SendMessageInput } from "@/lib/schemas";
 
 export type AvisoResultado = { ok: true; protocolo: string; comOficio: boolean } | { ok: false; erro: string };
 
+/** Descrição EXATA do evento de histórico quando o cidadão é avisado da
+ * resolução. É a chave de idempotência do ciclo automático (`avisarResolucaoAutomatica`)
+ * — por isso vive numa constante, não como literal solto nos dois lugares. */
+const AVISO_RESOLUCAO_DESCRICAO = "Cidadão avisado da resolução por WhatsApp";
+
 interface DemandaParaAviso {
   id: string;
   estado: string;
@@ -163,10 +168,65 @@ export async function avisarCidadao(demandaId: string): Promise<AvisoResultado> 
     demanda_id: demandaId,
     tipo: "cidadao_avisado",
     descricao: ehResolucao
-      ? "Cidadão avisado da resolução por WhatsApp"
+      ? AVISO_RESOLUCAO_DESCRICAO
       : `Cidadão avisado por WhatsApp${comOficio ? ` (com ofício ${protocolo})` : ""}`,
     created_by: user.id,
   });
 
   return { ok: true, protocolo, comOficio };
+}
+
+/**
+ * CICLO DA DEMANDA — avisa o cidadão AUTOMATICAMENTE quando a demanda é resolvida.
+ *
+ * É o "resolvemos o que você pediu" sem depender de alguém lembrar de clicar: o
+ * cliente chama isto logo depois de marcar a demanda como resolvida. Reaproveita
+ * `avisarCidadao` (que, no estado 'resolvida', manda a boa notícia). Três guardas,
+ * para nunca mandar o que não deve:
+ *   1. só com a demanda já em 'resolvida' (o cliente pode chamar fora de hora);
+ *   2. só se o cidadão tem telefone — senão não há como avisar, e devolve o motivo
+ *      para a tela dizer "resolvida, mas sem telefone" em vez de um erro;
+ *   3. idempotente: se o aviso de resolução já saiu (o botão manual grava o MESMO
+ *      evento, `AVISO_RESOLUCAO_DESCRICAO`), não reenvia.
+ * Nunca lança: a resolução da demanda não pode falhar porque o WhatsApp falhou.
+ */
+export type AvisoAutoResultado =
+  | { ok: true; enviado: true; protocolo: string }
+  | { ok: true; enviado: false; motivo: "sem_telefone" | "ja_avisado" | "nao_resolvida" }
+  | { ok: false; erro: string };
+
+export async function avisarResolucaoAutomatica(demandaId: string): Promise<AvisoAutoResultado> {
+  const user = await requireAuth();
+  const org = await resolveActiveOrg(user);
+  if (!org) return { ok: false, erro: "Sessão ou organização inválida." };
+  const db = await createClient();
+
+  const { data, error } = await db
+    .from("demandas")
+    .select("estado, contacts(phone_number)")
+    .eq("organization_id", org.orgId)
+    .eq("id", demandaId)
+    .maybeSingle();
+  if (error || !data) return { ok: false, erro: "Erro ao carregar a demanda." };
+  const d = data as unknown as { estado: string; contacts: { phone_number: string | null } | null };
+
+  if (d.estado !== "resolvida") return { ok: true, enviado: false, motivo: "nao_resolvida" };
+  if (!d.contacts?.phone_number) return { ok: true, enviado: false, motivo: "sem_telefone" };
+
+  // Idempotência: o aviso de resolução já saiu? (manual e automático gravam o
+  // mesmo evento, então o botão "Avisar cidadão" clicado antes também conta.)
+  const { data: jaAvisado } = await db
+    .from("pol_demanda_eventos")
+    .select("id")
+    .eq("organization_id", org.orgId)
+    .eq("demanda_id", demandaId)
+    .eq("tipo", "cidadao_avisado")
+    .eq("descricao", AVISO_RESOLUCAO_DESCRICAO)
+    .limit(1)
+    .maybeSingle();
+  if (jaAvisado) return { ok: true, enviado: false, motivo: "ja_avisado" };
+
+  const r = await avisarCidadao(demandaId);
+  if (!r.ok) return { ok: false, erro: r.erro };
+  return { ok: true, enviado: true, protocolo: r.protocolo };
 }
