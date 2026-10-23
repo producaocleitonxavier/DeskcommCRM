@@ -13025,6 +13025,28 @@ export const DICIONARIO: Traducoes = {
   "Alguém confirmar na agenda que o paciente não compareceu.": {
     es: "Que alguien confirme en la agenda que el paciente no asistió.",
   },
+  // Modelos do nicho político (`lib/followup/modelos/politico.ts`): jornada,
+  // resumo e gatilho de cada um. Mesma chave dinâmica `t(modelo.resumo)`, mesma
+  // cobrança por `modelos.test.ts`.
+  "Boas-vindas": { es: "Bienvenida" },
+  "Pós-atendimento": { es: "Posatención" },
+  "Reconexão": { es: "Reconexión" },
+  "Alguém novo entrou em contato com o mandato. O fluxo apresenta o canal e começa a relação, sem pedir nada em troca.": {
+    es: "Alguien nuevo se puso en contacto con el mandato. El flujo presenta el canal y comienza la relación, sin pedir nada a cambio.",
+  },
+  "Depois que o gabinete atende alguém, o fluxo volta para confirmar que ficou resolvido e manter a porta aberta.": {
+    es: "Después de que el despacho atiende a alguien, el flujo vuelve para confirmar que quedó resuelto y mantener la puerta abierta.",
+  },
+  "A conversa com a pessoa parou faz dias. O fluxo reaquece o vínculo sem cobrar nada, só para manter o contato próximo.": {
+    es: "La conversación con la persona se detuvo hace días. El flujo reactiva el vínculo sin exigir nada, solo para mantener el contacto cercano.",
+  },
+  "Um novo contato entrar no sistema.": { es: "Que un nuevo contacto entre en el sistema." },
+  "Você inscrever a pessoa depois de um atendimento.": {
+    es: "Que inscribas a la persona después de una atención.",
+  },
+  "Uma semana sem a pessoa responder, com a conversa parada.": {
+    es: "Una semana sin que la persona responda, con la conversación detenida.",
+  },
   // O aviso da Central quando nenhum agente arma o fluxo.
   "Um follow-up está publicado e não está disparando": {
     es: "Hay un follow-up publicado que no se dispara",
