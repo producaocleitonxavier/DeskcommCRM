@@ -31,7 +31,8 @@ type AcaoTipo =
   | "add_etiqueta"
   | "criar_contato"
   | "notificar_equipe"
-  | "add_funil_politico";
+  | "add_funil_politico"
+  | "captar_instagram";
 
 interface AcaoConfig {
   tipo: AcaoTipo;
@@ -59,6 +60,7 @@ const ACAO_OPTIONS: { value: AcaoTipo; label: string; descricao: string }[] = [
   { value: "criar_contato", label: "Criar contato", descricao: "Cria ou atualiza o contato no CRM com dados do Instagram." },
   { value: "notificar_equipe", label: "Notificar equipe", descricao: "Envia notificação para a equipe no canal de atendimento." },
   { value: "add_funil_politico", label: "Funil político", descricao: "Classifica o contato no funil: Simpatizante, Apoiador ou Embaixador." },
+  { value: "captar_instagram", label: "Captação (funil + pesquisa)", descricao: "Capta o comentador no Kanban: responde, manda a pesquisa de cidade e começa a jornada. Usa os textos da Personalização. Dedup embutido (não duplica nem reenvia) e nutre quem retorna. Recomendado como ação única." },
 ];
 
 const NIVEIS_FUNIL = ["Simpatizante", "Apoiador", "Embaixador"];

@@ -197,6 +197,10 @@ export default async function CaptacaoInstagramPage() {
   const db = await createClient();
   const config = await lerCaptacaoConfig(db, org.orgId);
   const alvoLabel = rotuloAlvo(config);
+  // Safeguard: sem alvo configurado, estaNoAlvo() dá falso pra todos → ninguém
+  // qualifica (vai tudo pra "Fora de alvo"). Avisa o admin pra configurar.
+  const alvoConfigurado =
+    config.abrangencia === "estado" ? !!config.estadoAlvo : !!config.cidadeAlvo;
   const vinculoLabel = config.cidadeAlvo ? `vínculo ${config.cidadeAlvo}` : "no alvo";
 
   // Rótulos dinâmicos por candidato: a coluna de qualificados usa o alvo da org.
@@ -265,6 +269,26 @@ export default async function CaptacaoInstagramPage() {
           ))}
         </div>
       </header>
+
+      {/* Safeguard: alvo não configurado */}
+      {!alvoConfigurado && (
+        <div
+          className="wr-card-dark p-4 flex flex-wrap items-center gap-3"
+          style={{ borderColor: "color-mix(in srgb, #F59E0B 45%, var(--color-border))" }}
+        >
+          <span className="inline-flex items-center justify-center w-7 h-7 rounded-full text-sm font-bold shrink-0" style={{ background: "#F59E0B", color: "#1B1403" }}>!</span>
+          <p className="text-sm flex-1 min-w-0" style={{ color: "var(--color-text-muted)" }}>
+            <strong style={{ color: "var(--color-text)" }}>Região-alvo não configurada.</strong>{" "}
+            Sem o alvo, ninguém qualifica — todo lead cai em "Fora de alvo".
+            {ehAdmin ? " Configure a cidade/estado do candidato na Personalização." : " Peça a um administrador para configurar."}
+          </p>
+          {ehAdmin && (
+            <Link href="/app/instagram/captacao/config" className="text-sm font-bold whitespace-nowrap" style={{ color: "var(--color-accent)" }}>
+              ⚙ Configurar agora →
+            </Link>
+          )}
+        </div>
+      )}
 
       {/* Board */}
       {total === 0 ? (
