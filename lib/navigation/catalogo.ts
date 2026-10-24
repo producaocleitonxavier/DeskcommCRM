@@ -1091,6 +1091,15 @@ export const NAV_CATALOG = [
     sidebar: true,
   },
   {
+    href: "/app/politico/materiais",
+    label: "Biblioteca de Materiais",
+    description: "Banco de conteúdos — e-books, PDFs, cards e links por tema, para enviar e construir relacionamento.",
+    icon: "BookOpen",
+    group: "gabinete",
+    minRole: "manager",
+    sidebar: true,
+  },
+  {
     href: "/app/politico/transparencia",
     label: "Portal da Transparência",
     description: "Vitrine pública do mandato — obras e emendas marcadas como públicas, com valores e mapa de entregas.",
