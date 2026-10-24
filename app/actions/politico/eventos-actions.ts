@@ -79,6 +79,24 @@ export async function criarLocalComEvento(dados: NovoLocalInput): Promise<AcaoRe
   const localId = (local?.id as string | undefined) ?? undefined;
   if (!localId) return { ok: false, erro: "Não foi possível criar o local." };
 
+  // Fase 2B: deriva a zona eleitoral pelo bairro (dados do TSE) e carimba no local.
+  // É enriquecimento — se o TSE não resolver, o local fica sem zona e não falha o cadastro.
+  if (dados.bairro?.trim() && dados.cidade?.trim()) {
+    try {
+      const { data: zona } = await db.rpc("intel_zona_do_bairro", {
+        p_municipio_nome: dados.cidade.trim(),
+        p_uf: dados.uf?.trim() ? dados.uf.trim().toUpperCase().slice(0, 2) : null,
+        p_bairro: dados.bairro.trim(),
+        p_ano: 2024,
+      });
+      if (zona != null) {
+        await db.from("pol_locais").update({ zona_eleitoral: String(zona) }).eq("id", localId).eq("organization_id", org);
+      }
+    } catch {
+      /* zona é opcional */
+    }
+  }
+
   if (dados.comEvento) {
     const eventoPayload: Record<string, unknown> = {
       organization_id: org,
