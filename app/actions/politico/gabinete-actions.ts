@@ -32,7 +32,7 @@ export interface AnexoDemanda {
 const BUCKET_ANEXOS = "gabinete-anexos";
 
 // Tabelas do gabinete que as actions podem gravar (whitelist).
-const TABELAS = new Set(["demandas", "pol_liderancas", "pol_emendas", "pol_projetos_lei", "pol_agenda", "pol_obras", "pol_materiais"]);
+const TABELAS = new Set(["demandas", "pol_liderancas", "pol_emendas", "pol_projetos_lei", "pol_agenda", "pol_obras", "pol_materiais", "pol_locais"]);
 
 async function orgAtiva(): Promise<string | null> {
   const user = await requireAuth();

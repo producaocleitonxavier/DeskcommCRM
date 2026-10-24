@@ -1100,6 +1100,15 @@ export const NAV_CATALOG = [
     sidebar: true,
   },
   {
+    href: "/app/politico/locais",
+    label: "Locais & Eventos",
+    description: "Escolas, igrejas e associações onde o mandato faz eventos — cada local agrupa os cadastros e vira público quente.",
+    icon: "MapPin",
+    group: "gabinete",
+    minRole: "manager",
+    sidebar: true,
+  },
+  {
     href: "/app/politico/transparencia",
     label: "Portal da Transparência",
     description: "Vitrine pública do mandato — obras e emendas marcadas como públicas, com valores e mapa de entregas.",
