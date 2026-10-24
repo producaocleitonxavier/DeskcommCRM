@@ -90,9 +90,9 @@ export default function NovoLocalForm() {
     setCepStatus(null);
     try {
       const r = await fetch(`https://viacep.com.br/ws/${d}/json/`);
-      const j = await r.json();
-      if (j?.erro) {
-        setCepStatus("CEP não encontrado.");
+      const j = r.ok ? await r.json().catch(() => null) : null;
+      if (!j || j.erro) {
+        setCepStatus("CEP não encontrado — confira o número.");
         return;
       }
       if (j.logradouro) setEndereco(j.logradouro);
@@ -108,12 +108,17 @@ export default function NovoLocalForm() {
   }
 
   // Endereço → CEP: preencheu rua + cidade + UF, acha o CEP (ViaCEP).
+  // A ViaCEP busca pelo NOME DA RUA, sem número — então tiramos o número.
   async function buscarCepPorEndereco() {
-    const uf2 = uf.trim();
+    const uf2 = uf.trim().toUpperCase();
     const cid = cidade.trim();
-    const rua = endereco.trim();
+    const rua = endereco
+      .trim()
+      .split(",")[0]!
+      .replace(/\s+n?º?\.?\s*\d+\s*$/i, "")
+      .trim();
     if (uf2.length !== 2 || cid.length < 3 || rua.length < 3) {
-      setCepStatus("Preencha UF, cidade e o nome da rua para buscar o CEP.");
+      setCepStatus("Preencha UF, cidade e o nome da rua (sem o número) para buscar o CEP.");
       return;
     }
     setBuscandoCep(true);
@@ -122,15 +127,15 @@ export default function NovoLocalForm() {
       const r = await fetch(
         `https://viacep.com.br/ws/${encodeURIComponent(uf2)}/${encodeURIComponent(cid)}/${encodeURIComponent(rua)}/json/`,
       );
-      const j = await r.json();
+      const j = r.ok ? await r.json().catch(() => null) : null;
       if (!Array.isArray(j) || j.length === 0) {
-        setCepStatus("Não achei CEP para esse endereço — confira a rua/cidade.");
+        setCepStatus("Não achei CEP para esse endereço — confira a rua e a cidade (sem o número).");
         return;
       }
       const first = j[0];
       if (first.cep) setCep(first.cep);
       if (first.bairro && !bairro.trim()) setBairro(first.bairro);
-      setCepStatus(j.length > 1 ? `Achei ${j.length} CEPs — preenchi o primeiro, confira.` : "CEP preenchido ✓");
+      setCepStatus(j.length > 1 ? `Achei ${j.length} CEPs nessa rua — preenchi o primeiro, confira.` : "CEP preenchido ✓");
     } catch {
       setCepStatus("Não consegui buscar o CEP agora — preencha à mão.");
     } finally {
