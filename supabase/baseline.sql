@@ -56368,7 +56368,7 @@ create index if not exists idx_pol_materiais_ativo on public.pol_materiais(organ
 alter table public.pol_materiais enable row level security;
 drop policy if exists tenant_isolation_pol_materiais_all on public.pol_materiais;
 create policy tenant_isolation_pol_materiais_all on public.pol_materiais
-  using (organization_id = any(public.fn_user_org_ids()));
+  using (organization_id in (select public.fn_user_org_ids()));
 
 revoke all on public.pol_materiais from anon;
 grant select, insert, update, delete on public.pol_materiais to authenticated;
