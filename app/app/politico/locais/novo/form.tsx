@@ -9,7 +9,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, Check } from "lucide-react";
+import { ArrowLeft, Check, Search } from "lucide-react";
 
 import { criarLocalComEvento } from "@/app/actions/politico/eventos-actions";
 
@@ -70,6 +70,8 @@ export default function NovoLocalForm() {
   const [uf, setUf] = useState("");
   const [cep, setCep] = useState("");
   const [endereco, setEndereco] = useState("");
+  const [cepStatus, setCepStatus] = useState<string | null>(null);
+  const [buscandoCep, setBuscandoCep] = useState(false);
 
   const [comEvento, setComEvento] = useState(true);
   const [tema, setTema] = useState("");
@@ -79,6 +81,62 @@ export default function NovoLocalForm() {
 
   const [salvando, setSalvando] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
+
+  // CEP → endereço: digitou o CEP, preenche rua/bairro/cidade/UF (ViaCEP).
+  async function buscarPorCep(valor: string) {
+    const d = valor.replace(/\D/g, "");
+    if (d.length !== 8) return;
+    setBuscandoCep(true);
+    setCepStatus(null);
+    try {
+      const r = await fetch(`https://viacep.com.br/ws/${d}/json/`);
+      const j = await r.json();
+      if (j?.erro) {
+        setCepStatus("CEP não encontrado.");
+        return;
+      }
+      if (j.logradouro) setEndereco(j.logradouro);
+      if (j.bairro) setBairro(j.bairro);
+      if (j.localidade) setCidade(j.localidade);
+      if (j.uf) setUf(j.uf);
+      setCepStatus("Endereço preenchido pelo CEP ✓");
+    } catch {
+      setCepStatus("Não consegui buscar o CEP agora — preencha à mão.");
+    } finally {
+      setBuscandoCep(false);
+    }
+  }
+
+  // Endereço → CEP: preencheu rua + cidade + UF, acha o CEP (ViaCEP).
+  async function buscarCepPorEndereco() {
+    const uf2 = uf.trim();
+    const cid = cidade.trim();
+    const rua = endereco.trim();
+    if (uf2.length !== 2 || cid.length < 3 || rua.length < 3) {
+      setCepStatus("Preencha UF, cidade e o nome da rua para buscar o CEP.");
+      return;
+    }
+    setBuscandoCep(true);
+    setCepStatus(null);
+    try {
+      const r = await fetch(
+        `https://viacep.com.br/ws/${encodeURIComponent(uf2)}/${encodeURIComponent(cid)}/${encodeURIComponent(rua)}/json/`,
+      );
+      const j = await r.json();
+      if (!Array.isArray(j) || j.length === 0) {
+        setCepStatus("Não achei CEP para esse endereço — confira a rua/cidade.");
+        return;
+      }
+      const first = j[0];
+      if (first.cep) setCep(first.cep);
+      if (first.bairro && !bairro.trim()) setBairro(first.bairro);
+      setCepStatus(j.length > 1 ? `Achei ${j.length} CEPs — preenchi o primeiro, confira.` : "CEP preenchido ✓");
+    } catch {
+      setCepStatus("Não consegui buscar o CEP agora — preencha à mão.");
+    } finally {
+      setBuscandoCep(false);
+    }
+  }
 
   async function salvar(e: React.FormEvent) {
     e.preventDefault();
@@ -125,15 +183,40 @@ export default function NovoLocalForm() {
             <div><Label obrig>Nome do local</Label><input type="text" value={nome} onChange={(e) => setNome(e.target.value)} placeholder="Ex.: Escola Municipal João XXIII" className="wr-input w-full" /></div>
             <div><Label>Tipo</Label><select value={tipo} onChange={(e) => setTipo(e.target.value)} className="wr-input w-full">{TIPOS.map((o) => <option key={o.id} value={o.id}>{o.nome}</option>)}</select></div>
           </div>
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <div><Label>Bairro</Label><input type="text" value={bairro} onChange={(e) => setBairro(e.target.value)} className="wr-input w-full" /></div>
-            <div className="grid grid-cols-[1fr_auto] gap-3">
-              <div><Label>Cidade</Label><input type="text" value={cidade} onChange={(e) => setCidade(e.target.value)} className="wr-input w-full" /></div>
-              <div><Label>UF</Label><input type="text" value={uf} onChange={(e) => setUf(e.target.value)} maxLength={2} placeholder="MG" className="wr-input w-16" /></div>
+          <p className="text-xs" style={{ color: "var(--color-text-subtle)" }}>
+            Dica: digite o CEP que a rua, bairro e cidade se preenchem sozinhos — ou preencha a rua + cidade + UF e clique em "Buscar CEP".
+          </p>
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-[180px_1fr_72px]">
+            <div>
+              <Label>CEP</Label>
+              <input
+                type="text"
+                value={cep}
+                maxLength={9}
+                onChange={(e) => setCep(e.target.value)}
+                onBlur={(e) => buscarPorCep(e.target.value)}
+                placeholder="00000-000"
+                className="wr-input w-full"
+              />
             </div>
-            <div><Label>CEP</Label><input type="text" value={cep} onChange={(e) => setCep(e.target.value)} className="wr-input w-full" /></div>
-            <div><Label>Endereço</Label><input type="text" value={endereco} onChange={(e) => setEndereco(e.target.value)} className="wr-input w-full" /></div>
+            <div><Label>Cidade</Label><input type="text" value={cidade} onChange={(e) => setCidade(e.target.value)} className="wr-input w-full" /></div>
+            <div><Label>UF</Label><input type="text" value={uf} onChange={(e) => setUf(e.target.value)} maxLength={2} placeholder="MG" className="wr-input w-full" /></div>
           </div>
+          <div>
+            <Label>Endereço (rua)</Label>
+            <div className="flex gap-2">
+              <input type="text" value={endereco} onChange={(e) => setEndereco(e.target.value)} placeholder="Ex.: Rua Princesa Isabel" className="wr-input w-full" />
+              <button type="button" onClick={buscarCepPorEndereco} disabled={buscandoCep} className="wr-btn inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap disabled:opacity-60">
+                <Search className="h-4 w-4" aria-hidden /> Buscar CEP
+              </button>
+            </div>
+          </div>
+          <div><Label>Bairro</Label><input type="text" value={bairro} onChange={(e) => setBairro(e.target.value)} className="wr-input w-full" /></div>
+          {(cepStatus || buscandoCep) && (
+            <p className="text-xs" style={{ color: buscandoCep ? "var(--color-text-subtle)" : "var(--color-text-muted)" }}>
+              {buscandoCep ? "Buscando…" : cepStatus}
+            </p>
+          )}
         </section>
 
         <section className="wr-card space-y-4 p-5 sm:p-6">
