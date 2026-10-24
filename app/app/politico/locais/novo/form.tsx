@@ -13,6 +13,11 @@ import { ArrowLeft, Check, Search } from "lucide-react";
 
 import { criarLocalComEvento } from "@/app/actions/politico/eventos-actions";
 
+export interface MaterialOpcao {
+  id: string;
+  titulo: string;
+}
+
 interface Opcao {
   id: string;
   nome: string;
@@ -60,7 +65,7 @@ function Toggle({ on, set, label }: { on: boolean; set: (v: boolean) => void; la
   );
 }
 
-export default function NovoLocalForm() {
+export default function NovoLocalForm({ materiais }: { materiais: MaterialOpcao[] }) {
   const router = useRouter();
 
   const [nome, setNome] = useState("");
@@ -78,6 +83,7 @@ export default function NovoLocalForm() {
   const [tipoEvento, setTipoEvento] = useState("visita");
   const [data, setData] = useState("");
   const [publico, setPublico] = useState("");
+  const [materialId, setMaterialId] = useState("");
 
   const [salvando, setSalvando] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
@@ -162,6 +168,7 @@ export default function NovoLocalForm() {
       tipoEvento,
       data,
       publicoEstimado: publico ? Number(publico) : undefined,
+      materialId: materialId || undefined,
     });
     if (!res.ok) {
       setSalvando(false);
@@ -232,6 +239,20 @@ export default function NovoLocalForm() {
               <div><Label>Tipo de evento</Label><select value={tipoEvento} onChange={(e) => setTipoEvento(e.target.value)} className="wr-input w-full">{TIPOS_EVENTO.map((o) => <option key={o.id} value={o.id}>{o.nome}</option>)}</select></div>
               <div><Label>Data</Label><input type="date" value={data} onChange={(e) => setData(e.target.value)} className="wr-input w-full" /></div>
               <div><Label>Público estimado</Label><input type="number" min={0} value={publico} onChange={(e) => setPublico(e.target.value)} placeholder="Ex.: 200" className="wr-input w-full" /></div>
+              <div className="sm:col-span-2">
+                <Label>Ebook a enviar para quem se cadastrar</Label>
+                {materiais.length === 0 ? (
+                  <p className="text-xs" style={{ color: "var(--color-text-subtle)" }}>Cadastre materiais na Biblioteca para poder escolher aqui.</p>
+                ) : (
+                  <>
+                    <select value={materialId} onChange={(e) => setMaterialId(e.target.value)} className="wr-input w-full">
+                      <option value="">Escolher depois</option>
+                      {materiais.map((m) => <option key={m.id} value={m.id}>{m.titulo}</option>)}
+                    </select>
+                    <p className="mt-1.5 text-xs" style={{ color: "var(--color-text-subtle)" }}>O envio automático começa quando o número dedicado estiver conectado (Fase 2C).</p>
+                  </>
+                )}
+              </div>
             </div>
           )}
         </section>

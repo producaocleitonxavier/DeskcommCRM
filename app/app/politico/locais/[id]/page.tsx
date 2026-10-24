@@ -34,10 +34,22 @@ export default async function LocalDetalhePage({ params }: { params: Promise<{ i
 
   const { data: eventosData } = await db
     .from("pol_events")
-    .select("id, title, theme, type, event_date, estimated_audience")
+    .select("id, title, theme, type, event_date, estimated_audience, material_id")
     .eq("organization_id", org.orgId)
     .eq("local_id", id)
     .order("event_date", { ascending: false, nullsFirst: false });
+
+  const { data: materiaisData } = await db
+    .from("pol_materiais")
+    .select("id, titulo")
+    .eq("organization_id", org.orgId)
+    .eq("ativo", true)
+    .order("titulo");
+  const materiais = ((materiaisData ?? []) as Record<string, unknown>[]).map((m) => ({
+    id: String(m.id),
+    titulo: String(m.titulo ?? ""),
+  }));
+  const tituloMaterial = new Map(materiais.map((m) => [m.id, m.titulo]));
 
   const eventos = (eventosData ?? []) as Record<string, unknown>[];
   const eventoIds = eventos.map((e) => String(e.id));
@@ -73,14 +85,18 @@ export default async function LocalDetalhePage({ params }: { params: Promise<{ i
     ativo: Boolean(l.ativo),
   };
 
-  const eventosDTO: EventoDoLocal[] = eventos.map((e) => ({
-    id: String(e.id),
-    titulo: String(e.theme ?? e.title ?? "Evento"),
-    tipo: String(e.type ?? "outro"),
-    data: (e.event_date as string | null) ?? null,
-    publicoEstimado: (e.estimated_audience as number | null) ?? null,
-    nPessoas: pessoasPorEvento.get(String(e.id)) ?? 0,
-  }));
+  const eventosDTO: EventoDoLocal[] = eventos.map((e) => {
+    const mid = (e.material_id as string | null) ?? null;
+    return {
+      id: String(e.id),
+      titulo: String(e.theme ?? e.title ?? "Evento"),
+      tipo: String(e.type ?? "outro"),
+      data: (e.event_date as string | null) ?? null,
+      publicoEstimado: (e.estimated_audience as number | null) ?? null,
+      nPessoas: pessoasPorEvento.get(String(e.id)) ?? 0,
+      ebook: mid ? (tituloMaterial.get(mid) ?? null) : null,
+    };
+  });
 
   const pessoasDTO: PessoaRegistrada[] = presenca.map((p) => {
     const c = (p.contacts ?? null) as { name?: string | null; phone_number?: string | null } | null;
@@ -95,5 +111,5 @@ export default async function LocalDetalhePage({ params }: { params: Promise<{ i
     };
   });
 
-  return <LocalDetalheClient local={local} eventos={eventosDTO} pessoas={pessoasDTO} />;
+  return <LocalDetalheClient local={local} eventos={eventosDTO} pessoas={pessoasDTO} materiais={materiais} />;
 }

@@ -18,6 +18,7 @@ import {
   CalendarPlus,
   Check,
   Phone,
+  BookOpen,
 } from "lucide-react";
 
 import { registrarPessoaEmEvento, criarEventoNoLocal } from "@/app/actions/politico/eventos-actions";
@@ -42,6 +43,11 @@ export interface EventoDoLocal {
   data: string | null;
   publicoEstimado: number | null;
   nPessoas: number;
+  ebook: string | null;
+}
+export interface MaterialOpcao {
+  id: string;
+  titulo: string;
 }
 export interface PessoaRegistrada {
   contactId: string;
@@ -91,10 +97,12 @@ export default function LocalDetalheClient({
   local,
   eventos,
   pessoas,
+  materiais,
 }: {
   local: LocalDetalhe;
   eventos: EventoDoLocal[];
   pessoas: PessoaRegistrada[];
+  materiais: MaterialOpcao[];
 }) {
   const router = useRouter();
 
@@ -113,6 +121,7 @@ export default function LocalDetalheClient({
   const [tipoEvento, setTipoEvento] = useState("visita");
   const [dataEvento, setDataEvento] = useState("");
   const [publico, setPublico] = useState("");
+  const [materialEvento, setMaterialEvento] = useState("");
   const [salvandoEvento, setSalvandoEvento] = useState(false);
   const [erroEvento, setErroEvento] = useState<string | null>(null);
 
@@ -146,6 +155,7 @@ export default function LocalDetalheClient({
       tipoEvento,
       data: dataEvento,
       publicoEstimado: publico ? Number(publico) : undefined,
+      materialId: materialEvento || undefined,
     });
     if (!res.ok) {
       setSalvandoEvento(false);
@@ -155,6 +165,7 @@ export default function LocalDetalheClient({
     setTema("");
     setDataEvento("");
     setPublico("");
+    setMaterialEvento("");
     setAbrirEvento(false);
     setSalvandoEvento(false);
     router.refresh();
@@ -230,6 +241,15 @@ export default function LocalDetalheClient({
               <div><Label>Tipo</Label><select value={tipoEvento} onChange={(e) => setTipoEvento(e.target.value)} className="wr-input w-full">{TIPOS_EVENTO.map((o) => <option key={o.id} value={o.id}>{o.nome}</option>)}</select></div>
               <div><Label>Data</Label><input type="date" value={dataEvento} onChange={(e) => setDataEvento(e.target.value)} className="wr-input w-full" /></div>
               <div><Label>Público estimado</Label><input type="number" min={0} value={publico} onChange={(e) => setPublico(e.target.value)} className="wr-input w-full" /></div>
+              {materiais.length > 0 && (
+                <div className="sm:col-span-2">
+                  <Label>Ebook a enviar para quem se cadastrar</Label>
+                  <select value={materialEvento} onChange={(e) => setMaterialEvento(e.target.value)} className="wr-input w-full">
+                    <option value="">Escolher depois</option>
+                    {materiais.map((m) => <option key={m.id} value={m.id}>{m.titulo}</option>)}
+                  </select>
+                </div>
+              )}
             </div>
             {erroEvento && <div role="alert" className="rounded-xl px-4 py-3 text-sm" style={{ background: "#FBE4E2", color: "#A3302A" }}>{erroEvento}</div>}
             <button type="submit" disabled={salvandoEvento} className="wr-btn-dark inline-flex items-center gap-2 disabled:opacity-60"><Check className="h-4 w-4" aria-hidden /> {salvandoEvento ? "Salvando…" : "Salvar evento"}</button>
@@ -244,7 +264,14 @@ export default function LocalDetalheClient({
               <li key={ev.id} className="flex flex-wrap items-center justify-between gap-2 py-3">
                 <div className="min-w-0">
                   <div className="font-medium">{ev.titulo}</div>
-                  <div className="text-xs" style={{ color: "var(--color-text-subtle)" }}>{data(ev.data)}{ev.publicoEstimado ? ` · ~${ev.publicoEstimado} pessoas` : ""}</div>
+                  <div className="flex flex-wrap items-center gap-2 text-xs" style={{ color: "var(--color-text-subtle)" }}>
+                    <span>{data(ev.data)}{ev.publicoEstimado ? ` · ~${ev.publicoEstimado} pessoas` : ""}</span>
+                    {ev.ebook && (
+                      <span className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 font-semibold" style={{ background: "rgba(215,243,106,0.16)", color: "#5B6B16" }}>
+                        <BookOpen className="h-3 w-3" aria-hidden /> {ev.ebook}
+                      </span>
+                    )}
+                  </div>
                 </div>
                 <span className="inline-flex items-center gap-1.5 text-sm" style={{ color: "var(--color-text-muted)" }}><Users className="h-4 w-4" aria-hidden /> {ev.nPessoas} cadastrada{ev.nPessoas === 1 ? "" : "s"}</span>
               </li>

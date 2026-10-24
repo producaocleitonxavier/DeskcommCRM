@@ -46,6 +46,8 @@ export interface NovoLocalInput {
   tipoEvento?: string;
   data?: string;
   publicoEstimado?: number;
+  /** Material da Biblioteca a enviar (Fase 2C — ebook por evento). */
+  materialId?: string;
 }
 
 /**
@@ -113,6 +115,7 @@ export async function criarLocalComEvento(dados: NovoLocalInput): Promise<AcaoRe
     if (typeof dados.publicoEstimado === "number" && dados.publicoEstimado > 0) {
       eventoPayload.estimated_audience = dados.publicoEstimado;
     }
+    if (dados.materialId) eventoPayload.material_id = dados.materialId;
     // Se o evento falhar, o local já existe — não desfaz o cadastro do local.
     await db.from("pol_events").insert(eventoPayload);
   }
@@ -123,7 +126,7 @@ export async function criarLocalComEvento(dados: NovoLocalInput): Promise<AcaoRe
 /** Cria um evento (palestra/visita) ligado a um local existente. */
 export async function criarEventoNoLocal(
   localId: string,
-  dados: { tema?: string; tipoEvento?: string; data?: string; publicoEstimado?: number },
+  dados: { tema?: string; tipoEvento?: string; data?: string; publicoEstimado?: number; materialId?: string },
 ): Promise<AcaoResultado> {
   const org = await orgAtiva();
   if (!org) return { ok: false, erro: "Sessão ou organização inválida." };
@@ -154,6 +157,7 @@ export async function criarEventoNoLocal(
   if (typeof dados.publicoEstimado === "number" && dados.publicoEstimado > 0) {
     eventoPayload.estimated_audience = dados.publicoEstimado;
   }
+  if (dados.materialId) eventoPayload.material_id = dados.materialId;
 
   const { data: ev, error } = await db.from("pol_events").insert(eventoPayload).select("id").maybeSingle();
   if (error) return { ok: false, erro: traduzErro(error) };
