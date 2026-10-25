@@ -104,11 +104,14 @@ export async function entregarMaterialNaResposta(
 
     // 5) Entrega o material, pelo mesmo número do disparo.
     //
-    // REGRA (cliente, 2026-10-25): SEMPRE com a CAPA — gera credibilidade. A capa
-    // vai como IMAGEM, com a legenda, ANTES do PDF; o documento vem logo em
-    // seguida, sem legenda (para não repetir). Sem capa cadastrada, o PDF carrega
-    // a legenda. A capa é best-effort: se falhar, a legenda volta para o PDF e a
-    // entrega do arquivo (que é o essencial) segue.
+    // ⚠️ CAPA (regra do cliente: sempre com a capa, gera credibilidade): este
+    // WAHA/NOWEB não-oficial NÃO entrega IMAGEM proativa — aceita o sendImage
+    // (201, sobe pro servidor do WhatsApp) mas a imagem nunca aparece no celular,
+    // enquanto o DOCUMENTO entrega sempre (medido 2026-10-25, URL e base64). Por
+    // isso a capa como imagem separada está DESLIGADA aqui; a credibilidade da
+    // capa volta quando o envio for pela API Oficial (Cloud API, que entrega
+    // imagem) ou via miniatura embutida no PDF, se o canal suportar. Até lá, o
+    // PDF SEMPRE leva a legenda (nome do material) — entrega confiável e completa.
     try {
       const boundary = await beginServiceAtOrigin(admin, entrada.organizationId, entrada.contactId, canalId);
       const legenda = material.titulo
@@ -122,31 +125,12 @@ export async function entregarMaterialNaResposta(
         requestId: `ebook-resposta:${recipiente.id}:${randomUUID()}`,
       } as Parameters<typeof sendMessageHandler>[1];
 
-      const capaValida =
-        typeof material.capa_url === "string" && /^https?:\/\//.test(material.capa_url.trim());
-      let legendaDoDocumento: string | undefined = legenda;
-      if (capaValida) {
-        try {
-          await sendMessageHandler(admin, ctx, {
-            conversation_id: boundary.conversation_id,
-            type: "image",
-            media_url: material.capa_url!,
-            body: legenda,
-            metadata: { source: "ebook_resposta_capa", material_id: materialId, recipient_id: recipiente.id },
-          } as Parameters<typeof sendMessageHandler>[2]);
-          legendaDoDocumento = undefined; // a capa já levou a legenda
-        } catch {
-          // Capa é bônus: se falhar, a legenda volta para o PDF e seguimos.
-          legendaDoDocumento = legenda;
-        }
-      }
-
       const msg = await sendMessageHandler(admin, ctx, {
         conversation_id: boundary.conversation_id,
         type: "document",
         media_url: material.url,
         media_mime: mimeDoArquivo(material.url),
-        body: legendaDoDocumento,
+        body: legenda,
         metadata: { source: "ebook_resposta", material_id: materialId, recipient_id: recipiente.id },
       } as Parameters<typeof sendMessageHandler>[2]);
       if ((msg as { status?: string }).status === "failed") {
