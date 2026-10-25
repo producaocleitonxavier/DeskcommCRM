@@ -24,12 +24,12 @@ import {
 } from "@/lib/politico/relatorio-kit";
 
 const COLUNAS: ColunaKit[] = [
-  { header: "Assunto", largura: "30%" },
+  { header: "Justificativa", largura: "30%" },
   { header: "Tipo", largura: "12%" },
   { header: "Órgão", largura: "16%" },
   { header: "Status", largura: "11%", pilula: true },
   { header: "Prioridade", largura: "10%" },
-  { header: "Prazo", largura: "10.5%" },
+  { header: "Visita", largura: "10.5%" },
   { header: "Aberta em", largura: "10.5%" },
 ];
 

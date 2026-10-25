@@ -321,7 +321,7 @@ export default async function GabinetePage({
                 <table className="w-full text-sm border-collapse">
                   <thead>
                     <tr>
-                      {["Demanda", "Tipo", "Órgão destino", "Status", "Prazo", "Prioridade"].map((col) => (
+                      {["Demanda", "Tipo", "Órgão destino", "Status", "Visita", "Prioridade"].map((col) => (
                         <th
                           key={col}
                           className="text-left font-medium text-[13px] px-4 py-3 whitespace-nowrap border-b"

@@ -31,6 +31,7 @@ export interface DemandaDetalhe {
   pol_prioridade: string | null;
   pol_orgao_destino: string | null;
   pol_encaminhamento_ia: string | null;
+  pol_municipio: string | null;
   pol_territory_id: string | null;
   pol_lideranca_id: string | null;
   dono_kind: string | null;
@@ -54,8 +55,6 @@ export interface EventoDemanda {
 
 export interface Props {
   demanda: DemandaDetalhe;
-  territorios: Opcao[];
-  liderancas: Opcao[];
   assessores: Opcao[];
   eventos: EventoDemanda[];
 }
@@ -69,7 +68,6 @@ const TIPOS: Opcao[] = [
   { id: "assistencia_social", nome: "Assistência social" },
   { id: "meio_ambiente", nome: "Meio ambiente" },
   { id: "documentacao", nome: "Documentação" },
-  { id: "emprego", nome: "Emprego" },
   { id: "outro", nome: "Outro" },
 ];
 const PRIORIDADES: Opcao[] = [
@@ -110,7 +108,7 @@ function paraInputDate(d: string | null): string {
   return new Date(d).toISOString().slice(0, 10);
 }
 
-export default function DetalheDemandaClient({ demanda, territorios, liderancas, assessores, eventos }: Props) {
+export default function DetalheDemandaClient({ demanda, assessores, eventos }: Props) {
   const router = useRouter();
 
   const [d, setD] = useState<DemandaDetalhe>(demanda);
@@ -130,8 +128,7 @@ export default function DetalheDemandaClient({ demanda, territorios, liderancas,
   const [prioridade, setPrioridade] = useState(d.pol_prioridade ?? "normal");
   const [orgao, setOrgao] = useState(d.pol_orgao_destino ?? "");
   const [prazo, setPrazo] = useState(paraInputDate(d.prazo_em));
-  const [territoryId, setTerritoryId] = useState(d.pol_territory_id ?? "");
-  const [liderancaId, setLiderancaId] = useState(d.pol_lideranca_id ?? "");
+  const [municipio, setMunicipio] = useState(d.pol_municipio ?? "");
   const [assessorNome, setAssessorNome] = useState(
     d.pol_assessor_nome ?? (d.dono_kind === "humano" ? (assessores.find((a) => a.id === d.dono_user_id)?.nome ?? "") : ""),
   );
@@ -164,8 +161,7 @@ export default function DetalheDemandaClient({ demanda, territorios, liderancas,
       pol_tipo: tipo || null,
       pol_prioridade: prioridade,
       pol_orgao_destino: orgao.trim() || null,
-      pol_territory_id: territoryId || null,
-      pol_lideranca_id: liderancaId || null,
+      pol_municipio: municipio.trim() || null,
       dono_kind: membro ? "humano" : "ia",
       dono_user_id: membro ? membro.id : null,
       pol_assessor_nome: nomeAssessor || null,
@@ -354,16 +350,16 @@ export default function DetalheDemandaClient({ demanda, territorios, liderancas,
       <section className="wr-card p-6 sm:p-7">
         {editando ? (
           <div className="space-y-4">
-            <Campo label="Assunto">
+            <Campo label="Tipo de demanda">
+              <select value={tipo} onChange={(e) => setTipo(e.target.value)} className="wr-input w-full">
+                <option value="">— Selecione a área —</option>
+                {TIPOS.map((t) => <option key={t.id} value={t.id}>{t.nome}</option>)}
+              </select>
+            </Campo>
+            <Campo label="Justificativa">
               <textarea value={assunto} onChange={(e) => setAssunto(e.target.value)} rows={3} className="wr-input w-full" />
             </Campo>
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-              <Campo label="Tipo">
-                <select value={tipo} onChange={(e) => setTipo(e.target.value)} className="wr-input w-full">
-                  <option value="">—</option>
-                  {TIPOS.map((t) => <option key={t.id} value={t.id}>{t.nome}</option>)}
-                </select>
-              </Campo>
               <Campo label="Prioridade">
                 <select value={prioridade} onChange={(e) => setPrioridade(e.target.value)} className="wr-input w-full">
                   {PRIORIDADES.map((p) => <option key={p.id} value={p.id}>{p.nome}</option>)}
@@ -372,25 +368,12 @@ export default function DetalheDemandaClient({ demanda, territorios, liderancas,
               <Campo label="Órgão de destino">
                 <input type="text" value={orgao} onChange={(e) => setOrgao(e.target.value)} className="wr-input w-full" />
               </Campo>
-              <Campo label="Prazo">
+              <Campo label="Data da visita">
                 <input type="date" value={prazo} onChange={(e) => setPrazo(e.target.value)} className="wr-input w-full" />
               </Campo>
-              {territorios.length > 0 && (
-                <Campo label="Território">
-                  <select value={territoryId} onChange={(e) => setTerritoryId(e.target.value)} className="wr-input w-full">
-                    <option value="">—</option>
-                    {territorios.map((t) => <option key={t.id} value={t.id}>{t.nome}</option>)}
-                  </select>
-                </Campo>
-              )}
-              {liderancas.length > 0 && (
-                <Campo label="Liderança responsável">
-                  <select value={liderancaId} onChange={(e) => setLiderancaId(e.target.value)} className="wr-input w-full">
-                    <option value="">—</option>
-                    {liderancas.map((l) => <option key={l.id} value={l.id}>{l.nome}</option>)}
-                  </select>
-                </Campo>
-              )}
+              <Campo label="Município">
+                <input type="text" value={municipio} onChange={(e) => setMunicipio(e.target.value)} placeholder="Ex.: Belo Horizonte" className="wr-input w-full" />
+              </Campo>
               <Campo label="Assessor responsável">
                 <input
                   type="text"
@@ -421,8 +404,7 @@ export default function DetalheDemandaClient({ demanda, territorios, liderancas,
                   setPrioridade(d.pol_prioridade ?? "normal");
                   setOrgao(d.pol_orgao_destino ?? "");
                   setPrazo(paraInputDate(d.prazo_em));
-                  setTerritoryId(d.pol_territory_id ?? "");
-                  setLiderancaId(d.pol_lideranca_id ?? "");
+                  setMunicipio(d.pol_municipio ?? "");
                   setAssessorNome(d.pol_assessor_nome ?? (d.dono_kind === "humano" ? (assessores.find((a) => a.id === d.dono_user_id)?.nome ?? "") : ""));
                 }}
                 className="wr-btn inline-flex items-center gap-1.5"
@@ -433,12 +415,11 @@ export default function DetalheDemandaClient({ demanda, territorios, liderancas,
           </div>
         ) : (
           <dl className="grid grid-cols-1 gap-x-6 gap-y-4 sm:grid-cols-2">
-            <Info label="Tipo" valor={labelTipo(d.pol_tipo)} />
+            <Info label="Tipo de demanda" valor={labelTipo(d.pol_tipo)} />
             <Info label="Prioridade" valor={PRIORIDADES.find((p) => p.id === d.pol_prioridade)?.nome ?? "Normal"} />
             <Info label="Órgão de destino" valor={d.pol_orgao_destino ?? "—"} />
-            <Info label="Prazo" valor={fmtData(d.prazo_em)} />
-            <Info label="Território" valor={nomeDe(territorios, d.pol_territory_id)} />
-            <Info label="Liderança" valor={nomeDe(liderancas, d.pol_lideranca_id)} />
+            <Info label="Data da visita" valor={fmtData(d.prazo_em)} />
+            <Info label="Município" valor={d.pol_municipio ?? "—"} />
             <Info label="Aberta em" valor={fmtData(d.aberta_em)} />
             <Info label="Responsável" valor={d.pol_assessor_nome ?? (d.dono_kind === "humano" ? nomeDe(assessores, d.dono_user_id) : "IA / triagem")} />
           </dl>

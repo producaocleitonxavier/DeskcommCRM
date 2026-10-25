@@ -10,7 +10,7 @@
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, Check, FileText, Paperclip, Search, UserPlus, X } from "lucide-react";
+import { Check, FileText, Paperclip, Search, UserPlus, X } from "lucide-react";
 
 import {
   buscarCidadaos,
@@ -19,6 +19,7 @@ import {
   type CidadaoOpcao,
 } from "@/app/actions/politico/gabinete-actions";
 import { uploadAnexoDemanda, formatarBytes, ANEXO_MAX_BYTES } from "@/lib/politico/anexos-upload";
+import { CommandHero } from "@/components/politico/command-hero";
 
 interface Opcao {
   id: string;
@@ -27,8 +28,6 @@ interface Opcao {
 
 export interface NovaDemandaFormProps {
   orgId: string;
-  territorios: Opcao[];
-  liderancas: Opcao[];
   assessores: Opcao[];
 }
 
@@ -41,7 +40,6 @@ const TIPOS: Opcao[] = [
   { id: "assistencia_social", nome: "Assistência social" },
   { id: "meio_ambiente", nome: "Meio ambiente" },
   { id: "documentacao", nome: "Documentação" },
-  { id: "emprego", nome: "Emprego" },
   { id: "outro", nome: "Outro" },
 ];
 const PRIORIDADES: Opcao[] = [
@@ -60,7 +58,7 @@ function Label({ children, obrig }: { children: React.ReactNode; obrig?: boolean
   );
 }
 
-export default function NovaDemandaForm({ territorios, liderancas, assessores }: NovaDemandaFormProps) {
+export default function NovaDemandaForm({ assessores }: NovaDemandaFormProps) {
   const router = useRouter();
 
   // Cidadão (contact)
@@ -79,10 +77,9 @@ export default function NovaDemandaForm({ territorios, liderancas, assessores }:
   const [tipo, setTipo] = useState("");
   const [prioridade, setPrioridade] = useState("normal");
   const [orgao, setOrgao] = useState("");
-  const [territoryId, setTerritoryId] = useState("");
-  const [liderancaId, setLiderancaId] = useState("");
+  const [municipio, setMunicipio] = useState("");
   const [assessorNome, setAssessorNome] = useState("");
-  const [prazo, setPrazo] = useState("");
+  const [dataVisita, setDataVisita] = useState("");
 
   // Anexos escolhidos (só vão para o servidor DEPOIS que a demanda é criada —
   // o arquivo precisa de um id de demanda no caminho do bucket).
@@ -137,7 +134,8 @@ export default function NovaDemandaForm({ territorios, liderancas, assessores }:
     e.preventDefault();
     setErro(null);
     if (!contato) return setErro("Selecione ou cadastre o cidadão (demandante).");
-    if (!assunto.trim()) return setErro("Descreva o assunto da demanda.");
+    if (!tipo) return setErro("Selecione o tipo da demanda.");
+    if (!assunto.trim()) return setErro("Escreva a justificativa da demanda.");
 
     setSalvando(true);
     // Assessor: texto livre com sugestão dos membros. Se o nome digitado bate
@@ -162,9 +160,8 @@ export default function NovaDemandaForm({ territorios, liderancas, assessores }:
     if (nomeAssessor) payload.pol_assessor_nome = nomeAssessor;
     if (tipo) payload.pol_tipo = tipo;
     if (orgao.trim()) payload.pol_orgao_destino = orgao.trim();
-    if (territoryId) payload.pol_territory_id = territoryId;
-    if (liderancaId) payload.pol_lideranca_id = liderancaId;
-    if (prazo) payload.prazo_em = new Date(prazo + "T12:00:00").toISOString();
+    if (municipio.trim()) payload.pol_municipio = municipio.trim();
+    if (dataVisita) payload.prazo_em = new Date(dataVisita + "T12:00:00").toISOString();
 
     const res = await criarRegistro("demandas", payload);
     if (!res.ok) {
@@ -195,15 +192,12 @@ export default function NovaDemandaForm({ territorios, liderancas, assessores }:
 
   return (
     <div className="mx-auto max-w-[760px] px-4 py-7 space-y-5" style={{ background: "var(--color-bg)" }}>
-      <div>
-        <Link href="/app/politico/demandas" className="inline-flex items-center gap-1 text-sm transition-colors" style={{ color: "var(--color-text-muted)" }}>
-          <ArrowLeft className="h-4 w-4" aria-hidden /> Demandas
-        </Link>
-        <h1 className="mt-3 font-heading text-3xl font-bold leading-tight">Nova demanda</h1>
-        <p className="mt-1 text-sm" style={{ color: "var(--color-text-muted)" }}>
-          Registre uma demanda do cidadão e encaminhe ao gabinete.
-        </p>
-      </div>
+      <CommandHero
+        eyebrow="Gabinete · Demandas"
+        titulo="Nova demanda"
+        subtitulo="Registre uma demanda do cidadão e encaminhe ao gabinete."
+        acoes={[{ href: "/app/politico/demandas", label: "← Demandas" }]}
+      />
 
       <form onSubmit={salvar} className="space-y-5">
         {/* Cidadão */}
@@ -287,17 +281,23 @@ export default function NovaDemandaForm({ territorios, liderancas, assessores }:
         {/* Dados da demanda */}
         <section className="wr-card space-y-4 p-5 sm:p-6">
           <div>
-            <Label obrig>Assunto</Label>
-            <textarea value={assunto} onChange={(e) => setAssunto(e.target.value)} rows={3} placeholder="Ex.: Falta de iluminação na Rua X, bairro Y" className="wr-input w-full" />
+            <Label obrig>Tipo de demanda</Label>
+            <select value={tipo} onChange={(e) => setTipo(e.target.value)} className="wr-input w-full">
+              <option value="">— Selecione a área —</option>
+              {TIPOS.map((t) => <option key={t.id} value={t.id}>{t.nome}</option>)}
+            </select>
+          </div>
+          <div>
+            <Label obrig>Justificativa</Label>
+            <textarea
+              value={assunto}
+              onChange={(e) => setAssunto(e.target.value)}
+              rows={3}
+              placeholder="Descreva a demanda: o que é, onde e para quê. Ex.: Falta de iluminação na Rua X, bairro Y."
+              className="wr-input w-full"
+            />
           </div>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <div>
-              <Label>Tipo</Label>
-              <select value={tipo} onChange={(e) => setTipo(e.target.value)} className="wr-input w-full">
-                <option value="">—</option>
-                {TIPOS.map((t) => <option key={t.id} value={t.id}>{t.nome}</option>)}
-              </select>
-            </div>
             <div>
               <Label>Prioridade</Label>
               <select value={prioridade} onChange={(e) => setPrioridade(e.target.value)} className="wr-input w-full">
@@ -326,27 +326,13 @@ export default function NovaDemandaForm({ territorios, liderancas, assessores }:
               <input type="text" value={orgao} onChange={(e) => setOrgao(e.target.value)} placeholder="Ex.: Secretaria de Obras" className="wr-input w-full" />
             </div>
             <div>
-              <Label>Prazo</Label>
-              <input type="date" value={prazo} onChange={(e) => setPrazo(e.target.value)} className="wr-input w-full" />
+              <Label>Data da visita</Label>
+              <input type="date" value={dataVisita} onChange={(e) => setDataVisita(e.target.value)} className="wr-input w-full" />
             </div>
-            {territorios.length > 0 && (
-              <div>
-                <Label>Território</Label>
-                <select value={territoryId} onChange={(e) => setTerritoryId(e.target.value)} className="wr-input w-full">
-                  <option value="">—</option>
-                  {territorios.map((t) => <option key={t.id} value={t.id}>{t.nome}</option>)}
-                </select>
-              </div>
-            )}
-            {liderancas.length > 0 && (
-              <div>
-                <Label>Liderança responsável</Label>
-                <select value={liderancaId} onChange={(e) => setLiderancaId(e.target.value)} className="wr-input w-full">
-                  <option value="">—</option>
-                  {liderancas.map((l) => <option key={l.id} value={l.id}>{l.nome}</option>)}
-                </select>
-              </div>
-            )}
+            <div>
+              <Label>Município</Label>
+              <input type="text" value={municipio} onChange={(e) => setMunicipio(e.target.value)} placeholder="Ex.: Belo Horizonte" className="wr-input w-full" />
+            </div>
           </div>
         </section>
 

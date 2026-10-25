@@ -1,9 +1,9 @@
 /**
  * /app/politico/demandas/[id] — detalhe e edição de uma demanda (Gabinete).
  *
- * Server component: auth + busca da demanda (com cidadão), territórios e
- * lideranças para os selects de edição. A interação (editar, transições de
- * estado, encaminhamento) vive em ./_detalhe-client.
+ * Server component: auth + busca da demanda (com cidadão), membros (assessores)
+ * e eventos. A interação (editar, transições de estado, encaminhamento) vive em
+ * ./_detalhe-client.
  *
  * Acesso: manager+
  */
@@ -27,17 +27,15 @@ export default async function DemandaDetalhePage({
   if (!org) redirect("/app/onboarding");
 
   const db = await createClient();
-  const [demRes, terrRes, lidRes, membrosRes, evtRes] = await Promise.all([
+  const [demRes, membrosRes, evtRes] = await Promise.all([
     db
       .from("demandas")
       .select(
-        "id, assunto, estado, origem, pol_tipo, pol_prioridade, pol_orgao_destino, pol_encaminhamento_ia, pol_territory_id, pol_lideranca_id, dono_kind, dono_user_id, pol_assessor_nome, aberta_em, prazo_em, desfecho, fechada_em, created_at, updated_at, contacts(name, phone_number)",
+        "id, assunto, estado, origem, pol_tipo, pol_prioridade, pol_orgao_destino, pol_encaminhamento_ia, pol_municipio, pol_territory_id, pol_lideranca_id, dono_kind, dono_user_id, pol_assessor_nome, aberta_em, prazo_em, desfecho, fechada_em, created_at, updated_at, contacts(name, phone_number)",
       )
       .eq("organization_id", org.orgId)
       .eq("id", id)
       .maybeSingle(),
-    db.from("pol_territories").select("id, name, state_code").eq("organization_id", org.orgId).order("name").limit(600),
-    db.from("pol_liderancas").select("id, nome, cidade").eq("organization_id", org.orgId).eq("status", "ativo").order("nome").limit(500),
     db.from("user_organizations").select("user_id, role").eq("organization_id", org.orgId).is("revoked_at", null),
     db
       .from("pol_demanda_eventos")
@@ -49,15 +47,6 @@ export default async function DemandaDetalhePage({
   ]);
 
   if (!demRes.data) notFound();
-
-  const territorios = ((terrRes.data ?? []) as { id: string; name: string; state_code: string | null }[]).map((t) => ({
-    id: t.id,
-    nome: t.state_code ? `${t.name} · ${t.state_code}` : t.name,
-  }));
-  const liderancas = ((lidRes.data ?? []) as { id: string; nome: string; cidade: string | null }[]).map((l) => ({
-    id: l.id,
-    nome: l.cidade ? `${l.nome} · ${l.cidade}` : l.nome,
-  }));
 
   const membros = (membrosRes.data ?? []) as { user_id: string; role: string }[];
   const nomes = await nomesDosAtendentes(membros.map((m) => m.user_id));
@@ -75,8 +64,6 @@ export default async function DemandaDetalhePage({
   return (
     <DetalheDemandaClient
       demanda={demRes.data as unknown as DemandaDetalhe}
-      territorios={territorios}
-      liderancas={liderancas}
       assessores={assessores}
       eventos={eventos}
     />
