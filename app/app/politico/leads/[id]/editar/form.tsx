@@ -24,18 +24,8 @@ export interface LeadParaEdicao {
   profissao: string;
   customFields: Record<string, unknown>;
   support_level: string;
-  temperature: string;
-  zona_eleitoral: string;
-  secao_eleitoral: string;
   community_role: string;
   leader_potential: boolean;
-  territory_id: string;
-}
-
-interface Territorio {
-  id: string;
-  name: string;
-  type: string;
 }
 
 const ETAPAS = [
@@ -44,12 +34,6 @@ const ETAPAS = [
   { value: "apoiador", label: "Apoiador" },
   { value: "militante", label: "Multiplicador" },
   { value: "voto_certo", label: "Voto certo" },
-] as const;
-
-const TEMPERATURAS = [
-  { value: "frio", label: "Frio", emoji: "❄️" },
-  { value: "morno", label: "Morno", emoji: "🌤️" },
-  { value: "quente", label: "Quente", emoji: "🔥" },
 ] as const;
 
 function Label({ children }: { children: ReactNode }) {
@@ -71,7 +55,7 @@ function formatarTelefone(value: string): string {
   return `+${d}`;
 }
 
-export default function EditarLeadForm({ inicial, territorios }: { inicial: LeadParaEdicao; territorios: Territorio[] }) {
+export default function EditarLeadForm({ inicial }: { inicial: LeadParaEdicao }) {
   const router = useRouter();
   const [salvando, setSalvando] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
@@ -84,10 +68,6 @@ export default function EditarLeadForm({ inicial, territorios }: { inicial: Lead
   const [profissao, setProfissao] = useState(inicial.profissao);
 
   const [etapa, setEtapa] = useState(inicial.support_level);
-  const [temperatura, setTemperatura] = useState(inicial.temperature);
-  const [territorioId, setTerritorioId] = useState(inicial.territory_id);
-  const [zona, setZona] = useState(inicial.zona_eleitoral);
-  const [secao, setSecao] = useState(inicial.secao_eleitoral);
   const [papel, setPapel] = useState(inicial.community_role);
   const [liderPotencial, setLiderPotencial] = useState(inicial.leader_potential);
 
@@ -127,12 +107,8 @@ export default function EditarLeadForm({ inicial, territorios }: { inicial: Lead
 
       const leadBody: Record<string, unknown> = {
         support_level: etapa,
-        temperature: temperatura,
-        zona_eleitoral: zona.trim() || null,
-        secao_eleitoral: secao.trim() || null,
         community_role: papel.trim() || null,
         leader_potential: liderPotencial,
-        territory_id: territorioId || null,
       };
       const resL = await fetch(`/api/v1/pol-leads/${inicial.leadId}`, {
         method: "PATCH",
@@ -200,47 +176,9 @@ export default function EditarLeadForm({ inicial, territorios }: { inicial: Lead
             ))}
           </select>
         </label>
-        <fieldset className="space-y-1.5">
-          <legend className="text-sm font-semibold" style={{ color: "var(--color-text-muted)" }}>Temperatura</legend>
-          <div className="flex gap-2 flex-wrap">
-            {TEMPERATURAS.map((t) => (
-              <button
-                key={t.value}
-                type="button"
-                onClick={() => setTemperatura(t.value)}
-                className="inline-flex items-center gap-1.5 h-10 px-4 rounded-full border text-sm font-semibold transition-colors cursor-pointer"
-                style={{
-                  background: temperatura === t.value ? "var(--wr-btn-dark-bg)" : "var(--color-surface)",
-                  color: temperatura === t.value ? "var(--wr-btn-dark-fg)" : "var(--color-text-muted)",
-                  borderColor: temperatura === t.value ? "var(--wr-btn-dark-bg)" : "var(--color-border)",
-                }}
-              >
-                <span aria-hidden="true">{t.emoji}</span> {t.label}
-              </button>
-            ))}
-          </div>
-        </fieldset>
-        {territorios.length > 0 && (
-          <label className="block space-y-1.5">
-            <Label>Território</Label>
-            <select value={territorioId} onChange={(e) => setTerritorioId(e.target.value)} className="wr-input">
-              <option value="">Nenhum</option>
-              {territorios.map((t) => (
-                <option key={t.id} value={t.id}>{t.name} ({t.type})</option>
-              ))}
-            </select>
-          </label>
-        )}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <label className="block space-y-1.5">
-            <Label>Zona eleitoral</Label>
-            <input type="text" value={zona} onChange={(e) => setZona(e.target.value)} maxLength={20} className="wr-input" />
-          </label>
-          <label className="block space-y-1.5">
-            <Label>Seção eleitoral</Label>
-            <input type="text" value={secao} onChange={(e) => setSecao(e.target.value)} maxLength={20} className="wr-input" />
-          </label>
-        </div>
+        <p className="text-xs leading-relaxed" style={{ color: "var(--color-text-subtle)" }}>
+          A <strong style={{ color: "var(--color-text-muted)" }}>temperatura</strong> (frio/morno/quente) é medida ao longo da jornada (engajamento real), não editada à mão.
+        </p>
         <label className="block space-y-1.5">
           <Label>Papel na comunidade</Label>
           <input type="text" value={papel} onChange={(e) => setPapel(e.target.value)} maxLength={120} placeholder="Ex.: Presidente de associação" className="wr-input" />

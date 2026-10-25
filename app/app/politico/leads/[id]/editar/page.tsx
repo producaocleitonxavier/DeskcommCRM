@@ -11,6 +11,7 @@
 import { redirect, notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { requireAuth, resolveActiveOrg } from "@/lib/auth/server";
+import { CommandHero } from "@/components/politico/command-hero";
 import EditarLeadForm, { type LeadParaEdicao } from "./form";
 
 export const dynamic = "force-dynamic";
@@ -25,9 +26,7 @@ export default async function EditarLeadPage({ params }: { params: Promise<{ id:
 
   const { data: lead } = await db
     .from("pol_leads")
-    .select(
-      "id, contact_id, support_level, temperature, zona_eleitoral, secao_eleitoral, community_role, leader_potential, territory_id",
-    )
+    .select("id, contact_id, support_level, community_role, leader_potential")
     .eq("organization_id", org.orgId)
     .eq("id", id)
     .maybeSingle();
@@ -37,22 +36,15 @@ export default async function EditarLeadPage({ params }: { params: Promise<{ id:
     id: string;
     contact_id: string;
     support_level: string;
-    temperature: string;
-    zona_eleitoral: string | null;
-    secao_eleitoral: string | null;
     community_role: string | null;
     leader_potential: boolean | null;
-    territory_id: string | null;
   };
 
-  const [{ data: contact }, { data: territorios }] = await Promise.all([
-    db
-      .from("contacts")
-      .select("id, name, phone_number, email, custom_fields")
-      .eq("id", l.contact_id)
-      .maybeSingle(),
-    db.from("pol_territories").select("id, name, type").eq("organization_id", org.orgId).order("name"),
-  ]);
+  const { data: contact } = await db
+    .from("contacts")
+    .select("id, name, phone_number, email, custom_fields")
+    .eq("id", l.contact_id)
+    .maybeSingle();
 
   if (!contact) notFound();
   const c = contact as {
@@ -75,24 +67,19 @@ export default async function EditarLeadPage({ params }: { params: Promise<{ id:
     profissao: typeof cf.profissao === "string" ? cf.profissao : "",
     customFields: cf,
     support_level: l.support_level,
-    temperature: l.temperature,
-    zona_eleitoral: l.zona_eleitoral ?? "",
-    secao_eleitoral: l.secao_eleitoral ?? "",
     community_role: l.community_role ?? "",
     leader_potential: !!l.leader_potential,
-    territory_id: l.territory_id ?? "",
   };
 
   return (
-    <div className="mx-auto max-w-[720px] px-4 py-7 space-y-[18px]">
-      <header className="wr-card p-6 sm:p-7">
-        <h1 className="font-heading text-[28px] sm:text-[32px] font-bold leading-tight">Editar pessoa</h1>
-        <p className="mt-1.5 text-base" style={{ color: "var(--color-text-muted)" }}>
-          Ajuste os dados de contato e a classificação política. As mudanças valem na hora.
-        </p>
-      </header>
-
-      <EditarLeadForm inicial={inicial} territorios={(territorios ?? []) as { id: string; name: string; type: string }[]} />
+    <div className="mx-auto max-w-[720px] space-y-[18px] px-4 py-7" style={{ background: "var(--color-bg)" }}>
+      <CommandHero
+        eyebrow="Base · Pessoas"
+        titulo="Editar pessoa"
+        subtitulo="Ajuste os dados de contato e a classificação política. As mudanças valem na hora."
+        acoes={[{ href: `/app/politico/leads/${inicial.leadId}`, label: "← Ficha" }]}
+      />
+      <EditarLeadForm inicial={inicial} />
     </div>
   );
 }
