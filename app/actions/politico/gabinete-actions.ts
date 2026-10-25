@@ -113,6 +113,21 @@ export async function garantirLeadNovoCadastro(contactId: string): Promise<AcaoR
   return { ok: true, id: (data?.id as string | undefined) };
 }
 
+/**
+ * Carimba a ZONA ELEITORAL provável nas pessoas da base, derivada do BAIRRO
+ * (dados do TSE via intel_zona_do_bairro). Rodar depois de importar a base.
+ * Eficiente (uma derivação por bairro distinto) e idempotente (só preenche o
+ * que está vazio). Devolve quantas pessoas foram carimbadas.
+ */
+export async function carimbarZonasDosLeads(): Promise<{ ok: true; carimbados: number } | { ok: false; erro: string }> {
+  const org = await orgAtiva();
+  if (!org) return { ok: false, erro: "Sessão ou organização inválida." };
+  const db = await createClient();
+  const { data, error } = await db.rpc("pol_carimbar_zonas_leads", { p_org: org });
+  if (error) return { ok: false, erro: traduzErro(error) };
+  return { ok: true, carimbados: typeof data === "number" ? data : 0 };
+}
+
 /** Insere um registro numa tabela do gabinete, escopado à org ativa. */
 export async function criarRegistro(tabela: string, dados: Record<string, unknown>): Promise<AcaoResultado> {
   if (!TABELAS.has(tabela)) return { ok: false, erro: "Tabela inválida." };
