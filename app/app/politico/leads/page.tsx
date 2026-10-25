@@ -52,12 +52,22 @@ async function buscarLeads(
   const db = await createClient();
   const offset = (pagina - 1) * POR_PAGINA;
 
+  // Busca por nome: cada PALAVRA precisa aparecer (AND), em qualquer ordem — assim
+  // "ana gabriela silva" acha "ANA GABRIELA MARTINS DA SILVA". E o embed vira INNER
+  // quando há busca: sem isso o PostgREST filtra o EMBED (não o pai) e devolve os
+  // leads que NÃO casam com contacts=null — o bug dos cards "Sem nome".
+  const palavras = busca ? busca.trim().split(/\s+/).filter(Boolean) : [];
+  const contatoEmbed =
+    palavras.length > 0
+      ? "contacts!contact_id!inner(name, phone_number, source, last_activity_at)"
+      : "contacts!contact_id(name, phone_number, source, last_activity_at)";
+
   let query = db
     .from("pol_leads")
     .select(
       // contacts!contact_id: pol_leads tem 2 FKs para contacts (contact_id e
       // mobilizer_id); sem o hint o embed fica ambiguo (PGRST201) e a lista volta vazia.
-      "id, support_level, temperature, political_score, territory_id, created_at, contacts!contact_id(name, phone_number, source, last_activity_at), pol_territories(name)",
+      `id, support_level, temperature, political_score, territory_id, created_at, ${contatoEmbed}, pol_territories(name)`,
       { count: "exact" },
     )
     .eq("organization_id", organizationId)
@@ -67,7 +77,7 @@ async function buscarLeads(
   if (etapa) query = query.eq("support_level", etapa);
   if (temp) query = query.eq("temperature", temp);
   if (cidade) query = query.eq("territory_id", cidade);
-  if (busca) query = query.ilike("contacts.name", `%${busca}%`);
+  for (const p of palavras) query = query.ilike("contacts.name", `%${p}%`);
 
   const { data, count } = await query;
   return { leads: (data as unknown as LeadRow[]) ?? [], total: count ?? 0 };

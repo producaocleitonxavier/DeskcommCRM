@@ -170,6 +170,15 @@ async function buscarLead(organizationId: string, leadId: string) {
 
   if (!contact) return null;
 
+  // Cidade/bairro do contato — vários formatos de custom_fields coexistem na base
+  // (cadastro novo: cidade/bairro + endereco; demanda/eventos/migração: endereco_gip).
+  const cf = ((contact as { custom_fields?: Record<string, unknown> }).custom_fields ?? {}) as Record<string, unknown>;
+  const cfEndereco = (cf.endereco ?? {}) as Record<string, unknown>;
+  const cfGip = (cf.endereco_gip ?? {}) as Record<string, unknown>;
+  const txt = (v: unknown): string | null => (typeof v === "string" && v.trim() ? v.trim() : null);
+  const cidadeContato = txt(cf.cidade) ?? txt(cfEndereco.cidade) ?? txt(cfGip.cidade);
+  const bairroContato = txt(cf.bairro) ?? txt(cfEndereco.bairro) ?? txt(cfGip.bairro);
+
   // Buscar transições de funil
   const { data: transitions } = await db
     .from("pol_funnel_transitions")
@@ -399,6 +408,8 @@ export default async function FichaPage({
           <InfoCard titulo="Contato">
             <InfoRow label="Telefone" value={contact.phone_number} />
             <InfoRow label="Email" value={contact.email} />
+            <InfoRow label="Cidade" value={cidadeContato} />
+            <InfoRow label="Bairro" value={bairroContato} />
             <InfoRow label="Nascimento" value={contact.birthdate ? formatarData(contact.birthdate) : null} />
             <InfoRow label="Origem" value={sourceLabel(contact.source)} />
             {origemCaptacao && (
@@ -422,9 +433,7 @@ export default async function FichaPage({
             {contact.social_identity && <InfoRow label="Social" value={contact.social_identity} />}
           </InfoCard>
 
-          <InfoCard titulo="Território eleitoral">
-            <InfoRow label="Zona" value={lead.zona_eleitoral} />
-            <InfoRow label="Seção" value={lead.secao_eleitoral} />
+          <InfoCard titulo="Comunidade & mobilização">
             <InfoRow label="Papel comunitário" value={lead.community_role} />
             <InfoRow label="Mobilizador" value={mobilizadorNome} />
           </InfoCard>
