@@ -77,11 +77,16 @@ export async function entregarMaterialNaResposta(
     // 3) O material está ativo e tem URL?
     const { data: mat } = await admin
       .from("pol_materiais")
-      .select("titulo, url, ativo")
+      .select("titulo, url, capa_url, ativo")
       .eq("organization_id", entrada.organizationId)
       .eq("id", materialId)
       .maybeSingle();
-    const material = mat as { titulo: string | null; url: string | null; ativo: boolean | null } | null;
+    const material = mat as {
+      titulo: string | null;
+      url: string | null;
+      capa_url: string | null;
+      ativo: boolean | null;
+    } | null;
     if (!material || material.ativo === false || !material.url) {
       return { entregou: false, motivo: "material_invalido" };
     }
@@ -97,30 +102,53 @@ export async function entregarMaterialNaResposta(
       .maybeSingle();
     if (!claim) return { entregou: false, motivo: "ja_reclamado" };
 
-    // 5) Entrega o material como ANEXO, pelo mesmo número do disparo.
+    // 5) Entrega o material, pelo mesmo número do disparo.
+    //
+    // REGRA (cliente, 2026-10-25): SEMPRE com a CAPA — gera credibilidade. A capa
+    // vai como IMAGEM, com a legenda, ANTES do PDF; o documento vem logo em
+    // seguida, sem legenda (para não repetir). Sem capa cadastrada, o PDF carrega
+    // a legenda. A capa é best-effort: se falhar, a legenda volta para o PDF e a
+    // entrega do arquivo (que é o essencial) segue.
     try {
       const boundary = await beginServiceAtOrigin(admin, entrada.organizationId, entrada.contactId, canalId);
       const legenda = material.titulo
         ? `📘 Aqui está o material *${material.titulo}*. Qualquer dúvida, é só chamar! 🙂`
         : "📘 Aqui está o material que você pediu. Qualquer dúvida, é só chamar! 🙂";
-      const msg = await sendMessageHandler(
-        admin,
-        {
-          organization_id: entrada.organizationId,
-          serviceBoundary: boundary,
-          proactiveContext: { organizationId: entrada.organizationId, contactId: entrada.contactId },
-          actor: { type: "webhook_source", id: `ebook-resposta:${recipiente.id}` },
-          requestId: `ebook-resposta:${recipiente.id}:${randomUUID()}`,
-        } as Parameters<typeof sendMessageHandler>[1],
-        {
-          conversation_id: boundary.conversation_id,
-          type: "document",
-          media_url: material.url,
-          media_mime: mimeDoArquivo(material.url),
-          body: legenda,
-          metadata: { source: "ebook_resposta", material_id: materialId, recipient_id: recipiente.id },
-        } as Parameters<typeof sendMessageHandler>[2],
-      );
+      const ctx = {
+        organization_id: entrada.organizationId,
+        serviceBoundary: boundary,
+        proactiveContext: { organizationId: entrada.organizationId, contactId: entrada.contactId },
+        actor: { type: "webhook_source", id: `ebook-resposta:${recipiente.id}` },
+        requestId: `ebook-resposta:${recipiente.id}:${randomUUID()}`,
+      } as Parameters<typeof sendMessageHandler>[1];
+
+      const capaValida =
+        typeof material.capa_url === "string" && /^https?:\/\//.test(material.capa_url.trim());
+      let legendaDoDocumento: string | undefined = legenda;
+      if (capaValida) {
+        try {
+          await sendMessageHandler(admin, ctx, {
+            conversation_id: boundary.conversation_id,
+            type: "image",
+            media_url: material.capa_url!,
+            body: legenda,
+            metadata: { source: "ebook_resposta_capa", material_id: materialId, recipient_id: recipiente.id },
+          } as Parameters<typeof sendMessageHandler>[2]);
+          legendaDoDocumento = undefined; // a capa já levou a legenda
+        } catch {
+          // Capa é bônus: se falhar, a legenda volta para o PDF e seguimos.
+          legendaDoDocumento = legenda;
+        }
+      }
+
+      const msg = await sendMessageHandler(admin, ctx, {
+        conversation_id: boundary.conversation_id,
+        type: "document",
+        media_url: material.url,
+        media_mime: mimeDoArquivo(material.url),
+        body: legendaDoDocumento,
+        metadata: { source: "ebook_resposta", material_id: materialId, recipient_id: recipiente.id },
+      } as Parameters<typeof sendMessageHandler>[2]);
       if ((msg as { status?: string }).status === "failed") {
         // Devolve o carimbo para `null`: o retry de 24h (ou outra resposta) tenta de novo.
         await admin
