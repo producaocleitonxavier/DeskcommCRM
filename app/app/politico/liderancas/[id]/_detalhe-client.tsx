@@ -8,9 +8,9 @@
 import { useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, Camera, Check, Link2, Loader2, MessageCircle, Pencil, X } from "lucide-react";
+import { ArrowLeft, Camera, Check, Link2, Loader2, MessageCircle, Pencil, Trash2, X } from "lucide-react";
 
-import { atualizarRegistro } from "@/app/actions/politico/gabinete-actions";
+import { atualizarRegistro, excluirRegistro } from "@/app/actions/politico/gabinete-actions";
 import { uploadFotoLideranca } from "@/lib/politico/foto-lideranca";
 
 interface Opcao {
@@ -99,6 +99,7 @@ export default function DetalheLiderancaClient({ lideranca, fotoUrl, territorios
   const [enviandoFoto, setEnviandoFoto] = useState(false);
   const fotoRef = useRef<HTMLInputElement>(null);
   const [linkCopiado, setLinkCopiado] = useState(false);
+  const [excluindo, setExcluindo] = useState(false);
 
   async function copiarLinkCaptacao() {
     const url = `${window.location.origin}/c/${l.id}`;
@@ -240,9 +241,32 @@ export default function DetalheLiderancaClient({ lideranca, fotoUrl, territorios
               {linkCopiado ? "Copiado!" : "Link de captação"}
             </button>
             {!editando && (
-              <button type="button" onClick={() => setEditando(true)} className="wr-btn inline-flex items-center gap-2">
-                <Pencil className="h-4 w-4" aria-hidden /> Editar
-              </button>
+              <>
+                <button type="button" onClick={() => setEditando(true)} className="wr-btn inline-flex items-center gap-2">
+                  <Pencil className="h-4 w-4" aria-hidden /> Editar
+                </button>
+                <button
+                  type="button"
+                  disabled={excluindo}
+                  onClick={async () => {
+                    if (!window.confirm("Excluir esta liderança? Esta ação não pode ser desfeita.")) return;
+                    setErro(null);
+                    setExcluindo(true);
+                    const res = await excluirRegistro("pol_liderancas", l.id);
+                    if (!res.ok) {
+                      setExcluindo(false);
+                      setErro(res.erro);
+                      return;
+                    }
+                    router.push("/app/politico/liderancas");
+                    router.refresh();
+                  }}
+                  className="wr-btn inline-flex items-center gap-2 disabled:opacity-50"
+                  style={{ color: "#EF4444", borderColor: "rgba(239,68,68,0.35)" }}
+                >
+                  <Trash2 className="h-4 w-4" aria-hidden /> {excluindo ? "Excluindo…" : "Excluir"}
+                </button>
+              </>
             )}
           </div>
         </div>

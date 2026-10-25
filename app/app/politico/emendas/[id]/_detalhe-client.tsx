@@ -10,9 +10,9 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, Check, Pencil, X, Users, Copy } from "lucide-react";
+import { ArrowLeft, Check, Pencil, Trash2, X, Users, Copy } from "lucide-react";
 
-import { atualizarRegistro } from "@/app/actions/politico/gabinete-actions";
+import { atualizarRegistro, excluirRegistro } from "@/app/actions/politico/gabinete-actions";
 import { listarBeneficiariosEmenda, type BeneficiarioObra } from "@/app/actions/politico/obras-actions";
 
 interface Opcao {
@@ -143,6 +143,7 @@ export default function DetalheEmendaClient({ emenda, liderancas, peso, mandatoN
   const [erro, setErro] = useState<string | null>(null);
   const [avAberto, setAvAberto] = useState(false); // painel de "avançar etapa" (valor + data)
   const [avValor, setAvValor] = useState("");
+  const [excluindo, setExcluindo] = useState(false);
 
   // Campos de edição
   const [numero, setNumero] = useState(e.numero ?? "");
@@ -271,6 +272,29 @@ export default function DetalheEmendaClient({ emenda, liderancas, peso, mandatoN
             {!editando && (
               <button type="button" onClick={() => setEditando(true)} className="wr-btn inline-flex items-center gap-2">
                 <Pencil className="h-4 w-4" aria-hidden /> Editar
+              </button>
+            )}
+            {!editando && (
+              <button
+                type="button"
+                disabled={excluindo}
+                onClick={async () => {
+                  if (!window.confirm("Excluir esta emenda? Esta ação não pode ser desfeita.")) return;
+                  setErro(null);
+                  setExcluindo(true);
+                  const res = await excluirRegistro("pol_emendas", e.id);
+                  if (!res.ok) {
+                    setExcluindo(false);
+                    setErro(res.erro);
+                    return;
+                  }
+                  router.push("/app/politico/emendas");
+                  router.refresh();
+                }}
+                className="wr-btn inline-flex items-center gap-2 disabled:opacity-50"
+                style={{ color: "#EF4444", borderColor: "rgba(239,68,68,0.35)" }}
+              >
+                <Trash2 className="h-4 w-4" aria-hidden /> {excluindo ? "Excluindo…" : "Excluir"}
               </button>
             )}
           </div>
