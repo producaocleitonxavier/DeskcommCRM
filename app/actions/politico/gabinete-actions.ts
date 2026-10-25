@@ -72,7 +72,7 @@ export async function buscarCidadaos(q: string): Promise<CidadaoOpcao[]> {
 }
 
 /** Cria um cidadão (contact) mínimo na org ativa e devolve o id. */
-export async function criarCidadao(nome: string, telefone?: string): Promise<AcaoResultado> {
+export async function criarCidadao(nome: string, telefone?: string, endereco?: string): Promise<AcaoResultado> {
   const org = await orgAtiva();
   if (!org) return { ok: false, erro: "Sessão ou organização inválida." };
   if (!nome.trim()) return { ok: false, erro: "Informe o nome do cidadão." };
@@ -80,8 +80,36 @@ export async function criarCidadao(nome: string, telefone?: string): Promise<Aca
   const payload: Record<string, unknown> = { organization_id: org, name: nome.trim(), source: "gabinete" };
   const fone = telefone ? normalizarTelefone(telefone) : null;
   if (fone) payload.phone_number = fone;
+  // Endereço vai no mesmo lugar que o resto do político usa (custom_fields.endereco_gip),
+  // para alimentar a inteligência territorial.
+  if (endereco?.trim()) payload.custom_fields = { endereco_gip: { endereco: endereco.trim() } };
   const { data, error } = await db.from("contacts").insert(payload).select("id").maybeSingle();
   if (error) return { ok: false, erro: traduzErro(error) };
+  return { ok: true, id: (data?.id as string | undefined) };
+}
+
+/**
+ * Garante que um cidadão esteja na BASE (funil político) como `novo_cadastro`.
+ * Idempotente: quem já é lead (qualquer nível) não é tocado. É o que faz o
+ * solicitante de uma demanda "entrar no nosso cadastro" — pronto para nutrir.
+ */
+export async function garantirLeadNovoCadastro(contactId: string): Promise<AcaoResultado> {
+  const org = await orgAtiva();
+  if (!org) return { ok: false, erro: "Sessão ou organização inválida." };
+  const db = await createClient();
+  const { data: existe } = await db
+    .from("pol_leads")
+    .select("id")
+    .eq("organization_id", org)
+    .eq("contact_id", contactId)
+    .maybeSingle();
+  if (existe) return { ok: true, id: existe.id as string };
+  const { data, error } = await db
+    .from("pol_leads")
+    .insert({ organization_id: org, contact_id: contactId, support_level: "novo_cadastro", consent_origin: "gabinete" })
+    .select("id")
+    .maybeSingle();
+  if (error && error.code !== "23505") return { ok: false, erro: traduzErro(error) };
   return { ok: true, id: (data?.id as string | undefined) };
 }
 

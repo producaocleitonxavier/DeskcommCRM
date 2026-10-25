@@ -16,6 +16,7 @@ import {
   buscarCidadaos,
   criarCidadao,
   criarRegistro,
+  garantirLeadNovoCadastro,
   type CidadaoOpcao,
 } from "@/app/actions/politico/gabinete-actions";
 import { uploadAnexoDemanda, formatarBytes, ANEXO_MAX_BYTES } from "@/lib/politico/anexos-upload";
@@ -70,6 +71,7 @@ export default function NovaDemandaForm({ assessores }: NovaDemandaFormProps) {
   const [modoNovo, setModoNovo] = useState(false);
   const [novoNome, setNovoNome] = useState("");
   const [novoFone, setNovoFone] = useState("");
+  const [novoEndereco, setNovoEndereco] = useState("");
   const [criandoCidadao, setCriandoCidadao] = useState(false);
 
   // Campos
@@ -118,8 +120,11 @@ export default function NovaDemandaForm({ assessores }: NovaDemandaFormProps) {
   async function cadastrarCidadao() {
     setErro(null);
     if (!novoNome.trim()) return setErro("Informe o nome do cidadão.");
+    if (!novoFone.trim()) return setErro("Informe o WhatsApp do cidadão — é por onde o gabinete dá retorno.");
     setCriandoCidadao(true);
-    const res = await criarCidadao(novoNome, novoFone || undefined);
+    const res = await criarCidadao(novoNome, novoFone || undefined, novoEndereco || undefined);
+    // Solicitante novo entra na nossa base (funil) como novo_cadastro — pronto pra nutrir.
+    if (res.ok && res.id) await garantirLeadNovoCadastro(res.id);
     setCriandoCidadao(false);
     if (!res.ok || !res.id) {
       setErro(res.ok ? "Não consegui obter o id do cidadão." : res.erro);
@@ -230,10 +235,17 @@ export default function NovaDemandaForm({ assessores }: NovaDemandaFormProps) {
                   <input type="text" value={novoNome} onChange={(e) => setNovoNome(e.target.value)} className="wr-input w-full" />
                 </div>
                 <div>
-                  <Label>WhatsApp / telefone</Label>
+                  <Label obrig>WhatsApp (contato)</Label>
                   <input type="tel" value={novoFone} onChange={(e) => setNovoFone(e.target.value)} placeholder="(31) 99999-9999" className="wr-input w-full" />
                 </div>
               </div>
+              <div>
+                <Label>Endereço</Label>
+                <input type="text" value={novoEndereco} onChange={(e) => setNovoEndereco(e.target.value)} placeholder="Rua, número, bairro — opcional" className="wr-input w-full" />
+              </div>
+              <p className="text-xs" style={{ color: "var(--color-text-subtle)" }}>
+                O cidadão entra na sua base automaticamente — pronto para acompanhamento.
+              </p>
               <div className="flex items-center gap-2">
                 <button type="button" disabled={criandoCidadao} onClick={cadastrarCidadao} className="wr-btn-dark inline-flex items-center gap-1.5 disabled:opacity-60">
                   <UserPlus className="h-4 w-4" aria-hidden /> {criandoCidadao ? "Cadastrando…" : "Cadastrar e usar"}
