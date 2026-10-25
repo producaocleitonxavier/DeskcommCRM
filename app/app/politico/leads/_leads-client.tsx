@@ -6,12 +6,14 @@
  * buscados pelo server (page.tsx).
  */
 
+import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Search, Users } from "lucide-react";
+import { MapPin, Search, Users } from "lucide-react";
 
 import { CommandHero } from "@/components/politico/command-hero";
 import { EmptyState } from "@/components/politico/empty-state";
+import { carimbarZonasDosLeads } from "@/app/actions/politico/gabinete-actions";
 import type { LeadRow } from "./page";
 
 const ETAPAS = [
@@ -71,6 +73,8 @@ export interface LeadsClientProps {
 
 export default function LeadsClient({ leads, total, contagens, cidades, filtros, porPagina }: LeadsClientProps) {
   const router = useRouter();
+  const [carimbando, setCarimbando] = useState(false);
+  const [carimboMsg, setCarimboMsg] = useState<string | null>(null);
   const totalPaginas = Math.max(1, Math.ceil(total / porPagina));
 
   function href(overrides: Partial<Filtros>): string {
@@ -109,6 +113,34 @@ export default function LeadsClient({ leads, total, contagens, cidades, filtros,
         subtitulo="Toda a base em um lugar — filtre por etapa ou temperatura."
         acoes={[{ href: "/app/politico/leads/novo", label: "+ Novo cadastro", primary: true }]}
       />
+
+      {/* ── Carimbar zonas pelo bairro (dados do TSE) ───────────── */}
+      <div className="flex flex-wrap items-center justify-end gap-3">
+        {carimboMsg && (
+          <span className="text-xs" style={{ color: "var(--color-text-muted)" }}>{carimboMsg}</span>
+        )}
+        <button
+          type="button"
+          disabled={carimbando}
+          onClick={async () => {
+            if (!window.confirm("Carimbar a zona eleitoral das pessoas pelo bairro (dados do TSE)? Preenche só quem está sem zona. Pode levar alguns segundos.")) return;
+            setCarimboMsg(null);
+            setCarimbando(true);
+            const res = await carimbarZonasDosLeads();
+            setCarimbando(false);
+            if (res.ok) {
+              setCarimboMsg(`${res.carimbados.toLocaleString("pt-BR")} pessoa(s) ganharam zona pelo bairro.`);
+              router.refresh();
+            } else {
+              setCarimboMsg(res.erro);
+            }
+          }}
+          className="wr-btn inline-flex items-center gap-2 disabled:opacity-60"
+          title="Deriva a zona eleitoral pelo bairro, usando dados agregados do TSE. Só preenche quem está sem zona."
+        >
+          <MapPin className="h-4 w-4" aria-hidden /> {carimbando ? "Carimbando zonas…" : "Carimbar zonas pelo bairro"}
+        </button>
+      </div>
 
       {/* ── Filtros ─────────────────────────────────────────────── */}
       <div className="wr-card space-y-4 p-4 sm:p-5">
