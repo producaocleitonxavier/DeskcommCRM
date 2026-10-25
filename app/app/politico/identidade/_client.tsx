@@ -8,14 +8,14 @@
 
 import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Check, Trash2, Upload, Loader2, ArrowLeft } from "lucide-react";
-import Link from "next/link";
+import { Check, Trash2, Upload, Loader2 } from "lucide-react";
 
 import {
   salvarIdentidade,
   removerImagemIdentidade,
   type IdentidadeGabinete,
 } from "@/app/actions/politico/gabinete-identidade";
+import { CommandHero } from "@/components/politico/command-hero";
 
 function Campo({ label, children, dica }: { label: string; children: React.ReactNode; dica?: string }) {
   return (
@@ -126,15 +126,12 @@ export default function IdentidadeClient({ inicial }: { inicial: IdentidadeGabin
 
   return (
     <div className="mx-auto max-w-[760px] px-4 py-7 space-y-5" style={{ background: "var(--color-bg)" }}>
-      <div>
-        <Link href="/app/politico/demandas" className="inline-flex items-center gap-1 text-sm transition-colors" style={{ color: "var(--color-text-muted)" }}>
-          <ArrowLeft className="h-4 w-4" aria-hidden /> Gabinete
-        </Link>
-        <h1 className="mt-3 font-heading text-3xl font-bold leading-tight">Identidade do gabinete</h1>
-        <p className="mt-1 text-sm" style={{ color: "var(--color-text-muted)" }}>
-          Logo, assinatura e dados do parlamentar que entram no timbre dos ofícios gerados.
-        </p>
-      </div>
+      <CommandHero
+        eyebrow="Gabinete · Identidade"
+        titulo="Identidade do gabinete"
+        subtitulo="Logo, assinatura e dados do parlamentar que entram no timbre dos ofícios e relatórios."
+        acoes={[{ href: "/app/politico/demandas", label: "← Gabinete" }]}
+      />
 
       {erro && <div role="alert" className="rounded-xl px-4 py-3 text-sm" style={{ background: "#FBE4E2", color: "#A3302A" }}>{erro}</div>}
       {okMsg && <div className="rounded-xl px-4 py-3 text-sm" style={{ background: "rgba(34,197,94,0.14)", color: "#22C55E" }}>Identidade salva.</div>}
