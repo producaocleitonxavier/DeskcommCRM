@@ -170,15 +170,6 @@ async function buscarLead(organizationId: string, leadId: string) {
 
   if (!contact) return null;
 
-  // Cidade/bairro do contato — vários formatos de custom_fields coexistem na base
-  // (cadastro novo: cidade/bairro + endereco; demanda/eventos/migração: endereco_gip).
-  const cf = ((contact as { custom_fields?: Record<string, unknown> }).custom_fields ?? {}) as Record<string, unknown>;
-  const cfEndereco = (cf.endereco ?? {}) as Record<string, unknown>;
-  const cfGip = (cf.endereco_gip ?? {}) as Record<string, unknown>;
-  const txt = (v: unknown): string | null => (typeof v === "string" && v.trim() ? v.trim() : null);
-  const cidadeContato = txt(cf.cidade) ?? txt(cfEndereco.cidade) ?? txt(cfGip.cidade);
-  const bairroContato = txt(cf.bairro) ?? txt(cfEndereco.bairro) ?? txt(cfGip.bairro);
-
   // Buscar transições de funil
   const { data: transitions } = await db
     .from("pol_funnel_transitions")
@@ -332,6 +323,15 @@ export default async function FichaPage({
   if (!dados) notFound();
 
   const { lead, contact, transitions, mobilizadorNome, origemCaptacao } = dados;
+
+  // Cidade/bairro do contato — vários formatos de custom_fields coexistem na base
+  // (cadastro novo: cidade/bairro + endereco; demanda/eventos/migração: endereco_gip).
+  const cf = ((contact as { custom_fields?: Record<string, unknown> }).custom_fields ?? {}) as Record<string, unknown>;
+  const cfEnd = (cf.endereco ?? {}) as Record<string, unknown>;
+  const cfGip = (cf.endereco_gip ?? {}) as Record<string, unknown>;
+  const txtCf = (v: unknown): string | null => (typeof v === "string" && v.trim() ? v.trim() : null);
+  const cidadeContato = txtCf(cf.cidade) ?? txtCf(cfEnd.cidade) ?? txtCf(cfGip.cidade);
+  const bairroContato = txtCf(cf.bairro) ?? txtCf(cfEnd.bairro) ?? txtCf(cfGip.bairro);
 
   const tempS = tempEstilo(lead.temperature);
   const telefone = contact.phone_number ?? "";
