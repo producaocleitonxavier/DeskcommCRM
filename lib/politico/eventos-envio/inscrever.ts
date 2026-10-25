@@ -12,6 +12,8 @@
  * que é o que define por onde a inscrição vai falar.
  */
 
+import { randomUUID } from "node:crypto";
+
 import { createAdminClient } from "@/lib/supabase/admin";
 import { beginServiceAtOrigin } from "@/lib/atendimento/origem";
 import { enrollFollowupFlow } from "@/lib/followup/enroll";
@@ -54,7 +56,7 @@ export async function inscreverNoFluxoDeEvento(params: {
     pointerId,
     contactId: params.contactId,
     actorUserId: params.actorUserId,
-    requestId: crypto.randomUUID(),
+    requestId: randomUUID(),
     resolveServiceBoundary: () =>
       beginServiceAtOrigin(admin, params.orgId, params.contactId, sessionId),
   });
