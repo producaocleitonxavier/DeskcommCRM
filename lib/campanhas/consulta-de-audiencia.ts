@@ -13,7 +13,7 @@
  */
 import type { SupabaseClient } from "@supabase/supabase-js";
 
-import { CAMPANHAS_VIVAS, limiteDeSilencio, usaNegocio, type FiltroDeAudiencia } from "./audiencia";
+import { CAMPANHAS_VIVAS, limiteDeSilencio, usaNegocio, usaPolitico, type FiltroDeAudiencia } from "./audiencia";
 import { nomeDoContato } from "@/lib/contacts/rotulo-do-contato";
 import { recusouMarketing, type CandidatoDaAudiencia } from "./elegibilidade";
 import { camposUsadosNoTexto, type CamposPersonalizados } from "./renderizador";
@@ -167,10 +167,16 @@ export async function buscarCandidatos(
   //   * com recorte de negócio, a consulta é fatiada por `buscaEmLotes`;
   //   * sem ele, a consulta é única e paginada por `max_rows`, parando cedo.
   const excluidos = new Set(filtro.excluir_contatos);
+  // FUNIL POLÍTICO: inner-join em pol_leads (1:1 com o contato) filtra o PAI pelo
+  // estágio/temperatura sem duplicar — hint pol_leads_contact_id_fkey porque há 2
+  // FKs (contact_id e mobilizer_id). Só entra no SELECT quando o recorte pede.
+  const embedPolitico = usaPolitico(filtro)
+    ? ", pol_leads!pol_leads_contact_id_fkey!inner(support_level, temperature)"
+    : "";
   const consultaDeContatos = () => {
     let consulta = admin
       .from("contacts")
-      .select(COLUNAS_DO_CONTATO + colunasDeContato + ", created_at")
+      .select(COLUNAS_DO_CONTATO + colunasDeContato + ", created_at" + embedPolitico)
       .eq("organization_id", organizationId)
       // Placeholder de GRUPO não recebe campanha: campanha é 1:1 por doutrina, e
       // o grupo não tem opt-in individual nenhum por trás desse registro técnico.
@@ -185,6 +191,13 @@ export async function buscarCandidatos(
       consulta = consulta.not("tags", "ov", `{${filtro.sem_tags.map(citar).join(",")}}`);
     }
     if (filtro.origens.length > 0) consulta = consulta.in("source", filtro.origens);
+    // Filtros do funil político sobre o embed inner (vale sobre o PAI).
+    if (filtro.niveis_de_apoio.length > 0) {
+      consulta = consulta.in("pol_leads.support_level", filtro.niveis_de_apoio);
+    }
+    if (filtro.temperaturas.length > 0) {
+      consulta = consulta.in("pol_leads.temperature", filtro.temperaturas);
+    }
     if (filtro.sem_interacao_ha_dias !== null) {
       const limite = limiteDeSilencio(filtro.sem_interacao_ha_dias, agora).toISOString();
       // Quem nunca interagiu ENTRA no recorte de silêncio: `last_activity_at` nulo

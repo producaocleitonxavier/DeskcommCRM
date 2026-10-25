@@ -65,6 +65,18 @@ export const filtroDeAudienciaSchema = z
     /** `contacts.source` — de onde o contato veio. */
     origens: z.array(z.string().trim().min(1).max(40)).max(20).default([]),
 
+    /**
+     * FUNIL POLÍTICO (`pol_leads.support_level`) — o estágio de apoio. É 1:1 com
+     * o contato (um lead por pessoa), então entra como inner-join na consulta de
+     * contatos, sem o risco de duplicação do funil comercial.
+     */
+    niveis_de_apoio: z
+      .array(z.enum(["novo_cadastro", "simpatizante", "apoiador", "militante", "voto_certo"]))
+      .max(5)
+      .default([]),
+    /** TEMPERATURA do lead político (`pol_leads.temperature`) — derivada do engajamento. */
+    temperaturas: z.array(z.enum(["frio", "morno", "quente"])).max(3).default([]),
+
     /** Contatos a incluir mesmo que o recorte não os pegue. */
     incluir_contatos: z.array(z.string().uuid()).max(5000).default([]),
     /** Contatos a tirar, mesmo que o recorte os pegue. */
@@ -83,6 +95,8 @@ export const filtroDeAudienciaSchema = z
       f.responsaveis.length > 0 ||
       f.situacoes_do_negocio.length > 0 ||
       f.origens.length > 0 ||
+      f.niveis_de_apoio.length > 0 ||
+      f.temperaturas.length > 0 ||
       f.sem_interacao_ha_dias !== null ||
       f.com_interacao_ha_dias !== null ||
       f.cadastrado_de !== null ||
@@ -107,6 +121,8 @@ export const FILTRO_VAZIO = {
   cadastrado_de: null,
   cadastrado_ate: null,
   origens: [],
+  niveis_de_apoio: [],
+  temperaturas: [],
   incluir_contatos: [],
   excluir_contatos: [],
   limite: 500,
@@ -120,6 +136,11 @@ export function usaNegocio(filtro: FiltroDeAudiencia): boolean {
     filtro.responsaveis.length > 0 ||
     filtro.situacoes_do_negocio.length > 0
   );
+}
+
+/** O recorte usa o FUNIL POLÍTICO (estágio de apoio ou temperatura)? */
+export function usaPolitico(filtro: FiltroDeAudiencia): boolean {
+  return filtro.niveis_de_apoio.length > 0 || filtro.temperaturas.length > 0;
 }
 
 /** A data-limite de "sem interação há N dias". Exportada para o teste não recalcular. */

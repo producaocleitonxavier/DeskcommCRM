@@ -60,6 +60,11 @@ export function NovaCampanha() {
   const [agente, setAgente] = useState("");
   const [funilDoPublico, setFunilDoPublico] = useState("");
   const [etapaDoPublico, setEtapaDoPublico] = useState("");
+  // Recorte POLÍTICO (fork War Room): origem da captação + estágio do funil
+  // político + temperatura. É o que o gabinete usa de verdade.
+  const [origens, setOrigens] = useState("");
+  const [niveis, setNiveis] = useState<string[]>([]);
+  const [temps, setTemps] = useState<string[]>([]);
 
   const funis = useFunis();
   const etapas = useEtapas(funil || null);
@@ -73,9 +78,12 @@ export function NovaCampanha() {
       sem_interacao_ha_dias: semInteracao ? Number(semInteracao) : null,
       funis: funilDoPublico ? [funilDoPublico] : [],
       etapas: etapaDoPublico ? [etapaDoPublico] : [],
+      origens: listar(origens),
+      niveis_de_apoio: niveis,
+      temperaturas: temps,
       limite: Number(limite) || 100,
     }),
-    [comAlgumaTag, semTags, semInteracao, funilDoPublico, etapaDoPublico, limite],
+    [comAlgumaTag, semTags, semInteracao, funilDoPublico, etapaDoPublico, origens, niveis, temps, limite],
   );
 
   const temCriterio =
@@ -83,6 +91,9 @@ export function NovaCampanha() {
     filtro.sem_tags.length > 0 ||
     filtro.funis.length > 0 ||
     filtro.etapas.length > 0 ||
+    filtro.origens.length > 0 ||
+    filtro.niveis_de_apoio.length > 0 ||
+    filtro.temperaturas.length > 0 ||
     filtro.sem_interacao_ha_dias !== null;
 
   const podeSalvar =
@@ -234,6 +245,67 @@ export function NovaCampanha() {
         <p className="text-sm text-muted-foreground">
           {t("Escolha pelo menos um critério — uma lista sem recorte ninguém confere antes de apertar.")}
         </p>
+
+        {/* ── Recorte POLÍTICO: origem × estágio × temperatura ── */}
+        <div className="space-y-3 rounded-lg border border-border/70 p-3">
+          <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+            {t("Recorte da base")}
+          </p>
+          <div className="space-y-2">
+            <Label htmlFor="origens">{t("Origem da captação")}</Label>
+            <Input
+              id="origens"
+              value={origens}
+              onChange={(e) => setOrigens(e.target.value)}
+              placeholder={t("ex.: abaixo_assinado, saga_palestras, campo (separe por vírgula)")}
+            />
+          </div>
+          <div className="space-y-1.5">
+            <Label>{t("Estágio no funil")}</Label>
+            <div className="flex flex-wrap gap-2">
+              {ESTAGIOS_POLITICOS.map(([valor, rotulo]) => {
+                const ativo = niveis.includes(valor);
+                return (
+                  <button
+                    key={valor}
+                    type="button"
+                    onClick={() => setNiveis(alternar(niveis, valor))}
+                    className={`rounded-full border px-3 py-1 text-sm transition-colors ${
+                      ativo
+                        ? "border-transparent bg-primary text-primary-foreground"
+                        : "border-border bg-surface text-muted-foreground hover:border-primary/50"
+                    }`}
+                  >
+                    {t(rotulo)}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+          <div className="space-y-1.5">
+            <Label>{t("Temperatura")}</Label>
+            <div className="flex flex-wrap gap-2">
+              {TEMPERATURAS_POLITICAS.map(([valor, rotulo]) => {
+                const ativo = temps.includes(valor);
+                return (
+                  <button
+                    key={valor}
+                    type="button"
+                    onClick={() => setTemps(alternar(temps, valor))}
+                    className={`rounded-full border px-3 py-1 text-sm transition-colors ${
+                      ativo
+                        ? "border-transparent bg-primary text-primary-foreground"
+                        : "border-border bg-surface text-muted-foreground hover:border-primary/50"
+                    }`}
+                  >
+                    {t(rotulo)}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+
         <div className="grid gap-4 sm:grid-cols-2">
           <div className="space-y-2">
             <Label htmlFor="com-tags">{t("Com alguma destas etiquetas")}</Label>
@@ -528,4 +600,25 @@ function listar(bruto: string): string[] {
     .split(",")
     .map((s) => s.trim())
     .filter(Boolean);
+}
+
+/** Estágios do funil político, na ordem (rótulo humano). */
+const ESTAGIOS_POLITICOS: ReadonlyArray<readonly [string, string]> = [
+  ["novo_cadastro", "Novo cadastro"],
+  ["simpatizante", "Simpatizante"],
+  ["apoiador", "Apoiador"],
+  ["militante", "Multiplicador"],
+  ["voto_certo", "Voto certo"],
+];
+
+/** Temperaturas do lead político. */
+const TEMPERATURAS_POLITICAS: ReadonlyArray<readonly [string, string]> = [
+  ["frio", "Frio"],
+  ["morno", "Morno"],
+  ["quente", "Quente"],
+];
+
+/** Liga/desliga um valor numa lista de seleção (chips). */
+function alternar(lista: string[], valor: string): string[] {
+  return lista.includes(valor) ? lista.filter((x) => x !== valor) : [...lista, valor];
 }

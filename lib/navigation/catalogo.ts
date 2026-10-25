@@ -261,15 +261,18 @@ export const NAV_CATALOG = [
     // A campanha vive no CRM e não em Conexões: quem a usa está pensando em
     // QUEM vai falar, não no número que fala. O ritmo (que é de Conexões) ela
     // herda, e só sabe deixar mais devagar.
+    //
+    // No fork político, DISPAROS é operação central (não "de vez em quando"): é
+    // por aqui que o gabinete fala com a base por origem × estágio do funil, no
+    // ritmo seguro. Por isso é FIXO no sidebar da Operação (o cliente pediu).
     href: "/app/campaigns",
-    label: "Campanhas",
-    description: "Fale com uma lista de contatos que você escolhe, no ritmo do número.",
+    label: "Disparos",
+    description:
+      "Dispare mensagens e materiais para a base que você escolhe — por origem e estágio no funil, no ritmo que não queima o número.",
     icon: "Megaphone",
     group: "operacao",
     section: "O dia a dia da venda",
-    // SÓ NO HUB, como as demais telas de preparação: o quinto item do sidebar do
-    // CRM já fez o menu rolar 13px em 900px (e2e `navegacao.spec.ts`), e a
-    // campanha é montada de vez em quando, não aberta todo dia.
+    sidebar: true,
   },
   {
     href: "/app/contacts",
