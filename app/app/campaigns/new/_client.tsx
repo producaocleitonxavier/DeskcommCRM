@@ -1,42 +1,60 @@
 "use client";
 /**
- * Criar campanha (PRD §8).
+ * Novo disparo — fluxo GUIADO (War Room 2.0, redesign premium).
  *
- * ═══ Por que SEÇÕES e não um wizard de cinco passos ═══
- *
- * O PRD recomenda o wizard; a ordem das perguntas aqui é a mesma dele
- * (Informações → Público → Mensagem → Entrega), mas numa página só. O wizard
- * acrescentaria estado de passo, navegação entre passos e rascunho parcial
- * gravado a cada etapa — máquina para um formulário que cabe numa tela. O que
- * ele daria de útil, que é não deixar apertar "enviar" antes de conferir, já
- * existe: criar uma campanha cria um RASCUNHO, e preparar/testar/iniciar são
- * ações da tela de detalhe, cada uma com sua confirmação.
- *
- * A prévia do público fica ao lado do filtro, e não depois: o número que o
- * operador precisa ver antes de apertar é "quantas pessoas isto pega".
+ * Regra do cliente: "como se uma criança conseguisse fazer". Então: 4 passos
+ * numerados, tudo CLICÁVEL (origem/estágio/temperatura/material/número/velocidade
+ * em chips e cards), sem jargão de CRM de vendas, prévia do WhatsApp ao vivo, e
+ * ritmo em 3 velocidades prontas (o número cru fica no Avançado). Animação sutil
+ * reforça o entendimento (entrada escalonada, contagem que sobe, seleção que
+ * responde ao toque). Cria um RASCUNHO — o envio é confirmado depois.
  */
 import { useRouter } from "next/navigation";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 
-import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
+import { CommandHero } from "@/components/politico/command-hero";
 import { useCriarCampanha, usePreviaDaAudiencia } from "@/hooks/campanhas/useCampanhas";
 import { channelLabel, useChannelSessions } from "@/hooks/channels/useChannelSessions";
 import { useT } from "@/hooks/i18n/useT";
 import {
-  useAgentesPublicados,
-  useEtapas,
-  useFunis,
-} from "@/hooks/campanhas/useDestinoDaCampanha";
-import { VARIAVEIS_DA_CAMPANHA, DESCRICAO_DA_VARIAVEL } from "@/lib/campanhas/renderizador";
+  Users,
+  MessageSquare,
+  BookOpen,
+  Send,
+  Check,
+  Eye,
+  Gauge,
+  ChevronDown,
+  Sparkles,
+} from "lucide-react";
+
+type Origem = { value: string; label: string; total: number };
+type Material = { id: string; titulo: string; tipo: string };
+
+const ESTAGIOS: ReadonlyArray<readonly [string, string]> = [
+  ["novo_cadastro", "Novo cadastro"],
+  ["simpatizante", "Simpatizante"],
+  ["apoiador", "Apoiador"],
+  ["militante", "Multiplicador"],
+  ["voto_certo", "Voto certo"],
+];
+const TEMPS: ReadonlyArray<readonly [string, string]> = [
+  ["frio", "Frio"],
+  ["morno", "Morno"],
+  ["quente", "Quente"],
+];
+const VELOCIDADES = [
+  { id: "calmo", label: "Calmo", emoji: "🐢", desc: "Protege o número. Ideal para a base fria.", intervalo: 90, teto: 40 },
+  { id: "normal", label: "Normal", emoji: "🚶", desc: "Equilíbrio entre rapidez e segurança.", intervalo: 45, teto: 150 },
+  { id: "rapido", label: "Rápido", emoji: "🏃", desc: "Número aquecido ou quem já respondeu.", intervalo: 20, teto: 400 },
+] as const;
 
 export function NovaCampanha({
   materiais = [],
+  origens = [],
 }: {
-  materiais?: Array<{ id: string; titulo: string; tipo: string }>;
+  materiais?: Material[];
+  origens?: Origem[];
 }) {
   const t = useT();
   const router = useRouter();
@@ -45,68 +63,42 @@ export function NovaCampanha({
   const previa = usePreviaDaAudiencia();
 
   const [nome, setNome] = useState("");
-  const [canal, setCanal] = useState("");
-  const [baseLegal, setBaseLegal] = useState<"consent" | "legitimate_interest">("consent");
-  const [liaRef, setLiaRef] = useState("");
-  const [comAlgumaTag, setComAlgumaTag] = useState("");
-  const [semTags, setSemTags] = useState("");
-  const [semInteracao, setSemInteracao] = useState("");
-  const [limite, setLimite] = useState("100");
-  const [texto, setTexto] = useState("");
-  const [intervalo, setIntervalo] = useState("");
-  const [janelaInicio, setJanelaInicio] = useState("");
-  const [janelaFim, setJanelaFim] = useState("");
-  const [tetoDiario, setTetoDiario] = useState("");
-  const [tetoHorario, setTetoHorario] = useState("");
-  const [extras, setExtras] = useState<string[]>([]);
-  const [funil, setFunil] = useState("");
-  const [etapa, setEtapa] = useState("");
-  const [agente, setAgente] = useState("");
-  const [funilDoPublico, setFunilDoPublico] = useState("");
-  const [etapaDoPublico, setEtapaDoPublico] = useState("");
-  // Recorte POLÍTICO (fork War Room): origem da captação + estágio do funil
-  // político + temperatura. É o que o gabinete usa de verdade.
-  const [origens, setOrigens] = useState("");
+  const [origensSel, setOrigensSel] = useState<string[]>([]);
   const [niveis, setNiveis] = useState<string[]>([]);
   const [temps, setTemps] = useState<string[]>([]);
-  // Material (ebook) entregue automaticamente quando a pessoa responde SIM.
+  const [texto, setTexto] = useState("");
   const [material, setMaterial] = useState("");
+  const [canal, setCanal] = useState("");
+  const [velocidade, setVelocidade] = useState<string>("calmo");
+  // Avançado
+  const [avancado, setAvancado] = useState(false);
+  const [baseLegal, setBaseLegal] = useState<"consent" | "legitimate_interest">("consent");
+  const [liaRef, setLiaRef] = useState("");
+  const [limite, setLimite] = useState("500");
 
-  const funis = useFunis();
-  const etapas = useEtapas(funil || null);
-  const etapasDoPublico = useEtapas(funilDoPublico || null);
-  const agentes = useAgentesPublicados();
+  const listaDeCanais = canais.data ?? [];
+  // Preseleciona quando só há um número.
+  useEffect(() => {
+    if (!canal && listaDeCanais.length === 1) setCanal(listaDeCanais[0]!.id);
+  }, [canal, listaDeCanais]);
 
   const filtro = useMemo(
     () => ({
-      com_alguma_tag: listar(comAlgumaTag),
-      sem_tags: listar(semTags),
-      sem_interacao_ha_dias: semInteracao ? Number(semInteracao) : null,
-      funis: funilDoPublico ? [funilDoPublico] : [],
-      etapas: etapaDoPublico ? [etapaDoPublico] : [],
-      origens: listar(origens),
+      origens: origensSel,
       niveis_de_apoio: niveis,
       temperaturas: temps,
-      limite: Number(limite) || 100,
+      limite: Number(limite) || 500,
     }),
-    [comAlgumaTag, semTags, semInteracao, funilDoPublico, etapaDoPublico, origens, niveis, temps, limite],
+    [origensSel, niveis, temps, limite],
   );
+  const temPublico = origensSel.length > 0 || niveis.length > 0 || temps.length > 0;
 
-  const temCriterio =
-    filtro.com_alguma_tag.length > 0 ||
-    filtro.sem_tags.length > 0 ||
-    filtro.funis.length > 0 ||
-    filtro.etapas.length > 0 ||
-    filtro.origens.length > 0 ||
-    filtro.niveis_de_apoio.length > 0 ||
-    filtro.temperaturas.length > 0 ||
-    filtro.sem_interacao_ha_dias !== null;
-
-  const podeSalvar =
+  const vel = VELOCIDADES.find((v) => v.id === velocidade) ?? VELOCIDADES[0];
+  const podeCriar =
     nome.trim() !== "" &&
     canal !== "" &&
     texto.trim() !== "" &&
-    temCriterio &&
+    temPublico &&
     (baseLegal !== "legitimate_interest" || liaRef.trim() !== "");
 
   async function salvar() {
@@ -117,547 +109,438 @@ export function NovaCampanha({
       base_legal: baseLegal,
       lia_ref: liaRef.trim() || null,
       audience_filter: filtro,
-      intervalo_segundos: intervalo ? Number(intervalo) : null,
-      janela_inicio_hora: janelaInicio ? Number(janelaInicio) : null,
-      janela_fim_hora: janelaFim ? Number(janelaFim) : null,
-      teto_diario: tetoDiario ? Number(tetoDiario) : null,
-      teto_horario: tetoHorario ? Number(tetoHorario) : null,
-      channel_session_ids: extras,
-      pipeline_id: funil || null,
-      stage_id: etapa || null,
-      agent_id: agente || null,
+      intervalo_segundos: vel.intervalo,
+      teto_diario: vel.teto,
       material_id: material || null,
     });
     router.push(`/app/campaigns/${criada.id}`);
   }
 
   return (
-    <div className="mx-auto max-w-3xl space-y-4 p-6">
-      <header>
-        <h1 className="text-2xl font-semibold tracking-tight">{t("Nova campanha")}</h1>
-        <p className="text-sm text-muted-foreground">
-          {t("Isto cria um rascunho. Nada é enviado antes de você preparar a lista e iniciar.")}
-        </p>
-      </header>
+    <div className="mx-auto max-w-[760px] space-y-[18px] px-4 py-7" style={{ background: "var(--color-bg)" }}>
+      <CommandHero
+        eyebrow="Operação · Comunicação"
+        titulo="Novo disparo"
+        subtitulo="Monte em 4 passos simples: quem recebe, o que você diz, o que entrega e no ritmo seguro. No fim vira um rascunho — você confere e inicia depois."
+        acoes={[{ href: "/app/campaigns", label: "← Voltar" }]}
+      />
 
-      <Card className="space-y-4 p-4">
-        <h2 className="font-medium">{t("Informações")}</h2>
-        <div className="space-y-2">
-          <Label htmlFor="nome">{t("Nome da campanha")}</Label>
-          <Input
-            id="nome"
+      {/* Nome */}
+      <section className="wr-card wr-anim-in p-5 sm:p-6" style={{ animationDelay: "0.02s" }}>
+        <label className="block space-y-2">
+          <span className="font-heading text-[15px] font-bold" style={{ color: "var(--color-text)" }}>
+            {t("Como você quer chamar este disparo?")}
+          </span>
+          <input
             value={nome}
             onChange={(e) => setNome(e.target.value)}
-            placeholder={t("Ex.: Reativação de clientes parados")}
+            placeholder={t("Ex.: Material de proteção digital — base de palestras")}
+            className="wr-input"
           />
-        </div>
-        <div className="space-y-2">
-          <Label htmlFor="canal">{t("Enviar pelo número")}</Label>
-          <select
-            id="canal"
-            className="h-9 w-full rounded-md border border-border bg-surface px-2 text-sm"
-            value={canal}
-            onChange={(e) => setCanal(e.target.value)}
-          >
-            <option value="">{t("Escolha um número")}</option>
-            {(canais.data ?? []).map((c) => (
-              <option key={c.id} value={c.id}>
-                {channelLabel(c, t)}
-              </option>
-            ))}
-          </select>
-          {canais.data?.length === 0 && (
-            <p className="text-sm text-warning-fg">
-              {t("Nenhum número conectado. Conecte um em Conexões antes de criar a campanha.")}
-            </p>
-          )}
-        </div>
+          <span className="text-xs" style={{ color: "var(--color-text-subtle)" }}>
+            {t("Só pra você encontrar depois. O destinatário não vê.")}
+          </span>
+        </label>
+      </section>
 
-        {(canais.data ?? []).length > 1 && (
-          <fieldset className="space-y-2">
-            <legend className="text-sm font-medium">{t("Falar também por estes números")}</legend>
-            <p className="text-sm text-muted-foreground">
-              {t(
-                "A campanha reveza entre os números marcados, escolhendo a cada envio o que tem mais folga no teto do dia. Quem já conversa com você por um deles recebe por esse mesmo, para não chegar de um número desconhecido.",
-              )}
-            </p>
-            {(canais.data ?? [])
-              .filter((c) => c.id !== canal)
-              .map((c) => (
-                <label key={c.id} className="flex items-center gap-2 text-sm">
-                  <input
-                    type="checkbox"
-                    checked={extras.includes(c.id)}
-                    onChange={(e) =>
-                      setExtras((atual) =>
-                        e.target.checked ? [...atual, c.id] : atual.filter((id) => id !== c.id),
-                      )
-                    }
-                  />
-                  {channelLabel(c, t)}
-                </label>
-              ))}
-            {extras.length > 0 && (
-              <p className="text-sm text-muted-foreground">
-                {t(
-                  "Atenção: o intervalo e os tetos da CAMPANHA somam todos os números. Para o rodízio aumentar o volume, deixe o ritmo da campanha em branco e cada número usa o dele.",
-                )}
-              </p>
-            )}
-          </fieldset>
-        )}
-        <fieldset className="space-y-2">
-          <legend className="text-sm font-medium">{t("Base legal do envio")}</legend>
-          <p className="text-sm text-muted-foreground">
-            {t(
-              "Quem recebe pode perguntar por que recebeu, e a resposta precisa existir antes do envio.",
-            )}
-          </p>
-          <label className="flex items-center gap-2 text-sm">
-            <input
-              type="radio"
-              name="base-legal"
-              value="consent"
-              checked={baseLegal === "consent"}
-              onChange={() => setBaseLegal("consent")}
-            />
-            {t("Consentimento — estas pessoas pediram para receber")}
-          </label>
-          <label className="flex items-center gap-2 text-sm">
-            <input
-              type="radio"
-              name="base-legal"
-              value="legitimate_interest"
-              checked={baseLegal === "legitimate_interest"}
-              onChange={() => setBaseLegal("legitimate_interest")}
-            />
-            {t("Interesse legítimo — com avaliação (LIA) registrada")}
-          </label>
-          {baseLegal === "legitimate_interest" && (
-            <div className="space-y-2">
-              <Label htmlFor="lia">{t("Referência da avaliação (LIA)")}</Label>
-              <Input
-                id="lia"
-                value={liaRef}
-                onChange={(e) => setLiaRef(e.target.value)}
-                placeholder={t("Ex.: LIA-2026-01")}
-              />
-            </div>
-          )}
-        </fieldset>
-      </Card>
-
-      <Card className="space-y-4 p-4">
-        <h2 className="font-medium">{t("Público")}</h2>
-        <p className="text-sm text-muted-foreground">
-          {t("Escolha pelo menos um critério — uma lista sem recorte ninguém confere antes de apertar.")}
+      {/* PASSO 1 — Público */}
+      <Passo numero={1} icone={Users} titulo={t("Quem vai receber?")} atraso="0.06s">
+        <p className="text-sm" style={{ color: "var(--color-text-subtle)" }}>
+          {t("Escolha pelo menos um filtro. Dá pra combinar origem, estágio e temperatura.")}
         </p>
 
-        {/* ── Recorte POLÍTICO: origem × estágio × temperatura ── */}
-        <div className="space-y-3 rounded-lg border border-border/70 p-3">
-          <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-            {t("Recorte da base")}
-          </p>
-          <div className="space-y-2">
-            <Label htmlFor="origens">{t("Origem da captação")}</Label>
-            <Input
-              id="origens"
-              value={origens}
-              onChange={(e) => setOrigens(e.target.value)}
-              placeholder={t("ex.: abaixo_assinado, saga_palestras, campo (separe por vírgula)")}
-            />
-          </div>
-          <div className="space-y-1.5">
-            <Label>{t("Estágio no funil")}</Label>
-            <div className="flex flex-wrap gap-2">
-              {ESTAGIOS_POLITICOS.map(([valor, rotulo]) => {
-                const ativo = niveis.includes(valor);
-                return (
-                  <button
-                    key={valor}
-                    type="button"
-                    onClick={() => setNiveis(alternar(niveis, valor))}
-                    className={`rounded-full border px-3 py-1 text-sm transition-colors ${
-                      ativo
-                        ? "border-transparent bg-primary text-primary-foreground"
-                        : "border-border bg-surface text-muted-foreground hover:border-primary/50"
-                    }`}
-                  >
-                    {t(rotulo)}
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-          <div className="space-y-1.5">
-            <Label>{t("Temperatura")}</Label>
-            <div className="flex flex-wrap gap-2">
-              {TEMPERATURAS_POLITICAS.map(([valor, rotulo]) => {
-                const ativo = temps.includes(valor);
-                return (
-                  <button
-                    key={valor}
-                    type="button"
-                    onClick={() => setTemps(alternar(temps, valor))}
-                    className={`rounded-full border px-3 py-1 text-sm transition-colors ${
-                      ativo
-                        ? "border-transparent bg-primary text-primary-foreground"
-                        : "border-border bg-surface text-muted-foreground hover:border-primary/50"
-                    }`}
-                  >
-                    {t(rotulo)}
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-        </div>
-
-        <div className="grid gap-4 sm:grid-cols-2">
-          <div className="space-y-2">
-            <Label htmlFor="com-tags">{t("Com alguma destas etiquetas")}</Label>
-            <Input
-              id="com-tags"
-              value={comAlgumaTag}
-              onChange={(e) => setComAlgumaTag(e.target.value)}
-              placeholder={t("separe por vírgula")}
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="sem-tags">{t("Sem nenhuma destas etiquetas")}</Label>
-            <Input
-              id="sem-tags"
-              value={semTags}
-              onChange={(e) => setSemTags(e.target.value)}
-              placeholder={t("separe por vírgula")}
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="silencio">{t("Sem falar com a gente há (dias)")}</Label>
-            <Input
-              id="silencio"
-              type="number"
-              min={1}
-              value={semInteracao}
-              onChange={(e) => setSemInteracao(e.target.value)}
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="pub-funil">{t("Com negócio no funil")}</Label>
-            <select
-              id="pub-funil"
-              className="h-9 w-full rounded-md border border-border bg-surface px-2 text-sm"
-              value={funilDoPublico}
-              onChange={(e) => {
-                setFunilDoPublico(e.target.value);
-                setEtapaDoPublico("");
-              }}
-            >
-              <option value="">{t("Qualquer um")}</option>
-              {(funis.data ?? []).map((f) => (
-                <option key={f.id} value={f.id}>
-                  {f.name}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="pub-etapa">{t("Na etapa")}</Label>
-            <select
-              id="pub-etapa"
-              className="h-9 w-full rounded-md border border-border bg-surface px-2 text-sm"
-              value={etapaDoPublico}
-              onChange={(e) => setEtapaDoPublico(e.target.value)}
-              disabled={!funilDoPublico}
-            >
-              <option value="">{t("Qualquer etapa")}</option>
-              {(etapasDoPublico.data ?? []).map((e) => (
-                <option key={e.id} value={e.id}>
-                  {e.name}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="limite">{t("Máximo de contatos nesta campanha")}</Label>
-            <Input
-              id="limite"
-              type="number"
-              min={1}
-              max={5000}
-              value={limite}
-              onChange={(e) => setLimite(e.target.value)}
-            />
-          </div>
-        </div>
-        <div className="flex flex-wrap items-center gap-3">
-          <Button
-            type="button"
-            variant="outline"
-            disabled={!temCriterio || previa.isPending}
-            onClick={() =>
-              previa.mutate({ audience_filter: filtro, message_body: texto })
-            }
-          >
-            {previa.isPending ? t("Contando…") : t("Ver quantas pessoas")}
-          </Button>
-          {previa.data && (
-            <p className="text-sm">
-              <strong>{previa.data.elegiveis}</strong> {t("podem receber")}
-              {previa.data.excluidos > 0
-                ? ` · ${previa.data.excluidos} ${t("ficam de fora")}`
-                : ""}
+        <Campo rotulo={t("De onde essas pessoas vieram?")} dica={t("a origem do cadastro")}>
+          {origens.length === 0 ? (
+            <p className="text-sm" style={{ color: "var(--color-text-subtle)" }}>
+              {t("Nenhuma origem na base ainda.")}
             </p>
+          ) : (
+            <div className="flex flex-wrap gap-2">
+              {origens.map((o) => (
+                <Chip
+                  key={o.value}
+                  ativo={origensSel.includes(o.value)}
+                  onClick={() => setOrigensSel(alternar(origensSel, o.value))}
+                >
+                  {o.label}
+                  <span className="ml-1 opacity-60">· {o.total.toLocaleString("pt-BR")}</span>
+                </Chip>
+              ))}
+            </div>
           )}
-        </div>
-        {previa.data && previa.data.excluidos > 0 && (
-          <ul className="space-y-1 text-sm text-muted-foreground">
-            {Object.entries(previa.data.motivos).map(([motivo, quantos]) => (
-              <li key={motivo}>
-                {quantos} — {t(previa.data!.legenda[motivo] ?? motivo)}
-              </li>
-            ))}
-          </ul>
-        )}
-        {previa.data?.truncado && (
-          <p className="text-sm text-amber-600">
-            {t(
-              "O recorte bateu o teto de 20.000 negócios desta prévia — a lista pode estar incompleta. Refine o filtro para ver o todo.",
-            )}
-          </p>
-        )}
-      </Card>
+        </Campo>
 
-      <Card className="space-y-4 p-4">
-        <h2 className="font-medium">{t("Mensagem")}</h2>
-        <Textarea
-          rows={6}
+        <Campo rotulo={t("Em que ponto da jornada?")} dica={t("o estágio no funil")}>
+          <div className="flex flex-wrap gap-2">
+            {ESTAGIOS.map(([v, l]) => (
+              <Chip key={v} ativo={niveis.includes(v)} onClick={() => setNiveis(alternar(niveis, v))}>
+                {t(l)}
+              </Chip>
+            ))}
+          </div>
+        </Campo>
+
+        <Campo rotulo={t("Quão engajadas?")} dica={t("opcional")}>
+          <div className="flex flex-wrap gap-2">
+            {TEMPS.map(([v, l]) => (
+              <Chip key={v} ativo={temps.includes(v)} onClick={() => setTemps(alternar(temps, v))}>
+                {t(l)}
+              </Chip>
+            ))}
+          </div>
+        </Campo>
+
+        {/* Prévia do público */}
+        <div className="mt-1 rounded-xl p-4" style={{ background: "rgba(215,243,106,0.07)", border: "1px solid rgba(215,243,106,0.2)" }}>
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              {previa.data ? (
+                <div className="flex items-baseline gap-2">
+                  <ContadorQueSobe alvo={previa.data.elegiveis} />
+                  <span className="text-sm" style={{ color: "var(--color-text-muted)" }}>
+                    {t("pessoas vão receber")}
+                  </span>
+                </div>
+              ) : (
+                <span className="text-sm" style={{ color: "var(--color-text-muted)" }}>
+                  {t("Clique para ver quantas pessoas o filtro pega.")}
+                </span>
+              )}
+              {previa.data && previa.data.excluidos > 0 && (
+                <p className="mt-0.5 text-xs" style={{ color: "var(--color-text-subtle)" }}>
+                  {previa.data.excluidos} {t("ficam de fora (opt-out, sem telefone, etc.)")}
+                </p>
+              )}
+            </div>
+            <button
+              type="button"
+              disabled={!temPublico || previa.isPending}
+              onClick={() => previa.mutate({ audience_filter: filtro, message_body: texto })}
+              className="wr-btn-dark inline-flex items-center gap-2 px-5 disabled:opacity-50"
+            >
+              <Eye className="h-4 w-4" />
+              {previa.isPending ? t("Contando…") : t("Ver quantas")}
+            </button>
+          </div>
+        </div>
+      </Passo>
+
+      {/* PASSO 2 — Mensagem */}
+      <Passo numero={2} icone={MessageSquare} titulo={t("O que você vai dizer?")} atraso="0.1s">
+        <p className="text-sm" style={{ color: "var(--color-text-subtle)" }}>
+          {t("Convide a pessoa a responder SIM. Quando ela responder, o material é entregue sozinho.")}
+        </p>
+        <textarea
           value={texto}
           onChange={(e) => setTexto(e.target.value)}
-          placeholder={t("Escreva como você falaria com uma pessoa só.")}
-          aria-label={t("Texto da mensagem")}
+          rows={4}
+          placeholder={t("Ex.: Oi {{nome}}! Preparamos um material sobre proteção digital. Posso te enviar? Responde SIM 👍")}
+          className="wr-input resize-y"
+          style={{ minHeight: 110 }}
         />
-        <div className="space-y-1 text-sm text-muted-foreground">
-          <p>{t("Você pode usar:")}</p>
-          <ul className="space-y-1">
-            {VARIAVEIS_DA_CAMPANHA.map((v) => (
-              <li key={v}>
-                <button
-                  type="button"
-                  className="rounded-md bg-surface-elevated px-1 font-mono text-xs"
-                  onClick={() => setTexto((atual) => `${atual}{{${v}}}`)}
-                >
-                  {`{{${v}}}`}
-                </button>{" "}
-                — {t(DESCRICAO_DA_VARIAVEL[v])}
-              </li>
-            ))}
-          </ul>
-          <p>
-            {t(
-              "Quem não tiver o dado que a mensagem usa fica de fora, com o motivo na lista — mensagem com buraco não sai.",
-            )}
-          </p>
+        <div className="flex flex-wrap items-center gap-2">
+          <button type="button" onClick={() => setTexto((s) => s + "{{nome}}")} className="wr-btn text-xs">
+            + {t("nome da pessoa")}
+          </button>
+          <span className="text-xs" style={{ color: "var(--color-text-subtle)" }}>
+            {t("vira o primeiro nome de cada contato")}
+          </span>
         </div>
-      </Card>
 
-      {/* ── Material entregue na resposta (reply-gated) ── */}
-      <Card className="space-y-3 p-4">
-        <h2 className="font-medium">{t("Material entregue na resposta")}</h2>
-        <p className="text-sm text-muted-foreground">
-          {t(
-            "Quando a pessoa responder SIM (claro, pode mandar, manda aí…), o sistema entrega este material sozinho, como anexo — sem passar pelo gabinete. Deixe em branco para um disparo sem material.",
-          )}
-        </p>
-        {materiais.length > 0 ? (
-          <select
-            className="h-9 w-full rounded-md border border-border bg-surface px-2 text-sm"
-            value={material}
-            onChange={(e) => setMaterial(e.target.value)}
-          >
-            <option value="">{t("Sem material (só a mensagem)")}</option>
-            {materiais.map((m) => (
-              <option key={m.id} value={m.id}>
-                {m.titulo} {m.tipo ? `· ${m.tipo}` : ""}
-              </option>
-            ))}
-          </select>
-        ) : (
-          <p className="text-sm text-muted-foreground">
-            {t("Nenhum material cadastrado ainda. Cadastre um ebook em")}{" "}
-            <a href="/app/politico/materiais/novo" className="underline">
-              {t("Materiais")}
-            </a>{" "}
-            {t("para entregá-lo na resposta.")}
-          </p>
+        {/* Prévia WhatsApp */}
+        {texto.trim() && (
+          <div className="wr-anim-in mt-1">
+            <span className="text-xs font-semibold uppercase tracking-wide" style={{ color: "var(--color-text-subtle)" }}>
+              {t("Prévia no WhatsApp")}
+            </span>
+            <div className="mt-2 rounded-2xl p-4" style={{ background: "#0B141A" }}>
+              <div
+                className="max-w-[85%] rounded-xl rounded-tl-sm px-3 py-2 text-sm"
+                style={{ background: "#1F2C33", color: "#E9EDEF", boxShadow: "0 1px 1px rgba(0,0,0,0.3)" }}
+                dangerouslySetInnerHTML={{ __html: previewWhatsapp(texto) }}
+              />
+            </div>
+          </div>
         )}
-      </Card>
+      </Passo>
 
-      <Card className="space-y-4 p-4">
-        <h2 className="font-medium">{t("Quem responder")}</h2>
-        <p className="text-sm text-muted-foreground">
-          {t("Em branco, tudo segue como hoje: o card nasce no funil do número e quem atende é o agente publicado nele.")}
+      {/* PASSO 3 — Material */}
+      <Passo numero={3} icone={BookOpen} titulo={t("Vai entregar um material?")} atraso="0.14s" opcional>
+        <p className="text-sm" style={{ color: "var(--color-text-subtle)" }}>
+          {t("Quando a pessoa responder SIM, mandamos este material sozinho — sem passar pelo gabinete.")}
         </p>
-        <div className="grid gap-4 sm:grid-cols-2">
-          <div className="space-y-2">
-            <Label htmlFor="funil">{t("Vira card no funil")}</Label>
-            <select
-              id="funil"
-              className="h-9 w-full rounded-md border border-border bg-surface px-2 text-sm"
-              value={funil}
-              onChange={(e) => {
-                setFunil(e.target.value);
-                setEtapa("");
-              }}
-            >
-              <option value="">{t("Funil do número (padrão)")}</option>
-              {(funis.data ?? []).map((f) => (
-                <option key={f.id} value={f.id}>
-                  {f.name}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="etapa">{t("Na etapa")}</Label>
-            <select
-              id="etapa"
-              className="h-9 w-full rounded-md border border-border bg-surface px-2 text-sm"
-              value={etapa}
-              onChange={(e) => setEtapa(e.target.value)}
-              disabled={!funil}
-            >
-              <option value="">{t("Primeira etapa do funil")}</option>
-              {(etapas.data ?? [])
-                .filter((e) => !e.is_won && !e.is_lost)
-                .map((e) => (
-                  <option key={e.id} value={e.id}>
-                    {e.name}
-                  </option>
-                ))}
-            </select>
-          </div>
-        </div>
-        <div className="space-y-2">
-          <Label htmlFor="agente">{t("Quem atende a resposta")}</Label>
-          <select
-            id="agente"
-            className="h-9 w-full rounded-md border border-border bg-surface px-2 text-sm"
-            value={agente}
-            onChange={(e) => setAgente(e.target.value)}
-          >
-            <option value="">{t("Agente publicado no número (padrão)")}</option>
-            {(agentes.data ?? []).map((a) => (
-              <option key={a.id} value={a.id}>
-                {a.name}
-              </option>
-            ))}
-          </select>
-          <p className="text-sm text-muted-foreground">
-            {t("Vale só para conversas que nascem desta campanha: quem já falava com você continua com quem o atendia. Quem aborda precisa saber dizer de onde veio o contato — essa resposta tem de estar no material do agente escolhido.")}
+        {materiais.length === 0 ? (
+          <p className="text-sm" style={{ color: "var(--color-text-subtle)" }}>
+            {t("Nenhum material cadastrado.")}{" "}
+            <a href="/app/politico/materiais/novo" className="underline" style={{ color: "var(--color-accent)" }}>
+              {t("Cadastrar um ebook")}
+            </a>
           </p>
-        </div>
-      </Card>
+        ) : (
+          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+            <CardEscolha ativo={material === ""} onClick={() => setMaterial("")} titulo={t("Nenhum material")} sub={t("só a mensagem")} />
+            {materiais.map((m) => (
+              <CardEscolha
+                key={m.id}
+                ativo={material === m.id}
+                onClick={() => setMaterial(m.id)}
+                titulo={m.titulo}
+                sub={m.tipo ? m.tipo.toUpperCase() : "material"}
+                icone={<BookOpen className="h-4 w-4" />}
+              />
+            ))}
+          </div>
+        )}
+      </Passo>
 
-      <Card className="space-y-4 p-4">
-        <h2 className="font-medium">{t("Ritmo desta campanha")}</h2>
-        <p className="text-sm text-muted-foreground">
-          {t(
-            "Em branco, vale o ritmo do número (Conexões › Proteção de envio). O que você puser aqui só pode deixar mais devagar.",
+      {/* PASSO 4 — Envio */}
+      <Passo numero={4} icone={Send} titulo={t("De qual número e em que ritmo?")} atraso="0.18s">
+        <Campo rotulo={t("Por qual número o disparo sai?")}>
+          {listaDeCanais.length === 0 ? (
+            <p className="text-sm" style={{ color: "var(--color-text-subtle)" }}>{t("Nenhuma conexão de WhatsApp.")}</p>
+          ) : (
+            <div className="flex flex-wrap gap-2">
+              {listaDeCanais.map((ch) => (
+                <Chip key={ch.id} ativo={canal === ch.id} onClick={() => setCanal(ch.id)}>
+                  {channelLabel(ch, t)}
+                </Chip>
+              ))}
+            </div>
           )}
-        </p>
-        <div className="grid gap-4 sm:grid-cols-2">
-          <div className="space-y-2">
-            <Label htmlFor="intervalo">{t("Intervalo mínimo entre mensagens (segundos)")}</Label>
-            <Input
-              id="intervalo"
-              type="number"
-              min={1}
-              value={intervalo}
-              onChange={(e) => setIntervalo(e.target.value)}
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="teto">{t("Máximo por dia")}</Label>
-            <Input
-              id="teto"
-              type="number"
-              min={1}
-              value={tetoDiario}
-              onChange={(e) => setTetoDiario(e.target.value)}
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="teto-hora">{t("Máximo por hora")}</Label>
-            <Input
-              id="teto-hora"
-              type="number"
-              min={1}
-              value={tetoHorario}
-              onChange={(e) => setTetoHorario(e.target.value)}
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="janela-inicio">{t("Enviar só a partir das (hora)")}</Label>
-            <Input
-              id="janela-inicio"
-              type="number"
-              min={0}
-              max={23}
-              value={janelaInicio}
-              onChange={(e) => setJanelaInicio(e.target.value)}
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="janela-fim">{t("Parar de enviar às (hora)")}</Label>
-            <Input
-              id="janela-fim"
-              type="number"
-              min={1}
-              max={24}
-              value={janelaFim}
-              onChange={(e) => setJanelaFim(e.target.value)}
-            />
-          </div>
-        </div>
-      </Card>
+        </Campo>
 
-      <div className="flex items-center justify-end gap-2">
-        <Button variant="outline" onClick={() => router.push("/app/campaigns")}>
-          {t("Cancelar")}
-        </Button>
-        <Button disabled={!podeSalvar || criar.isPending} onClick={() => void salvar()}>
-          {criar.isPending ? t("Salvando…") : t("Salvar rascunho")}
-        </Button>
+        <Campo rotulo={t("Velocidade do envio")} dica={t("mais devagar = mais seguro pro número")}>
+          <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+            {VELOCIDADES.map((v) => (
+              <button
+                key={v.id}
+                type="button"
+                onClick={() => setVelocidade(v.id)}
+                className="wr-lift rounded-xl border p-3 text-left transition-colors"
+                style={
+                  velocidade === v.id
+                    ? { borderColor: "var(--color-accent)", background: "rgba(215,243,106,0.08)" }
+                    : { borderColor: "var(--color-border)" }
+                }
+              >
+                <div className="flex items-center gap-2">
+                  <span className="text-lg">{v.emoji}</span>
+                  <span className="font-heading text-sm font-bold" style={{ color: "var(--color-text)" }}>{t(v.label)}</span>
+                  {velocidade === v.id && <Check className="ml-auto h-4 w-4" style={{ color: "var(--color-accent)" }} />}
+                </div>
+                <p className="mt-1 text-xs" style={{ color: "var(--color-text-subtle)" }}>{t(v.desc)}</p>
+              </button>
+            ))}
+          </div>
+        </Campo>
+      </Passo>
+
+      {/* Avançado */}
+      <section className="wr-card wr-anim-in p-5 sm:p-6" style={{ animationDelay: "0.22s" }}>
+        <button
+          type="button"
+          onClick={() => setAvancado((v) => !v)}
+          className="flex w-full items-center justify-between text-left"
+        >
+          <span className="inline-flex items-center gap-2 font-heading text-sm font-bold" style={{ color: "var(--color-text-muted)" }}>
+            <Gauge className="h-4 w-4" /> {t("Opções avançadas")}
+          </span>
+          <ChevronDown className="h-4 w-4 transition-transform" style={{ color: "var(--color-text-subtle)", transform: avancado ? "rotate(180deg)" : "none" }} />
+        </button>
+        {avancado && (
+          <div className="wr-anim-in mt-4 space-y-4">
+            <Campo rotulo={t("Base legal do envio")} dica={t("por que essas pessoas podem receber")}>
+              <div className="flex flex-col gap-2">
+                <label className="flex items-center gap-2 text-sm">
+                  <input type="radio" name="bl" checked={baseLegal === "consent"} onChange={() => setBaseLegal("consent")} />
+                  {t("Consentimento — pediram para receber")}
+                </label>
+                <label className="flex items-center gap-2 text-sm">
+                  <input type="radio" name="bl" checked={baseLegal === "legitimate_interest"} onChange={() => setBaseLegal("legitimate_interest")} />
+                  {t("Interesse legítimo — com avaliação (LIA)")}
+                </label>
+                {baseLegal === "legitimate_interest" && (
+                  <input value={liaRef} onChange={(e) => setLiaRef(e.target.value)} placeholder={t("Referência da LIA, ex.: LIA-2026-01")} className="wr-input" />
+                )}
+              </div>
+            </Campo>
+            <Campo rotulo={t("Máximo de pessoas neste disparo")}>
+              <input type="number" min={1} max={5000} value={limite} onChange={(e) => setLimite(e.target.value)} className="wr-input" style={{ maxWidth: 160 }} />
+            </Campo>
+          </div>
+        )}
+      </section>
+
+      {/* Criar */}
+      <div className="wr-anim-in flex flex-col items-center gap-2 pt-1" style={{ animationDelay: "0.26s" }}>
+        {criar.isError && (
+          <p className="text-sm font-semibold" style={{ color: "#F87171" }}>{t("Não deu para criar. Confira os campos e tente de novo.")}</p>
+        )}
+        <button
+          type="button"
+          disabled={!podeCriar || criar.isPending}
+          onClick={salvar}
+          className="wr-btn-dark inline-flex items-center gap-2 px-8 py-3 text-base disabled:opacity-50"
+        >
+          <Sparkles className="h-5 w-5" />
+          {criar.isPending ? t("Criando…") : t("Criar disparo")}
+        </button>
+        <span className="text-xs" style={{ color: "var(--color-text-subtle)" }}>
+          {t("Cria um rascunho. Nada é enviado antes de você conferir e iniciar.")}
+        </span>
       </div>
     </div>
   );
 }
 
-function listar(bruto: string): string[] {
-  return bruto
-    .split(",")
-    .map((s) => s.trim())
-    .filter(Boolean);
+/* ── Blocos ───────────────────────────────────────────────────────────────── */
+
+function Passo({
+  numero,
+  icone: Icone,
+  titulo,
+  atraso,
+  opcional,
+  children,
+}: {
+  numero: number;
+  icone: typeof Users;
+  titulo: string;
+  atraso: string;
+  opcional?: boolean;
+  children: ReactNode;
+}) {
+  const t = useT();
+  return (
+    <section className="wr-card wr-anim-in space-y-4 p-5 sm:p-6" style={{ animationDelay: atraso }}>
+      <div className="flex items-center gap-3">
+        <span
+          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full font-heading text-sm font-bold"
+          style={{ background: "var(--color-accent)", color: "#14181F" }}
+        >
+          {numero}
+        </span>
+        <div className="flex items-center gap-2">
+          <Icone className="h-5 w-5" style={{ color: "var(--color-accent)" }} />
+          <h2 className="font-heading text-[18px] font-bold" style={{ color: "var(--color-text)" }}>{titulo}</h2>
+        </div>
+        {opcional && (
+          <span className="ml-auto rounded-full px-2 py-0.5 text-[11px] font-semibold" style={{ background: "var(--color-surface-elevated)", color: "var(--color-text-subtle)" }}>
+            {t("opcional")}
+          </span>
+        )}
+      </div>
+      {children}
+    </section>
+  );
 }
 
-/** Estágios do funil político, na ordem (rótulo humano). */
-const ESTAGIOS_POLITICOS: ReadonlyArray<readonly [string, string]> = [
-  ["novo_cadastro", "Novo cadastro"],
-  ["simpatizante", "Simpatizante"],
-  ["apoiador", "Apoiador"],
-  ["militante", "Multiplicador"],
-  ["voto_certo", "Voto certo"],
-];
+function Campo({ rotulo, dica, children }: { rotulo: string; dica?: string; children: ReactNode }) {
+  return (
+    <div className="space-y-2">
+      <div className="flex items-baseline gap-2">
+        <span className="text-sm font-semibold" style={{ color: "var(--color-text-muted)" }}>{rotulo}</span>
+        {dica && <span className="text-xs" style={{ color: "var(--color-text-subtle)" }}>· {dica}</span>}
+      </div>
+      {children}
+    </div>
+  );
+}
 
-/** Temperaturas do lead político. */
-const TEMPERATURAS_POLITICAS: ReadonlyArray<readonly [string, string]> = [
-  ["frio", "Frio"],
-  ["morno", "Morno"],
-  ["quente", "Quente"],
-];
+function Chip({ ativo, onClick, children }: { ativo: boolean; onClick: () => void; children: ReactNode }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="wr-lift inline-flex items-center rounded-full border px-3.5 py-1.5 text-sm font-medium transition-colors"
+      style={
+        ativo
+          ? { background: "var(--color-accent)", color: "#14181F", borderColor: "transparent" }
+          : { borderColor: "var(--color-border)", color: "var(--color-text-muted)" }
+      }
+    >
+      {children}
+    </button>
+  );
+}
 
-/** Liga/desliga um valor numa lista de seleção (chips). */
+function CardEscolha({
+  ativo,
+  onClick,
+  titulo,
+  sub,
+  icone,
+}: {
+  ativo: boolean;
+  onClick: () => void;
+  titulo: string;
+  sub: string;
+  icone?: ReactNode;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="wr-lift flex items-center gap-3 rounded-xl border p-3 text-left transition-colors"
+      style={
+        ativo
+          ? { borderColor: "var(--color-accent)", background: "rgba(215,243,106,0.08)" }
+          : { borderColor: "var(--color-border)" }
+      }
+    >
+      <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg" style={{ background: "rgba(215,243,106,0.12)", color: "var(--color-accent)" }}>
+        {icone ?? <span className="text-xs">—</span>}
+      </span>
+      <span className="min-w-0">
+        <span className="block truncate font-heading text-sm font-bold" style={{ color: "var(--color-text)" }}>{titulo}</span>
+        <span className="block text-xs" style={{ color: "var(--color-text-subtle)" }}>{sub}</span>
+      </span>
+      {ativo && <Check className="ml-auto h-4 w-4 shrink-0" style={{ color: "var(--color-accent)" }} />}
+    </button>
+  );
+}
+
+/** Contador que sobe suavemente até o alvo — dá vida ao "quantas pessoas". */
+function ContadorQueSobe({ alvo }: { alvo: number }) {
+  const [n, setN] = useState(0);
+  const ref = useRef<number>(0);
+  useEffect(() => {
+    const inicio = ref.current;
+    const t0 = performance.now();
+    const dur = 600;
+    let raf = 0;
+    const passo = (t: number) => {
+      const p = Math.min(1, (t - t0) / dur);
+      const eased = 1 - Math.pow(1 - p, 3);
+      const atual = Math.round(inicio + (alvo - inicio) * eased);
+      setN(atual);
+      if (p < 1) raf = requestAnimationFrame(passo);
+      else ref.current = alvo;
+    };
+    raf = requestAnimationFrame(passo);
+    return () => cancelAnimationFrame(raf);
+  }, [alvo]);
+  return (
+    <span className="font-heading text-3xl font-bold tabular-nums" style={{ color: "var(--color-text)" }}>
+      {n.toLocaleString("pt-BR")}
+    </span>
+  );
+}
+
+/* ── Helpers ──────────────────────────────────────────────────────────────── */
+
 function alternar(lista: string[], valor: string): string[] {
   return lista.includes(valor) ? lista.filter((x) => x !== valor) : [...lista, valor];
+}
+
+/** Prévia WhatsApp: {{nome}} → "Maria", *negrito* → bold, escapando HTML. */
+function previewWhatsapp(texto: string): string {
+  const escapado = texto
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;");
+  return escapado
+    .replace(/\{\{\s*nome\s*\}\}/g, "Maria")
+    .replace(/\*([^*]+)\*/g, "<strong>$1</strong>")
+    .replace(/\n/g, "<br/>");
 }
