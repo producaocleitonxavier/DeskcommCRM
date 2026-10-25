@@ -54,6 +54,8 @@ const NAV_ALLOWLIST: Record<string, string> = {
     "sub-fluxo de novo material, alcançado pelo botão '+ Novo material' em /app/politico/materiais",
   "/app/politico/locais/novo":
     "sub-fluxo de novo local, alcançado pelo botão '+ Novo local' em /app/politico/locais",
+  "/app/politico/locais/inteligencia":
+    "painel de inteligência dos eventos, alcançado pelo botão '📊 Inteligência' em /app/politico/locais",
 };
 
 /** Deriva as rotas estáticas a partir dos arquivos de página que existem. */

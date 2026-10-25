@@ -80,7 +80,10 @@ export default function LocaisClient({ locais, kpis }: LocaisClientProps) {
         eyebrow="Gabinete · Eventos"
         titulo="Locais & Eventos"
         subtitulo="Escolas, igrejas e associações onde o mandato faz eventos — cada local agrupa os cadastros e vira público quente."
-        acoes={[{ href: "/app/politico/locais/novo", label: "+ Novo local", primary: true }]}
+        acoes={[
+          { href: "/app/politico/locais/inteligencia", label: "📊 Inteligência" },
+          { href: "/app/politico/locais/novo", label: "+ Novo local", primary: true },
+        ]}
       />
 
       <section className="grid grid-cols-3 gap-4">
