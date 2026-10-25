@@ -1004,15 +1004,10 @@ export const NAV_CATALOG = [
   },
 
   // ── Execução (itens internos, sem sidebar) ─────────────────────────
-  {
-    href: "/app/politico/funil-invisivel",
-    label: "Funil Invisível",
-    description: "Nurturing automático com scoring de afinidade e rastreamento de engajamento.",
-    icon: "Eye",
-    group: "inteligencia",
-    minRole: "manager",
-    sidebar: false, // aba do Funil
-  },
+  // Funil Invisível foi PARKEADO (2026-10-25): retirado do front, a rota agora
+  // redireciona para /app/politico/funil. Fora do catálogo de propósito; a rota
+  // redirect vive na allowlist do teste de navegação. Conceito guardado como
+  // "Termômetro de Base" (2027). Ver app/app/politico/funil-invisivel/page.tsx.
 
   // ── Território — Mapa Eleitoral: APOSENTADO, fundido no Radar Zonal.
   // Fora da sidebar; a rota redireciona para /radar-zonal (não quebra links).

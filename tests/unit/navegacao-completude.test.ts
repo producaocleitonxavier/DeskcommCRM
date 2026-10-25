@@ -56,6 +56,8 @@ const NAV_ALLOWLIST: Record<string, string> = {
     "sub-fluxo de novo local, alcançado pelo botão '+ Novo local' em /app/politico/locais",
   "/app/politico/locais/inteligencia":
     "painel de inteligência dos eventos, alcançado pelo botão '📊 Inteligência' em /app/politico/locais",
+  "/app/politico/funil-invisivel":
+    "rota parkeada (2026-10-25) — redireciona para /app/politico/funil; funil comportamental retirado do front por estar vazio/sem pipeline, conceito guardado como Termômetro de Base (2027)",
 };
 
 /** Deriva as rotas estáticas a partir dos arquivos de página que existem. */
