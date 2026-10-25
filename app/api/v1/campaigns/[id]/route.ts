@@ -154,6 +154,7 @@ export async function PATCH(
     "pipeline_id",
     "stage_id",
     "agent_id",
+    "material_id",
   ] as const) {
     if (entrada[campo] !== undefined) mudanca[campo] = entrada[campo];
   }

@@ -33,7 +33,11 @@ import {
 } from "@/hooks/campanhas/useDestinoDaCampanha";
 import { VARIAVEIS_DA_CAMPANHA, DESCRICAO_DA_VARIAVEL } from "@/lib/campanhas/renderizador";
 
-export function NovaCampanha() {
+export function NovaCampanha({
+  materiais = [],
+}: {
+  materiais?: Array<{ id: string; titulo: string; tipo: string }>;
+}) {
   const t = useT();
   const router = useRouter();
   const canais = useChannelSessions();
@@ -65,6 +69,8 @@ export function NovaCampanha() {
   const [origens, setOrigens] = useState("");
   const [niveis, setNiveis] = useState<string[]>([]);
   const [temps, setTemps] = useState<string[]>([]);
+  // Material (ebook) entregue automaticamente quando a pessoa responde SIM.
+  const [material, setMaterial] = useState("");
 
   const funis = useFunis();
   const etapas = useEtapas(funil || null);
@@ -120,6 +126,7 @@ export function NovaCampanha() {
       pipeline_id: funil || null,
       stage_id: etapa || null,
       agent_id: agente || null,
+      material_id: material || null,
     });
     router.push(`/app/campaigns/${criada.id}`);
   }
@@ -452,6 +459,38 @@ export function NovaCampanha() {
             )}
           </p>
         </div>
+      </Card>
+
+      {/* ── Material entregue na resposta (reply-gated) ── */}
+      <Card className="space-y-3 p-4">
+        <h2 className="font-medium">{t("Material entregue na resposta")}</h2>
+        <p className="text-sm text-muted-foreground">
+          {t(
+            "Quando a pessoa responder SIM (claro, pode mandar, manda aí…), o sistema entrega este material sozinho, como anexo — sem passar pelo gabinete. Deixe em branco para um disparo sem material.",
+          )}
+        </p>
+        {materiais.length > 0 ? (
+          <select
+            className="h-9 w-full rounded-md border border-border bg-surface px-2 text-sm"
+            value={material}
+            onChange={(e) => setMaterial(e.target.value)}
+          >
+            <option value="">{t("Sem material (só a mensagem)")}</option>
+            {materiais.map((m) => (
+              <option key={m.id} value={m.id}>
+                {m.titulo} {m.tipo ? `· ${m.tipo}` : ""}
+              </option>
+            ))}
+          </select>
+        ) : (
+          <p className="text-sm text-muted-foreground">
+            {t("Nenhum material cadastrado ainda. Cadastre um ebook em")}{" "}
+            <a href="/app/politico/materiais/novo" className="underline">
+              {t("Materiais")}
+            </a>{" "}
+            {t("para entregá-lo na resposta.")}
+          </p>
+        )}
       </Card>
 
       <Card className="space-y-4 p-4">

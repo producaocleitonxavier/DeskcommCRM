@@ -147,6 +147,7 @@ export async function POST(req: NextRequest): Promise<Response> {
       pipeline_id: entrada.pipeline_id ?? null,
       stage_id: entrada.stage_id ?? null,
       agent_id: entrada.agent_id ?? null,
+      material_id: entrada.material_id ?? null,
       created_by: user.id,
     })
     .select(COLUNAS_DA_LISTA)

@@ -17,6 +17,7 @@ import { automationRulesHandler } from "@/lib/automation/engine.handler";
 import { followupReactivityHandler } from "@/lib/followup/reactivity.handler";
 import { campanhaRespostaHandler } from "@/lib/campanhas/resposta.handler";
 import { polGraduacaoEngajamentoHandler } from "@/lib/politico/graduacao-engajamento.handler";
+import { polEbookNaRespostaHandler } from "@/lib/politico/ebook-na-resposta.handler";
 import { followupGatilhoEtapaHandler } from "@/lib/followup/gatilho-etapa.handler";
 import { followupGatilhoLeadHandler } from "@/lib/followup/gatilho-lead.handler";
 import { followupGatilhoCasoHandler } from "@/lib/followup/gatilho-caso.handler";
@@ -58,6 +59,10 @@ export function ensureHandlersRegistered(): void {
   // novo_cadastro→simpatizante e aquece a temperatura. Escrita curta no banco,
   // gated por pol_leads (org não-política é no-op), roda antes do LLM.
   registerHandler(polGraduacaoEngajamentoHandler);
+  // Entrega do ebook na resposta "SIM": depois da atribuição e da graduação, no
+  // mesmo evento de entrada. Envia material (anexo) só a quem respondeu afirmativo
+  // a um disparo com material; idempotente por material_entregue_at.
+  registerHandler(polEbookNaRespostaHandler);
   // Mesmo critério: o gatilho do cliente que volta é escrita curta no banco e
   // precisa rodar antes do LLM. Depois da reatividade, para o match_reply dos
   // fluxos já vivos ler a mensagem primeiro.

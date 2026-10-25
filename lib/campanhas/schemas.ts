@@ -44,6 +44,12 @@ const baseDaCampanha = {
   pipeline_id: z.string().uuid().nullable().optional(),
   stage_id: z.string().uuid().nullable().optional(),
   agent_id: z.string().uuid().nullable().optional(),
+  /**
+   * MATERIAL (ebook da biblioteca pol_materiais) entregue automaticamente quando
+   * o destinatário responde SIM ao disparo (reply-gated). `null` = disparo sem
+   * material. Migration 9051.
+   */
+  material_id: z.string().uuid().nullable().optional(),
 };
 
 export const criarCampanhaSchema = z
@@ -84,6 +90,7 @@ export const editarCampanhaSchema = z
     pipeline_id: baseDaCampanha.pipeline_id,
     stage_id: baseDaCampanha.stage_id,
     agent_id: baseDaCampanha.agent_id,
+    material_id: baseDaCampanha.material_id,
   })
   .merge(ritmoSchema);
 
