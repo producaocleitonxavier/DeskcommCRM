@@ -12,6 +12,7 @@ import Link from "next/link";
 import { ArrowUpRight, GitBranch, MessageCircle, Pencil } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { requireAuth, resolveActiveOrg } from "@/lib/auth/server";
+import BotaoDescadastro from "./_descadastrar";
 
 export const dynamic = "force-dynamic";
 
@@ -29,6 +30,7 @@ interface Contact {
   last_activity_at: string | null;
   created_at: string;
   custom_fields: Record<string, unknown> | null;
+  is_blocked: boolean | null;
 }
 
 interface PolLead {
@@ -164,7 +166,7 @@ async function buscarLead(organizationId: string, leadId: string) {
   // Buscar contato
   const { data: contact } = await db
     .from("contacts")
-    .select("id, name, phone_number, email, birthdate, source, tags, social_identity, last_activity_at, created_at, custom_fields")
+    .select("id, name, phone_number, email, birthdate, source, tags, social_identity, last_activity_at, created_at, custom_fields, is_blocked")
     .eq("id", (lead as PolLead).contact_id)
     .single();
 
@@ -360,6 +362,24 @@ export default async function FichaPage({
         ← Pessoas
       </Link>
 
+      {/* ── Aviso: descadastrada (opt-out) ──────────────────────── */}
+      {contact.is_blocked && (
+        <div
+          className="wr-card p-4 flex items-start gap-3"
+          style={{ background: "#FBE4E2", borderColor: "#F3C9C5" }}
+          role="status"
+        >
+          <span className="font-bold text-sm" style={{ color: "#A3302A" }}>
+            Descadastrada
+          </span>
+          <span className="text-sm" style={{ color: "#8A2A24" }}>
+            Esta pessoa pediu para não receber contato. Está fora de WhatsApp, campanhas e follow-up, e
+            não aparece na base ativa. O pedido sobrevive a importações futuras (LGPD). Reative só se ela
+            voltar a pedir.
+          </span>
+        </div>
+      )}
+
       {/* ── Header card ─────────────────────────────────────────── */}
       <header className="wr-card p-6 sm:p-7">
         <div className="flex flex-wrap items-start gap-5">
@@ -524,6 +544,9 @@ export default async function FichaPage({
               <Link href="/app/politico/funil" className="wr-btn w-full justify-center">
                 <GitBranch style={{ width: 16, height: 16 }} /> Mover no funil
               </Link>
+              <div className="border-t pt-2.5 mt-0.5" style={{ borderColor: "var(--color-border)" }}>
+                <BotaoDescadastro contactId={contact.id} leadId={lead.id} bloqueado={!!contact.is_blocked} />
+              </div>
             </div>
           </div>
 

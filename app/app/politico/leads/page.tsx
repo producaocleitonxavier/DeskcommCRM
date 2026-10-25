@@ -57,10 +57,10 @@ async function buscarLeads(
   // quando há busca: sem isso o PostgREST filtra o EMBED (não o pai) e devolve os
   // leads que NÃO casam com contacts=null — o bug dos cards "Sem nome".
   const palavras = busca ? busca.trim().split(/\s+/).filter(Boolean) : [];
-  const contatoEmbed =
-    palavras.length > 0
-      ? "contacts!contact_id!inner(name, phone_number, source, last_activity_at)"
-      : "contacts!contact_id(name, phone_number, source, last_activity_at)";
+  // Embed SEMPRE inner: além de consertar os cards "Sem nome" na busca, é o que
+  // permite filtrar o PAI por uma coluna do contato (is_blocked). Todo lead tem
+  // contato (FK contact_id), então inner não esconde ninguém legítimo.
+  const contatoEmbed = "contacts!contact_id!inner(name, phone_number, source, last_activity_at)";
 
   let query = db
     .from("pol_leads")
@@ -71,6 +71,9 @@ async function buscarLeads(
       { count: "exact" },
     )
     .eq("organization_id", organizationId)
+    // Quem pediu para sair (opt-out / descadastro) some da base ativa. `is not
+    // true` pega tanto false quanto null (o normal de quem nunca foi bloqueado).
+    .not("contacts.is_blocked", "is", true)
     .order("created_at", { ascending: false })
     .range(offset, offset + POR_PAGINA - 1);
 
@@ -103,18 +106,23 @@ async function contarPorEtapa(organizationId: string): Promise<Record<string, nu
   const db = await createClient();
   const counts: Record<string, number> = {};
 
+  // As contagens excluem os descadastrados, para baterem com a lista: embed inner
+  // em contacts + filtro is_blocked. O `contacts!contact_id!inner(id)` não traz
+  // dado (head:true), só serve de join para o filtro valer sobre o pai.
   const { count: totalCount } = await db
     .from("pol_leads")
-    .select("id", { count: "exact", head: true })
-    .eq("organization_id", organizationId);
+    .select("id, contacts!contact_id!inner(id)", { count: "exact", head: true })
+    .eq("organization_id", organizationId)
+    .not("contacts.is_blocked", "is", true);
   counts._total = totalCount ?? 0;
 
   await Promise.all(
     SUPPORT_LEVELS.map(async (lvl) => {
       const { count } = await db
         .from("pol_leads")
-        .select("id", { count: "exact", head: true })
+        .select("id, contacts!contact_id!inner(id)", { count: "exact", head: true })
         .eq("organization_id", organizationId)
+        .not("contacts.is_blocked", "is", true)
         .eq("support_level", lvl);
       counts[lvl] = count ?? 0;
     }),

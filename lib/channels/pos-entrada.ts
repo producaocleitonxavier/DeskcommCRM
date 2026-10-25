@@ -53,6 +53,7 @@ import { PADRAO_DO_REF } from "@/lib/plataformas-de-anuncio/captura-de-clique";
 import { casarClickRef } from "@/lib/plataformas-de-anuncio/meta/captura-de-clique";
 import type { createAdminClient } from "@/lib/supabase/admin";
 import { ehPedidoDeOptOut } from "@/lib/opt-out/deteccao";
+import { suprimirEnderecoDoContato } from "@/lib/politico/descadastro";
 import { ehContatoDoNumeroInterno } from "@/lib/escalacao/numero-interno-de-aviso";
 import { acelerarFollowupDoInbound, drenarEventosDoInbound } from "@/lib/dev/kick-local-pipeline";
 import { origemDoNegocioPeloCanal } from "@/lib/channels/origem-do-negocio";
@@ -330,6 +331,17 @@ async function aplicarOptOut(admin: Admin, entrada: EntradaDeMensagem): Promise<
   }
 
   await fecharNegociosAbertosDeQuemPediuParar(admin, entrada);
+
+  // DURABILIDADE: o bloqueio acima mora na LINHA do contato, e a base política é
+  // re-importada (abaixo-assinado, eventos, sindicatos). Sem isto, zerar e subir
+  // a planilha de novo apagaria o `is_blocked` e a pessoa voltaria como cadastro
+  // novo. A supressão guarda o HASH do telefone — sobrevive ao wipe e ao import,
+  // que a consulta e pula (`lib/politico/descadastro.ts`). Best-effort: o
+  // bloqueio na linha já cala o produto; isto é a camada que atravessa o import.
+  await suprimirEnderecoDoContato(admin, entrada.organizationId, entrada.contactId, {
+    source: "sistema",
+    reason: "opt_out_inbound",
+  });
 }
 
 /**
