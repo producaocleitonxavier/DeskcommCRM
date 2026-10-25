@@ -19,9 +19,15 @@ import {
   Check,
   Phone,
   BookOpen,
+  Trash2,
 } from "lucide-react";
 
-import { registrarPessoaEmEvento, criarEventoNoLocal } from "@/app/actions/politico/eventos-actions";
+import {
+  registrarPessoaEmEvento,
+  criarEventoNoLocal,
+  excluirEvento,
+  excluirLocal,
+} from "@/app/actions/politico/eventos-actions";
 import { KpiCard } from "@/components/politico/kpi-card";
 
 export interface LocalDetalhe {
@@ -124,6 +130,33 @@ export default function LocalDetalheClient({
   const [materialEvento, setMaterialEvento] = useState("");
   const [salvandoEvento, setSalvandoEvento] = useState(false);
   const [erroEvento, setErroEvento] = useState<string | null>(null);
+
+  // Exclusão
+  const [confirmarEvento, setConfirmarEvento] = useState<string | null>(null);
+  const [excluindoEvento, setExcluindoEvento] = useState(false);
+  const [confirmarLocal, setConfirmarLocal] = useState(false);
+  const [excluindoLocal, setExcluindoLocal] = useState(false);
+
+  async function deletarEvento(id: string) {
+    setExcluindoEvento(true);
+    const res = await excluirEvento(id);
+    setExcluindoEvento(false);
+    setConfirmarEvento(null);
+    if (res.ok) router.refresh();
+    else setErroEvento(res.erro);
+  }
+
+  async function deletarLocal() {
+    setExcluindoLocal(true);
+    const res = await excluirLocal(local.id);
+    if (res.ok) {
+      router.push("/app/politico/locais");
+      router.refresh();
+    } else {
+      setExcluindoLocal(false);
+      setConfirmarLocal(false);
+    }
+  }
 
   async function cadastrarPessoa(e: React.FormEvent) {
     e.preventDefault();
@@ -273,7 +306,17 @@ export default function LocalDetalheClient({
                     )}
                   </div>
                 </div>
-                <span className="inline-flex items-center gap-1.5 text-sm" style={{ color: "var(--color-text-muted)" }}><Users className="h-4 w-4" aria-hidden /> {ev.nPessoas} cadastrada{ev.nPessoas === 1 ? "" : "s"}</span>
+                <div className="flex items-center gap-3">
+                  <span className="inline-flex items-center gap-1.5 text-sm" style={{ color: "var(--color-text-muted)" }}><Users className="h-4 w-4" aria-hidden /> {ev.nPessoas} cadastrada{ev.nPessoas === 1 ? "" : "s"}</span>
+                  {confirmarEvento === ev.id ? (
+                    <span className="inline-flex items-center gap-2 text-xs">
+                      <button type="button" onClick={() => deletarEvento(ev.id)} disabled={excluindoEvento} className="rounded-full px-2 py-1 font-semibold disabled:opacity-60" style={{ background: "#A3302A", color: "#fff" }}>{excluindoEvento ? "Excluindo…" : "Excluir"}</button>
+                      <button type="button" onClick={() => setConfirmarEvento(null)} style={{ color: "var(--color-text-muted)" }}>Cancelar</button>
+                    </span>
+                  ) : (
+                    <button type="button" onClick={() => setConfirmarEvento(ev.id)} title="Excluir evento" className="rounded-md p-1.5 transition-colors hover:opacity-80" style={{ color: "#A3302A" }}><Trash2 className="h-4 w-4" aria-hidden /></button>
+                  )}
+                </div>
               </li>
             ))}
           </ul>
@@ -302,6 +345,23 @@ export default function LocalDetalheClient({
           </ul>
         )}
       </section>
+
+      {/* Excluir local */}
+      <div className="flex justify-end pt-1">
+        {confirmarLocal ? (
+          <div className="inline-flex flex-wrap items-center gap-2 text-sm">
+            <span style={{ color: "var(--color-text-muted)" }}>Excluir este local e todos os seus eventos?</span>
+            <button type="button" onClick={deletarLocal} disabled={excluindoLocal} className="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 font-semibold disabled:opacity-60" style={{ background: "#A3302A", color: "#fff" }}>
+              <Trash2 className="h-4 w-4" aria-hidden /> {excluindoLocal ? "Excluindo…" : "Confirmar exclusão"}
+            </button>
+            <button type="button" onClick={() => setConfirmarLocal(false)} style={{ color: "var(--color-text-muted)" }}>Cancelar</button>
+          </div>
+        ) : (
+          <button type="button" onClick={() => setConfirmarLocal(true)} className="inline-flex items-center gap-1.5 text-sm font-medium" style={{ color: "#A3302A" }}>
+            <Trash2 className="h-4 w-4" aria-hidden /> Excluir local
+          </button>
+        )}
+      </div>
     </div>
   );
 }

@@ -164,6 +164,27 @@ export async function criarEventoNoLocal(
   return { ok: true, id: (ev?.id as string | undefined) ?? undefined };
 }
 
+/** Exclui um evento (a presença cai em cascata). Os contatos/leads permanecem. */
+export async function excluirEvento(eventId: string): Promise<AcaoResultado> {
+  const org = await orgAtiva();
+  if (!org) return { ok: false, erro: "Sessão ou organização inválida." };
+  const db = await createClient();
+  const { error } = await db.from("pol_events").delete().eq("id", eventId).eq("organization_id", org);
+  if (error) return { ok: false, erro: traduzErro(error) };
+  return { ok: true };
+}
+
+/** Exclui um local e os eventos realizados nele (a presença cai em cascata). */
+export async function excluirLocal(localId: string): Promise<AcaoResultado> {
+  const org = await orgAtiva();
+  if (!org) return { ok: false, erro: "Sessão ou organização inválida." };
+  const db = await createClient();
+  await db.from("pol_events").delete().eq("local_id", localId).eq("organization_id", org);
+  const { error } = await db.from("pol_locais").delete().eq("id", localId).eq("organization_id", org);
+  if (error) return { ok: false, erro: traduzErro(error) };
+  return { ok: true };
+}
+
 /**
  * Registra uma pessoa num evento: cria o contato, cria o pol_lead em
  * `novo_cadastro` (idempotente) e grava a presença. É a porta de entrada do
