@@ -118,6 +118,35 @@ export async function gerarRelatorioDemandas(filtroEstado?: string): Promise<Rel
     aberta: dataBR(d.aberta_em),
   }));
 
+  // ── Leitura do período (análise) ───────────────────────────────────────────
+  const total = totalRes.count ?? 0;
+  const concluidas = (distRes[3]?.count ?? 0) + (distRes[4]?.count ?? 0); // resolvida + encerrada
+  const taxaResolucao = total > 0 ? Math.round((concluidas / total) * 100) : 0;
+  const altaAbertas = demandas.filter(
+    (d) => d.pol_prioridade === "alta" && d.estado !== "resolvida" && d.estado !== "encerrada",
+  ).length;
+  const orgaoContagem = new Map<string, number>();
+  for (const d of demandas) {
+    const o = d.pol_orgao_destino?.trim();
+    if (o) orgaoContagem.set(o, (orgaoContagem.get(o) ?? 0) + 1);
+  }
+  const orgaoTop = [...orgaoContagem.entries()].sort((a, b) => b[1] - a[1])[0];
+
+  const analise: string[] = [];
+  if (total > 0) {
+    analise.push(`Taxa de resolução de ${taxaResolucao}% — ${concluidas} de ${total} demanda(s) concluída(s).`);
+  }
+  if (tempoMedioDias !== null) {
+    const ritmo = tempoMedioDias <= 3 ? "um ritmo ágil de atendimento" : tempoMedioDias <= 10 ? "dentro de um prazo saudável" : "um prazo que merece atenção";
+    analise.push(`Tempo médio de atendimento de ${tempoMedioDias} dia(s), ${ritmo}.`);
+  }
+  if (altaAbertas > 0) {
+    analise.push(`${altaAbertas} demanda(s) de alta prioridade ainda em aberto — foco imediato da equipe.`);
+  }
+  if (orgaoTop) {
+    analise.push(`Órgão mais acionado: ${orgaoTop[0]} (${orgaoTop[1]} demanda(s)).`);
+  }
+
   // Identidade (timbre) — mesma régua do ofício.
   const marca = await marcaDaOrganizacaoParaPdf(db, orgId);
   const admin = createAdminClient();
@@ -150,6 +179,7 @@ export async function gerarRelatorioDemandas(filtroEstado?: string): Promise<Rel
       },
       statusDist,
       linhas,
+      analise,
     });
   } catch {
     return { ok: false, erro: "Falha ao renderizar o relatório." };

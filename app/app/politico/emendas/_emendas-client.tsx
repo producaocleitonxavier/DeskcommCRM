@@ -43,6 +43,31 @@ export interface EmendasClientProps {
 }
 
 export default function EmendasClient({ kpis, valorPorArea, emendas }: EmendasClientProps) {
+  // Leitura analítica + barras + cores de pílula do relatório PDF.
+  const totalArea = valorPorArea.reduce((s, a) => s + a.value, 0);
+  const areaTop = [...valorPorArea].sort((a, b) => b.value - a.value)[0];
+  const nMunicipios = new Set(emendas.map((e) => e.municipio?.trim()).filter(Boolean)).size;
+  const pagas = emendas.filter((e) => e.status === "paga").length;
+  const analisePdf: string[] = [
+    `${emendas.length} emenda(s): ${kpis.alocado} alocados, ${kpis.executado} executados e ${kpis.pendente} pendentes.`,
+  ];
+  if (areaTop && totalArea > 0) analisePdf.push(`Maior concentração em ${areaTop.name} (${Math.round((areaTop.value / totalArea) * 100)}% do valor indicado).`);
+  if (nMunicipios > 0) analisePdf.push(`Recursos destinados a ${nMunicipios} município(s).`);
+  if (emendas.length > 0) analisePdf.push(`${pagas} de ${emendas.length} emenda(s) já paga(s).`);
+  const distribuicoesPdf =
+    valorPorArea.length > 0
+      ? {
+          titulo: "Valor indicado por área",
+          itens: valorPorArea.map((a) => ({
+            label: a.name,
+            valor: `R$ ${a.value.toLocaleString("pt-BR")}`,
+            pct: totalArea > 0 ? (a.value / totalArea) * 100 : 0,
+            cor: a.fill,
+          })),
+        }
+      : undefined;
+  const coresPilulaPdf: Record<string, string> = Object.fromEntries(Object.values(STATUS).map((s) => [s.label, s.fg]));
+
   return (
     <div className="mx-auto max-w-[1140px] px-4 py-7 space-y-6" style={{ background: "var(--color-bg)" }}>
       <CommandHero
@@ -70,10 +95,13 @@ export default function EmendasClient({ kpis, valorPorArea, emendas }: EmendasCl
                 { header: "Área", largura: "16%" },
                 { header: "Município", largura: "14%" },
                 { header: "Entidade", largura: "20%" },
-                { header: "Status", largura: "12%" },
+                { header: "Status", largura: "12%", pilula: true },
                 { header: "Indicado", largura: "10%" },
                 { header: "Pago", largura: "10%" },
               ],
+              analise: analisePdf,
+              distribuicoes: distribuicoesPdf,
+              coresPilula: coresPilulaPdf,
               linhas: emendas.map((e) => [
                 e.numero ?? "—",
                 String(e.ano),

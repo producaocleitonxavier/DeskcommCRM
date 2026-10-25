@@ -103,6 +103,36 @@ export default function LiderancasClient({ liderancas }: LiderancasClientProps) 
   };
   const engajamentoBR: Record<string, string> = { baixo: "Baixo", medio: "Médio", alto: "Alto", critico: "Crítico" };
 
+  // Leitura analítica + barras + cores de pílula do relatório PDF.
+  const pctAtivas = total > 0 ? Math.round((ativas / total) * 100) : 0;
+  const pctWhats = total > 0 ? Math.round((comWhatsapp / total) * 100) : 0;
+  const analisePdf: string[] = [];
+  if (total > 0) analisePdf.push(`${total} liderança(s), ${ativas} ativa(s) (${pctAtivas}%).`);
+  if (municipios > 0) analisePdf.push(`Capilaridade em ${municipios} município(s).`);
+  if (total > 0) analisePdf.push(`${comWhatsapp} com WhatsApp (${pctWhats}%) — canal direto de mobilização.`);
+  if (totalMobilizados > 0 || totalEventos > 0)
+    analisePdf.push(`A rede já indicou ${totalMobilizados} pessoa(s) e organizou ${totalEventos} evento(s).`);
+  const engCont = new Map<string, number>();
+  for (const l of liderancas) engCont.set(l.nivel_engajamento, (engCont.get(l.nivel_engajamento) ?? 0) + 1);
+  const distribuicoesPdf =
+    engCont.size > 0
+      ? {
+          titulo: "Lideranças por engajamento",
+          itens: ["critico", "alto", "medio", "baixo"]
+            .filter((k) => engCont.has(k))
+            .map((k) => ({
+              label: engajamentoBR[k] ?? k,
+              valor: String(engCont.get(k) ?? 0),
+              pct: total > 0 ? ((engCont.get(k) ?? 0) / total) * 100 : 0,
+              cor: ENGAJAMENTO_CFG[k]?.fg ?? "#5B606B",
+            })),
+        }
+      : undefined;
+  const coresPilulaPdf: Record<string, string> = {
+    ...Object.fromEntries(Object.entries(engajamentoBR).map(([k, label]) => [label, ENGAJAMENTO_CFG[k]?.fg ?? "#5B606B"])),
+    ...Object.fromEntries(Object.values(STATUS_CFG).map((s) => [s.label, s.fg])),
+  };
+
   return (
     <div className="mx-auto max-w-[1140px] px-4 py-7 space-y-6" style={{ background: "var(--color-bg)" }}>
       <CommandHero
@@ -138,9 +168,12 @@ export default function LiderancasClient({ liderancas }: LiderancasClientProps) 
                 { header: "Aniv.", largura: "7%" },
                 { header: "Indicados", largura: "6%" },
                 { header: "Eventos", largura: "5%" },
-                { header: "Engaj.", largura: "6%" },
-                { header: "Status", largura: "5%" },
+                { header: "Engaj.", largura: "6%", pilula: true },
+                { header: "Status", largura: "5%", pilula: true },
               ],
+              analise: analisePdf,
+              distribuicoes: distribuicoesPdf,
+              coresPilula: coresPilulaPdf,
               linhas: liderancas.map((l) => [
                 l.nome ?? "",
                 l.apelido ?? "",
