@@ -9,6 +9,7 @@
 
 import { createClient } from "@/lib/supabase/server";
 import { requireAuth, resolveActiveOrg } from "@/lib/auth/server";
+import { inscreverNoFluxoDeEvento } from "@/lib/politico/eventos-envio/inscrever";
 
 export type AcaoResultado = { ok: true; id?: string } | { ok: false; erro: string };
 
@@ -247,6 +248,16 @@ export async function registrarPessoaEmEvento(
   if (pessoa.relacao?.trim()) presencaPayload.notes = pessoa.relacao.trim();
   const { error: errA } = await db.from("pol_event_attendance").insert(presencaPayload);
   if (errA) return { ok: false, erro: traduzErro(errA) };
+
+  // 4) Máquina de envio (Fase 2C Fatia 2): inscreve no fluxo do ebook pelo número
+  // dedicado. DORMENTE — no-opa enquanto a máquina não estiver armada; best-effort,
+  // nunca derruba o cadastro.
+  try {
+    const user = await requireAuth();
+    await inscreverNoFluxoDeEvento({ orgId: org, eventId, contactId, actorUserId: user?.id ?? null });
+  } catch {
+    /* envio é opcional; o cadastro já está feito */
+  }
 
   return { ok: true, id: contactId };
 }
