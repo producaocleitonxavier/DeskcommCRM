@@ -34,7 +34,7 @@ export const dynamic = "force-dynamic";
 const COLUNAS_DA_LISTA =
   "id, name, status, channel_session_id, snapshot_total, snapshot_eligible, snapshot_excluded, " +
   "scheduled_at, started_at, completed_at, cancelled_at, created_at, created_by, " +
-  "pipeline_id, stage_id, agent_id";
+  "pipeline_id, stage_id, agent_id, material_id";
 
 export async function GET(req: NextRequest): Promise<Response> {
   const requestId = randomUUID();

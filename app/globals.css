@@ -1875,3 +1875,29 @@
 }
 
 /* (bloco .war-room consolidado na linha ~778, junto com os componentes wr-*) */
+
+/* ───────────────────────────────────────────────────────────────────────────
+   Animações premium (Disparos e telas políticas). Sutis de propósito — a regra
+   é "didático e claro", então movimento só reforça o entendimento (entrada
+   suave, "ao vivo" do que está enviando), nunca distrai. O bloco
+   prefers-reduced-motion acima NEUTRALIZA tudo isto para quem pediu calma.
+   ─────────────────────────────────────────────────────────────────────────── */
+@keyframes wr-fade-up {
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes wr-live-pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50%      { opacity: 0.35; transform: scale(0.8); }
+}
+/* Entrada suave (fade + sobe). Combine com inline animation-delay para escalonar. */
+.wr-anim-in { animation: wr-fade-up 0.45s cubic-bezier(0.22, 0.61, 0.36, 1) both; }
+/* Lift no hover — dá vida ao card sem exagero. */
+.wr-lift { transition: transform 0.18s ease, box-shadow 0.18s ease; }
+.wr-lift:hover { transform: translateY(-2px); box-shadow: 0 10px 28px -12px rgba(0,0,0,0.28); }
+/* Ponto "ao vivo" pulsante — sinaliza disparo em andamento (status Enviando). */
+.wr-live-dot {
+  display: inline-block; width: 7px; height: 7px; border-radius: 9999px;
+  background: #22C55E; box-shadow: 0 0 0 3px rgba(34,197,94,0.18);
+  animation: wr-live-pulse 1.3s ease-in-out infinite;
+}
