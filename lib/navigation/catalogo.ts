@@ -139,6 +139,14 @@ export function sobeAoMenuLateral(
   d: Pick<NavMetadata, "sidebar" | "group">,
   temEscolhaExplicita: boolean,
 ): boolean {
+  // `sidebar: false` é "nunca no menu lateral", EXPLÍCITO, e vence o atalho de
+  // grupo-sem-hub. Sem isto, item marcado "oculto do menu" (aba de outra tela,
+  // sub-tela de hub) ainda subia quando a empresa tinha destinos próprios
+  // (`temEscolhaExplicita`) — o defeito que deixava Alertas/Adversários/Decisão
+  // (abas de Opinião Pública), as sub-telas do Instagram e os itens de Engajamento
+  // aparecerem no menu mesmo marcados para ocultar. `sidebar` AUSENTE continua
+  // caindo no atalho (grupo sem hub mostra a porta quando não há "Ver tudo").
+  if (d.sidebar === false) return false;
   const grupo = NAV_GROUPS.find((g) => g.id === d.group);
   return !!d.sidebar || (!grupo?.hub && temEscolhaExplicita);
 }
@@ -1078,7 +1086,11 @@ export const NAV_CATALOG = [
   },
   {
     href: "/app/politico/agenda",
-    label: "Agenda",
+    // "Agenda do mandato" (não só "Agenda") para não colidir com a Agenda de
+    // ATENDIMENTO (/app/agenda, grupo atendimento). São ferramentas diferentes:
+    // esta é o diário de compromissos do mandato (reunião/visita/audiência, com
+    // território/liderança); a de atendimento é booking com disponibilidade/Google.
+    label: "Agenda do mandato",
     description: "Agenda do mandato — reuniões, visitas, audiências, eventos e compromissos.",
     icon: "CalendarBlank",
     group: "gabinete",
@@ -1246,7 +1258,11 @@ export const NAV_CATALOG = [
     icon: "ChartBar",
     group: "analise",
     section: "Os números do período",
-    sidebar: true,
+    // Oculto do menu no fork político: esta tela lê o CRM de VENDAS (crm_leads /
+    // crm_stages — "carrinho abandonado", "negócios ganhos"), vazio/irrelevante
+    // para um gabinete. A visão estratégica política é o "Painel" (Dashboard,
+    // /app/politico/dashboard), que lê as views pol_*. Rota mantida (⌘K/hub).
+    sidebar: false,
   },
   {
     // Logo abaixo de Desempenho porque responde a metade da MESMA pergunta: lá
