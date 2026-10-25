@@ -330,8 +330,20 @@ export default async function FichaPage({
   const cfEnd = (cf.endereco ?? {}) as Record<string, unknown>;
   const cfGip = (cf.endereco_gip ?? {}) as Record<string, unknown>;
   const txtCf = (v: unknown): string | null => (typeof v === "string" && v.trim() ? v.trim() : null);
-  const cidadeContato = txtCf(cf.cidade) ?? txtCf(cfEnd.cidade) ?? txtCf(cfGip.cidade);
-  const bairroContato = txtCf(cf.bairro) ?? txtCf(cfEnd.bairro) ?? txtCf(cfGip.bairro);
+  const cidadeContato = txtCf(cfEnd.cidade) ?? txtCf(cf.cidade) ?? txtCf(cfGip.cidade);
+  const bairroContato = txtCf(cfEnd.bairro) ?? txtCf(cf.bairro) ?? txtCf(cfGip.bairro);
+  const endereco = {
+    cep: txtCf(cfEnd.cep) ?? txtCf(cfGip.cep),
+    logradouro: txtCf(cfEnd.logradouro) ?? txtCf(cfGip.logradouro),
+    numero: txtCf(cfEnd.numero) ?? txtCf(cfGip.numero),
+    complemento: txtCf(cfEnd.complemento) ?? txtCf(cfGip.complemento),
+    estado: txtCf(cfEnd.estado) ?? txtCf(cfGip.estado) ?? txtCf(cf.uf) ?? txtCf(cf.estado),
+  };
+  const temEndereco = !!(endereco.cep || endereco.logradouro || endereco.numero || endereco.complemento || endereco.estado);
+  const profissaoContato = txtCf(cf.profissao);
+  const quemIndicou = txtCf(cf.quem_indicou);
+  const observacoes = txtCf(cf.observacoes);
+  const temRelacionamento = !!(quemIndicou || observacoes);
 
   const tempS = tempEstilo(lead.temperature);
   const telefone = contact.phone_number ?? "";
@@ -411,6 +423,7 @@ export default async function FichaPage({
             <InfoRow label="Cidade" value={cidadeContato} />
             <InfoRow label="Bairro" value={bairroContato} />
             <InfoRow label="Nascimento" value={contact.birthdate ? formatarData(contact.birthdate) : null} />
+            <InfoRow label="Profissão" value={profissaoContato} />
             <InfoRow label="Origem" value={sourceLabel(contact.source)} />
             {origemCaptacao && (
               <InfoRow
@@ -433,10 +446,30 @@ export default async function FichaPage({
             {contact.social_identity && <InfoRow label="Social" value={contact.social_identity} />}
           </InfoCard>
 
+          {temEndereco && (
+            <InfoCard titulo="Endereço completo">
+              <InfoRow label="CEP" value={endereco.cep} />
+              <InfoRow label="Logradouro" value={endereco.logradouro} />
+              <InfoRow label="Número" value={endereco.numero} />
+              <InfoRow label="Complemento" value={endereco.complemento} />
+              <InfoRow label="Bairro" value={bairroContato} />
+              <InfoRow label="Cidade" value={cidadeContato} />
+              <InfoRow label="Estado" value={endereco.estado} />
+            </InfoCard>
+          )}
+
           <InfoCard titulo="Comunidade & mobilização">
             <InfoRow label="Papel comunitário" value={lead.community_role} />
+            <InfoRow label="Potencial multiplicador" value={lead.leader_potential ? "Sim" : null} />
             <InfoRow label="Mobilizador" value={mobilizadorNome} />
           </InfoCard>
+
+          {temRelacionamento && (
+            <InfoCard titulo="Relacionamento">
+              <InfoRow label="Quem indicou" value={quemIndicou} />
+              <InfoRow label="Observações" value={observacoes} />
+            </InfoCard>
+          )}
 
           <InfoCard titulo="Linha do tempo">
             {transitions.length === 0 ? (

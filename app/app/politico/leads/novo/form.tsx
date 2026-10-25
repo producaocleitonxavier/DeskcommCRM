@@ -145,6 +145,7 @@ export default function NovoCadastroForm() {
   const [nome, setNome] = useState("");
   const [telefone, setTelefone] = useState("");
   const [email, setEmail] = useState("");
+  const [dataNascimento, setDataNascimento] = useState("");
   const [profissao, setProfissao] = useState("");
 
   // Endereço (bloco único)
@@ -250,6 +251,7 @@ export default function NovoCadastroForm() {
       const contactBody: Record<string, unknown> = { name: nome.trim(), source: origem };
       if (phoneFormatted) contactBody.phone_number = phoneFormatted;
       if (email.trim()) contactBody.email = email.trim();
+      if (dataNascimento) contactBody.birthdate = dataNascimento;
       if (Object.keys(customFields).length > 0) contactBody.custom_fields = customFields;
 
       const resContact = await fetch("/api/v1/contacts", {
@@ -324,6 +326,11 @@ export default function NovoCadastroForm() {
         <label className="block space-y-1.5">
           <Label><IconeEmail /> E-mail</Label>
           <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="email@exemplo.com" className="wr-input" />
+        </label>
+
+        <label className="block space-y-1.5">
+          <Label>Data de nascimento</Label>
+          <input type="date" value={dataNascimento} onChange={(e) => setDataNascimento(e.target.value)} className="wr-input" />
         </label>
 
         <label className="block space-y-1.5">

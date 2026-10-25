@@ -42,7 +42,7 @@ export default async function EditarLeadPage({ params }: { params: Promise<{ id:
 
   const { data: contact } = await db
     .from("contacts")
-    .select("id, name, phone_number, email, custom_fields")
+    .select("id, name, phone_number, email, birthdate, custom_fields")
     .eq("id", l.contact_id)
     .maybeSingle();
 
@@ -52,6 +52,7 @@ export default async function EditarLeadPage({ params }: { params: Promise<{ id:
     name: string | null;
     phone_number: string | null;
     email: string | null;
+    birthdate: string | null;
     custom_fields: Record<string, unknown> | null;
   };
 
@@ -62,6 +63,7 @@ export default async function EditarLeadPage({ params }: { params: Promise<{ id:
     nome: c.name ?? "",
     telefone: c.phone_number ?? "",
     email: c.email ?? "",
+    birthdate: c.birthdate ?? "",
     cidade: typeof cf.cidade === "string" ? cf.cidade : "",
     bairro: typeof cf.bairro === "string" ? cf.bairro : "",
     profissao: typeof cf.profissao === "string" ? cf.profissao : "",

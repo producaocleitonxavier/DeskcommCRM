@@ -19,6 +19,7 @@ export interface LeadParaEdicao {
   nome: string;
   telefone: string;
   email: string;
+  birthdate: string;
   cidade: string;
   bairro: string;
   profissao: string;
@@ -63,6 +64,7 @@ export default function EditarLeadForm({ inicial }: { inicial: LeadParaEdicao })
   const [nome, setNome] = useState(inicial.nome);
   const [telefone, setTelefone] = useState(inicial.telefone);
   const [email, setEmail] = useState(inicial.email);
+  const [dataNascimento, setDataNascimento] = useState(inicial.birthdate);
   const [cidade, setCidade] = useState(inicial.cidade);
   const [bairro, setBairro] = useState(inicial.bairro);
   const [profissao, setProfissao] = useState(inicial.profissao);
@@ -92,6 +94,7 @@ export default function EditarLeadForm({ inicial }: { inicial: LeadParaEdicao })
       const contactBody: Record<string, unknown> = { name: nome.trim(), custom_fields: customFields };
       if (telefone.trim()) contactBody.phone_number = formatarTelefone(telefone.trim());
       if (email.trim()) contactBody.email = email.trim();
+      contactBody.birthdate = dataNascimento.trim() || null;
 
       const resC = await fetch(`/api/v1/contacts/${inicial.contactId}`, {
         method: "PATCH",
@@ -149,6 +152,10 @@ export default function EditarLeadForm({ inicial }: { inicial: LeadParaEdicao })
             <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="email@exemplo.com" className="wr-input" />
           </label>
         </div>
+        <label className="block space-y-1.5">
+          <Label>Data de nascimento</Label>
+          <input type="date" value={dataNascimento} onChange={(e) => setDataNascimento(e.target.value)} className="wr-input" />
+        </label>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <label className="block space-y-1.5">
             <Label>Cidade</Label>
