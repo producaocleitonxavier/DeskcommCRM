@@ -59,7 +59,7 @@ export async function PATCH(req: NextRequest, ctx: { params: Promise<{ id: strin
   if (error) return fail("internal_error", error.message, 500, { requestId });
   if (!data) return fail("not_found", t("Origem não encontrada."), 404, { requestId });
 
-  return ok({ data }, { requestId });
+  return ok(data, { requestId });
 }
 
 export async function DELETE(_req: NextRequest, ctx: { params: Promise<{ id: string }> }): Promise<Response> {

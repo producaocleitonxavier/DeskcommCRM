@@ -61,7 +61,7 @@ export async function GET(_req: NextRequest): Promise<Response> {
     materiais_entregues: porOrigem.get(o.id as string)?.entregues ?? 0,
   }));
 
-  return ok({ data: lista }, { requestId });
+  return ok(lista, { requestId });
 }
 
 export async function POST(req: NextRequest): Promise<Response> {
@@ -119,5 +119,5 @@ export async function POST(req: NextRequest): Promise<Response> {
     metadata: { codigo },
   });
 
-  return ok({ data: { ...(data as object), cadastros: 0, materiais_entregues: 0 } }, { requestId });
+  return ok({ ...(data as object), cadastros: 0, materiais_entregues: 0 }, { requestId });
 }

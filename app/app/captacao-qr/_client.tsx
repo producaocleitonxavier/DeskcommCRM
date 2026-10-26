@@ -58,7 +58,7 @@ export function CaptacaoQrClient({ materiais, canais }: { materiais: Material[];
     try {
       const r = await fetch("/api/v1/qr-origens", { credentials: "same-origin" });
       const j = await r.json();
-      setOrigens((j?.data ?? []) as Origem[]);
+      setOrigens(Array.isArray(j?.data) ? (j.data as Origem[]) : []);
     } catch {
       setErro(t("Não consegui carregar as origens."));
     } finally {
@@ -88,7 +88,8 @@ export function CaptacaoQrClient({ materiais, canais }: { materiais: Material[];
       });
       if (!r.ok) throw new Error("falha");
       const j = await r.json();
-      setOrigens((prev) => [j.data as Origem, ...prev]);
+      if (j?.data?.id) setOrigens((prev) => [j.data as Origem, ...prev]);
+      else await carregar();
       setNome("");
       setMensagem(MENSAGEM_PADRAO);
     } catch {
