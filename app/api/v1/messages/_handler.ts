@@ -1102,7 +1102,7 @@ export async function sendMessageHandler(
         if (signErr || !signed?.signedUrl) {
           throw new Error(`storage_sign_failed: ${signErr?.message ?? "no_url"}`);
         }
-        const filename = input.media_storage_path.split("/").pop() ?? undefined;
+        const filename = input.media_filename ?? input.media_storage_path.split("/").pop() ?? undefined;
         await checkBoundary();
         ({ externalId } = await adapter.send({
           beforeSend: checkBoundary,
@@ -1141,6 +1141,9 @@ export async function sendMessageHandler(
           media: {
             url: input.media_url,
             mime: input.media_mime ?? "application/octet-stream",
+            // Sem filename o WhatsApp mostra "file" no documento. Quem envia
+            // (ex.: o ebook na resposta) passa o nome real para dar credibilidade.
+            filename: input.media_filename ?? undefined,
             caption: corpoDoCanal(input.body ?? null),
           },
           replyToExternalId: citada?.external_id ?? null,

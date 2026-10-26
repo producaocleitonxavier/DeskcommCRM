@@ -79,6 +79,9 @@ export const sendMessageSchema = z
     media_url: z.string().url().optional(),
     media_storage_path: z.string().min(1).max(500).optional(),
     media_mime: z.string().optional(),
+    /** Nome do arquivo como o destinatário vê (ex.: "Os Apps dos Predadores.pdf").
+     *  Sem isto o WhatsApp mostra "file" — ruim para credibilidade. */
+    media_filename: z.string().min(1).max(255).optional(),
     media_size_bytes: z.number().int().positive().optional(),
     metadata: z.record(z.string(), z.unknown()).optional(),
     /** Só em `type: "template"`. Nome exato aprovado na Meta. */

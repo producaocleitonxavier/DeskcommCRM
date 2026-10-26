@@ -43,6 +43,22 @@ function mimeDoArquivo(url: string): string | undefined {
   return undefined;
 }
 
+/**
+ * Nome que o destinatário vê no documento: o TÍTULO do material + a extensão.
+ * Sem isto o WhatsApp mostra "file" — o cliente pediu o nome do ebook, por
+ * credibilidade. Sanitiza os caracteres que atrapalham nome de arquivo.
+ */
+function nomeDoArquivo(titulo: string | null, url: string): string | undefined {
+  const base = (titulo ?? "").trim().replace(/[\\/:*?"<>|]+/g, " ").replace(/\s+/g, " ").trim();
+  if (!base) return undefined;
+  const limpo = url.split("?")[0]?.toLowerCase() ?? "";
+  const ext = limpo.endsWith(".epub") ? "epub"
+    : limpo.endsWith(".docx") ? "docx"
+    : limpo.endsWith(".doc") ? "doc"
+    : "pdf";
+  return `${base}.${ext}`;
+}
+
 export async function entregarMaterialNaResposta(
   admin: SupabaseClient,
   entrada: { organizationId: string; contactId: string; texto: string | null },
@@ -130,6 +146,7 @@ export async function entregarMaterialNaResposta(
         type: "document",
         media_url: material.url,
         media_mime: mimeDoArquivo(material.url),
+        media_filename: nomeDoArquivo(material.titulo, material.url),
         body: legenda,
         metadata: { source: "ebook_resposta", material_id: materialId, recipient_id: recipiente.id },
       } as Parameters<typeof sendMessageHandler>[2]);

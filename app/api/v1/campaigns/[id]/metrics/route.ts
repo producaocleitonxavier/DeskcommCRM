@@ -79,7 +79,10 @@ export async function GET(
     naFila: linhas.filter((l) => l.status === "queued").length,
     enviando: linhas.filter((l) => l.status === "sending").length,
     enviados: linhas.filter((l) => l.sent_at !== null).length,
-    entregues: linhas.filter((l) => l.delivered_at !== null).length,
+    // O WAHA/NOWEB quase nunca devolve o ✓✓ (delivered_at fica null mesmo quando
+    // chegou). Mas quem LEU ou RESPONDEU provou que recebeu — então entregue é
+    // delivered_at OU read_at OU replied_at. Sem isto, "Entregues" vivia em 0.
+    entregues: linhas.filter((l) => l.delivered_at !== null || l.read_at !== null || l.replied_at !== null).length,
     lidos: linhas.filter((l) => l.read_at !== null).length,
     responderam: linhas.filter((l) => l.replied_at !== null).length,
     falharam: linhas.filter((l) => l.status === "failed").length,

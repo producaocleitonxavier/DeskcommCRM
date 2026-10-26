@@ -398,8 +398,14 @@ async function buscarMetricas(organizationId: string): Promise<MetricasHoje> {
 
 // -- Helpers -----------------------------------------------------------------
 
+// O container roda em UTC; sem fixar o fuso, "Bom dia/Boa tarde" e a hora saem
+// 3h adiantadas. Horário de Brasília (America/Sao_Paulo) em tudo que é "agora".
+const FUSO_BR = "America/Sao_Paulo";
+
 function saudacao(): string {
-  const h = new Date().getHours();
+  const h = Number(
+    new Intl.DateTimeFormat("en-US", { timeZone: FUSO_BR, hour: "numeric", hourCycle: "h23" }).format(new Date()),
+  );
   if (h < 12) return "Bom dia";
   if (h < 18) return "Boa tarde";
   return "Boa noite";
@@ -407,6 +413,7 @@ function saudacao(): string {
 
 function dataFormatada(): string {
   const txt = new Date().toLocaleDateString("pt-BR", {
+    timeZone: FUSO_BR,
     weekday: "long",
     day: "numeric",
     month: "long",
@@ -415,7 +422,7 @@ function dataFormatada(): string {
 }
 
 function horaAgora(): string {
-  return new Date().toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
+  return new Date().toLocaleTimeString("pt-BR", { timeZone: FUSO_BR, hour: "2-digit", minute: "2-digit" });
 }
 
 function primeiroNome(nome: string | null | undefined): string {
