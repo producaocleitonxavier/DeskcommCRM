@@ -20,6 +20,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { logger } from "@/lib/logger";
+import { recomputarEngajamento } from "@/lib/politico/engajamento";
 import { enviarMaterialComoDocumento, enviarTextoNoCanal } from "@/lib/politico/enviar-material";
 
 /** `[qr:CODE]` — colchetes e prefixo próprio para não casar por acidente. */
@@ -195,6 +196,9 @@ async function capturarNomeEEntregar(
       .update({ nome_informado: nome, aguardando_nome: false })
       .eq("id", cad.id);
   }
+
+  // Cadastro confirmado = sinal do funil: recalcula o índice de engajamento.
+  await recomputarEngajamento(admin, organizationId, contactId, { reason: "Cadastro por QR confirmado" });
 
   // Entrega o material (se houver material e canal).
   if (!origem.material_id || !origem.channel_session_id) {

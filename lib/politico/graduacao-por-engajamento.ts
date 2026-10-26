@@ -29,23 +29,23 @@
  */
 import type { SupabaseClient } from "@supabase/supabase-js";
 
-import { logger } from "@/lib/logger";
+import { recomputarEngajamento } from "@/lib/politico/engajamento";
 
 export interface GraduacaoResultado {
   /** Havia lead político para este contato? (não → org não-política ou contato sem lead) */
   temLead: boolean;
   /** Subiu de estágio nesta chamada? */
   graduou: boolean;
-  /** Aqueceu a temperatura (frio → morno) nesta chamada? */
+  /** Aqueceu a temperatura nesta chamada? (mantido por compatibilidade) */
   aqueceu: boolean;
 }
 
-const NADA: GraduacaoResultado = { temLead: false, graduou: false, aqueceu: false };
-
 /**
- * Gradua o lead do contato por engajamento. FAIL-SOFT: devolve o resultado
- * parcial e registra o aviso; nunca lança (o chamador é um handler de evento que
- * não pode derrubar o drain por causa de bookkeeping de funil).
+ * Gradua o lead por engajamento — agora pelo ÍNDICE DE ENGAJAMENTO
+ * (`lib/politico/engajamento.ts`), não mais por um degrau fixo. Toda resposta de
+ * entrada recalcula o índice dos fatos (resposta pesa +5, material +1, etc.),
+ * avança o estágio (forward-only) e aquece a temperatura. `engajouAgora` garante
+ * o piso simpatizante/morno. FAIL-SOFT: recomputarEngajamento nunca lança.
  */
 export async function graduarPorEngajamento(
   admin: SupabaseClient,
@@ -53,71 +53,9 @@ export async function graduarPorEngajamento(
   contactId: string,
   opts: { reason?: string } = {},
 ): Promise<GraduacaoResultado> {
-  try {
-    const { data: lead } = await admin
-      .from("pol_leads")
-      .select("id, support_level, temperature")
-      .eq("organization_id", organizationId)
-      .eq("contact_id", contactId)
-      .maybeSingle();
-
-    if (!lead) return NADA;
-    const l = lead as { id: string; support_level: string; temperature: string | null };
-
-    const resultado: GraduacaoResultado = { temLead: true, graduou: false, aqueceu: false };
-
-    // 1) Degrau do funil: só na primeira interação (novo_cadastro → simpatizante).
-    if (l.support_level === "novo_cadastro") {
-      const { error: errTransicao } = await admin.from("pol_funnel_transitions").insert({
-        organization_id: organizationId,
-        contact_id: contactId,
-        from_stage: "novo_cadastro",
-        to_stage: "simpatizante",
-        changed_by: null, // sistema
-        reason: opts.reason ?? "Engajou no WhatsApp",
-      });
-      if (errTransicao) {
-        logger.warn("graduacao: transição não gravada (nível não muda)", {
-          organization_id: organizationId,
-          contact_id: contactId,
-          detail: errTransicao.message.slice(0, 160),
-        });
-      } else {
-        // O UPDATE casa o nível atual: se outra graduação correu junto, não
-        // regride nem pula — a corrida perde em silêncio, sem transição órfã.
-        const { data: upd } = await admin
-          .from("pol_leads")
-          .update({ support_level: "simpatizante" })
-          .eq("id", l.id)
-          .eq("organization_id", organizationId)
-          .eq("support_level", "novo_cadastro")
-          .select("id")
-          .maybeSingle();
-        resultado.graduou = !!upd;
-      }
-    }
-
-    // 2) Temperatura: engajar tira do frio (frio → morno). Morno → quente pede
-    //    sinal mais forte (recorrência, presença) — fica para o Termômetro de Base.
-    if (l.temperature === "frio" || l.temperature == null) {
-      const { data: aq } = await admin
-        .from("pol_leads")
-        .update({ temperature: "morno" })
-        .eq("id", l.id)
-        .eq("organization_id", organizationId)
-        .or("temperature.eq.frio,temperature.is.null")
-        .select("id")
-        .maybeSingle();
-      resultado.aqueceu = !!aq;
-    }
-
-    return resultado;
-  } catch (err) {
-    logger.warn("graduacao: falhou (a conversa segue normal)", {
-      organization_id: organizationId,
-      contact_id: contactId,
-      detail: err instanceof Error ? err.message.slice(0, 160) : "desconhecido",
-    });
-    return NADA;
-  }
+  const r = await recomputarEngajamento(admin, organizationId, contactId, {
+    reason: opts.reason ?? "Engajou no WhatsApp",
+    engajouAgora: true,
+  });
+  return { temLead: r.temLead, graduou: r.avancou, aqueceu: r.avancou };
 }
