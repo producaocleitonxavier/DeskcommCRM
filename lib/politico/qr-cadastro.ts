@@ -166,12 +166,17 @@ async function capturarNomeEEntregar(
 ): Promise<ResultadoQrCadastro> {
   // Há um cadastro deste contato com o material ainda PENDENTE? (aguardando o
   // nome, ou com o nome já dado mas a entrega falhou — este caso re-entrega).
+  // JANELA: só os RECENTES (48h) captam a resposta como nome — assim uma mensagem
+  // qualquer semanas depois (ex.: uma reclamação) NÃO vira o nome da pessoa nem
+  // dispara entrega fora de hora (LGPD / sobrescrita indevida).
+  const janela = new Date(Date.now() - 48 * 3_600_000).toISOString();
   const { data: pend } = await admin
     .from("pol_qr_cadastros")
     .select("id, nome_informado, pol_qr_origens!inner(id, nome, material_id, channel_session_id)")
     .eq("organization_id", organizationId)
     .eq("contact_id", contactId)
     .is("material_entregue_at", null)
+    .gte("created_at", janela)
     .order("created_at", { ascending: false })
     .limit(1)
     .maybeSingle();
@@ -228,6 +233,18 @@ async function capturarNomeEEntregar(
     return { status: "ok", detail: "nome_ok_material_invalido" };
   }
 
+  // RECLAMA a entrega ANTES de enviar (compare-and-set): dois inbounds concorrentes
+  // da mesma pessoa (o drain roda em paralelo) não mandam o PDF duas vezes nem
+  // convidam a indicar duas vezes. Quem não reclamar encerra.
+  const { data: reclamou } = await admin
+    .from("pol_qr_cadastros")
+    .update({ material_entregue_at: new Date().toISOString() })
+    .eq("id", cad.id)
+    .is("material_entregue_at", null)
+    .select("id")
+    .maybeSingle();
+  if (!reclamou) return { status: "ok", detail: "ja_entregue" };
+
   const primeiro = nome.split(" ")[0];
   const legenda = material.titulo
     ? `Obrigado, ${primeiro}! 🙏 Aqui está o material: *${material.titulo}*. Qualquer dúvida, é só me chamar por aqui.`
@@ -241,12 +258,13 @@ async function capturarNomeEEntregar(
     rotulo: `qr-cadastro:${origem.id}`,
   });
   if (!r.enviou) {
-    // Nome já gravado; material_entregue_at fica null (operador vê na lista).
+    // Envio falhou: DEVOLVE o carimbo (reclamado antes do envio) → a próxima
+    // mensagem re-tenta. Nome já gravado.
+    await admin.from("pol_qr_cadastros").update({ material_entregue_at: null }).eq("id", cad.id);
     logger.warn("[qr-cadastro] envio do material falhou", { organization_id: organizationId, contact_id: contactId, detail: r.erro });
     return { status: "error", detail: `envio_falhou:${r.erro ?? ""}` };
   }
-  await admin.from("pol_qr_cadastros").update({ material_entregue_at: new Date().toISOString() }).eq("id", cad.id);
-  // Convida a indicar (uma vez) — o ouro do funil.
+  // material_entregue_at já foi carimbado no reclaim. Convida a indicar (uma vez).
   await convidarAIndicar(admin, { organizationId, contactId, canalId: origem.channel_session_id });
   return { status: "ok", detail: `entregue:${origem.nome}` };
 }

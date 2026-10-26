@@ -36,13 +36,15 @@ function gerarCodigo(tam = 6): string {
 
 /**
  * O código pessoal do contato — pega o que já existe ou gera um único na org.
- * Retorna null se não conseguir (falha é best-effort: sem código, sem indicação).
+ * Retorna `{codigo, novo}`: `novo=true` SÓ quando ESTA chamada criou o código
+ * (venceu o compare-and-set) — é o que desempata a corrida do convite (só quem
+ * criou envia o "indica aqui", evitando convite em dobro). `codigo=null` se falhou.
  */
 export async function codigoDeIndicacao(
   admin: SupabaseClient,
   organizationId: string,
   contactId: string,
-): Promise<string | null> {
+): Promise<{ codigo: string | null; novo: boolean }> {
   try {
     const { data: atual } = await admin
       .from("contacts")
@@ -51,7 +53,7 @@ export async function codigoDeIndicacao(
       .eq("id", contactId)
       .maybeSingle();
     const existente = (atual as { codigo_indicacao: string | null } | null)?.codigo_indicacao;
-    if (existente) return existente;
+    if (existente) return { codigo: existente, novo: false };
 
     for (let tentativa = 0; tentativa < 6; tentativa++) {
       const codigo = gerarCodigo();
@@ -63,7 +65,7 @@ export async function codigoDeIndicacao(
         .is("codigo_indicacao", null)
         .select("codigo_indicacao")
         .maybeSingle();
-      if (!error && data) return (data as { codigo_indicacao: string }).codigo_indicacao;
+      if (!error && data) return { codigo: (data as { codigo_indicacao: string }).codigo_indicacao, novo: true };
       // Conflito de unicidade (23505) → tenta outro código. Corrida que já gravou → relê.
       if (error && error.code === "23505") continue;
       const { data: relido } = await admin
@@ -73,12 +75,12 @@ export async function codigoDeIndicacao(
         .eq("id", contactId)
         .maybeSingle();
       const c = (relido as { codigo_indicacao: string | null } | null)?.codigo_indicacao;
-      if (c) return c;
+      if (c) return { codigo: c, novo: false };
     }
-    return null;
+    return { codigo: null, novo: false };
   } catch (err) {
     logger.warn("[indicacao] falha ao obter código", { organization_id: organizationId, contact_id: contactId, detail: err instanceof Error ? err.message.slice(0, 120) : "?" });
-    return null;
+    return { codigo: null, novo: false };
   }
 }
 
@@ -189,10 +191,13 @@ export async function convidarAIndicar(
       .eq("organization_id", organizationId).eq("id", contactId).maybeSingle();
     if ((c as { codigo_indicacao: string | null } | null)?.codigo_indicacao) return;
 
-    const codigo = await codigoDeIndicacao(admin, organizationId, contactId);
-    if (!codigo) return;
+    const { codigo, novo } = await codigoDeIndicacao(admin, organizationId, contactId);
+    // Só quem CRIOU o código agora envia o convite — se outra chamada (corrida)
+    // criou, ela envia; esta encerra, sem convite em dobro.
+    if (!codigo || !novo) return;
     const { data: ch } = await admin
-      .from("channel_sessions").select("phone_number").eq("id", canalId).maybeSingle();
+      .from("channel_sessions").select("phone_number")
+      .eq("organization_id", organizationId).eq("id", canalId).maybeSingle();
     const numero = (ch as { phone_number: string | null } | null)?.phone_number;
     if (!numero) return;
 

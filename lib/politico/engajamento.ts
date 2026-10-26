@@ -101,7 +101,7 @@ export async function recomputarEngajamento(
         .eq("organization_id", organizationId).eq("contact_id", contactId).not("nome_informado", "is", null),
       admin.from("pol_indicacoes").select("id", { count: "exact", head: true })
         .eq("organization_id", organizationId).eq("indicador_contact_id", contactId),
-      admin.from("contacts").select("last_activity_at").eq("id", contactId).maybeSingle(),
+      admin.from("contacts").select("last_activity_at").eq("organization_id", organizationId).eq("id", contactId).maybeSingle(),
     ]);
 
     const materiais = (matCamp.count ?? 0) + (matQr.count ?? 0);

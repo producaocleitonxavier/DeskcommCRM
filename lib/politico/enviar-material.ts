@@ -35,7 +35,14 @@ export function mimeDoArquivo(url: string): string | undefined {
  * de arquivo.
  */
 export function nomeDoArquivo(titulo: string | null, url: string): string | undefined {
-  const base = (titulo ?? "").trim().replace(/[\\/:*?"<>|]+/g, " ").replace(/\s+/g, " ").trim();
+  // Tira caracteres de nome de arquivo E controle/quebra de linha (defesa extra
+  // caso o nome flua um dia para um header).
+  const base = (titulo ?? "")
+    .trim()
+    // eslint-disable-next-line no-control-regex
+    .replace(/[\\/:*?"<>|\u0000-\u001F\u007F]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
   if (!base) return undefined;
   const limpo = url.split("?")[0]?.toLowerCase() ?? "";
   const ext = limpo.endsWith(".epub") ? "epub"
