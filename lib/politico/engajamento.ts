@@ -25,6 +25,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { logger } from "@/lib/logger";
+import { inscreverGraduadoNoDrip } from "@/lib/politico/drip-engajamento";
 
 const ORDEM_ESTAGIO = ["novo_cadastro", "simpatizante", "apoiador", "militante", "voto_certo"] as const;
 const ORDEM_TEMP = ["frio", "morno", "quente"] as const;
@@ -165,6 +166,12 @@ export async function recomputarEngajamento(
       .from("pol_leads")
       .update({ political_score: score, temperature: novaTemp })
       .eq("id", lead.id);
+
+    // Graduou (chegou a simpatizante+) → entra no drip mensal (dormente-seguro:
+    // só inscreve se a máquina de nutrição estiver armada).
+    if (avancou && alvoEstagio !== "novo_cadastro") {
+      await inscreverGraduadoNoDrip(admin, organizationId, contactId);
+    }
 
     return { temLead: true, score, estagio: avancou ? alvoEstagio : lead.support_level, avancou };
   } catch (err) {
