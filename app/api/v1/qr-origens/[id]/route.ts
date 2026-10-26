@@ -16,13 +16,15 @@ import { createAdminClient } from "@/lib/supabase/admin";
 
 export const dynamic = "force-dynamic";
 
-const COLUNAS = "id, nome, codigo, material_id, channel_session_id, mensagem, ativo, created_at";
+const COLUNAS = "id, nome, codigo, material_id, channel_session_id, mensagem, endereco, bairro, ativo, created_at";
 
 const editarSchema = z.object({
   nome: z.string().min(1).max(120).optional(),
   mensagem: z.string().min(1).max(600).optional(),
   material_id: z.string().uuid().nullable().optional(),
   channel_session_id: z.string().uuid().nullable().optional(),
+  endereco: z.string().max(240).nullable().optional(),
+  bairro: z.string().max(120).nullable().optional(),
   ativo: z.boolean().optional(),
 });
 
@@ -44,7 +46,7 @@ export async function PATCH(req: NextRequest, ctx: { params: Promise<{ id: strin
     });
   }
   const mudanca: Record<string, unknown> = { updated_at: new Date().toISOString() };
-  for (const campo of ["nome", "mensagem", "material_id", "channel_session_id", "ativo"] as const) {
+  for (const campo of ["nome", "mensagem", "material_id", "channel_session_id", "endereco", "bairro", "ativo"] as const) {
     if (parsed.data[campo] !== undefined) mudanca[campo] = parsed.data[campo];
   }
 

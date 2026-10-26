@@ -32,9 +32,18 @@ interface Origem {
   material_id: string | null;
   channel_session_id: string | null;
   mensagem: string;
+  endereco: string | null;
+  bairro: string | null;
   ativo: boolean;
   cadastros: number;
   materiais_entregues: number;
+}
+interface Cadastrado {
+  contact_id: string;
+  nome: string;
+  telefone: string | null;
+  created_at: string;
+  recebeu_material: boolean;
 }
 
 const MENSAGEM_PADRAO = "Olá! Me cadastrei e quero receber os materiais e novidades.";
@@ -49,6 +58,8 @@ export function CaptacaoQrClient({ materiais, canais }: { materiais: Material[];
   const [erro, setErro] = useState<string | null>(null);
 
   const [nome, setNome] = useState("");
+  const [endereco, setEndereco] = useState("");
+  const [bairro, setBairro] = useState("");
   const [materialId, setMaterialId] = useState<string>(materiais[0]?.id ?? "");
   const [canalId, setCanalId] = useState<string>(canalPadrao?.id ?? "");
   const [mensagem, setMensagem] = useState(MENSAGEM_PADRAO);
@@ -84,6 +95,8 @@ export function CaptacaoQrClient({ materiais, canais }: { materiais: Material[];
           mensagem: mensagem.trim() || MENSAGEM_PADRAO,
           material_id: materialId || null,
           channel_session_id: canalId || null,
+          endereco: endereco.trim() || null,
+          bairro: bairro.trim() || null,
         }),
       });
       if (!r.ok) throw new Error("falha");
@@ -91,6 +104,8 @@ export function CaptacaoQrClient({ materiais, canais }: { materiais: Material[];
       if (j?.data?.id) setOrigens((prev) => [j.data as Origem, ...prev]);
       else await carregar();
       setNome("");
+      setEndereco("");
+      setBairro("");
       setMensagem(MENSAGEM_PADRAO);
     } catch {
       setErro(t("Não consegui criar o ponto de captação."));
@@ -193,6 +208,32 @@ export function CaptacaoQrClient({ materiais, canais }: { materiais: Material[];
             </select>
           </label>
         </div>
+        <div className="grid gap-4 sm:grid-cols-[1fr_220px]">
+          <label className="space-y-1.5">
+            <span className="text-xs font-semibold uppercase tracking-wide" style={{ color: "var(--color-text-subtle)" }}>
+              {t("Endereço do lugar")} <span className="font-normal normal-case">({t("opcional")})</span>
+            </span>
+            <input
+              value={endereco}
+              onChange={(e) => setEndereco(e.target.value)}
+              placeholder={t("Ex.: Rua das Flores, 123")}
+              className="block w-full rounded-xl border px-4 py-3 text-sm"
+              style={{ borderColor: "var(--color-border)", background: "var(--color-surface)", color: "var(--color-text)" }}
+            />
+          </label>
+          <label className="space-y-1.5">
+            <span className="text-xs font-semibold uppercase tracking-wide" style={{ color: "var(--color-text-subtle)" }}>
+              {t("Bairro")} <span className="font-normal normal-case">({t("opcional")})</span>
+            </span>
+            <input
+              value={bairro}
+              onChange={(e) => setBairro(e.target.value)}
+              placeholder={t("Ex.: Centro")}
+              className="block w-full rounded-xl border px-4 py-3 text-sm"
+              style={{ borderColor: "var(--color-border)", background: "var(--color-surface)", color: "var(--color-text)" }}
+            />
+          </label>
+        </div>
         {canais.length > 1 && (
           <label className="space-y-1.5">
             <span className="text-xs font-semibold uppercase tracking-wide" style={{ color: "var(--color-text-subtle)" }}>
@@ -285,8 +326,28 @@ function CartaoOrigem({
   t: (s: string) => string;
 }) {
   const [copiado, setCopiado] = useState(false);
+  const [verLista, setVerLista] = useState(false);
+  const [pessoas, setPessoas] = useState<Cadastrado[] | null>(null);
+  const [carregandoLista, setCarregandoLista] = useState(false);
   const link = numero ? montarLinkWaMe(numero, origem.mensagem, origem.codigo) : "";
   const imagemUrl = `/api/v1/qr-origens/${origem.id}/imagem`;
+
+  async function alternarLista() {
+    const abrindo = !verLista;
+    setVerLista(abrindo);
+    if (abrindo && pessoas === null) {
+      setCarregandoLista(true);
+      try {
+        const r = await fetch(`/api/v1/qr-origens/${origem.id}/cadastros`, { credentials: "same-origin" });
+        const j = await r.json();
+        setPessoas(Array.isArray(j?.data) ? (j.data as Cadastrado[]) : []);
+      } catch {
+        setPessoas([]);
+      } finally {
+        setCarregandoLista(false);
+      }
+    }
+  }
 
   async function copiar() {
     try {
@@ -307,6 +368,11 @@ function CartaoOrigem({
             {t("código")} <span className="font-mono font-semibold" style={{ color: "var(--color-text-muted)" }}>{origem.codigo}</span>
             {" · "}{origem.cadastros} {origem.cadastros === 1 ? t("cadastro") : t("cadastros")}
           </p>
+          {(origem.bairro || origem.endereco) && (
+            <p className="truncate text-[11px]" style={{ color: "var(--color-text-subtle)" }}>
+              📍 {[origem.bairro, origem.endereco].filter(Boolean).join(" · ")}
+            </p>
+          )}
         </div>
         <button type="button" onClick={onApagar} className="opacity-40 transition-opacity hover:opacity-100" title={t("Apagar")} aria-label={t("Apagar ponto")}>
           <Trash2 className="h-4 w-4" style={{ color: "#F87171" }} />
@@ -339,10 +405,50 @@ function CartaoOrigem({
         </div>
       </div>
 
-      <label className="mt-1 flex items-center gap-2 text-xs" style={{ color: "var(--color-text-muted)" }}>
-        <input type="checkbox" checked={origem.ativo} onChange={onAlternar} />
-        {origem.ativo ? t("Ativo — recebendo cadastros") : t("Pausado — não recebe")}
-      </label>
+      <div className="flex items-center justify-between gap-2">
+        <label className="flex items-center gap-2 text-xs" style={{ color: "var(--color-text-muted)" }}>
+          <input type="checkbox" checked={origem.ativo} onChange={onAlternar} />
+          {origem.ativo ? t("Ativo — recebendo cadastros") : t("Pausado — não recebe")}
+        </label>
+        {origem.cadastros > 0 && (
+          <button
+            type="button"
+            onClick={() => void alternarLista()}
+            className="inline-flex items-center gap-1 text-xs font-semibold"
+            style={{ color: "var(--color-accent)" }}
+          >
+            {verLista ? t("Ocultar") : t("Ver quem se cadastrou")}
+          </button>
+        )}
+      </div>
+
+      {verLista && (
+        <div className="rounded-xl border" style={{ borderColor: "var(--color-border)" }}>
+          {carregandoLista ? (
+            <p className="p-3 text-xs" style={{ color: "var(--color-text-subtle)" }}>{t("Carregando…")}</p>
+          ) : !pessoas || pessoas.length === 0 ? (
+            <p className="p-3 text-xs" style={{ color: "var(--color-text-subtle)" }}>{t("Ninguém ainda.")}</p>
+          ) : (
+            <ul className="max-h-56 divide-y overflow-auto" style={{ borderColor: "var(--color-border)" }}>
+              {pessoas.map((p) => (
+                <li key={p.contact_id} className="flex items-center justify-between gap-2 px-3 py-2">
+                  <div className="min-w-0">
+                    <p className="truncate text-xs font-semibold" style={{ color: "var(--color-text)" }}>{p.nome}</p>
+                    <p className="text-[11px]" style={{ color: "var(--color-text-subtle)" }}>
+                      {p.telefone ?? ""} · {new Date(p.created_at).toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" })}
+                    </p>
+                  </div>
+                  {p.recebeu_material ? (
+                    <span className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold" style={{ background: "rgba(34,197,94,0.15)", color: "#4ADE80" }}>
+                      <Check className="h-3 w-3" /> {t("ebook")}
+                    </span>
+                  ) : null}
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      )}
     </div>
   );
 }

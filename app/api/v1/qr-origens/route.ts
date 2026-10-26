@@ -21,13 +21,15 @@ import { createClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
 
-const COLUNAS = "id, nome, codigo, material_id, channel_session_id, mensagem, ativo, created_at";
+const COLUNAS = "id, nome, codigo, material_id, channel_session_id, mensagem, endereco, bairro, ativo, created_at";
 
 const criarSchema = z.object({
   nome: z.string().min(1).max(120),
   mensagem: z.string().min(1).max(600),
   material_id: z.string().uuid().nullable().optional(),
   channel_session_id: z.string().uuid().nullable().optional(),
+  endereco: z.string().max(240).nullable().optional(),
+  bairro: z.string().max(120).nullable().optional(),
 });
 
 export async function GET(_req: NextRequest): Promise<Response> {
@@ -103,6 +105,8 @@ export async function POST(req: NextRequest): Promise<Response> {
       mensagem: entrada.mensagem,
       material_id: entrada.material_id ?? null,
       channel_session_id: entrada.channel_session_id ?? null,
+      endereco: entrada.endereco ?? null,
+      bairro: entrada.bairro ?? null,
       created_by: authz.user.id,
     })
     .select(COLUNAS)
