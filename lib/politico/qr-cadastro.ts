@@ -152,13 +152,13 @@ async function capturarNomeEEntregar(
   contactId: string,
   texto: string | null,
 ): Promise<ResultadoQrCadastro> {
-  // Há um cadastro deste contato aguardando o nome (e sem material entregue)?
+  // Há um cadastro deste contato com o material ainda PENDENTE? (aguardando o
+  // nome, ou com o nome já dado mas a entrega falhou — este caso re-entrega).
   const { data: pend } = await admin
     .from("pol_qr_cadastros")
-    .select("id, pol_qr_origens!inner(id, nome, material_id, channel_session_id)")
+    .select("id, nome_informado, pol_qr_origens!inner(id, nome, material_id, channel_session_id)")
     .eq("organization_id", organizationId)
     .eq("contact_id", contactId)
-    .eq("aguardando_nome", true)
     .is("material_entregue_at", null)
     .order("created_at", { ascending: false })
     .limit(1)
@@ -166,31 +166,35 @@ async function capturarNomeEEntregar(
   if (!pend) return { status: "skipped", detail: "sem_cadastro_pendente" };
   const cad = pend as unknown as {
     id: string;
+    nome_informado: string | null;
     pol_qr_origens: { id: string; nome: string; material_id: string | null; channel_session_id: string | null };
   };
   const origem = cad.pol_qr_origens;
 
-  const nome = limparNome(texto);
+  // Se o nome já foi dado antes (entrega falhou), re-entrega sem re-perguntar.
+  let nome = cad.nome_informado;
   if (!nome) {
-    // Não parece nome: re-pede uma vez, gentil (mantém aguardando).
-    if (origem.channel_session_id) {
-      await enviarTextoNoCanal(admin, {
-        organizationId,
-        contactId,
-        canalId: origem.channel_session_id,
-        texto: "Pode me mandar só o seu *nome e sobrenome*? Aí já te envio o material. 🙂",
-        rotulo: `qr-repede-nome:${origem.id}`,
-      });
+    nome = limparNome(texto);
+    if (!nome) {
+      // Não parece nome: re-pede uma vez, gentil.
+      if (origem.channel_session_id) {
+        await enviarTextoNoCanal(admin, {
+          organizationId,
+          contactId,
+          canalId: origem.channel_session_id,
+          texto: "Pode me mandar só o seu *nome e sobrenome*? Aí já te envio o material. 🙂",
+          rotulo: `qr-repede-nome:${origem.id}`,
+        });
+      }
+      return { status: "ok", detail: "nome_invalido_repediu" };
     }
-    return { status: "ok", detail: "nome_invalido_repediu" };
+    // Grava o nome no contato (confirmação da pessoa) e no cadastro.
+    await admin.from("contacts").update({ name: nome }).eq("organization_id", organizationId).eq("id", contactId);
+    await admin
+      .from("pol_qr_cadastros")
+      .update({ nome_informado: nome, aguardando_nome: false })
+      .eq("id", cad.id);
   }
-
-  // Grava o nome no contato (confirmação da pessoa) e no cadastro.
-  await admin.from("contacts").update({ name: nome }).eq("organization_id", organizationId).eq("id", contactId);
-  await admin
-    .from("pol_qr_cadastros")
-    .update({ nome_informado: nome, aguardando_nome: false })
-    .eq("id", cad.id);
 
   // Entrega o material (se houver material e canal).
   if (!origem.material_id || !origem.channel_session_id) {
