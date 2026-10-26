@@ -94,6 +94,7 @@ export function NovaCampanha({
   const temPublico = origensSel.length > 0 || niveis.length > 0 || temps.length > 0;
 
   const vel = VELOCIDADES.find((v) => v.id === velocidade) ?? VELOCIDADES[0];
+  const materialTitulo = materiais.find((m) => m.id === material)?.titulo ?? null;
   const podeCriar =
     nome.trim() !== "" &&
     canal !== "" &&
@@ -117,7 +118,7 @@ export function NovaCampanha({
   }
 
   return (
-    <div className="mx-auto max-w-[760px] space-y-[18px] px-4 py-7" style={{ background: "var(--color-bg)" }}>
+    <div className="mx-auto max-w-[1100px] px-4 py-7" style={{ background: "var(--color-bg)" }}>
       <CommandHero
         eyebrow="Operação · Comunicação"
         titulo="Novo disparo"
@@ -125,6 +126,8 @@ export function NovaCampanha({
         acoes={[{ href: "/app/campaigns", label: "← Voltar" }]}
       />
 
+      <div className="mt-[18px] lg:grid lg:grid-cols-[minmax(0,1fr)_330px] lg:gap-6 lg:items-start">
+        <div className="space-y-[18px]">
       {/* Nome */}
       <section className="wr-card wr-anim-in p-5 sm:p-6" style={{ animationDelay: "0.02s" }}>
         <label className="block space-y-2">
@@ -233,10 +236,16 @@ export function NovaCampanha({
         <textarea
           value={texto}
           onChange={(e) => setTexto(e.target.value)}
-          rows={4}
+          rows={5}
           placeholder={t("Ex.: Oi {{nome}}! Preparamos um material sobre proteção digital. Posso te enviar? Responde SIM 👍")}
-          className="wr-input resize-y"
-          style={{ minHeight: 110 }}
+          className="block w-full resize-y rounded-xl border px-4 py-3 text-sm"
+          style={{
+            minHeight: 130,
+            lineHeight: 1.55,
+            background: "var(--color-surface)",
+            borderColor: "var(--color-border)",
+            color: "var(--color-text)",
+          }}
         />
         <div className="flex flex-wrap items-center gap-2">
           <button type="button" onClick={() => setTexto((s) => s + "{{nome}}")} className="wr-btn text-xs">
@@ -247,9 +256,9 @@ export function NovaCampanha({
           </span>
         </div>
 
-        {/* Prévia WhatsApp */}
+        {/* Prévia WhatsApp (inline, só no celular — no desktop é o aparelho à direita) */}
         {texto.trim() && (
-          <div className="wr-anim-in mt-1">
+          <div className="wr-anim-in mt-1 lg:hidden">
             <span className="text-xs font-semibold uppercase tracking-wide" style={{ color: "var(--color-text-subtle)" }}>
               {t("Prévia no WhatsApp")}
             </span>
@@ -388,6 +397,12 @@ export function NovaCampanha({
         <span className="text-xs" style={{ color: "var(--color-text-subtle)" }}>
           {t("Cria um rascunho. Nada é enviado antes de você conferir e iniciar.")}
         </span>
+      </div>
+        </div>
+
+        <aside className="mt-[18px] hidden lg:block lg:sticky lg:top-6">
+          <PhoneMockup texto={texto} materialTitulo={materialTitulo} />
+        </aside>
       </div>
     </div>
   );
@@ -543,4 +558,131 @@ function previewWhatsapp(texto: string): string {
     .replace(/\{\{\s*nome\s*\}\}/g, "Maria")
     .replace(/\*([^*]+)\*/g, "<strong>$1</strong>")
     .replace(/\n/g, "<br/>");
+}
+
+function escaparHtml(s: string): string {
+  return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+}
+
+/* ── Aparelho — prévia ultrapremium do disparo ─────────────────────────────── */
+
+function PhoneMockup({ texto, materialTitulo }: { texto: string; materialTitulo: string | null }) {
+  const t = useT();
+  const temTexto = texto.trim().length > 0;
+  return (
+    <div className="wr-anim-in">
+      <div
+        className="wr-float relative mx-auto"
+        style={{
+          width: 300,
+          borderRadius: 44,
+          padding: 11,
+          background: "linear-gradient(155deg,#33363d 0%,#0a0b0e 60%)",
+          boxShadow: "0 34px 70px -22px rgba(0,0,0,0.65), 0 0 0 1px rgba(255,255,255,0.05), 0 0 60px -14px rgba(215,243,106,0.18)",
+        }}
+      >
+        <div className="relative overflow-hidden" style={{ borderRadius: 34, background: "#0B141A", height: 604 }}>
+          {/* Ilha dinâmica */}
+          <div className="absolute left-1/2 top-[9px] z-30 -translate-x-1/2 rounded-full" style={{ width: 92, height: 26, background: "#000" }} />
+          {/* Barra de status */}
+          <div className="relative z-20 flex items-center justify-between px-5 pt-3 text-[11px] font-semibold" style={{ color: "#fff" }}>
+            <span>9:41</span>
+            <span className="flex items-center gap-1.5">
+              <span className="flex items-end gap-[2px]">
+                {[4, 6, 8, 10].map((h) => (
+                  <span key={h} style={{ width: 2.5, height: h, background: "#fff", borderRadius: 1, display: "inline-block" }} />
+                ))}
+              </span>
+              <span className="relative inline-flex items-center" style={{ width: 20, height: 10, border: "1px solid rgba(255,255,255,0.8)", borderRadius: 2.5 }}>
+                <span style={{ position: "absolute", right: -3, top: 3, width: 2, height: 4, background: "rgba(255,255,255,0.8)", borderRadius: 1 }} />
+                <span style={{ position: "absolute", left: 1.5, top: 1.5, bottom: 1.5, width: "78%", background: "#4ADE80", borderRadius: 1 }} />
+              </span>
+            </span>
+          </div>
+          {/* Cabeçalho WhatsApp */}
+          <div className="relative z-20 mt-2 flex items-center gap-2.5 px-3 py-2.5" style={{ background: "#1F2C33", boxShadow: "0 1px 0 rgba(0,0,0,0.3)" }}>
+            <span className="text-lg leading-none" style={{ color: "#8696A0" }}>‹</span>
+            <span className="flex h-9 w-9 items-center justify-center rounded-full font-heading text-sm font-bold" style={{ background: "linear-gradient(135deg,#D7F36A,#8AA62E)", color: "#14181F" }}>C</span>
+            <div className="min-w-0 flex-1">
+              <div className="truncate text-sm font-semibold" style={{ color: "#E9EDEF" }}>Cleiton Xavier</div>
+              <div className="text-[10px]" style={{ color: "#4ADE80" }}>online</div>
+            </div>
+          </div>
+          {/* Conversa */}
+          <div
+            className="relative space-y-2 overflow-y-auto px-3 py-3"
+            style={{
+              height: 500,
+              background: "#0B141A",
+              backgroundImage: "radial-gradient(rgba(255,255,255,0.025) 1px, transparent 1px)",
+              backgroundSize: "20px 20px",
+            }}
+          >
+            <Bolha lado="out" atraso="0.15s">
+              <span dangerouslySetInnerHTML={{ __html: temTexto ? previewWhatsapp(texto) : "<span style='opacity:.45'>Sua mensagem aparece aqui conforme você escreve…</span>" }} />
+              <Hora checks />
+            </Bolha>
+            {materialTitulo && temTexto && (
+              <>
+                <Bolha lado="in" atraso="0.9s">
+                  Sim <Hora />
+                </Bolha>
+                <Bolha lado="out" atraso="1.5s">
+                  <DocCard titulo={materialTitulo} />
+                  <span className="mt-1.5 block" dangerouslySetInnerHTML={{ __html: `📘 Aqui está o material <strong>${escaparHtml(materialTitulo)}</strong>. Qualquer dúvida, é só chamar! 🙂` }} />
+                  <Hora checks />
+                </Bolha>
+              </>
+            )}
+          </div>
+        </div>
+      </div>
+      <p className="mt-3 text-center text-xs" style={{ color: "var(--color-text-subtle)" }}>
+        {materialTitulo ? t("Prévia — o convite, o “SIM” e o material chegando") : t("Prévia — é assim que a pessoa vê")}
+      </p>
+    </div>
+  );
+}
+
+function Bolha({ lado, atraso, children }: { lado: "in" | "out"; atraso: string; children: ReactNode }) {
+  const out = lado === "out";
+  return (
+    <div className={`flex ${out ? "justify-end" : "justify-start"}`}>
+      <div
+        className="wr-anim-in relative max-w-[82%] px-2.5 py-1.5 text-[13px] leading-snug"
+        style={{
+          animationDelay: atraso,
+          background: out ? "#005C4B" : "#1F2C33",
+          color: "#E9EDEF",
+          borderRadius: 10,
+          borderTopRightRadius: out ? 3 : 10,
+          borderTopLeftRadius: out ? 10 : 3,
+          boxShadow: "0 1px 1px rgba(0,0,0,0.25)",
+        }}
+      >
+        {children}
+      </div>
+    </div>
+  );
+}
+
+function Hora({ checks }: { checks?: boolean }) {
+  return (
+    <span className="ml-1.5 inline-flex items-center gap-0.5 align-bottom text-[9px]" style={{ color: "rgba(233,237,239,0.5)" }}>
+      18:42
+      {checks && <span style={{ color: "#53BDEB" }}>✓✓</span>}
+    </span>
+  );
+}
+
+function DocCard({ titulo }: { titulo: string }) {
+  return (
+    <div className="flex items-center gap-2 rounded-lg p-2" style={{ background: "rgba(0,0,0,0.22)" }}>
+      <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded" style={{ background: "#E53935", color: "#fff", fontSize: 9, fontWeight: 800 }}>PDF</span>
+      <span className="min-w-0">
+        <span className="block truncate text-[12px] font-semibold" style={{ color: "#E9EDEF" }}>{titulo}</span>
+        <span className="block text-[10px]" style={{ color: "rgba(233,237,239,0.5)" }}>PDF · documento</span>
+      </span>
+    </div>
+  );
 }

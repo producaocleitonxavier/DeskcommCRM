@@ -29,7 +29,7 @@ const COLUNAS =
   "audience_filter, audience_version, content_version, snapshot_total, snapshot_eligible, " +
   "snapshot_excluded, scheduled_at, prepared_at, started_at, paused_at, completed_at, " +
   "cancelled_at, failure_code, intervalo_segundos, janela_inicio_hora, janela_fim_hora, " +
-  "teto_diario, teto_horario, pipeline_id, stage_id, agent_id, created_at, created_by";
+  "teto_diario, teto_horario, pipeline_id, stage_id, agent_id, material_id, created_at, created_by";
 
 export async function GET(
   _req: NextRequest,

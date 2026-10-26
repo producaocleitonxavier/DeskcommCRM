@@ -1,31 +1,18 @@
 "use client";
 /**
- * Configuração de campanhas — as três coisas que valem para TODAS elas.
+ * Ajustes dos disparos (War Room 2.0, redesign premium + didático).
  *
- * ═══ Por que uma tela e não três ═══
- *
- * "Cadê a tela de configuração das campanhas?" foi a pergunta que a criou. Três
- * telas separadas (padrões, textos, exclusões) seriam três lugares para
- * procurar, e a pessoa que pergunta isso está procurando UM. O que as une é o
- * escopo: nada aqui pertence a uma campanha, tudo vale para a próxima também.
- *
- * ═══ O que NÃO está aqui, e onde está ═══
- *
- * A proteção do NÚMERO — intervalo, janela, teto diário e aquecimento — vive em
- * Conexões › Proteção de envio, porque protege o número inteiro, inclusive o
- * que o agente manda. Esta tela guarda o padrão da CAMPANHA, e campanha só sabe
- * ir mais devagar que o número. O link está escrito na própria seção: mandar
- * alguém procurar é o mesmo defeito que criou esta tela.
+ * Três coisas que valem para TODOS os disparos: a velocidade padrão, a janela de
+ * resposta, os textos prontos e a lista de exclusão. Regra do cliente: já vem no
+ * MODO SEGURO (velocidade Calmo + 72h), explicado em linguagem prática — o
+ * usuário só mexe se quiser. A velocidade em cards é a MESMA das outras telas
+ * (consistência): o número cru fica no Avançado.
  */
 import Link from "next/link";
 import { useEffect, useState } from "react";
 
-import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import { CommandHero } from "@/components/politico/command-hero";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Textarea } from "@/components/ui/textarea";
 import {
   useApagarTexto,
   useConfiguracaoDeCampanhas,
@@ -37,28 +24,24 @@ import {
   useTirarDaExclusao,
 } from "@/hooks/campanhas/useConfiguracao";
 import { useT } from "@/hooks/i18n/useT";
-import { ArrowBendUpLeft } from "@/lib/ui/icons";
+import { Gauge, ChevronDown, Clock, BookText, UserX, CheckCircle2 } from "lucide-react";
+
+const VELOCIDADES = [
+  { id: "calmo", label: "Calmo", emoji: "🐢", desc: "Protege o número. Recomendado.", intervalo: 90, teto: 40 },
+  { id: "normal", label: "Normal", emoji: "🚶", desc: "Equilíbrio entre rapidez e segurança.", intervalo: 45, teto: 150 },
+  { id: "rapido", label: "Rápido", emoji: "🏃", desc: "Só com número aquecido.", intervalo: 20, teto: 400 },
+] as const;
 
 export function ConfiguracaoDeCampanhas() {
   const t = useT();
   return (
-    <div className="mx-auto max-w-3xl space-y-4 p-6">
-      <div>
-        <Link
-          href="/app/campaigns"
-          className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-text"
-        >
-          <ArrowBendUpLeft size={14} aria-hidden />
-          {t("Campanhas")}
-        </Link>
-      </div>
-      <header>
-        <h1 className="text-2xl font-semibold tracking-tight">{t("Configuração de campanhas")}</h1>
-        <p className="text-sm text-muted-foreground">
-          {t("O que vale para todas as campanhas, e não para uma só.")}
-        </p>
-      </header>
-
+    <div className="mx-auto max-w-[760px] space-y-[18px] px-4 py-7" style={{ background: "var(--color-bg)" }}>
+      <CommandHero
+        eyebrow="Operação · Comunicação"
+        titulo="Ajustes dos disparos"
+        subtitulo="O que vale para TODOS os disparos. Já vem no modo seguro — você só mexe se quiser."
+        acoes={[{ href: "/app/campaigns", label: "← Disparos" }]}
+      />
       <Padroes />
       <TextosSalvos />
       <ListaDeExclusao />
@@ -70,7 +53,9 @@ function Padroes() {
   const t = useT();
   const q = useConfiguracaoDeCampanhas();
   const salvar = useSalvarConfiguracao();
-  const [atribuicao, setAtribuicao] = useState("");
+  const [atribuicao, setAtribuicao] = useState("72");
+  const [velId, setVelId] = useState<string>("calmo");
+  const [avancado, setAvancado] = useState(false);
   const [intervalo, setIntervalo] = useState("");
   const [tetoDia, setTetoDia] = useState("");
   const [tetoHora, setTetoHora] = useState("");
@@ -81,80 +66,104 @@ function Padroes() {
   useEffect(() => {
     const c = q.data?.configuracao;
     if (!c || carregado) return;
-    setAtribuicao(String(c.atribuicao_horas));
+    setAtribuicao(String(c.atribuicao_horas ?? 72));
     setIntervalo(txt(c.intervalo_segundos));
     setTetoDia(txt(c.teto_diario));
     setTetoHora(txt(c.teto_horario));
     setInicio(txt(c.janela_inicio_hora));
     setFim(txt(c.janela_fim_hora));
+    setVelId(detectarVelocidade(c.intervalo_segundos, c.teto_diario));
     setCarregado(true);
   }, [q.data, carregado]);
 
-  if (q.isLoading || !carregado) return <Skeleton className="h-64 w-full" />;
+  if (q.isLoading || !carregado) return <Skeleton className="h-72 w-full rounded-2xl" />;
+
+  function salvarComVelocidade(novoVelId: string) {
+    setVelId(novoVelId);
+    const v = VELOCIDADES.find((x) => x.id === novoVelId);
+    if (!v) return;
+    setIntervalo(String(v.intervalo));
+    setTetoDia(String(v.teto));
+    setTetoHora("");
+    salvar.mutate({
+      atribuicao_horas: Number(atribuicao) || 72,
+      intervalo_segundos: v.intervalo,
+      teto_diario: v.teto,
+      teto_horario: null,
+      janela_inicio_hora: num(inicio),
+      janela_fim_hora: num(fim),
+    });
+  }
 
   return (
-    <Card className="space-y-4 p-4">
-      <div>
-        <h2 className="font-medium">{t("Padrões desta organização")}</h2>
-        <p className="text-sm text-muted-foreground">
-          {t("Campo vazio significa herdar o número. Toda campanha nova nasce com estes valores e pode ficar mais devagar, nunca mais rápida.")}
-        </p>
+    <section className="wr-card wr-anim-in space-y-5 p-5 sm:p-6" style={{ animationDelay: "0.04s" }}>
+      <div className="flex items-center gap-2">
+        <Gauge className="h-5 w-5" style={{ color: "var(--color-accent)" }} />
+        <h2 className="font-heading text-[18px] font-bold" style={{ color: "var(--color-text)" }}>{t("Velocidade padrão")}</h2>
       </div>
-
-      <div className="space-y-2">
-        <Label htmlFor="atribuicao">{t("Contar como resposta até (horas depois do envio)")}</Label>
-        <Input
-          id="atribuicao"
-          type="number"
-          min={1}
-          max={720}
-          value={atribuicao}
-          onChange={(e) => setAtribuicao(e.target.value)}
-        />
-        <p className="text-sm text-muted-foreground">
-          {t("Uma mensagem que chega depois desse prazo é conversa nova, não resposta à campanha. Isso muda o número de respostas que a tela mostra, inclusive das campanhas já enviadas.")}
-        </p>
-      </div>
-
-      <div className="grid gap-4 sm:grid-cols-2">
-        <Campo id="p-intervalo" rotulo={t("Intervalo mínimo entre mensagens (segundos)")} valor={intervalo} onChange={setIntervalo} />
-        <Campo id="p-dia" rotulo={t("Máximo por dia")} valor={tetoDia} onChange={setTetoDia} />
-        <Campo id="p-hora" rotulo={t("Máximo por hora")} valor={tetoHora} onChange={setTetoHora} />
-        <div />
-        <Campo id="p-inicio" rotulo={t("Enviar só a partir das (hora)")} valor={inicio} onChange={setInicio} />
-        <Campo id="p-fim" rotulo={t("Parar de enviar às (hora)")} valor={fim} onChange={setFim} />
-      </div>
-
-      <p className="text-sm text-muted-foreground">
-        {t("A proteção do número — ritmo, janela e aquecimento que valem para tudo que sai por ele — fica em")}{" "}
-        <Link href="/app/connections" className="underline">
-          {t("Conexões › Proteção de envio")}
-        </Link>
-        .
+      <p className="text-sm" style={{ color: "var(--color-text-subtle)" }}>
+        {t("A velocidade com que todo disparo novo começa. Pode deixar mais devagar em cada disparo — nunca mais rápido que o número aguenta.")}
       </p>
-
-      <div className="flex items-center gap-3">
-        <Button
-          size="sm"
-          disabled={salvar.isPending}
-          onClick={() =>
-            salvar.mutate({
-              atribuicao_horas: Number(atribuicao) || 72,
-              intervalo_segundos: num(intervalo),
-              teto_diario: num(tetoDia),
-              teto_horario: num(tetoHora),
-              janela_inicio_hora: num(inicio),
-              janela_fim_hora: num(fim),
-            })
-          }
-        >
-          {salvar.isPending ? t("Salvando…") : t("Salvar padrões")}
-        </Button>
-        {salvar.isSuccess && !salvar.isPending && (
-          <span className="text-sm text-success-fg">{t("Padrões salvos.")}</span>
-        )}
+      <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+        {VELOCIDADES.map((v) => {
+          const ativo = velId === v.id;
+          return (
+            <button key={v.id} type="button" disabled={salvar.isPending} onClick={() => salvarComVelocidade(v.id)} className="wr-lift rounded-xl border p-3 text-left transition-colors disabled:opacity-60" style={ativo ? { borderColor: "var(--color-accent)", background: "rgba(215,243,106,0.08)" } : { borderColor: "var(--color-border)" }}>
+              <div className="flex items-center gap-2">
+                <span className="text-lg">{v.emoji}</span>
+                <span className="font-heading text-sm font-bold" style={{ color: "var(--color-text)" }}>{t(v.label)}</span>
+                {ativo && <CheckCircle2 className="ml-auto h-4 w-4" style={{ color: "var(--color-accent)" }} />}
+              </div>
+              <p className="mt-1 text-xs" style={{ color: "var(--color-text-subtle)" }}>{t(v.desc)}</p>
+            </button>
+          );
+        })}
       </div>
-    </Card>
+
+      {/* Janela de resposta */}
+      <div className="space-y-2 border-t pt-4" style={{ borderColor: "var(--color-border)" }}>
+        <div className="flex items-center gap-2">
+          <Clock className="h-4 w-4" style={{ color: "var(--color-accent)" }} />
+          <span className="text-sm font-semibold" style={{ color: "var(--color-text-muted)" }}>{t("Até quando uma resposta conta como “respondeu ao disparo”?")}</span>
+        </div>
+        <div className="flex items-center gap-2">
+          <input type="number" min={1} max={720} value={atribuicao} onChange={(e) => setAtribuicao(e.target.value)} className="wr-input" style={{ maxWidth: 110 }} />
+          <span className="text-sm" style={{ color: "var(--color-text-muted)" }}>{t("horas depois do envio")}</span>
+        </div>
+        <p className="text-xs" style={{ color: "var(--color-text-subtle)" }}>
+          {t("Se a pessoa responder depois desse prazo, o sistema trata como conversa nova (não como resposta ao disparo). 72h é um bom padrão.")}
+        </p>
+        <button className="wr-btn-dark mt-1 px-5" disabled={salvar.isPending} onClick={() => salvar.mutate({ atribuicao_horas: Number(atribuicao) || 72, intervalo_segundos: num(intervalo), teto_diario: num(tetoDia), teto_horario: num(tetoHora), janela_inicio_hora: num(inicio), janela_fim_hora: num(fim) })}>
+          {salvar.isPending ? t("Salvando…") : t("Salvar janela de resposta")}
+        </button>
+        {salvar.isSuccess && !salvar.isPending && <span className="ml-2 text-sm" style={{ color: "#4ADE80" }}>{t("Salvo!")}</span>}
+      </div>
+
+      {/* Avançado */}
+      <button type="button" onClick={() => setAvancado((v) => !v)} className="inline-flex items-center gap-2 text-sm font-semibold" style={{ color: "var(--color-text-muted)" }}>
+        <Gauge className="h-4 w-4" /> {t("Ajuste fino do ritmo (avançado)")}
+        <ChevronDown className="h-4 w-4 transition-transform" style={{ transform: avancado ? "rotate(180deg)" : "none" }} />
+      </button>
+      {avancado && (
+        <div className="wr-anim-in space-y-3">
+          <p className="text-xs" style={{ color: "var(--color-text-subtle)" }}>
+            {t("Campo vazio = herda o número. A proteção do número inteiro fica em")}{" "}
+            <Link href="/app/connections" className="underline" style={{ color: "var(--color-accent)" }}>{t("Conexões › Proteção de envio")}</Link>.
+          </p>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <CampoNum id="p-int" rotulo={t("Intervalo mínimo (segundos)")} valor={intervalo} onChange={setIntervalo} />
+            <CampoNum id="p-dia" rotulo={t("Máximo por dia")} valor={tetoDia} onChange={setTetoDia} />
+            <CampoNum id="p-hora" rotulo={t("Máximo por hora")} valor={tetoHora} onChange={setTetoHora} />
+            <div />
+            <CampoNum id="p-ini" rotulo={t("Enviar só a partir das (hora)")} valor={inicio} onChange={setInicio} />
+            <CampoNum id="p-fim" rotulo={t("Parar de enviar às (hora)")} valor={fim} onChange={setFim} />
+          </div>
+          <button className="wr-btn-dark px-5" disabled={salvar.isPending} onClick={() => salvar.mutate({ atribuicao_horas: Number(atribuicao) || 72, intervalo_segundos: num(intervalo), teto_diario: num(tetoDia), teto_horario: num(tetoHora), janela_inicio_hora: num(inicio), janela_fim_hora: num(fim) })}>
+            {salvar.isPending ? t("Salvando…") : t("Salvar ajuste fino")}
+          </button>
+        </div>
+      )}
+    </section>
   );
 }
 
@@ -167,49 +176,34 @@ function TextosSalvos() {
   const [corpo, setCorpo] = useState("");
 
   return (
-    <Card className="space-y-4 p-4">
-      <div>
-        <h2 className="font-medium">{t("Textos salvos")}</h2>
-        <p className="text-sm text-muted-foreground">
-          {t("Copy que você reusa entre campanhas. Mudar um texto aqui não muda mensagem que já foi preparada nem que já foi enviada.")}
-        </p>
+    <section className="wr-card wr-anim-in space-y-4 p-5 sm:p-6" style={{ animationDelay: "0.08s" }}>
+      <div className="flex items-center gap-2">
+        <BookText className="h-5 w-5" style={{ color: "var(--color-accent)" }} />
+        <h2 className="font-heading text-[18px] font-bold" style={{ color: "var(--color-text)" }}>{t("Modelos de mensagem")}</h2>
       </div>
-
+      <p className="text-sm" style={{ color: "var(--color-text-subtle)" }}>
+        {t("Textos prontos pra reusar em novos disparos, sem reescrever. Mudar aqui não altera disparo já enviado.")}
+      </p>
       <div className="space-y-2">
-        <Label htmlFor="t-nome">{t("Nome")}</Label>
-        <Input id="t-nome" value={nome} onChange={(e) => setNome(e.target.value)} placeholder={t("Ex.: Primeiro contato — produtor")} />
-        <Label htmlFor="t-corpo">{t("Texto")}</Label>
-        <Textarea id="t-corpo" rows={4} value={corpo} onChange={(e) => setCorpo(e.target.value)} />
-        <Button
-          size="sm"
-          disabled={nome.trim() === "" || corpo.trim() === "" || salvar.isPending}
-          onClick={async () => {
-            await salvar.mutateAsync({ name: nome.trim(), body: corpo.trim() });
-            setNome("");
-            setCorpo("");
-          }}
-        >
-          {salvar.isPending ? t("Salvando…") : t("Salvar texto")}
-        </Button>
+        <input value={nome} onChange={(e) => setNome(e.target.value)} placeholder={t("Nome do modelo. Ex.: Convite proteção digital")} className="wr-input" />
+        <textarea value={corpo} onChange={(e) => setCorpo(e.target.value)} rows={4} placeholder={t("Escreva o texto…")} className="block w-full resize-y rounded-xl border px-4 py-3 text-sm" style={{ minHeight: 110, lineHeight: 1.55, background: "var(--color-surface)", borderColor: "var(--color-border)", color: "var(--color-text)" }} />
+        <button className="wr-btn-dark px-5" disabled={nome.trim() === "" || corpo.trim() === "" || salvar.isPending} onClick={async () => { await salvar.mutateAsync({ name: nome.trim(), body: corpo.trim() }); setNome(""); setCorpo(""); }}>
+          {salvar.isPending ? t("Salvando…") : t("Salvar modelo")}
+        </button>
       </div>
-
-      <div className="divide-y divide-border">
+      <div className="divide-y" style={{ borderColor: "var(--color-border)" }}>
         {(q.data ?? []).map((texto) => (
-          <div key={texto.id} className="flex items-start justify-between gap-3 py-2">
+          <div key={texto.id} className="flex items-start justify-between gap-3 py-2.5">
             <div className="min-w-0">
-              <p className="font-medium">{texto.name}</p>
-              <p className="truncate text-sm text-muted-foreground">{texto.body}</p>
+              <p className="font-heading text-sm font-bold" style={{ color: "var(--color-text)" }}>{texto.name}</p>
+              <p className="truncate text-sm" style={{ color: "var(--color-text-subtle)" }}>{texto.body}</p>
             </div>
-            <Button size="sm" variant="outline" disabled={apagar.isPending} onClick={() => apagar.mutate(texto.id)}>
-              {t("Apagar")}
-            </Button>
+            <button className="wr-btn text-xs" disabled={apagar.isPending} onClick={() => apagar.mutate(texto.id)}>{t("Apagar")}</button>
           </div>
         ))}
-        {(q.data ?? []).length === 0 && !q.isLoading && (
-          <p className="py-2 text-sm text-muted-foreground">{t("Nenhum texto salvo ainda.")}</p>
-        )}
+        {(q.data ?? []).length === 0 && !q.isLoading && <p className="py-2 text-sm" style={{ color: "var(--color-text-subtle)" }}>{t("Nenhum modelo salvo ainda.")}</p>}
       </div>
-    </Card>
+    </section>
   );
 }
 
@@ -222,80 +216,59 @@ function ListaDeExclusao() {
   const [motivo, setMotivo] = useState("");
 
   return (
-    <Card className="space-y-4 p-4">
-      <div>
-        <h2 className="font-medium">{t("Lista de exclusão")}</h2>
-        <p className="text-sm text-muted-foreground">
-          {t("Números que nenhuma campanha alcança. Diferente de quem pediu para parar: aqui o atendimento continua normal se a pessoa escrever — isto é uma decisão sua, não dela.")}
-        </p>
+    <section className="wr-card wr-anim-in space-y-4 p-5 sm:p-6" style={{ animationDelay: "0.12s" }}>
+      <div className="flex items-center gap-2">
+        <UserX className="h-5 w-5" style={{ color: "var(--color-accent)" }} />
+        <h2 className="font-heading text-[18px] font-bold" style={{ color: "var(--color-text)" }}>{t("Números que nunca recebem disparo")}</h2>
       </div>
-
+      <p className="text-sm" style={{ color: "var(--color-text-subtle)" }}>
+        {t("Decisão sua (ex.: imprensa, adversário, número interno). Diferente de quem pediu para sair: aqui, se a pessoa escrever, o atendimento responde normal.")}
+      </p>
       <div className="grid gap-3 sm:grid-cols-2">
-        <div className="space-y-2">
-          <Label htmlFor="x-tel">{t("Telefone com DDI e DDD")}</Label>
-          <Input id="x-tel" value={telefone} onChange={(e) => setTelefone(e.target.value)} placeholder="+5548999990000" />
-        </div>
-        <div className="space-y-2">
-          <Label htmlFor="x-motivo">{t("Motivo (opcional)")}</Label>
-          <Input id="x-motivo" value={motivo} onChange={(e) => setMotivo(e.target.value)} />
-        </div>
+        <label className="block space-y-1.5">
+          <span className="text-sm font-semibold" style={{ color: "var(--color-text-muted)" }}>{t("Telefone (com DDI e DDD)")}</span>
+          <input value={telefone} onChange={(e) => setTelefone(e.target.value)} placeholder="+5531999990000" className="wr-input" />
+        </label>
+        <label className="block space-y-1.5">
+          <span className="text-sm font-semibold" style={{ color: "var(--color-text-muted)" }}>{t("Motivo (opcional)")}</span>
+          <input value={motivo} onChange={(e) => setMotivo(e.target.value)} className="wr-input" />
+        </label>
       </div>
-      <Button
-        size="sm"
-        disabled={telefone.trim() === "" || excluir.isPending}
-        onClick={async () => {
-          await excluir.mutateAsync({ address: telefone.trim(), reason: motivo.trim() || null });
-          setTelefone("");
-          setMotivo("");
-        }}
-      >
-        {excluir.isPending ? t("Salvando…") : t("Excluir das campanhas")}
-      </Button>
-
-      <div className="divide-y divide-border">
+      <button className="wr-btn-dark px-5" disabled={telefone.trim() === "" || excluir.isPending} onClick={async () => { await excluir.mutateAsync({ address: telefone.trim(), reason: motivo.trim() || null }); setTelefone(""); setMotivo(""); }}>
+        {excluir.isPending ? t("Salvando…") : t("Adicionar à lista")}
+      </button>
+      <div className="divide-y" style={{ borderColor: "var(--color-border)" }}>
         {(q.data ?? []).map((e) => (
-          <div key={e.id} className="flex items-center justify-between gap-3 py-2 text-sm">
-            <span>
-              {/* Só os últimos dígitos: o número inteiro não volta do servidor. */}
-              {t("termina em")} {e.address_tail ?? "—"}
-              {e.reason ? ` · ${e.reason}` : ""}
-            </span>
-            <Button size="sm" variant="outline" disabled={tirar.isPending} onClick={() => tirar.mutate(e.id)}>
-              {t("Tirar da lista")}
-            </Button>
+          <div key={e.id} className="flex items-center justify-between gap-3 py-2.5 text-sm">
+            <span style={{ color: "var(--color-text)" }}>{t("termina em")} {e.address_tail ?? "—"}{e.reason ? ` · ${e.reason}` : ""}</span>
+            <button className="wr-btn text-xs" disabled={tirar.isPending} onClick={() => tirar.mutate(e.id)}>{t("Tirar da lista")}</button>
           </div>
         ))}
-        {(q.data ?? []).length === 0 && !q.isLoading && (
-          <p className="py-2 text-sm text-muted-foreground">{t("Nenhum número excluído.")}</p>
-        )}
+        {(q.data ?? []).length === 0 && !q.isLoading && <p className="py-2 text-sm" style={{ color: "var(--color-text-subtle)" }}>{t("Nenhum número na lista.")}</p>}
       </div>
-    </Card>
+    </section>
   );
 }
 
-function Campo({
-  id,
-  rotulo,
-  valor,
-  onChange,
-}: {
-  id: string;
-  rotulo: string;
-  valor: string;
-  onChange: (v: string) => void;
-}) {
+function CampoNum({ id, rotulo, valor, onChange }: { id: string; rotulo: string; valor: string; onChange: (v: string) => void }) {
   return (
-    <div className="space-y-2">
-      <Label htmlFor={id}>{rotulo}</Label>
-      <Input id={id} type="number" min={0} value={valor} onChange={(e) => onChange(e.target.value)} />
-    </div>
+    <label className="block space-y-1.5" htmlFor={id}>
+      <span className="text-sm font-semibold" style={{ color: "var(--color-text-muted)" }}>{rotulo}</span>
+      <input id={id} type="number" min={0} value={valor} onChange={(e) => onChange(e.target.value)} className="wr-input" />
+    </label>
   );
+}
+
+function detectarVelocidade(intervalo: number | null, teto: number | null): string {
+  const v = VELOCIDADES.find((x) => x.intervalo === intervalo && x.teto === teto);
+  if (v) return v.id;
+  if (intervalo == null && teto == null) return "calmo";
+  return "calmo";
 }
 
 function txt(valor: number | null): string {
   return valor === null || valor === undefined ? "" : String(valor);
 }
-
 function num(valor: string): number | null {
   const limpo = valor.trim();
   if (limpo === "") return null;

@@ -36,6 +36,8 @@ export interface CampanhaDetalhada extends CampanhaDaLista {
   pipeline_id?: string | null;
   stage_id?: string | null;
   agent_id?: string | null;
+  /** Material (ebook) entregue na resposta SIM (migration 9051). */
+  material_id?: string | null;
   description: string | null;
   message_body: string | null;
   base_legal: string;

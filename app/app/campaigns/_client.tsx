@@ -15,7 +15,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useCampanhas } from "@/hooks/campanhas/useCampanhas";
 import { useTagDeIdioma } from "@/hooks/i18n/useLocaleDeData";
 import { useT } from "@/hooks/i18n/useT";
-import { Megaphone, Send, CheckCircle2, Users, BookOpen, ArrowUpRight } from "lucide-react";
+import { Megaphone, Send, CheckCircle2, Pencil, BookOpen, ArrowUpRight } from "lucide-react";
 import { STATUS_DA_CAMPANHA } from "@/lib/campanhas/tipos";
 
 interface CampanhaLinha {
@@ -45,8 +45,8 @@ export function ListaDeCampanhas() {
   const kpis = useMemo(() => {
     const enviando = campanhas.filter((c) => c.status === "running").length;
     const concluidos = campanhas.filter((c) => c.status === "completed").length;
-    const naBase = campanhas.reduce((s, c) => s + (c.snapshot_eligible || 0), 0);
-    return { total: campanhas.length, enviando, concluidos, naBase };
+    const rascunhos = campanhas.filter((c) => c.status === "draft").length;
+    return { total: campanhas.length, enviando, concluidos, rascunhos };
   }, [campanhas]);
 
   return (
@@ -67,7 +67,7 @@ export function ListaDeCampanhas() {
           <KpiCard label={t("Disparos")} valor={kpis.total} icone={Megaphone} />
           <KpiCard label={t("Enviando agora")} valor={kpis.enviando} icone={Send} cor="#4ADE80" />
           <KpiCard label={t("Concluídos")} valor={kpis.concluidos} icone={CheckCircle2} />
-          <KpiCard label={t("Pessoas na lista")} valor={kpis.naBase} icone={Users} />
+          <KpiCard label={t("Rascunhos")} valor={kpis.rascunhos} icone={Pencil} />
         </div>
       )}
 

@@ -1901,3 +1901,11 @@
   background: #22C55E; box-shadow: 0 0 0 3px rgba(34,197,94,0.18);
   animation: wr-live-pulse 1.3s ease-in-out infinite;
 }
+
+/* Flutuação sutil do aparelho (prévia do disparo). Lenta e pequena — presença,
+   não distração. Neutralizada por prefers-reduced-motion (bloco acima). */
+@keyframes wr-float {
+  0%, 100% { transform: translateY(0); }
+  50%      { transform: translateY(-7px); }
+}
+.wr-float { animation: wr-float 5.5s ease-in-out infinite; }
