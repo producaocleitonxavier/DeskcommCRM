@@ -97,6 +97,41 @@ export function NovaCampanha({
     (c) => !especificos.some((e) => e.id === c.id),
   );
 
+  // O <main> do shell tem overflow-auto mas NÃO rola internamente (quem rola é o
+  // documento), então position:sticky não ativa dentro dele. Seguimos o scroll à
+  // mão: o celular desliza por transform pra ficar sempre ~24px do topo, preso ao
+  // intervalo da coluna (aside esticada).
+  const asideRef = useRef<HTMLElement>(null);
+  const phoneRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    let raf = 0;
+    const update = () => {
+      const aside = asideRef.current;
+      const phone = phoneRef.current;
+      if (!aside || !phone || aside.offsetParent === null) {
+        if (phone) phone.style.transform = "";
+        return;
+      }
+      const r = aside.getBoundingClientRect();
+      const topDesejado = 24;
+      const maxShift = Math.max(0, aside.offsetHeight - phone.offsetHeight);
+      const shift = Math.max(0, Math.min(topDesejado - r.top, maxShift));
+      phone.style.transform = `translateY(${shift}px)`;
+    };
+    const onScroll = () => {
+      cancelAnimationFrame(raf);
+      raf = requestAnimationFrame(update);
+    };
+    window.addEventListener("scroll", onScroll, true);
+    window.addEventListener("resize", onScroll);
+    update();
+    return () => {
+      cancelAnimationFrame(raf);
+      window.removeEventListener("scroll", onScroll, true);
+      window.removeEventListener("resize", onScroll);
+    };
+  }, []);
+
   const filtro = useMemo(
     () => ({
       origens: origensSel,
@@ -112,6 +147,8 @@ export function NovaCampanha({
 
   const vel = VELOCIDADES.find((v) => v.id === velocidade) ?? VELOCIDADES[0];
   const materialTitulo = materiais.find((m) => m.id === material)?.titulo ?? null;
+  // Prévia: se há pessoa específica escolhida, mostra o NOME dela; senão, exemplo.
+  const nomeExemplo = especificos.length > 0 ? primeiroNome(especificos[0]!.nome) : "Maria";
   const podeCriar =
     nome.trim() !== "" &&
     canal !== "" &&
@@ -443,7 +480,7 @@ export function NovaCampanha({
 
       {/* Prévia no celular (mobile) — no desktop é o aparelho fixo à direita */}
       <div className="lg:hidden">
-        <PhoneMockup texto={texto} materialTitulo={materialTitulo} />
+        <PhoneMockup texto={texto} materialTitulo={materialTitulo} nome={nomeExemplo} />
       </div>
 
       {/* Criar */}
@@ -466,8 +503,10 @@ export function NovaCampanha({
       </div>
         </div>
 
-        <aside className="hidden lg:block lg:sticky lg:top-6 lg:self-start">
-          <PhoneMockup texto={texto} materialTitulo={materialTitulo} />
+        <aside ref={asideRef} className="hidden lg:block">
+          <div ref={phoneRef} style={{ willChange: "transform" }}>
+            <PhoneMockup texto={texto} materialTitulo={materialTitulo} nome={nomeExemplo} />
+          </div>
         </aside>
       </div>
     </div>
@@ -614,16 +653,23 @@ function alternar(lista: string[], valor: string): string[] {
   return lista.includes(valor) ? lista.filter((x) => x !== valor) : [...lista, valor];
 }
 
-/** Prévia WhatsApp: {{nome}} → "Maria", *negrito* → bold, escapando HTML. */
-function previewWhatsapp(texto: string): string {
+/** Prévia WhatsApp: {{nome}} → nome de exemplo, *negrito* → bold, escapando HTML. */
+function previewWhatsapp(texto: string, nome = "Maria"): string {
   const escapado = texto
     .replace(/&/g, "&amp;")
     .replace(/</g, "&lt;")
     .replace(/>/g, "&gt;");
   return escapado
-    .replace(/\{\{\s*nome\s*\}\}/g, "Maria")
+    .replace(/\{\{\s*nome\s*\}\}/g, escaparHtml(nome))
     .replace(/\*([^*]+)\*/g, "<strong>$1</strong>")
     .replace(/\n/g, "<br/>");
+}
+
+/** Primeiro nome para a prévia. Ex.: "LEONARDO VINICIUS…" → "Leonardo". */
+function primeiroNome(nomeCompleto: string): string {
+  const w = nomeCompleto.trim().split(/\s+/)[0] ?? "";
+  if (!w) return "Maria";
+  return w.charAt(0).toUpperCase() + w.slice(1).toLowerCase();
 }
 
 function escaparHtml(s: string): string {
@@ -632,7 +678,7 @@ function escaparHtml(s: string): string {
 
 /* ── Aparelho — prévia ultrapremium do disparo ─────────────────────────────── */
 
-function PhoneMockup({ texto, materialTitulo }: { texto: string; materialTitulo: string | null }) {
+function PhoneMockup({ texto, materialTitulo, nome }: { texto: string; materialTitulo: string | null; nome: string }) {
   const t = useT();
   const temTexto = texto.trim().length > 0;
   return (
@@ -685,7 +731,7 @@ function PhoneMockup({ texto, materialTitulo }: { texto: string; materialTitulo:
             }}
           >
             <Bolha lado="out" atraso="0.15s">
-              <span dangerouslySetInnerHTML={{ __html: temTexto ? previewWhatsapp(texto) : "<span style='opacity:.45'>Sua mensagem aparece aqui conforme você escreve…</span>" }} />
+              <span dangerouslySetInnerHTML={{ __html: temTexto ? previewWhatsapp(texto, nome) : "<span style='opacity:.45'>Sua mensagem aparece aqui conforme você escreve…</span>" }} />
               <Hora checks />
             </Bolha>
             {materialTitulo && temTexto && (

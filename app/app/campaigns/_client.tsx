@@ -12,10 +12,10 @@ import { useMemo, useState } from "react";
 import { CommandHero } from "@/components/politico/command-hero";
 import { KpiCard } from "@/components/politico/kpi-card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useCampanhas } from "@/hooks/campanhas/useCampanhas";
+import { useCampanhas, useExcluirCampanha } from "@/hooks/campanhas/useCampanhas";
 import { useTagDeIdioma } from "@/hooks/i18n/useLocaleDeData";
 import { useT } from "@/hooks/i18n/useT";
-import { Megaphone, Send, CheckCircle2, Pencil, BookOpen, ArrowUpRight } from "lucide-react";
+import { Megaphone, Send, CheckCircle2, Pencil, BookOpen, ArrowUpRight, Trash2 } from "lucide-react";
 import { STATUS_DA_CAMPANHA } from "@/lib/campanhas/tipos";
 
 interface CampanhaLinha {
@@ -31,12 +31,21 @@ interface CampanhaLinha {
   material_id?: string | null;
 }
 
+/** Estados que podem ser APAGADOS (vivo precisa cancelar antes). */
+const DELETAVEL = ["completed", "cancelled", "failed", "draft"];
+
 export function ListaDeCampanhas() {
   const t = useT();
   const idioma = useTagDeIdioma();
   const [status, setStatus] = useState<string>("");
   const filtros = useMemo(() => ({ status: status || undefined, limit: 30 }), [status]);
   const q = useCampanhas(filtros);
+  const excluir = useExcluirCampanha();
+
+  function apagar(id: string, nome: string) {
+    if (!window.confirm(`${t("Apagar o disparo")} “${nome}”?\n${t("Isso é definitivo — some da lista pra sempre.")}`)) return;
+    excluir.mutate(id);
+  }
   const campanhas = useMemo(
     () => (q.data?.pages.flatMap((p) => p.data) ?? []) as unknown as CampanhaLinha[],
     [q.data],
@@ -173,6 +182,18 @@ export function ListaDeCampanhas() {
                     <span className="text-xs tabular-nums" style={{ color: "var(--color-text-subtle)" }}>
                       {quando(c, t, idioma)}
                     </span>
+                    {DELETAVEL.includes(c.status) && (
+                      <button
+                        type="button"
+                        onClick={(e) => { e.preventDefault(); e.stopPropagation(); apagar(c.id, c.name); }}
+                        disabled={excluir.isPending}
+                        className="opacity-40 transition-opacity hover:opacity-100 disabled:opacity-30"
+                        aria-label={t("Apagar disparo")}
+                        title={t("Apagar")}
+                      >
+                        <Trash2 className="h-4 w-4" style={{ color: "#F87171" }} />
+                      </button>
+                    )}
                     <ArrowUpRight
                       className="h-4 w-4 opacity-40 transition-opacity group-hover:opacity-100"
                       style={{ color: "var(--color-accent)" }}

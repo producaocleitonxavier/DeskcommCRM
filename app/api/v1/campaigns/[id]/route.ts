@@ -12,11 +12,13 @@ import { randomUUID } from "node:crypto";
 import type { NextRequest } from "next/server";
 
 import { fail, ok } from "@/lib/api/wrappers";
+import { audit } from "@/lib/audit";
 import { requireRole } from "@/lib/auth/require-role";
 import { carregarCampanha } from "@/lib/campanhas/acoes";
 import { ehEditavel, ehTerminal } from "@/lib/campanhas/maquina-de-estados";
 import { gravarPool, lerPoolExtra } from "@/lib/campanhas/pool-de-numeros";
 import { editarCampanhaSchema } from "@/lib/campanhas/schemas";
+import type { StatusDaCampanha } from "@/lib/campanhas/tipos";
 import { traduzir } from "@/lib/i18n/dicionario";
 import { requireSupportWrite } from "@/lib/impersonate/support";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -224,4 +226,56 @@ export async function PATCH(
   // Editar rascunho NÃO audita: nada saiu dele, e auditar cada tecla encheria o
   // log com o que não tem consequência. Quem audita são as mudanças de estado.
   return ok({ ...(data as object), channel_session_ids: await lerPoolExtra(supabase, authz.org.orgId, id) }, { requestId });
+}
+
+/**
+ * DELETE /api/v1/campaigns/:id — APAGA um disparo.
+ *
+ * Só TERMINAL (concluído/cancelado/falhou) ou RASCUNHO: um disparo vivo
+ * (preparando/pronto/agendado/enviando/pausado) precisa ser CANCELADO antes —
+ * não se apaga algo que está no meio de um envio. O cascade leva os
+ * destinatários junto (FK campaign_id on delete cascade).
+ */
+export async function DELETE(_req: NextRequest, ctx: { params: Promise<{ id: string }> }): Promise<Response> {
+  const negado = await requireSupportWrite();
+  if (negado) return negado;
+
+  const requestId = randomUUID();
+  const authz = await requireRole("manager", { requestId, resource: "campaigns" });
+  if (!authz.ok) return authz.response;
+  const t = (texto: string) => traduzir(texto, authz.user.idioma);
+  const { id } = await ctx.params;
+
+  const supabase = createAdminClient();
+  const { data: campanha } = await supabase
+    .from("campaigns")
+    .select("id, status")
+    .eq("organization_id", authz.org.orgId)
+    .eq("id", id)
+    .maybeSingle();
+  if (!campanha) return fail("not_found", t("Disparo não encontrado."), 404, { requestId });
+
+  const status = (campanha as { status: StatusDaCampanha }).status;
+  if (!ehTerminal(status) && status !== "draft") {
+    return fail("conflict", t("Cancele o disparo antes de apagar."), 409, { requestId });
+  }
+
+  const { error } = await supabase
+    .from("campaigns")
+    .delete()
+    .eq("organization_id", authz.org.orgId)
+    .eq("id", id);
+  if (error) return fail("internal_error", error.message, 500, { requestId });
+
+  void audit({
+    action: "campaign.deleted",
+    actorUserId: authz.user.id,
+    organizationId: authz.org.orgId,
+    resourceType: "campaign",
+    resourceId: id,
+    requestId,
+    metadata: { status_anterior: status },
+  });
+
+  return ok({ id, deleted: true }, { requestId });
 }

@@ -119,6 +119,19 @@ export function useCampanhas(filtros: { status?: string; limit?: number }) {
   });
 }
 
+/** Apaga um disparo (só terminal/rascunho — a rota recusa os vivos). */
+export function useExcluirCampanha() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: string) => {
+      await apiClient.delete(`/api/v1/campaigns/${id}`);
+      return id;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["campanhas"] }),
+    onError: showApiError,
+  });
+}
+
 export function useCampanha(id: string) {
   return useQuery({
     queryKey: ["campanha", id],
