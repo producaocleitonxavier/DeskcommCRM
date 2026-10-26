@@ -151,12 +151,12 @@ function Padroes() {
             <Link href="/app/connections" className="underline" style={{ color: "var(--color-accent)" }}>{t("Conexões › Proteção de envio")}</Link>.
           </p>
           <div className="grid gap-3 sm:grid-cols-2">
-            <CampoNum id="p-int" rotulo={t("Intervalo mínimo (segundos)")} valor={intervalo} onChange={setIntervalo} />
-            <CampoNum id="p-dia" rotulo={t("Máximo por dia")} valor={tetoDia} onChange={setTetoDia} />
-            <CampoNum id="p-hora" rotulo={t("Máximo por hora")} valor={tetoHora} onChange={setTetoHora} />
+            <CampoNum id="p-int" rotulo={t("Intervalo mínimo (segundos)")} valor={intervalo} onChange={setIntervalo} dica={t("Tempo de espera entre uma mensagem e a próxima.")} />
+            <CampoNum id="p-dia" rotulo={t("Máximo por dia")} valor={tetoDia} onChange={setTetoDia} dica={t("Teto de mensagens por dia.")} />
+            <CampoNum id="p-hora" rotulo={t("Máximo por hora")} valor={tetoHora} onChange={setTetoHora} placeholder={t("sem limite")} dica={t("Em branco = vale só o teto do dia.")} />
             <div />
-            <CampoNum id="p-ini" rotulo={t("Enviar só a partir das (hora)")} valor={inicio} onChange={setInicio} />
-            <CampoNum id="p-fim" rotulo={t("Parar de enviar às (hora)")} valor={fim} onChange={setFim} />
+            <CampoNum id="p-ini" rotulo={t("Enviar só a partir das (hora)")} valor={inicio} onChange={setInicio} placeholder={t("ex.: 8")} dica={t("Em branco = sem restrição. Ex.: 8 = só a partir das 8h.")} />
+            <CampoNum id="p-fim" rotulo={t("Parar de enviar às (hora)")} valor={fim} onChange={setFim} placeholder={t("ex.: 20")} dica={t("Em branco = sem restrição. Ex.: 20 = para às 20h.")} />
           </div>
           <button className="wr-btn-dark px-5" disabled={salvar.isPending} onClick={() => salvar.mutate({ atribuicao_horas: Number(atribuicao) || 72, intervalo_segundos: num(intervalo), teto_diario: num(tetoDia), teto_horario: num(tetoHora), janela_inicio_hora: num(inicio), janela_fim_hora: num(fim) })}>
             {salvar.isPending ? t("Salvando…") : t("Salvar ajuste fino")}
@@ -250,11 +250,12 @@ function ListaDeExclusao() {
   );
 }
 
-function CampoNum({ id, rotulo, valor, onChange }: { id: string; rotulo: string; valor: string; onChange: (v: string) => void }) {
+function CampoNum({ id, rotulo, valor, onChange, dica, placeholder }: { id: string; rotulo: string; valor: string; onChange: (v: string) => void; dica?: string; placeholder?: string }) {
   return (
     <label className="block space-y-1.5" htmlFor={id}>
       <span className="text-sm font-semibold" style={{ color: "var(--color-text-muted)" }}>{rotulo}</span>
-      <input id={id} type="number" min={0} value={valor} onChange={(e) => onChange(e.target.value)} className="wr-input" />
+      <input id={id} type="number" min={0} value={valor} placeholder={placeholder} onChange={(e) => onChange(e.target.value)} className="wr-input" />
+      {dica && <span className="block text-xs" style={{ color: "var(--color-text-subtle)" }}>{dica}</span>}
     </label>
   );
 }

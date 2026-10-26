@@ -328,12 +328,12 @@ function VelocidadeDaCampanha({ campanha }: { campanha: CampanhaDetalhada }) {
       {avancado && (
         <div className="wr-anim-in space-y-3">
           <div className="grid gap-3 sm:grid-cols-2">
-            <CampoNum id="r-int" rotulo={t("Intervalo mínimo entre mensagens (segundos)")} valor={intervalo} onChange={setIntervalo} />
-            <CampoNum id="r-dia" rotulo={t("Máximo por dia")} valor={tetoDia} onChange={setTetoDia} />
-            <CampoNum id="r-hora" rotulo={t("Máximo por hora")} valor={tetoHora} onChange={setTetoHora} />
+            <CampoNum id="r-int" rotulo={t("Intervalo mínimo entre mensagens (segundos)")} valor={intervalo} onChange={setIntervalo} dica={t("Tempo de espera entre uma mensagem e a próxima.")} />
+            <CampoNum id="r-dia" rotulo={t("Máximo por dia")} valor={tetoDia} onChange={setTetoDia} dica={t("Teto de mensagens por dia.")} />
+            <CampoNum id="r-hora" rotulo={t("Máximo por hora")} valor={tetoHora} onChange={setTetoHora} placeholder={t("sem limite")} dica={t("Em branco = vale só o teto do dia.")} />
             <div />
-            <CampoNum id="r-ini" rotulo={t("Enviar só a partir das (hora)")} valor={inicio} onChange={setInicio} />
-            <CampoNum id="r-fim" rotulo={t("Parar de enviar às (hora)")} valor={fim} onChange={setFim} />
+            <CampoNum id="r-ini" rotulo={t("Enviar só a partir das (hora)")} valor={inicio} onChange={setInicio} placeholder={t("ex.: 8")} dica={t("Em branco = sem restrição. Ex.: 8 = só a partir das 8h.")} />
+            <CampoNum id="r-fim" rotulo={t("Parar de enviar às (hora)")} valor={fim} onChange={setFim} placeholder={t("ex.: 20")} dica={t("Em branco = sem restrição. Ex.: 20 = para às 20h.")} />
           </div>
           <button className="wr-btn-dark px-5" disabled={editar.isPending} onClick={() => editar.mutate({ intervalo_segundos: num(intervalo), teto_diario: num(tetoDia), teto_horario: num(tetoHora), janela_inicio_hora: num(inicio), janela_fim_hora: num(fim) })}>
             {editar.isPending ? t("Salvando…") : t("Salvar ajuste fino")}
@@ -368,7 +368,7 @@ function TesteDaCampanha({ onCancelar, onEnviar, enviando }: { onCancelar: () =>
   return (
     <div className="wr-card wr-anim-in space-y-3 p-5">
       <h2 className="font-heading text-[15px] font-bold" style={{ color: "var(--color-text)" }}>{t("Enviar um teste")}</h2>
-      <p className="text-sm" style={{ color: "var(--color-text-subtle)" }}>{t("Sai pelo mesmo número e com o mesmo texto do envio real. Não entra nos números do disparo.")}</p>
+      <p className="text-sm" style={{ color: "var(--color-text-subtle)" }}>{t("Escolha um contato (ex.: o seu próprio número) e o sistema manda a mensagem só pra ele — igualzinho ao envio real: mesmo número, mesmo texto, mesma saudação do horário. Serve pra você conferir como chega antes de disparar pra todo mundo. Esse teste NÃO conta nos números do disparo.")}</p>
       <input value={busca} onChange={(e) => setBusca(e.target.value)} placeholder={t("Busque o contato pelo nome ou telefone")} className="wr-input" />
       <div className="divide-y" style={{ borderColor: "var(--color-border)" }}>
         {encontrados.slice(0, 8).map((c) => (
@@ -402,11 +402,12 @@ function MiniKpi({ icone: Icone, label, valor, cor }: { icone: typeof Users; lab
   );
 }
 
-function CampoNum({ id, rotulo, valor, onChange }: { id: string; rotulo: string; valor: string; onChange: (v: string) => void }) {
+function CampoNum({ id, rotulo, valor, onChange, dica, placeholder }: { id: string; rotulo: string; valor: string; onChange: (v: string) => void; dica?: string; placeholder?: string }) {
   return (
     <label className="block space-y-1.5" htmlFor={id}>
       <span className="text-sm font-semibold" style={{ color: "var(--color-text-muted)" }}>{rotulo}</span>
-      <input id={id} type="number" min={0} value={valor} onChange={(e) => onChange(e.target.value)} className="wr-input" />
+      <input id={id} type="number" min={0} value={valor} placeholder={placeholder} onChange={(e) => onChange(e.target.value)} className="wr-input" />
+      {dica && <span className="block text-xs" style={{ color: "var(--color-text-subtle)" }}>{dica}</span>}
     </label>
   );
 }
@@ -428,7 +429,7 @@ function proximoPasso(status: string, eligible: number, failure: string | null):
   switch (status) {
     case "draft": return { emoji: "📋", texto: "Rascunho. Clique em “Preparar lista” para ver quem vai receber — depois você confere e inicia. Nada sai antes disso." };
     case "preparing": return { emoji: "⏳", texto: "Montando a lista… aguarde um instante." };
-    case "ready": return { emoji: "✅", texto: `Lista pronta: ${eligible.toLocaleString("pt-BR")} pessoas. Faça um teste (opcional) e clique em “Iniciar envio” quando quiser.` };
+    case "ready": return { emoji: "✅", texto: `Lista pronta: ${eligible.toLocaleString("pt-BR")} pessoas. Antes de disparar pra todo mundo, você pode fazer um TESTE: o sistema manda a mensagem só pra 1 contato que você escolher (ex.: o seu número), igual ao envio real — pra você ver como chega. Depois é só clicar em “Iniciar envio”.` };
     case "scheduled": return { emoji: "🗓️", texto: "Agendado. Vai começar sozinho na hora marcada." };
     case "running": return { emoji: "🚀", texto: "Enviando no ritmo seguro. Quem responder recebe o material sozinho. Você pode pausar quando quiser." };
     case "paused": return { emoji: "⏸️", texto: "Pausado. Ninguém mais recebe até você retomar." };
