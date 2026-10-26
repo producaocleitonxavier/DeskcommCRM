@@ -50,6 +50,11 @@ const baseDaCampanha = {
    * material. Migration 9051.
    */
   material_id: z.string().uuid().nullable().optional(),
+  /**
+   * RETRY 24h (migration 9057): quem não responder ao convite em 24h recebe UMA
+   * cutucada gentil. Opt-in, pausado, uma vez só. `false` = sem retry (padrão).
+   */
+  retry_24h: z.boolean().optional(),
 };
 
 export const criarCampanhaSchema = z

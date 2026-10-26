@@ -22,6 +22,7 @@ import { fail, ok } from "@/lib/api/wrappers";
 import { audit } from "@/lib/audit";
 import { autorizaCron } from "@/lib/auth/cron-auth";
 import { rodarUmaRodadaDeCampanha } from "@/lib/campanhas/rodada";
+import { processarRetries } from "@/lib/campanhas/retry";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 export const dynamic = "force-dynamic";
@@ -33,9 +34,12 @@ async function handle(req: NextRequest): Promise<Response> {
     return fail("forbidden", "Cron secret missing or invalid.", 403, { requestId });
   }
 
-  const r = await rodarUmaRodadaDeCampanha(createAdminClient());
+  const admin = createAdminClient();
+  const r = await rodarUmaRodadaDeCampanha(admin);
+  // Cutucada de 24h para quem não respondeu (campanhas com retry ligado).
+  const retry = await processarRetries(admin);
 
-  if (r.enviadas > 0 || r.pulados > 0 || r.concluidas > 0 || r.promovidas > 0) {
+  if (r.enviadas > 0 || r.pulados > 0 || r.concluidas > 0 || r.promovidas > 0 || retry.enviados > 0) {
     void audit({
       action: "cron.campaign_worker",
       requestId,
@@ -45,12 +49,13 @@ async function handle(req: NextRequest): Promise<Response> {
         pulados: r.pulados,
         concluidas: r.concluidas,
         promovidas: r.promovidas,
+        retry_enviados: retry.enviados,
         detalhe: r.detalhe,
       },
     });
   }
 
-  return ok(r, { requestId });
+  return ok({ ...r, retry_enviados: retry.enviados }, { requestId });
 }
 
 export async function GET(req: NextRequest): Promise<Response> {

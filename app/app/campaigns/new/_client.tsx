@@ -81,6 +81,7 @@ export function NovaCampanha({
   const [liaRef, setLiaRef] = useState("");
   const [limite, setLimite] = useState("5000");
   const [porDia, setPorDia] = useState("50");
+  const [retry24h, setRetry24h] = useState(false);
   // Disparo nominal: pessoas específicas escolhidas por nome (entram como incluídas).
   const [especificos, setEspecificos] = useState<Array<{ id: string; nome: string }>>([]);
   const [buscaPessoa, setBuscaPessoa] = useState("");
@@ -167,6 +168,7 @@ export function NovaCampanha({
       intervalo_segundos: vel.intervalo,
       teto_diario: Number(porDia) || 50,
       material_id: material || null,
+      retry_24h: retry24h,
     });
     router.push(`/app/campaigns/${criada.id}`);
   }
@@ -442,6 +444,18 @@ export function NovaCampanha({
           <p className="text-xs" style={{ color: "var(--color-text-subtle)" }}>
             {t("Começa em 50 (bem seguro). Pode aumentar ou diminuir à vontade. Ex.: 3.000 pessoas a 50/dia = terminam em ~60 dias, sozinho.")}
           </p>
+        </Campo>
+
+        <Campo rotulo={t("Tentar de novo quem não responder?")} dica={t("uma cutucada gentil, 24h depois, pausada")}>
+          <label className="flex cursor-pointer items-start gap-2.5 rounded-xl border p-3" style={{ borderColor: retry24h ? "var(--color-accent)" : "var(--color-border)", background: retry24h ? "rgba(215,243,106,0.06)" : "var(--color-surface)" }}>
+            <input type="checkbox" checked={retry24h} onChange={(e) => setRetry24h(e.target.checked)} className="mt-0.5" />
+            <span className="text-sm" style={{ color: "var(--color-text)" }}>
+              {t("Reenviar uma vez pra quem recebeu e não respondeu em 24h")}
+              <span className="mt-0.5 block text-xs" style={{ color: "var(--color-text-subtle)" }}>
+                {t("Uma única cutucada, no ritmo do número. Quem já respondeu não recebe.")}
+              </span>
+            </span>
+          </label>
         </Campo>
       </Passo>
 

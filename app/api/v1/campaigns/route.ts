@@ -148,6 +148,7 @@ export async function POST(req: NextRequest): Promise<Response> {
       stage_id: entrada.stage_id ?? null,
       agent_id: entrada.agent_id ?? null,
       material_id: entrada.material_id ?? null,
+      retry_24h: entrada.retry_24h ?? false,
       created_by: user.id,
     })
     .select(COLUNAS_DA_LISTA)
