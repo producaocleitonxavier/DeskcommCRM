@@ -169,8 +169,14 @@ export function DetalheDaCampanha({ id }: { id: string }) {
 
       {/* Confirmação */}
       {confirmando && (
-        <div className="wr-card wr-anim-in space-y-3 p-5" style={{ borderColor: "#F3C9C5", background: "#FEF5F4" }}>
-          <p className="text-sm" style={{ color: "#8A2A24" }}>
+        <div
+          className="wr-card wr-anim-in space-y-3 p-5"
+          style={{
+            borderColor: confirmando === "iniciar" ? "rgba(215,243,106,0.45)" : "rgba(248,113,113,0.45)",
+            background: confirmando === "iniciar" ? "rgba(215,243,106,0.06)" : "rgba(248,113,113,0.07)",
+          }}
+        >
+          <p className="text-sm" style={{ color: "rgba(255,255,255,0.88)" }}>
             {confirmando === "iniciar"
               ? `${t("Começar a enviar para")} ${c.snapshot_eligible} ${c.snapshot_eligible === 1 ? t("pessoa?") : t("pessoas?")} ${t("O envio segue o ritmo escolhido e pode levar horas.")}`
               : t("Cancelar é definitivo: quem ainda não recebeu não recebe mais, e o disparo não volta a rodar.")}
@@ -222,6 +228,11 @@ export function DetalheDaCampanha({ id }: { id: string }) {
         <div className="rounded-2xl p-4" style={{ background: "#0B141A" }}>
           <div className="max-w-[85%] rounded-xl rounded-tl-sm px-3 py-2 text-sm" style={{ background: "#1F2C33", color: "#E9EDEF" }} dangerouslySetInnerHTML={{ __html: previewWhatsapp(c.message_body ?? "") }} />
         </div>
+        {/\{\{\s*nome\s*\}\}/.test(c.message_body ?? "") && (
+          <p className="text-xs italic" style={{ color: "var(--color-text-subtle)" }}>
+            {t("“Maria” é só um exemplo — no envio real vira o primeiro nome de cada contato.")}
+          </p>
+        )}
         <p className="text-xs" style={{ color: "var(--color-text-subtle)" }}>
           {t("Base legal")}: {c.base_legal === "consent" ? t("consentimento") : t("interesse legítimo")}{c.lia_ref ? ` (${c.lia_ref})` : ""}
         </p>
