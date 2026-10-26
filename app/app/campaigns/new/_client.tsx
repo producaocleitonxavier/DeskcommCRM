@@ -256,21 +256,6 @@ export function NovaCampanha({
           </span>
         </div>
 
-        {/* Prévia WhatsApp (inline, só no celular — no desktop é o aparelho à direita) */}
-        {texto.trim() && (
-          <div className="wr-anim-in mt-1 lg:hidden">
-            <span className="text-xs font-semibold uppercase tracking-wide" style={{ color: "var(--color-text-subtle)" }}>
-              {t("Prévia no WhatsApp")}
-            </span>
-            <div className="mt-2 rounded-2xl p-4" style={{ background: "#0B141A" }}>
-              <div
-                className="max-w-[85%] rounded-xl rounded-tl-sm px-3 py-2 text-sm"
-                style={{ background: "#1F2C33", color: "#E9EDEF", boxShadow: "0 1px 1px rgba(0,0,0,0.3)" }}
-                dangerouslySetInnerHTML={{ __html: previewWhatsapp(texto) }}
-              />
-            </div>
-          </div>
-        )}
       </Passo>
 
       {/* PASSO 3 — Material */}
@@ -379,6 +364,11 @@ export function NovaCampanha({
           </div>
         )}
       </section>
+
+      {/* Prévia no celular (mobile) — no desktop é o aparelho fixo à direita */}
+      <div className="lg:hidden">
+        <PhoneMockup texto={texto} materialTitulo={materialTitulo} />
+      </div>
 
       {/* Criar */}
       <div className="wr-anim-in flex flex-col items-center gap-2 pt-1" style={{ animationDelay: "0.26s" }}>
