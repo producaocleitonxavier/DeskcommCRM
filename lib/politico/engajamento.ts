@@ -29,9 +29,11 @@ import { logger } from "@/lib/logger";
 const ORDEM_ESTAGIO = ["novo_cadastro", "simpatizante", "apoiador", "militante", "voto_certo"] as const;
 const ORDEM_TEMP = ["frio", "morno", "quente"] as const;
 
-const PESO = { material: 1, respostaDisparo: 5, qrCadastro: 6, consentiu: 10 } as const;
+const PESO = { material: 1, respostaDisparo: 5, qrCadastro: 6, consentiu: 10, indicado: 10 } as const;
 /** Teto de respostas pontuadas — evita que responder 50x infle o índice. */
 const TETO_RESPOSTAS = 5;
+/** Trouxe esta quantidade de gente = Multiplicador/Militante, direto. */
+const INDICADOS_PARA_MILITANTE = 3;
 
 const LIMIAR_ESTAGIO: Array<[number, (typeof ORDEM_ESTAGIO)[number]]> = [
   [50, "militante"],
@@ -87,7 +89,7 @@ export async function recomputarEngajamento(
     const lead = leadRow as { id: string; support_level: string; temperature: string | null; consent_at: string | null };
 
     // ── Conta os sinais (idempotente: são fatos no banco) ──
-    const [matCamp, matQr, respDisparo, qrConfirmado, contato] = await Promise.all([
+    const [matCamp, matQr, respDisparo, qrConfirmado, indicadosQ, contato] = await Promise.all([
       admin.from("campaign_recipients").select("id", { count: "exact", head: true })
         .eq("organization_id", organizationId).eq("contact_id", contactId).not("material_entregue_at", "is", null),
       admin.from("pol_qr_cadastros").select("id", { count: "exact", head: true })
@@ -96,6 +98,8 @@ export async function recomputarEngajamento(
         .eq("organization_id", organizationId).eq("contact_id", contactId).not("replied_at", "is", null),
       admin.from("pol_qr_cadastros").select("id", { count: "exact", head: true })
         .eq("organization_id", organizationId).eq("contact_id", contactId).not("nome_informado", "is", null),
+      admin.from("pol_indicacoes").select("id", { count: "exact", head: true })
+        .eq("organization_id", organizationId).eq("indicador_contact_id", contactId),
       admin.from("contacts").select("last_activity_at").eq("id", contactId).maybeSingle(),
     ]);
 
@@ -103,12 +107,14 @@ export async function recomputarEngajamento(
     const respostas = Math.min(respDisparo.count ?? 0, TETO_RESPOSTAS);
     const cadastrouQr = (qrConfirmado.count ?? 0) > 0 ? 1 : 0;
     const consentiu = lead.consent_at ? 1 : 0;
+    const indicados = indicadosQ.count ?? 0; // pessoas que ELA trouxe
 
     const score =
       materiais * PESO.material +
       respostas * PESO.respostaDisparo +
       cadastrouQr * PESO.qrCadastro +
-      consentiu * PESO.consentiu;
+      consentiu * PESO.consentiu +
+      indicados * PESO.indicado;
 
     const ultimaAtividade = (contato.data as { last_activity_at: string | null } | null)?.last_activity_at ?? null;
     const dias = ultimaAtividade
@@ -117,6 +123,10 @@ export async function recomputarEngajamento(
 
     let alvoEstagio = estagioPorScore(score);
     let alvoTemp = tempPorRecencia(score, dias);
+    // Trouxe gente de verdade = Multiplicador/Militante, direto (o ouro do funil).
+    if (indicados >= INDICADOS_PARA_MILITANTE && ordem(ORDEM_ESTAGIO, alvoEstagio) < ordem(ORDEM_ESTAGIO, "militante")) {
+      alvoEstagio = "militante";
+    }
     // Engajar AGORA (qualquer resposta de entrada) garante o piso simpatizante/
     // morno, mesmo que o índice ainda não tenha cruzado 5 — responder já é sinal.
     if (opts.engajouAgora) {

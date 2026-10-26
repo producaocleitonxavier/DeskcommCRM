@@ -65,6 +65,36 @@ async function buscarContagemPorTemperatura(organizationId: string): Promise<Rec
   return contagem;
 }
 
+export interface MultiplicadorRow {
+  contact_id: string;
+  nome: string;
+  trouxe: number;
+}
+
+/** Quem TROUXE gente (member-get-member) — o ouro do funil. Top 10. */
+async function buscarMultiplicadores(organizationId: string): Promise<MultiplicadorRow[]> {
+  const db = await createClient();
+  const { data } = await db
+    .from("pol_indicacoes")
+    .select("indicador_contact_id")
+    .eq("organization_id", organizationId)
+    .limit(5000);
+  const tally = new Map<string, number>();
+  for (const r of (data ?? []) as { indicador_contact_id: string }[]) {
+    tally.set(r.indicador_contact_id, (tally.get(r.indicador_contact_id) ?? 0) + 1);
+  }
+  const top = [...tally.entries()].sort((a, b) => b[1] - a[1]).slice(0, 10);
+  if (top.length === 0) return [];
+  const ids = top.map(([id]) => id);
+  const { data: cts } = await db
+    .from("contacts")
+    .select("id, name")
+    .eq("organization_id", organizationId)
+    .in("id", ids);
+  const nomeDe = new Map(((cts ?? []) as { id: string; name: string | null }[]).map((c) => [c.id, c.name]));
+  return top.map(([id, trouxe]) => ({ contact_id: id, nome: nomeDe.get(id) ?? "Sem nome", trouxe }));
+}
+
 async function buscarTransicoesRecentes(organizationId: string): Promise<TransicaoRow[]> {
   const db = await createClient();
   const { data } = await db
@@ -109,9 +139,10 @@ export default async function FunilPoliticoPage() {
   const org = await resolveActiveOrg(user);
   if (!org) redirect("/app/onboarding");
 
-  const [contagem, temperaturas, transicoes, velocidadeDias] = await Promise.all([
+  const [contagem, temperaturas, multiplicadores, transicoes, velocidadeDias] = await Promise.all([
     buscarContagemPorEstagio(org.orgId),
     buscarContagemPorTemperatura(org.orgId),
+    buscarMultiplicadores(org.orgId),
     buscarTransicoesRecentes(org.orgId),
     buscarVelocidadeDias(org.orgId),
   ]);
@@ -129,6 +160,7 @@ export default async function FunilPoliticoPage() {
     <FunilClient
       contagem={contagem}
       temperaturas={temperaturas}
+      multiplicadores={multiplicadores}
       transicoes={transicoes}
       total={total}
       taxaAtivacao={taxaAtivacao}

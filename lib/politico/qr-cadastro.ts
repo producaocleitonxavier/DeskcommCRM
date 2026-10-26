@@ -22,6 +22,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { logger } from "@/lib/logger";
 import { recomputarEngajamento } from "@/lib/politico/engajamento";
 import { enviarMaterialComoDocumento, enviarTextoNoCanal } from "@/lib/politico/enviar-material";
+import { convidarAIndicar, extrairCodigoIndicacao, processarIndicacao } from "@/lib/politico/indicacao";
 
 /** `[qr:CODE]` — colchetes e prefixo próprio para não casar por acidente. */
 export const PADRAO_QR = /\[qr:([A-Za-z0-9_-]{2,24})\]/i;
@@ -49,9 +50,19 @@ export interface ResultadoQrCadastro {
 
 export async function processarCadastroQr(
   admin: SupabaseClient,
-  entrada: { organizationId: string; contactId: string; texto: string | null },
+  entrada: { organizationId: string; contactId: string; texto: string | null; canalId?: string | null },
 ): Promise<ResultadoQrCadastro> {
   try {
+    // Indicação pessoal ([ind:CODE]) tem prioridade: credita quem trouxe + acolhe.
+    const codigoInd = extrairCodigoIndicacao(entrada.texto);
+    if (codigoInd) {
+      return await processarIndicacao(admin, {
+        organizationId: entrada.organizationId,
+        contactId: entrada.contactId,
+        codigo: codigoInd,
+        canalId: entrada.canalId ?? null,
+      });
+    }
     const codigo = extrairCodigoQr(entrada.texto);
     if (codigo) return await iniciarCadastro(admin, entrada.organizationId, entrada.contactId, codigo);
     return await capturarNomeEEntregar(admin, entrada.organizationId, entrada.contactId, entrada.texto);
@@ -235,5 +246,7 @@ async function capturarNomeEEntregar(
     return { status: "error", detail: `envio_falhou:${r.erro ?? ""}` };
   }
   await admin.from("pol_qr_cadastros").update({ material_entregue_at: new Date().toISOString() }).eq("id", cad.id);
+  // Convida a indicar (uma vez) — o ouro do funil.
+  await convidarAIndicar(admin, { organizationId, contactId, canalId: origem.channel_session_id });
   return { status: "ok", detail: `entregue:${origem.nome}` };
 }

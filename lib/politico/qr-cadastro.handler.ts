@@ -28,21 +28,26 @@ export const polQrCadastroHandler: EventHandler = {
       (typeof row.payload.message_id === "string" ? row.payload.message_id : null) ??
       (typeof row.entity_id === "string" ? row.entity_id : null);
     let texto: string | null = null;
+    let canalId: string | null = null;
     if (messageId) {
       const { data } = await admin
         .from("messages")
-        .select("body, direction")
+        .select("body, direction, channel_session_id")
         .eq("organization_id", row.organization_id)
         .eq("id", messageId)
         .maybeSingle();
-      const m = data as { body: string | null; direction: string | null } | null;
-      if (m && m.direction === "inbound") texto = m.body;
+      const m = data as { body: string | null; direction: string | null; channel_session_id: string | null } | null;
+      if (m && m.direction === "inbound") {
+        texto = m.body;
+        canalId = m.channel_session_id;
+      }
     }
 
     const r = await processarCadastroQr(admin, {
       organizationId: row.organization_id,
       contactId,
       texto,
+      canalId,
     });
     return { consumer_key: POL_QR_CADASTRO_HANDLER_KEY, status: r.status, detail: r.detail };
   },

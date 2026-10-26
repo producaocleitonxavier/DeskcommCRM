@@ -11,7 +11,7 @@ import { ArrowRight, Clock, Target, TrendingUp } from "lucide-react";
 import { FunnelBoard } from "@/components/politico/funnel-board";
 import { KpiCard } from "@/components/politico/kpi-card";
 import { CommandHero } from "@/components/politico/command-hero";
-import type { TransicaoRow } from "./page";
+import type { TransicaoRow, MultiplicadorRow } from "./page";
 
 const STAGES = [
   { value: "novo_cadastro", label: "Novo cadastro", hex: "#C9CEF3", badge: { bg: "#EEF0FB", fg: "#3B4280" } },
@@ -46,6 +46,7 @@ const TEMPERATURAS = [
 export interface FunilClientProps {
   contagem: Record<string, number>;
   temperaturas: Record<string, number>;
+  multiplicadores: MultiplicadorRow[];
   transicoes: TransicaoRow[];
   total: number;
   taxaAtivacao: number;
@@ -56,6 +57,7 @@ export interface FunilClientProps {
 export default function FunilClient({
   contagem,
   temperaturas,
+  multiplicadores,
   transicoes,
   total,
   taxaAtivacao,
@@ -161,6 +163,44 @@ export default function FunilClient({
         <KpiCard label="Taxa de ativação" valor={taxaAtivacao} sufixo="%" icone={TrendingUp} />
         <KpiCard label="Taxa de conversão" valor={taxaConversao} sufixo="%" icone={Target} />
         <KpiCard label="Velocidade do funil" valor={velocidadeDias} sufixo="dias" icone={Clock} />
+      </section>
+
+      {/* ── Multiplicadores (quem TROUXE gente — o ouro) ────────── */}
+      <section className="wr-card p-6 sm:p-7">
+        <div className="mb-4 flex items-center justify-between gap-2">
+          <h2 className="font-heading text-base font-bold">🏆 Multiplicadores</h2>
+          <span className="text-xs" style={{ color: "var(--color-text-subtle)" }}>quem trouxe mais gente pra base</span>
+        </div>
+        {multiplicadores.length === 0 ? (
+          <p className="text-sm" style={{ color: "var(--color-text-subtle)" }}>
+            Ninguém indicou ainda. Quando alguém trouxer um novo cadastro, aparece aqui — o sinal mais forte do funil.
+          </p>
+        ) : (
+          <ol className="space-y-2">
+            {multiplicadores.map((m, i) => (
+              <li key={m.contact_id} className="flex items-center gap-3 rounded-xl px-3 py-2" style={{ background: "var(--color-surface)" }}>
+                <span
+                  className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-xs font-bold"
+                  style={
+                    i === 0
+                      ? { background: "#FACC15", color: "#14181F" }
+                      : i === 1
+                        ? { background: "#CBD5E1", color: "#14181F" }
+                        : i === 2
+                          ? { background: "#D9A066", color: "#14181F" }
+                          : { background: "rgba(255,255,255,0.08)", color: "var(--color-text-muted)" }
+                  }
+                >
+                  {i + 1}
+                </span>
+                <span className="min-w-0 flex-1 truncate text-sm font-semibold" style={{ color: "var(--color-text)" }}>{m.nome}</span>
+                <span className="shrink-0 text-sm font-bold tabular-nums" style={{ color: "var(--color-accent)" }}>
+                  trouxe {m.trouxe}
+                </span>
+              </li>
+            ))}
+          </ol>
+        )}
       </section>
 
       {/* ── Transições recentes ─────────────────────────────────── */}

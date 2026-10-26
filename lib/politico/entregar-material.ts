@@ -20,6 +20,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { enviarMaterialComoDocumento } from "@/lib/politico/enviar-material";
 import { recomputarEngajamento } from "@/lib/politico/engajamento";
+import { convidarAIndicar } from "@/lib/politico/indicacao";
 import { logger } from "@/lib/logger";
 import { ehRespostaAfirmativa } from "@/lib/politico/resposta-afirmativa";
 
@@ -122,6 +123,8 @@ export async function entregarMaterialNaResposta(
 
     // Material entregue é sinal do funil: recalcula o índice de engajamento.
     await recomputarEngajamento(admin, entrada.organizationId, entrada.contactId, { reason: "Recebeu material" });
+    // E convida a indicar (uma vez) — o ouro do funil.
+    await convidarAIndicar(admin, { organizationId: entrada.organizationId, contactId: entrada.contactId, canalId });
 
     return { entregou: true, materialTitulo: material.titulo ?? undefined };
   } catch (err) {
