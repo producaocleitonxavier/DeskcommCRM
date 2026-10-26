@@ -275,6 +275,19 @@ export const NAV_CATALOG = [
     sidebar: true,
   },
   {
+    // Captação por QR: a pessoa escaneia e MANDA a mensagem pra gente (receptivo,
+    // ban ~zero, abre janela 24h) → recebe o ebook e entra no funil. FIXO no
+    // sidebar da Operação — é a porta de entrada de novos cadastros.
+    href: "/app/captacao-qr",
+    label: "Captação por QR",
+    description:
+      "Gere QR codes e links por lugar (praça, escola, evento, bio). A pessoa escaneia, manda 'me cadastrei' e recebe o material na hora — sem link pra clicar.",
+    icon: "QrCode",
+    group: "operacao",
+    section: "O dia a dia da venda",
+    sidebar: true,
+  },
+  {
     href: "/app/contacts",
     label: "Contatos",
     description: "As pessoas do outro lado da conversa e seu histórico.",

@@ -1139,6 +1139,9 @@ export const AUDIT_ACTIONS = [
   "pol_emendas.delete",
   // Ciclo da demanda: interruptor do aviso automático ao cidadão na resolução.
   "pol_gabinete.aviso_resolucao_updated",
+  // Captação por QR: criar/apagar uma origem (ponto de captação).
+  "pol_qr_origem.created",
+  "pol_qr_origem.deleted",
 ] as const;
 
 /** Um código de auditoria. Derivado de `AUDIT_ACTIONS` — não redigite a lista. */

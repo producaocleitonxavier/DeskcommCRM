@@ -55,6 +55,7 @@ import {
   Crown,
   CurrencyDollar,
   IdentificationCard,
+  QrCode,
 } from "@/lib/ui/icons";
 
 import {
@@ -125,6 +126,7 @@ const ICONS = {
   Crown,
   CurrencyDollar,
   IdentificationCard,
+  QrCode,
 };
 export interface NavDestination extends Omit<NavMetadata, "icon"> {
   icon: PhosphorIcon;

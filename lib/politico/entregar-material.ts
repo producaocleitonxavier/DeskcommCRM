@@ -16,12 +16,9 @@
  *
  * FAIL-SOFT: nunca lança — o chamador é um handler de evento.
  */
-import { randomUUID } from "node:crypto";
-
 import type { SupabaseClient } from "@supabase/supabase-js";
 
-import { sendMessageHandler } from "@/app/api/v1/messages/_handler";
-import { beginServiceAtOrigin } from "@/lib/atendimento/origem";
+import { enviarMaterialComoDocumento } from "@/lib/politico/enviar-material";
 import { logger } from "@/lib/logger";
 import { ehRespostaAfirmativa } from "@/lib/politico/resposta-afirmativa";
 
@@ -32,31 +29,6 @@ export interface EntregaResultado {
   entregou: boolean;
   motivo?: "nao_afirmativo" | "sem_pendencia" | "material_invalido" | "ja_reclamado" | "envio_falhou";
   materialTitulo?: string;
-}
-
-/** mime do anexo a partir da extensão da URL (o WAHA infere o resto). */
-function mimeDoArquivo(url: string): string | undefined {
-  const limpo = url.split("?")[0]?.toLowerCase() ?? "";
-  if (limpo.endsWith(".pdf")) return "application/pdf";
-  if (limpo.endsWith(".doc") || limpo.endsWith(".docx")) return "application/msword";
-  if (limpo.endsWith(".epub")) return "application/epub+zip";
-  return undefined;
-}
-
-/**
- * Nome que o destinatário vê no documento: o TÍTULO do material + a extensão.
- * Sem isto o WhatsApp mostra "file" — o cliente pediu o nome do ebook, por
- * credibilidade. Sanitiza os caracteres que atrapalham nome de arquivo.
- */
-function nomeDoArquivo(titulo: string | null, url: string): string | undefined {
-  const base = (titulo ?? "").trim().replace(/[\\/:*?"<>|]+/g, " ").replace(/\s+/g, " ").trim();
-  if (!base) return undefined;
-  const limpo = url.split("?")[0]?.toLowerCase() ?? "";
-  const ext = limpo.endsWith(".epub") ? "epub"
-    : limpo.endsWith(".docx") ? "docx"
-    : limpo.endsWith(".doc") ? "doc"
-    : "pdf";
-  return `${base}.${ext}`;
 }
 
 export async function entregarMaterialNaResposta(
@@ -118,59 +90,31 @@ export async function entregarMaterialNaResposta(
       .maybeSingle();
     if (!claim) return { entregou: false, motivo: "ja_reclamado" };
 
-    // 5) Entrega o material, pelo mesmo número do disparo.
-    //
-    // ⚠️ CAPA (regra do cliente: sempre com a capa, gera credibilidade): este
-    // WAHA/NOWEB não-oficial NÃO entrega IMAGEM proativa — aceita o sendImage
-    // (201, sobe pro servidor do WhatsApp) mas a imagem nunca aparece no celular,
-    // enquanto o DOCUMENTO entrega sempre (medido 2026-10-25, URL e base64). Por
-    // isso a capa como imagem separada está DESLIGADA aqui; a credibilidade da
-    // capa volta quando o envio for pela API Oficial (Cloud API, que entrega
-    // imagem) ou via miniatura embutida no PDF, se o canal suportar. Até lá, o
-    // PDF SEMPRE leva a legenda (nome do material) — entrega confiável e completa.
-    try {
-      const boundary = await beginServiceAtOrigin(admin, entrada.organizationId, entrada.contactId, canalId);
-      const legenda = material.titulo
-        ? `📘 Aqui está o material *${material.titulo}*. Qualquer dúvida, é só chamar! 🙂`
-        : "📘 Aqui está o material que você pediu. Qualquer dúvida, é só chamar! 🙂";
-      const ctx = {
-        organization_id: entrada.organizationId,
-        serviceBoundary: boundary,
-        proactiveContext: { organizationId: entrada.organizationId, contactId: entrada.contactId },
-        actor: { type: "webhook_source", id: `ebook-resposta:${recipiente.id}` },
-        requestId: `ebook-resposta:${recipiente.id}:${randomUUID()}`,
-      } as Parameters<typeof sendMessageHandler>[1];
-
-      const msg = await sendMessageHandler(admin, ctx, {
-        conversation_id: boundary.conversation_id,
-        type: "document",
-        media_url: material.url,
-        media_mime: mimeDoArquivo(material.url),
-        media_filename: nomeDoArquivo(material.titulo, material.url),
-        body: legenda,
-        metadata: { source: "ebook_resposta", material_id: materialId, recipient_id: recipiente.id },
-      } as Parameters<typeof sendMessageHandler>[2]);
-      if ((msg as { status?: string }).status === "failed") {
-        // Devolve o carimbo para `null`: o retry de 24h (ou outra resposta) tenta de novo.
-        await admin
-          .from("campaign_recipients")
-          .update({ material_entregue_at: null })
-          .eq("id", recipiente.id);
-        logger.warn("ebook: envio do material falhou no canal", {
-          organization_id: entrada.organizationId,
-          contact_id: entrada.contactId,
-        });
-        return { entregou: false, motivo: "envio_falhou" };
-      }
-    } catch (err) {
+    // 5) Entrega o material como DOCUMENTO (anexo com nome), pelo número do
+    //    disparo. A capa como imagem separada está DESLIGADA: este WAHA/NOWEB não
+    //    entrega imagem proativa (medido 2026-10-25); o PDF sempre leva a legenda
+    //    com o nome. A capa volta pela API Oficial. Envio compartilhado com o QR.
+    const legenda = material.titulo
+      ? `📘 Aqui está o material *${material.titulo}*. Qualquer dúvida, é só chamar! 🙂`
+      : "📘 Aqui está o material que você pediu. Qualquer dúvida, é só chamar! 🙂";
+    const r = await enviarMaterialComoDocumento(admin, {
+      organizationId: entrada.organizationId,
+      contactId: entrada.contactId,
+      canalId,
+      material: { titulo: material.titulo, url: material.url },
+      legenda,
+      rotulo: `ebook-resposta:${recipiente.id}`,
+    });
+    if (!r.enviou) {
+      // Devolve o carimbo para `null`: o retry de 24h (ou outra resposta) tenta de novo.
       await admin
         .from("campaign_recipients")
         .update({ material_entregue_at: null })
         .eq("id", recipiente.id);
-      logger.warn("ebook: entrega do material lançou (carimbo devolvido)", {
+      logger.warn("ebook: envio do material falhou no canal", {
         organization_id: entrada.organizationId,
         contact_id: entrada.contactId,
-        detail: err instanceof Error ? err.message.slice(0, 160) : "desconhecido",
+        detail: r.erro,
       });
       return { entregou: false, motivo: "envio_falhou" };
     }
