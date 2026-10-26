@@ -21,6 +21,7 @@ import {
   useMetricasDaCampanha,
   type AcaoDeCampanha,
   type CampanhaDetalhada,
+  type Destinatario,
 } from "@/hooks/campanhas/useCampanhas";
 import { useAgentesPublicados, useFunis } from "@/hooks/campanhas/useDestinoDaCampanha";
 import { useContactList } from "@/hooks/contacts/useContactList";
@@ -52,8 +53,12 @@ export function DetalheDaCampanha({ id }: { id: string }) {
   const t = useT();
   const campanha = useCampanha(id);
   const metricas = useMetricasDaCampanha(id, campanha.data?.status);
+  const [vista, setVista] = useState<"lista" | "kanban">("lista");
   const [filtroDeStatus, setFiltroDeStatus] = useState("");
-  const destinatarios = useDestinatarios(id, { status: filtroDeStatus || undefined });
+  // No kanban carrega TODOS os status (sem filtro), para montar as colunas.
+  const destinatarios = useDestinatarios(id, {
+    status: vista === "lista" && filtroDeStatus ? filtroDeStatus : undefined,
+  });
   const acao = useAcaoDeCampanha(id);
   const [confirmando, setConfirmando] = useState<AcaoDeCampanha | null>(null);
   const [testando, setTestando] = useState(false);
@@ -234,19 +239,38 @@ export function DetalheDaCampanha({ id }: { id: string }) {
       <div className="wr-card wr-anim-in space-y-3 p-5">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <h2 className="font-heading text-[15px] font-bold" style={{ color: "var(--color-text)" }}>{t("Quem está na lista")}</h2>
-          <select className="wr-input" style={{ maxWidth: 220 }} value={filtroDeStatus} onChange={(e) => setFiltroDeStatus(e.target.value)} aria-label={t("Filtrar")}>
-            <option value="">{t("Todos")}</option>
-            <option value="pending">{t("Na fila")}</option>
-            <option value="sent">{t("Enviadas")}</option>
-            <option value="delivered">{t("Entregues")}</option>
-            <option value="read">{t("Lidas")}</option>
-            <option value="replied">{t("Responderam")}</option>
-            <option value="skipped">{t("Fora da lista")}</option>
-            <option value="failed">{t("Falharam")}</option>
-          </select>
+          <div className="flex items-center gap-2">
+            <div className="flex rounded-full border p-0.5" style={{ borderColor: "var(--color-border)" }}>
+              {(["lista", "kanban"] as const).map((v) => (
+                <button key={v} type="button" onClick={() => setVista(v)} className="rounded-full px-3 py-1 text-xs font-semibold transition-colors" style={vista === v ? { background: "var(--color-accent)", color: "#14181F" } : { color: "var(--color-text-muted)" }}>
+                  {v === "lista" ? t("Lista") : t("Kanban")}
+                </button>
+              ))}
+            </div>
+            {vista === "lista" && (
+              <select className="wr-input" style={{ maxWidth: 200 }} value={filtroDeStatus} onChange={(e) => setFiltroDeStatus(e.target.value)} aria-label={t("Filtrar")}>
+                <option value="">{t("Todos")}</option>
+                <option value="pending">{t("Na fila")}</option>
+                <option value="sent">{t("Enviadas")}</option>
+                <option value="delivered">{t("Entregues")}</option>
+                <option value="read">{t("Lidas")}</option>
+                <option value="replied">{t("Responderam")}</option>
+                <option value="skipped">{t("Fora da lista")}</option>
+                <option value="failed">{t("Falharam")}</option>
+              </select>
+            )}
+          </div>
         </div>
         {c.snapshot_total === 0 ? (
           <p className="text-sm" style={{ color: "var(--color-text-subtle)" }}>{t("A lista ainda não foi montada. Use “Preparar lista” para ver quem entra.")}</p>
+        ) : vista === "kanban" ? (
+          <KanbanDosDestinatarios
+            linhas={linhas}
+            temMaterial={!!c.material_id}
+            hasNext={!!destinatarios.hasNextPage}
+            fetchNext={() => destinatarios.fetchNextPage()}
+            fetching={destinatarios.isFetchingNextPage}
+          />
         ) : (
           <div className="divide-y" style={{ borderColor: "var(--color-border)" }}>
             {linhas.map((d) => {
@@ -380,6 +404,79 @@ function TesteDaCampanha({ onCancelar, onEnviar, enviando }: { onCancelar: () =>
         {encontrados.length === 0 && <p className="py-2 text-sm" style={{ color: "var(--color-text-subtle)" }}>{t("Nenhum contato encontrado.")}</p>}
       </div>
       <button className="wr-btn" onClick={onCancelar}>{t("Fechar")}</button>
+    </div>
+  );
+}
+
+/* ── Kanban do disparo ─────────────────────────────────────────────────────── */
+
+function KanbanDosDestinatarios({
+  linhas,
+  temMaterial,
+  hasNext,
+  fetchNext,
+  fetching,
+}: {
+  linhas: Destinatario[];
+  temMaterial: boolean;
+  hasNext: boolean;
+  fetchNext: () => void;
+  fetching: boolean;
+}) {
+  const t = useT();
+  const colunas: Array<{ id: string; titulo: string; dica: string; cor: string; itens: Destinatario[] }> = [
+    { id: "fila", titulo: "Na fila", dica: "ainda não saiu", cor: "#9AA0AA", itens: [] },
+    { id: "enviado", titulo: "Enviado", dica: "convite entregue", cor: "#5A6BDC", itens: [] },
+    { id: "respondeu", titulo: "Respondeu", dica: "topou receber", cor: "#22C55E", itens: [] },
+  ];
+  if (temMaterial) colunas.push({ id: "material", titulo: "Recebeu material", dica: "ebook entregue", cor: "#8AA62E", itens: [] });
+
+  const col = (d: Destinatario): number => {
+    if (d.material_entregue_at) return temMaterial ? 3 : 2;
+    if (d.status === "replied" || d.replied_at) return 2;
+    if (["sent", "delivered", "read"].includes(d.status)) return 1;
+    if (["pending", "queued", "sending"].includes(d.status)) return 0;
+    return -1; // failed/skipped/cancelled/opted_out: fora do fluxo (ficam na Lista)
+  };
+  for (const d of linhas) {
+    const i = col(d);
+    if (i >= 0 && i < colunas.length) colunas[i]!.itens.push(d);
+  }
+
+  return (
+    <div className="space-y-3">
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+        {colunas.map((c) => (
+          <div key={c.id} className="rounded-xl border p-2.5" style={{ borderColor: "var(--color-border)", background: "var(--color-surface)" }}>
+            <div className="mb-2 flex items-center justify-between gap-2 px-1">
+              <span className="flex items-center gap-1.5 text-xs font-bold" style={{ color: "var(--color-text)" }}>
+                <span className="inline-block h-2 w-2 rounded-full" style={{ background: c.cor }} />
+                {t(c.titulo)}
+              </span>
+              <span className="rounded-full px-1.5 text-[11px] font-bold tabular-nums" style={{ background: "var(--color-surface-elevated)", color: "var(--color-text-muted)" }}>{c.itens.length}</span>
+            </div>
+            <div className="space-y-1.5" style={{ maxHeight: 360, overflowY: "auto" }}>
+              {c.itens.length === 0 ? (
+                <p className="px-1 py-2 text-[11px]" style={{ color: "var(--color-text-subtle)" }}>{t(c.dica)}</p>
+              ) : (
+                c.itens.map((d) => (
+                  <div key={d.id} className="rounded-lg px-2.5 py-1.5 text-xs" style={{ background: "var(--color-surface-elevated)", color: "var(--color-text)" }}>
+                    <span className="block truncate">{rotuloDoContato(d.contacts, t)}</span>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+        ))}
+      </div>
+      {hasNext && (
+        <div className="flex justify-center">
+          <button className="wr-btn" onClick={fetchNext} disabled={fetching}>{fetching ? t("Carregando…") : t("Carregar mais no quadro")}</button>
+        </div>
+      )}
+      <p className="text-center text-xs" style={{ color: "var(--color-text-subtle)" }}>
+        {t("As pessoas andam da esquerda pra direita conforme o disparo avança. Os totais exatos são os números do topo.")}
+      </p>
     </div>
   );
 }

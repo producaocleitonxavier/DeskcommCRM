@@ -67,6 +67,8 @@ export interface Destinatario {
   delivered_at: string | null;
   read_at: string | null;
   replied_at: string | null;
+  /** Quando o material (ebook) foi entregue na resposta SIM. Migration 9051. */
+  material_entregue_at: string | null;
   contacts: { name: string | null; display_name: string | null } | null;
 }
 
