@@ -426,6 +426,9 @@ export function NovaCampanha({
                   {velocidade === v.id && <Check className="ml-auto h-4 w-4" style={{ color: "var(--color-accent)" }} />}
                 </div>
                 <p className="mt-1 text-xs" style={{ color: "var(--color-text-subtle)" }}>{t(v.desc)}</p>
+                <p className="mt-1.5 text-[11px] font-bold tabular-nums" style={{ color: velocidade === v.id ? "var(--color-accent)" : "var(--color-text-muted)" }}>
+                  1 {t("msg a cada")} {v.intervalo}s
+                </p>
               </button>
             ))}
           </div>
