@@ -90,3 +90,35 @@ export async function enviarMaterialComoDocumento(
     return { enviou: false, erro: err instanceof Error ? err.message.slice(0, 160) : "desconhecido" };
   }
 }
+
+/**
+ * Envia uma MENSAGEM DE TEXTO pelo canal (ex.: pedir o nome no cadastro por QR).
+ * Mesmo transporte do material, só que `type: "text"`. Não lança.
+ */
+export async function enviarTextoNoCanal(
+  admin: SupabaseClient,
+  entrada: { organizationId: string; contactId: string; canalId: string; texto: string; rotulo: string },
+): Promise<{ enviou: boolean; erro?: string }> {
+  try {
+    const boundary = await beginServiceAtOrigin(admin, entrada.organizationId, entrada.contactId, entrada.canalId);
+    const ctx = {
+      organization_id: entrada.organizationId,
+      serviceBoundary: boundary,
+      proactiveContext: { organizationId: entrada.organizationId, contactId: entrada.contactId },
+      actor: { type: "webhook_source", id: entrada.rotulo },
+      requestId: `${entrada.rotulo}:${randomUUID()}`,
+    } as Parameters<typeof sendMessageHandler>[1];
+
+    const msg = await sendMessageHandler(admin, ctx, {
+      conversation_id: boundary.conversation_id,
+      type: "text",
+      body: entrada.texto,
+      metadata: { source: entrada.rotulo, contact_id: entrada.contactId },
+    } as Parameters<typeof sendMessageHandler>[2]);
+
+    if ((msg as { status?: string }).status === "failed") return { enviou: false, erro: "waha_error" };
+    return { enviou: true };
+  } catch (err) {
+    return { enviou: false, erro: err instanceof Error ? err.message.slice(0, 160) : "desconhecido" };
+  }
+}

@@ -46,7 +46,8 @@ interface Cadastrado {
   recebeu_material: boolean;
 }
 
-const MENSAGEM_PADRAO = "Olá! Me cadastrei e quero receber os materiais e novidades.";
+/** A mensagem pronta cita o LOCAL — "estive na praça X e quero o material". */
+const msgDoLocal = (nome: string) => `Olá! Estive na ${nome.trim() || "..."} e quero receber o material que você disse.`;
 
 export function CaptacaoQrClient({ materiais, canais }: { materiais: Material[]; canais: Canal[] }) {
   const t = useT();
@@ -62,7 +63,9 @@ export function CaptacaoQrClient({ materiais, canais }: { materiais: Material[];
   const [bairro, setBairro] = useState("");
   const [materialId, setMaterialId] = useState<string>(materiais[0]?.id ?? "");
   const [canalId, setCanalId] = useState<string>(canalPadrao?.id ?? "");
-  const [mensagem, setMensagem] = useState(MENSAGEM_PADRAO);
+  const [mensagem, setMensagem] = useState(msgDoLocal(""));
+  // A mensagem acompanha o nome do lugar até o usuário editá-la à mão.
+  const [mensagemEditada, setMensagemEditada] = useState(false);
 
   const carregar = useCallback(async () => {
     setCarregando(true);
@@ -92,7 +95,7 @@ export function CaptacaoQrClient({ materiais, canais }: { materiais: Material[];
         credentials: "same-origin",
         body: JSON.stringify({
           nome: nome.trim(),
-          mensagem: mensagem.trim() || MENSAGEM_PADRAO,
+          mensagem: mensagem.trim() || msgDoLocal(nome),
           material_id: materialId || null,
           channel_session_id: canalId || null,
           endereco: endereco.trim() || null,
@@ -106,7 +109,8 @@ export function CaptacaoQrClient({ materiais, canais }: { materiais: Material[];
       setNome("");
       setEndereco("");
       setBairro("");
-      setMensagem(MENSAGEM_PADRAO);
+      setMensagem(msgDoLocal(""));
+      setMensagemEditada(false);
     } catch {
       setErro(t("Não consegui criar o ponto de captação."));
     } finally {
@@ -185,7 +189,11 @@ export function CaptacaoQrClient({ materiais, canais }: { materiais: Material[];
             </span>
             <input
               value={nome}
-              onChange={(e) => setNome(e.target.value)}
+              onChange={(e) => {
+                const v = e.target.value;
+                setNome(v);
+                if (!mensagemEditada) setMensagem(msgDoLocal(v));
+              }}
               placeholder={t("Ex.: Praça 7 de Setembro")}
               className="block w-full rounded-xl border px-4 py-3 text-sm"
               style={{ borderColor: "var(--color-border)", background: "var(--color-surface)", color: "var(--color-text)" }}
@@ -257,7 +265,7 @@ export function CaptacaoQrClient({ materiais, canais }: { materiais: Material[];
           </span>
           <textarea
             value={mensagem}
-            onChange={(e) => setMensagem(e.target.value)}
+            onChange={(e) => { setMensagem(e.target.value); setMensagemEditada(true); }}
             rows={2}
             className="block w-full resize-y rounded-xl border px-4 py-3 text-sm"
             style={{ borderColor: "var(--color-border)", background: "var(--color-surface)", color: "var(--color-text)" }}
