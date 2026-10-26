@@ -46,6 +46,25 @@ async function buscarContagemPorEstagio(organizationId: string): Promise<Record<
   return contagem;
 }
 
+const TEMPERATURAS = ["frio", "morno", "quente"] as const;
+
+async function buscarContagemPorTemperatura(organizationId: string): Promise<Record<string, number>> {
+  const db = await createClient();
+  const contagem: Record<string, number> = {};
+  for (const t of TEMPERATURAS) contagem[t] = 0;
+  await Promise.all(
+    TEMPERATURAS.map(async (t) => {
+      const { count } = await db
+        .from("pol_leads")
+        .select("id", { count: "exact", head: true })
+        .eq("organization_id", organizationId)
+        .eq("temperature", t);
+      contagem[t] = count ?? 0;
+    }),
+  );
+  return contagem;
+}
+
 async function buscarTransicoesRecentes(organizationId: string): Promise<TransicaoRow[]> {
   const db = await createClient();
   const { data } = await db
@@ -90,8 +109,9 @@ export default async function FunilPoliticoPage() {
   const org = await resolveActiveOrg(user);
   if (!org) redirect("/app/onboarding");
 
-  const [contagem, transicoes, velocidadeDias] = await Promise.all([
+  const [contagem, temperaturas, transicoes, velocidadeDias] = await Promise.all([
     buscarContagemPorEstagio(org.orgId),
+    buscarContagemPorTemperatura(org.orgId),
     buscarTransicoesRecentes(org.orgId),
     buscarVelocidadeDias(org.orgId),
   ]);
@@ -108,6 +128,7 @@ export default async function FunilPoliticoPage() {
   return (
     <FunilClient
       contagem={contagem}
+      temperaturas={temperaturas}
       transicoes={transicoes}
       total={total}
       taxaAtivacao={taxaAtivacao}

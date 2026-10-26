@@ -5,6 +5,7 @@
  * 3 KPIs e tabela de transições recentes. Client — recebe dados do server.
  */
 
+import Link from "next/link";
 import { ArrowRight, Clock, Target, TrendingUp } from "lucide-react";
 
 import { FunnelBoard } from "@/components/politico/funnel-board";
@@ -36,8 +37,15 @@ function StageBadge({ value }: { value: string }) {
   );
 }
 
+const TEMPERATURAS = [
+  { value: "frio", label: "Frios", emoji: "🧊", cor: "#60A5FA", dica: "ainda não interagiram" },
+  { value: "morno", label: "Mornos", emoji: "🔥", cor: "#FB923C", dica: "já responderam ou receberam material" },
+  { value: "quente", label: "Quentes", emoji: "⚡", cor: "#F87171", dica: "engajamento alto, prontos pra mobilizar" },
+] as const;
+
 export interface FunilClientProps {
   contagem: Record<string, number>;
+  temperaturas: Record<string, number>;
   transicoes: TransicaoRow[];
   total: number;
   taxaAtivacao: number;
@@ -47,13 +55,19 @@ export interface FunilClientProps {
 
 export default function FunilClient({
   contagem,
+  temperaturas,
   transicoes,
   total,
   taxaAtivacao,
   taxaConversao,
   velocidadeDias,
 }: FunilClientProps) {
-  const heroData = STAGES.map((s) => ({ label: s.label, value: contagem[s.value] ?? 0, color: s.hex }));
+  const heroData = STAGES.map((s) => ({
+    label: s.label,
+    value: contagem[s.value] ?? 0,
+    color: s.hex,
+    href: `/app/politico/leads?etapa=${s.value}`,
+  }));
 
   // Conversões entre níveis consecutivos.
   const conversoes = STAGES.slice(0, -1).map((s, i) => {
@@ -75,7 +89,10 @@ export default function FunilClient({
       {/* ── Funil hero + conversões ─────────────────────────────── */}
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-[2fr_1fr]">
         <section className="wr-card p-6 sm:p-7">
-          <h2 className="mb-5 font-heading text-base font-bold">Distribuição por estágio</h2>
+          <div className="mb-5 flex items-center justify-between gap-2">
+            <h2 className="font-heading text-base font-bold">Distribuição por estágio</h2>
+            <span className="text-xs" style={{ color: "var(--color-text-subtle)" }}>clique num estágio para ver as pessoas →</span>
+          </div>
           <FunnelBoard data={heroData} showConversion={false} />
         </section>
 
@@ -100,6 +117,44 @@ export default function FunilClient({
           </div>
         </section>
       </div>
+
+      {/* ── Temperatura (clicável → filtra as pessoas) ──────────── */}
+      <section className="wr-card p-6 sm:p-7">
+        <div className="mb-4 flex items-center justify-between gap-2">
+          <h2 className="font-heading text-base font-bold">Temperatura da base</h2>
+          <span className="text-xs" style={{ color: "var(--color-text-subtle)" }}>o quanto cada pessoa já se aproximou</span>
+        </div>
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+          {TEMPERATURAS.map((t) => {
+            const n = temperaturas[t.value] ?? 0;
+            const share = total > 0 ? Math.round((n / total) * 100) : 0;
+            return (
+              <Link
+                key={t.value}
+                href={`/app/politico/leads?temp=${t.value}`}
+                className="wr-lift group rounded-xl border p-4 transition-colors"
+                style={{ borderColor: "var(--color-border)", background: "var(--color-surface)" }}
+              >
+                <div className="flex items-center justify-between">
+                  <span className="inline-flex items-center gap-2 text-sm font-semibold" style={{ color: "var(--color-text)" }}>
+                    <span className="text-lg">{t.emoji}</span> {t.label}
+                  </span>
+                  <span className="text-[11px] opacity-0 transition-opacity group-hover:opacity-70" style={{ color: "var(--color-accent)" }}>ver →</span>
+                </div>
+                <div className="mt-2 flex items-end gap-2">
+                  <span className="wr-kpi-value text-3xl leading-none" style={{ color: t.cor }}>{n.toLocaleString("pt-BR")}</span>
+                  <span className="pb-0.5 text-xs tabular-nums" style={{ color: "var(--color-text-subtle)" }}>{share}%</span>
+                </div>
+                {/* Barra proporcional */}
+                <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full" style={{ background: "rgba(255,255,255,0.06)" }}>
+                  <div className="h-full rounded-full" style={{ width: `${Math.max(share, n > 0 ? 3 : 0)}%`, background: t.cor }} />
+                </div>
+                <p className="mt-2 text-xs" style={{ color: "var(--color-text-subtle)" }}>{t.dica}</p>
+              </Link>
+            );
+          })}
+        </div>
+      </section>
 
       {/* ── KPIs ────────────────────────────────────────────────── */}
       <section className="grid grid-cols-1 gap-4 sm:grid-cols-3">

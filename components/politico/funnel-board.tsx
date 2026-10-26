@@ -11,12 +11,15 @@
  * Entrada animada (largura cresce da esquerda, escalonada). Tema "Sala de Guerra".
  */
 
+import Link from "next/link";
 import { useEffect, useState } from "react";
 
 export interface FunnelStage {
   label: string;
   value: number;
   color: string;
+  /** Se presente, a linha vira um link (drill-down para as pessoas do estágio). */
+  href?: string;
 }
 
 export interface FunnelBoardProps {
@@ -95,7 +98,14 @@ export function FunnelBoard({ data, className, showConversion = true }: FunnelBo
               </div>
             )}
 
-            <div className="flex items-center gap-3 py-1 sm:gap-4">
+            {(() => {
+              const Wrapper = (d.href ? Link : "div") as React.ElementType;
+              const wrapProps = d.href ? { href: d.href } : {};
+              return (
+            <Wrapper
+              {...wrapProps}
+              className={`group flex items-center gap-3 rounded-xl px-1 py-1 sm:gap-4 ${d.href ? "cursor-pointer transition-colors hover:bg-white/[0.045]" : ""}`}
+            >
               {/* Rótulo do estágio */}
               <div className="flex w-24 shrink-0 items-center gap-2 sm:w-32">
                 <span
@@ -163,7 +173,20 @@ export function FunnelBoard({ data, className, showConversion = true }: FunnelBo
                   {fmtPct(share)}
                 </div>
               </div>
-            </div>
+
+              {/* Seta de drill-down — aparece no hover quando a linha é clicável */}
+              {d.href && (
+                <span
+                  className="w-4 shrink-0 text-right text-base opacity-0 transition-opacity group-hover:opacity-70"
+                  style={{ color: "var(--color-accent, #D7F36A)" }}
+                  aria-hidden
+                >
+                  →
+                </span>
+              )}
+            </Wrapper>
+              );
+            })()}
           </li>
         );
       })}
