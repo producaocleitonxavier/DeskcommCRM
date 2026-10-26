@@ -15,6 +15,8 @@ import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { CommandHero } from "@/components/politico/command-hero";
 import { useCriarCampanha, usePreviaDaAudiencia } from "@/hooks/campanhas/useCampanhas";
 import { channelLabel, useChannelSessions } from "@/hooks/channels/useChannelSessions";
+import { useContactList } from "@/hooks/contacts/useContactList";
+import { rotuloDoContato } from "@/lib/contacts/rotulo-do-contato";
 import { useT } from "@/hooks/i18n/useT";
 import {
   Users,
@@ -26,6 +28,9 @@ import {
   Gauge,
   ChevronDown,
   Sparkles,
+  Search,
+  UserPlus,
+  X,
 } from "lucide-react";
 
 type Origem = { value: string; label: string; total: number };
@@ -74,7 +79,11 @@ export function NovaCampanha({
   const [avancado, setAvancado] = useState(false);
   const [baseLegal, setBaseLegal] = useState<"consent" | "legitimate_interest">("consent");
   const [liaRef, setLiaRef] = useState("");
-  const [limite, setLimite] = useState("500");
+  const [limite, setLimite] = useState("5000");
+  const [porDia, setPorDia] = useState("50");
+  // Disparo nominal: pessoas específicas escolhidas por nome (entram como incluídas).
+  const [especificos, setEspecificos] = useState<Array<{ id: string; nome: string }>>([]);
+  const [buscaPessoa, setBuscaPessoa] = useState("");
 
   const listaDeCanais = canais.data ?? [];
   // Preseleciona quando só há um número.
@@ -82,16 +91,24 @@ export function NovaCampanha({
     if (!canal && listaDeCanais.length === 1) setCanal(listaDeCanais[0]!.id);
   }, [canal, listaDeCanais]);
 
+  // Busca de pessoas para o disparo nominal (só consulta quando há texto).
+  const pessoas = useContactList({ search: buscaPessoa.trim() || undefined, limit: 8 });
+  const resultadosPessoas = (pessoas.data?.pages.flatMap((p) => p.data) ?? []).filter(
+    (c) => !especificos.some((e) => e.id === c.id),
+  );
+
   const filtro = useMemo(
     () => ({
       origens: origensSel,
       niveis_de_apoio: niveis,
       temperaturas: temps,
-      limite: Number(limite) || 500,
+      incluir_contatos: especificos.map((e) => e.id),
+      limite: Number(limite) || 5000,
     }),
-    [origensSel, niveis, temps, limite],
+    [origensSel, niveis, temps, especificos, limite],
   );
-  const temPublico = origensSel.length > 0 || niveis.length > 0 || temps.length > 0;
+  const temPublico =
+    origensSel.length > 0 || niveis.length > 0 || temps.length > 0 || especificos.length > 0;
 
   const vel = VELOCIDADES.find((v) => v.id === velocidade) ?? VELOCIDADES[0];
   const materialTitulo = materiais.find((m) => m.id === material)?.titulo ?? null;
@@ -111,7 +128,7 @@ export function NovaCampanha({
       lia_ref: liaRef.trim() || null,
       audience_filter: filtro,
       intervalo_segundos: vel.intervalo,
-      teto_diario: vel.teto,
+      teto_diario: Number(porDia) || 50,
       material_id: material || null,
     });
     router.push(`/app/campaigns/${criada.id}`);
@@ -191,6 +208,55 @@ export function NovaCampanha({
               </Chip>
             ))}
           </div>
+        </Campo>
+
+        {/* Pessoas específicas — disparo nominal */}
+        <Campo rotulo={t("Pessoas específicas")} dica={t("opcional — busque pelo nome")}>
+          <p className="text-xs" style={{ color: "var(--color-text-subtle)" }}>
+            {t("Precisa mandar pra alguém específico (uma liderança, um contato-chave)? Busque pelo nome e adicione. Pode ser junto com os filtros acima — ou só estas pessoas.")}
+          </p>
+          <div className="relative">
+            <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2">
+              <Search className="h-4 w-4" style={{ color: "var(--color-text-subtle)" }} />
+            </span>
+            <input
+              value={buscaPessoa}
+              onChange={(e) => setBuscaPessoa(e.target.value)}
+              placeholder={t("Buscar pessoa pelo nome ou telefone…")}
+              className="wr-input pl-9"
+            />
+            {buscaPessoa.trim() !== "" && resultadosPessoas.length > 0 && (
+              <div className="absolute z-20 mt-1 w-full overflow-hidden rounded-xl border" style={{ background: "var(--color-surface)", borderColor: "var(--color-border)", boxShadow: "0 12px 30px -12px rgba(0,0,0,0.35)" }}>
+                {resultadosPessoas.slice(0, 8).map((c) => (
+                  <button
+                    key={c.id}
+                    type="button"
+                    onClick={() => {
+                      setEspecificos((xs) => [...xs, { id: c.id, nome: rotuloDoContato(c, t) }]);
+                      setBuscaPessoa("");
+                    }}
+                    className="wr-hover flex w-full items-center gap-2 px-3 py-2 text-left text-sm"
+                    style={{ color: "var(--color-text)" }}
+                  >
+                    <UserPlus className="h-4 w-4 shrink-0" style={{ color: "var(--color-accent)" }} />
+                    <span className="truncate">{rotuloDoContato(c, t)}</span>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+          {especificos.length > 0 && (
+            <div className="flex flex-wrap gap-2">
+              {especificos.map((e) => (
+                <span key={e.id} className="inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-sm font-medium" style={{ background: "rgba(215,243,106,0.14)", color: "#8AA62E" }}>
+                  {e.nome}
+                  <button type="button" onClick={() => setEspecificos((xs) => xs.filter((x) => x.id !== e.id))} aria-label={t("Remover")}>
+                    <X className="h-3.5 w-3.5" />
+                  </button>
+                </span>
+              ))}
+            </div>
+          )}
         </Campo>
 
         {/* Prévia do público */}
@@ -326,6 +392,16 @@ export function NovaCampanha({
               </button>
             ))}
           </div>
+        </Campo>
+
+        <Campo rotulo={t("Quantos por dia?")} dica={t("o motor manda só essa quantidade por dia, dia após dia, até terminar a lista")}>
+          <div className="flex items-center gap-2">
+            <input type="number" min={1} max={5000} value={porDia} onChange={(e) => setPorDia(e.target.value)} className="wr-input" style={{ maxWidth: 120 }} />
+            <span className="text-sm" style={{ color: "var(--color-text-muted)" }}>{t("por dia")}</span>
+          </div>
+          <p className="text-xs" style={{ color: "var(--color-text-subtle)" }}>
+            {t("Começa em 50 (bem seguro). Pode aumentar ou diminuir à vontade. Ex.: 3.000 pessoas a 50/dia = terminam em ~60 dias, sozinho.")}
+          </p>
         </Campo>
       </Passo>
 

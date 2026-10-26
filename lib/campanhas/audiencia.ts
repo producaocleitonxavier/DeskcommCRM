@@ -143,6 +143,30 @@ export function usaPolitico(filtro: FiltroDeAudiencia): boolean {
   return filtro.niveis_de_apoio.length > 0 || filtro.temperaturas.length > 0;
 }
 
+/**
+ * Há RECORTE de segmento (não só pessoas incluídas à mão)?
+ *
+ * É o que separa o disparo SEGMENTADO (origem, estágio, etiqueta, silêncio…) do
+ * disparo NOMINAL (só `incluir_contatos`). Sem recorte, a audiência é SÓ os
+ * incluídos — a consulta NÃO varre a base inteira (era o defeito que fazia um
+ * disparo "só para estas 3 pessoas" pegar o contato mais recente de brinde).
+ * `incluir_contatos`/`excluir_contatos` de propósito NÃO contam como recorte.
+ */
+export function temRecorte(filtro: FiltroDeAudiencia): boolean {
+  return (
+    filtro.com_todas_tags.length > 0 ||
+    filtro.com_alguma_tag.length > 0 ||
+    filtro.sem_tags.length > 0 ||
+    usaNegocio(filtro) ||
+    usaPolitico(filtro) ||
+    filtro.origens.length > 0 ||
+    filtro.sem_interacao_ha_dias !== null ||
+    filtro.com_interacao_ha_dias !== null ||
+    filtro.cadastrado_de !== null ||
+    filtro.cadastrado_ate !== null
+  );
+}
+
 /** A data-limite de "sem interação há N dias". Exportada para o teste não recalcular. */
 export function limiteDeSilencio(dias: number, agora: Date): Date {
   return new Date(agora.getTime() - dias * 86_400_000);

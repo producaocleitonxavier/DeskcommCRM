@@ -13,7 +13,7 @@
  */
 import type { SupabaseClient } from "@supabase/supabase-js";
 
-import { CAMPANHAS_VIVAS, limiteDeSilencio, usaNegocio, usaPolitico, type FiltroDeAudiencia } from "./audiencia";
+import { CAMPANHAS_VIVAS, limiteDeSilencio, temRecorte, usaNegocio, usaPolitico, type FiltroDeAudiencia } from "./audiencia";
 import { nomeDoContato } from "@/lib/contacts/rotulo-do-contato";
 import { recusouMarketing, type CandidatoDaAudiencia } from "./elegibilidade";
 import { camposUsadosNoTexto, type CamposPersonalizados } from "./renderizador";
@@ -237,6 +237,11 @@ export async function buscarCandidatos(
     // o contrário do `ORDER BY` do Postgres. Com timestamp em UTC no formato do
     // PostgREST e uuid em hex minúsculo, a ordem de bytes é a do banco.
     linhas.sort((a, b) => ordinal(a.created_at, b.created_at) || ordinal(a.id, b.id));
+  } else if (!temRecorte(filtro)) {
+    // DISPARO NOMINAL: sem nenhum recorte de segmento, a audiência é SÓ os
+    // contatos incluídos à mão (adicionados logo abaixo). NÃO varre a base — era
+    // o defeito que fazia "só estas pessoas" pegar o contato mais recente junto.
+    linhas = [];
   } else {
     // Sem recorte de negócio não há por onde fatiar: uma consulta, por keyset em
     // (`created_at`, `id`) — a página CURTA não prova nada quando o `max_rows`
