@@ -126,8 +126,8 @@ export function NovaCampanha({
         acoes={[{ href: "/app/campaigns", label: "← Voltar" }]}
       />
 
-      <div className="mt-[18px] lg:grid lg:grid-cols-[minmax(0,1fr)_330px] lg:gap-6 lg:items-start">
-        <div className="space-y-[18px]">
+      <div className="mt-[18px] lg:flex lg:items-start lg:gap-6">
+        <div className="space-y-[18px] lg:min-w-0 lg:flex-1">
       {/* Nome */}
       <section className="wr-card wr-anim-in p-5 sm:p-6" style={{ animationDelay: "0.02s" }}>
         <label className="block space-y-2">
@@ -400,7 +400,7 @@ export function NovaCampanha({
       </div>
         </div>
 
-        <aside className="mt-[18px] hidden lg:block lg:sticky lg:top-6">
+        <aside className="mt-[18px] hidden lg:block lg:w-[330px] lg:shrink-0 lg:self-start lg:sticky lg:top-6">
           <PhoneMockup texto={texto} materialTitulo={materialTitulo} />
         </aside>
       </div>
