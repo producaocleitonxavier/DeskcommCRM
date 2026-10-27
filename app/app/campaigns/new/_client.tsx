@@ -35,6 +35,7 @@ import {
 
 type Origem = { value: string; label: string; total: number };
 type Material = { id: string; titulo: string; tipo: string };
+type CidadeOpt = { id: string; name: string; total: number };
 
 const ESTAGIOS: ReadonlyArray<readonly [string, string]> = [
   ["novo_cadastro", "Novo cadastro"],
@@ -57,9 +58,11 @@ const VELOCIDADES = [
 export function NovaCampanha({
   materiais = [],
   origens = [],
+  cidades = [],
 }: {
   materiais?: Material[];
   origens?: Origem[];
+  cidades?: CidadeOpt[];
 }) {
   const t = useT();
   const router = useRouter();
@@ -71,6 +74,8 @@ export function NovaCampanha({
   const [origensSel, setOrigensSel] = useState<string[]>([]);
   const [niveis, setNiveis] = useState<string[]>([]);
   const [temps, setTemps] = useState<string[]>([]);
+  const [cidadesSel, setCidadesSel] = useState<string[]>([]);
+  const [buscaCidade, setBuscaCidade] = useState("");
   const [texto, setTexto] = useState("");
   const [material, setMaterial] = useState("");
   const [canal, setCanal] = useState("");
@@ -138,13 +143,24 @@ export function NovaCampanha({
       origens: origensSel,
       niveis_de_apoio: niveis,
       temperaturas: temps,
+      cidades: cidadesSel,
       incluir_contatos: especificos.map((e) => e.id),
       limite: Number(limite) || 5000,
     }),
-    [origensSel, niveis, temps, especificos, limite],
+    [origensSel, niveis, temps, cidadesSel, especificos, limite],
   );
   const temPublico =
-    origensSel.length > 0 || niveis.length > 0 || temps.length > 0 || especificos.length > 0;
+    origensSel.length > 0 || niveis.length > 0 || temps.length > 0 || cidadesSel.length > 0 || especificos.length > 0;
+
+  // Busca de cidade (até 459 na base): filtra por nome, sem acento, e mostra as 12
+  // melhores — sem despejar centenas de chips na tela.
+  const cidadesFiltradas = useMemo(() => {
+    const q = buscaCidade.trim().normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
+    if (!q) return [];
+    return cidades
+      .filter((c) => c.name.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().includes(q))
+      .slice(0, 12);
+  }, [buscaCidade, cidades]);
 
   const vel = VELOCIDADES.find((v) => v.id === velocidade) ?? VELOCIDADES[0];
   const materialTitulo = materiais.find((m) => m.id === material)?.titulo ?? null;
@@ -248,6 +264,50 @@ export function NovaCampanha({
             ))}
           </div>
         </Campo>
+
+        {/* Cidade — fecha o laço com o mapa de calor (disparar para onde a base está) */}
+        {cidades.length > 0 && (
+          <Campo rotulo={t("De qual cidade?")} dica={t("opcional — o mesmo dado do mapa de calor")}>
+            {cidadesSel.length > 0 && (
+              <div className="mb-2 flex flex-wrap gap-2">
+                {cidadesSel.map((id) => {
+                  const c = cidades.find((x) => x.id === id);
+                  return (
+                    <Chip key={id} ativo onClick={() => setCidadesSel(alternar(cidadesSel, id))}>
+                      {c?.name ?? id}
+                      <X className="ml-1 inline h-3 w-3" aria-hidden />
+                    </Chip>
+                  );
+                })}
+              </div>
+            )}
+            <div className="relative">
+              <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2">
+                <Search className="h-4 w-4" style={{ color: "var(--color-text-subtle)" }} />
+              </span>
+              <input
+                value={buscaCidade}
+                onChange={(e) => setBuscaCidade(e.target.value)}
+                placeholder={t("Buscar cidade…")}
+                className="wr-input pl-9"
+              />
+            </div>
+            {buscaCidade.trim() !== "" && (
+              <div className="mt-2 flex flex-wrap gap-2">
+                {cidadesFiltradas.length === 0 ? (
+                  <p className="text-xs" style={{ color: "var(--color-text-subtle)" }}>{t("Nenhuma cidade encontrada.")}</p>
+                ) : (
+                  cidadesFiltradas.map((c) => (
+                    <Chip key={c.id} ativo={cidadesSel.includes(c.id)} onClick={() => setCidadesSel(alternar(cidadesSel, c.id))}>
+                      {c.name}
+                      <span className="ml-1 opacity-60">· {c.total.toLocaleString("pt-BR")}</span>
+                    </Chip>
+                  ))
+                )}
+              </div>
+            )}
+          </Campo>
+        )}
 
         {/* Pessoas específicas — disparo nominal */}
         <Campo rotulo={t("Pessoas específicas")} dica={t("opcional — busque pelo nome")}>

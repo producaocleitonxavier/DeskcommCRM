@@ -64,5 +64,21 @@ export default async function NovaCampanhaPage() {
   );
   const origens = contagens.filter((o) => o.total > 0).sort((a, b) => b.total - a.total);
 
-  return <NovaCampanha materiais={materiais} origens={origens} />;
+  // Cidades da base COM contatos (territory_id), para segmentar o disparo por
+  // cidade — fecha o laço "ver no mapa de calor → disparar pra lá". Depende de
+  // "Carimbar cidades" ter rodado (senão vem vazio e o seletor nem aparece).
+  const { data: cids } = await db
+    .from("pol_vw_mapa_oportunidades")
+    .select("territory_id, name, total_leads")
+    .eq("organization_id", org.orgId)
+    .gt("total_leads", 0)
+    .order("total_leads", { ascending: false })
+    .limit(600);
+  const cidades = ((cids ?? []) as { territory_id: string; name: string; total_leads: number }[]).map((c) => ({
+    id: c.territory_id,
+    name: c.name,
+    total: c.total_leads,
+  }));
+
+  return <NovaCampanha materiais={materiais} origens={origens} cidades={cidades} />;
 }

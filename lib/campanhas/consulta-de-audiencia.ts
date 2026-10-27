@@ -171,7 +171,7 @@ export async function buscarCandidatos(
   // estágio/temperatura sem duplicar — hint pol_leads_contact_id_fkey porque há 2
   // FKs (contact_id e mobilizer_id). Só entra no SELECT quando o recorte pede.
   const embedPolitico = usaPolitico(filtro)
-    ? ", pol_leads!pol_leads_contact_id_fkey!inner(support_level, temperature)"
+    ? ", pol_leads!pol_leads_contact_id_fkey!inner(support_level, temperature, territory_id)"
     : "";
   const consultaDeContatos = () => {
     let consulta = admin
@@ -197,6 +197,10 @@ export async function buscarCandidatos(
     }
     if (filtro.temperaturas.length > 0) {
       consulta = consulta.in("pol_leads.temperature", filtro.temperaturas);
+    }
+    // CIDADE (fecha o laço mapa→ação): disparar para a(s) cidade(s) onde a base está.
+    if (filtro.cidades.length > 0) {
+      consulta = consulta.in("pol_leads.territory_id", filtro.cidades);
     }
     if (filtro.sem_interacao_ha_dias !== null) {
       const limite = limiteDeSilencio(filtro.sem_interacao_ha_dias, agora).toISOString();

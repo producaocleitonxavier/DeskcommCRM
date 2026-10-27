@@ -76,6 +76,12 @@ export const filtroDeAudienciaSchema = z
       .default([]),
     /** TEMPERATURA do lead político (`pol_leads.temperature`) — derivada do engajamento. */
     temperaturas: z.array(z.enum(["frio", "morno", "quente"])).max(3).default([]),
+    /**
+     * CIDADE (`pol_leads.territory_id`) — fecha o laço mapa→ação: ver no mapa de
+     * calor onde está a base e disparar PARA aquela(s) cidade(s). São ids de
+     * pol_territories (type=cidade); dependem do "Carimbar cidades" ter rodado.
+     */
+    cidades: z.array(z.string().uuid()).max(200).default([]),
 
     /** Contatos a incluir mesmo que o recorte não os pegue. */
     incluir_contatos: z.array(z.string().uuid()).max(5000).default([]),
@@ -97,6 +103,7 @@ export const filtroDeAudienciaSchema = z
       f.origens.length > 0 ||
       f.niveis_de_apoio.length > 0 ||
       f.temperaturas.length > 0 ||
+      f.cidades.length > 0 ||
       f.sem_interacao_ha_dias !== null ||
       f.com_interacao_ha_dias !== null ||
       f.cadastrado_de !== null ||
@@ -123,6 +130,7 @@ export const FILTRO_VAZIO = {
   origens: [],
   niveis_de_apoio: [],
   temperaturas: [],
+  cidades: [],
   incluir_contatos: [],
   excluir_contatos: [],
   limite: 500,
@@ -138,9 +146,9 @@ export function usaNegocio(filtro: FiltroDeAudiencia): boolean {
   );
 }
 
-/** O recorte usa o FUNIL POLÍTICO (estágio de apoio ou temperatura)? */
+/** O recorte usa o FUNIL POLÍTICO (estágio, temperatura ou cidade/território)? */
 export function usaPolitico(filtro: FiltroDeAudiencia): boolean {
-  return filtro.niveis_de_apoio.length > 0 || filtro.temperaturas.length > 0;
+  return filtro.niveis_de_apoio.length > 0 || filtro.temperaturas.length > 0 || filtro.cidades.length > 0;
 }
 
 /**
