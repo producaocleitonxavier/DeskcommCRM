@@ -586,7 +586,7 @@ export const NAV_CATALOG = [
     // e na busca, e quem usa pode pô-la no menu dela.
     href: "/app/ai/atendimento",
     label: "Fluxos de atendimento",
-    description: "Perguntas que a IA conduz durante a conversa, com as respostas guardadas na ficha do cliente.",
+    description: "Perguntas que a IA conduz durante a conversa, com as respostas guardadas na ficha do contato.",
     icon: "ListChecks",
     group: "ia",
     section: "Montar o agente",
@@ -642,7 +642,7 @@ export const NAV_CATALOG = [
   {
     href: "/app/ai/knowledge/sources",
     label: "Conhecimento",
-    description: "Os materiais que o agente consulta antes de responder sobre o seu negócio.",
+    description: "Os materiais que o agente consulta antes de responder sobre o seu trabalho.",
     icon: "BookOpen",
     group: "ia",
     section: "Ensinar o agente",
@@ -1370,7 +1370,7 @@ export const NAV_CATALOG = [
     // dava para ligar com UPDATE à mão no banco.
     href: "/app/settings/atendimento",
     label: "Distribuição de atendimento",
-    description: "Quem recebe cada cliente novo, e o que cada atendente enxerga.",
+    description: "Quem recebe cada contato novo, e o que cada atendente enxerga.",
     icon: "UsersThree",
     group: "organizacao",
     section: "Sua empresa",
