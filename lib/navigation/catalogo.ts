@@ -828,8 +828,8 @@ export const NAV_CATALOG = [
   },
   {
     href: "/app/instagram/etiquetas",
-    label: "Etiquetas Instagram",
-    description: "Etiquetas aplicadas pelas automações de Instagram nos contatos e no funil político.",
+    label: "Funil Político",
+    description: "Os 3 níveis do apoiador (Simpatizante → Apoiador → Embaixador): o que cada um significa e como a pessoa sobe.",
     icon: "InstagramLogo",
     group: "canais",
     minRole: "manager",

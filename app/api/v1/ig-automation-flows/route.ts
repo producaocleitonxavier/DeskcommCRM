@@ -40,6 +40,7 @@ const ACAO_TIPOS = [
   "criar_contato",
   "notificar_equipe",
   "add_funil_politico",
+  "captar_instagram",
 ] as const;
 
 const acaoSchema = z.object({
@@ -62,6 +63,7 @@ const criarFlowSchema = z.object({
       keywords: z.array(z.string()).optional(),
       case_sensitive: z.boolean().optional(),
       post_ids: z.array(z.string()).optional(),
+      lista_exata: z.boolean().optional(),
       story_id: z.string().optional(),
     })
     .default({}),

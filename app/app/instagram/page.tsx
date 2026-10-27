@@ -353,9 +353,9 @@ export default async function InstagramHubPage() {
     },
     {
       href: "/app/instagram/etiquetas",
-      titulo: "Etiquetas",
+      titulo: "Funil Político",
       descricao:
-        "Etiquetas que as automações aplicam automaticamente nos contatos ao comentar.",
+        "Os 3 níveis do apoiador (Simpatizante → Apoiador → Embaixador) e como a pessoa sobe.",
       icon: "tag",
       badge: null,
     },

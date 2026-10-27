@@ -66,14 +66,14 @@ const TRIGGER_OPTIONS: { value: TriggerTipo; label: string; descricao: string }[
 // O que a automação FAZ. A "Captação completa" vem primeiro e já faz tudo (responde
 // o comentário + chama no Direct + pergunta cidade/WhatsApp + joga no Kanban), então
 // o cliente não precisa montar nada. As demais são peças soltas, pra casos avançados.
+// Só o que o cliente entende e usa. A "Captação completa" já faz tudo (responde +
+// Direct + pergunta cidade/WhatsApp + Kanban + funil), então as peças soltas de CRM
+// (etiqueta, criar contato, avisar equipe, classificar funil) saíram do menu — eram
+// jargão do motor e só confundiam (regra de ouro).
 const ACAO_OPTIONS: { value: AcaoTipo; label: string; descricao: string }[] = [
-  { value: "captar_instagram", label: "Captação completa (recomendado)", descricao: "Faz tudo de uma vez: responde o comentário em público, chama a pessoa no Direct, pergunta estado/cidade/bairro/WhatsApp e coloca no Kanban. Usa os textos da sua Personalização. Não precisa adicionar mais nada." },
-  { value: "enviar_dm", label: "Só chamar no Direct", descricao: "Envia uma mensagem no Direct para quem comentou. Use {{username}} pra chamar pelo @." },
-  { value: "responder_comentario", label: "Só responder o comentário", descricao: "Responde em público, embaixo do comentário. Use {{username}} pra chamar pelo @." },
-  { value: "add_etiqueta", label: "Marcar com uma etiqueta", descricao: "Adiciona uma etiqueta ao contato." },
-  { value: "criar_contato", label: "Criar o contato", descricao: "Cria ou atualiza o contato com os dados do Instagram." },
-  { value: "notificar_equipe", label: "Avisar a equipe", descricao: "Abre um aviso na Central para alguém do time olhar." },
-  { value: "add_funil_politico", label: "Classificar no funil", descricao: "Marca o nível: Simpatizante, Apoiador ou Embaixador." },
+  { value: "captar_instagram", label: "Captação completa (recomendado)", descricao: "Faz tudo sozinho: responde o comentário em público, chama a pessoa no Direct, pergunta de onde ela é (estado/cidade/bairro) e o WhatsApp, e coloca no Kanban. É o recomendado — não precisa de mais nada." },
+  { value: "enviar_dm", label: "Só chamar no Direct (sem pesquisa)", descricao: "Manda só uma mensagem no Direct pra quem comentou, sem perguntar cidade nem WhatsApp. Use se não quiser o funil completo." },
+  { value: "responder_comentario", label: "Só responder o comentário", descricao: "Responde só em público, embaixo do comentário — sem chamar no Direct." },
 ];
 
 const NIVEIS_FUNIL = ["Simpatizante", "Apoiador", "Embaixador"];
@@ -178,7 +178,7 @@ export default function NovoFlowPage() {
   const triggerInfo = TRIGGER_OPTIONS.find((o) => o.value === triggerTipo);
 
   function addAcao() {
-    setAcoes((prev) => [...prev, { tipo: "criar_contato" }]);
+    setAcoes((prev) => [...prev, { tipo: "responder_comentario" }]);
   }
   function updateAcao(i: number, acao: AcaoConfig) {
     setAcoes((prev) => prev.map((a, idx) => (idx === i ? acao : a)));

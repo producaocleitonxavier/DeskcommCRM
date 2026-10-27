@@ -247,10 +247,14 @@ export default async function CaptacaoInstagramPage() {
           {ehAdmin && (
             <Link
               href="/app/instagram/captacao/config"
-              className="inline-flex items-center gap-1.5 text-sm font-semibold mt-2"
-              style={{ color: "var(--color-accent)" }}
+              className="group mt-3 inline-flex items-center gap-3 rounded-[14px] px-4 py-3 transition-transform hover:scale-[1.01]"
+              style={{ background: "var(--color-accent)", color: "#1B2206", boxShadow: "0 6px 20px rgba(215,243,106,0.25)" }}
             >
-              ⚙ Personalizar (região-alvo e mensagens)
+              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-lg" style={{ background: "rgba(27,34,6,0.14)" }}>⚙</span>
+              <span className="text-left">
+                <span className="block text-[15px] font-bold leading-tight">Personalizar minha captação</span>
+                <span className="block text-[12px] font-medium opacity-80">Sua região-alvo e suas mensagens — em 4 passos fáceis</span>
+              </span>
             </Link>
           )}
         </div>
@@ -297,8 +301,8 @@ export default async function CaptacaoInstagramPage() {
             Nenhum lead captado ainda
           </h2>
           <p className="text-sm mt-2 max-w-xl mx-auto" style={{ color: "#B9BCC6" }}>
-            Quando um flow de captação estiver ativo e o Instagram publicado, cada pessoa que
-            comentar entra aqui automaticamente, é qualificada por cidade (MG/BH) e, se der o
+            Quando a automação de captação estiver ligada e o Instagram publicado, cada pessoa que
+            comentar entra aqui automaticamente, é qualificada por {alvoLabel} e, se der o
             WhatsApp, vira um apoiador reconvocável em 2028.
           </p>
           <Link
