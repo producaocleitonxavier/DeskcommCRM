@@ -15,6 +15,8 @@ import {
   Construction,
   Gift,
   Inbox,
+  Send,
+  Sparkles,
   Users,
 } from "lucide-react";
 
@@ -23,7 +25,7 @@ import { FunnelBoard } from "@/components/politico/funnel-board";
 import { BarChartCard } from "@/components/politico/bar-chart-card";
 import { AreaChartCard } from "@/components/politico/area-chart-card";
 import { SectionHeader } from "@/components/politico/section-header";
-import type { MetricasHoje, GabineteHoje } from "./page";
+import type { MetricasHoje, GabineteHoje, FilaDeAcao } from "./page";
 
 // Hexes do funil (espelham --wr-funnel-1..5) — Recharts aplica fill como
 // atributo SVG, onde var(--x) não é confiável.
@@ -40,6 +42,7 @@ const TIPO_CORES: Record<Tipo, { soft: string; strong: string }> = {
 export interface HojeClientProps {
   metrics: MetricasHoje;
   gabineteHoje: GabineteHoje;
+  filaAcao: FilaDeAcao;
   nome: string;
   saudacao: string;
   dataFormatada: string;
@@ -114,6 +117,7 @@ function GaugeResolucao({ pct, resolvidas, total }: { pct: number; resolvidas: n
 export default function HojeClient({
   metrics: m,
   gabineteHoje: g,
+  filaAcao,
   nome,
   saudacao,
   dataFormatada,
@@ -184,6 +188,48 @@ export default function HojeClient({
           <GaugeResolucao pct={g.resumo.taxaResolucao} resolvidas={g.resumo.resolvidas} total={g.resumo.totalDemandas} />
         </div>
       </header>
+
+      {/* ── Fila de ação: o que espera a sua decisão AGORA ───────── */}
+      {(filaAcao.rascunhosIA > 0 || filaAcao.disparosRascunho > 0) && (
+        <section aria-label="Esperando você" className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+          {filaAcao.rascunhosIA > 0 && (
+            <Link
+              href="/app/inbox"
+              className="wr-card flex items-center gap-3 p-4 transition-shadow hover:shadow-md"
+            >
+              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl" style={{ background: "rgba(215,243,106,0.14)", color: "#9fd30f" }} aria-hidden>
+                <Sparkles className="h-5 w-5" />
+              </span>
+              <span className="min-w-0 flex-1">
+                <span className="block font-heading text-lg font-bold leading-none tabular-nums" style={{ color: "var(--color-text)" }}>
+                  {filaAcao.rascunhosIA.toLocaleString("pt-BR")}
+                </span>
+                <span className="mt-0.5 block text-sm" style={{ color: "var(--color-text-muted)" }}>
+                  {filaAcao.rascunhosIA === 1 ? "resposta da IA pra aprovar" : "respostas da IA pra aprovar"}
+                </span>
+              </span>
+            </Link>
+          )}
+          {filaAcao.disparosRascunho > 0 && (
+            <Link
+              href="/app/campaigns"
+              className="wr-card flex items-center gap-3 p-4 transition-shadow hover:shadow-md"
+            >
+              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl" style={{ background: "rgba(59,130,246,0.14)", color: "#3B82F6" }} aria-hidden>
+                <Send className="h-5 w-5" />
+              </span>
+              <span className="min-w-0 flex-1">
+                <span className="block font-heading text-lg font-bold leading-none tabular-nums" style={{ color: "var(--color-text)" }}>
+                  {filaAcao.disparosRascunho.toLocaleString("pt-BR")}
+                </span>
+                <span className="mt-0.5 block text-sm" style={{ color: "var(--color-text-muted)" }}>
+                  {filaAcao.disparosRascunho === 1 ? "disparo em rascunho pra revisar" : "disparos em rascunho pra revisar"}
+                </span>
+              </span>
+            </Link>
+          )}
+        </section>
+      )}
 
       {/* ── 1b. No gabinete hoje ────────────────────────────────── */}
       <section aria-label="No gabinete hoje" className="grid grid-cols-1 gap-4 lg:grid-cols-3">

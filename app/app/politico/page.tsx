@@ -269,6 +269,37 @@ async function buscarGabineteHoje(organizationId: string): Promise<GabineteHoje>
   };
 }
 
+export interface FilaDeAcao {
+  /** Rascunhos da IA esperando o humano aprovar e enviar (modo assistido). */
+  rascunhosIA: number;
+  /** Disparos em rascunho (criados, ainda não iniciados). */
+  disparosRascunho: number;
+}
+
+/**
+ * A FILA DE AÇÃO do dia que faltava no comando: o que ESPERA uma decisão sua
+ * agora — respostas da IA pra aprovar (conversation_drafts vivos) e disparos em
+ * rascunho. Tudo contagem (head:true), barato.
+ */
+async function buscarFilaDeAcao(organizationId: string): Promise<FilaDeAcao> {
+  const db = await createClient();
+  const agora = new Date().toISOString();
+  const [draftsIA, disparos] = await Promise.all([
+    db
+      .from("conversation_drafts")
+      .select("id", { count: "exact", head: true })
+      .eq("organization_id", organizationId)
+      .is("consumed_at", null)
+      .gt("expires_at", agora),
+    db
+      .from("campaigns")
+      .select("id", { count: "exact", head: true })
+      .eq("organization_id", organizationId)
+      .eq("status", "draft"),
+  ]);
+  return { rascunhosIA: draftsIA.count ?? 0, disparosRascunho: disparos.count ?? 0 };
+}
+
 // -- Data fetching -----------------------------------------------------------
 
 async function buscarMetricas(organizationId: string): Promise<MetricasHoje> {
@@ -438,7 +469,11 @@ export default async function HojePage() {
   const org = await resolveActiveOrg(user);
   if (!org) redirect("/app/onboarding");
 
-  const [metrics, gabineteHoje] = await Promise.all([buscarMetricas(org.orgId), buscarGabineteHoje(org.orgId)]);
+  const [metrics, gabineteHoje, filaAcao] = await Promise.all([
+    buscarMetricas(org.orgId),
+    buscarGabineteHoje(org.orgId),
+    buscarFilaDeAcao(org.orgId),
+  ]);
 
   return (
     <>
@@ -446,6 +481,7 @@ export default async function HojePage() {
       <HojeClient
         metrics={metrics}
         gabineteHoje={gabineteHoje}
+        filaAcao={filaAcao}
         nome={primeiroNome(user.full_name)}
         saudacao={saudacao()}
         dataFormatada={dataFormatada()}
