@@ -23,6 +23,7 @@ import { audit } from "@/lib/audit";
 import { autorizaCron } from "@/lib/auth/cron-auth";
 import { rodarUmaRodadaDeCampanha } from "@/lib/campanhas/rodada";
 import { processarRetries } from "@/lib/campanhas/retry";
+import { esfriarInativos } from "@/lib/politico/esfriamento";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 export const dynamic = "force-dynamic";
@@ -38,8 +39,11 @@ async function handle(req: NextRequest): Promise<Response> {
   const r = await rodarUmaRodadaDeCampanha(admin);
   // Cutucada de 24h para quem não respondeu (campanhas com retry ligado).
   const retry = await processarRetries(admin);
+  // Esfriamento do funil ~1x/hora (o worker roda a cada minuto): a temperatura
+  // reflete o AGORA — quem some esfria. Barato (só o conjunto quente/morno).
+  const esfriados = new Date().getMinutes() === 17 ? (await esfriarInativos(admin)).esfriados : 0;
 
-  if (r.enviadas > 0 || r.pulados > 0 || r.concluidas > 0 || r.promovidas > 0 || retry.enviados > 0) {
+  if (r.enviadas > 0 || r.pulados > 0 || r.concluidas > 0 || r.promovidas > 0 || retry.enviados > 0 || esfriados > 0) {
     void audit({
       action: "cron.campaign_worker",
       requestId,
@@ -50,12 +54,13 @@ async function handle(req: NextRequest): Promise<Response> {
         concluidas: r.concluidas,
         promovidas: r.promovidas,
         retry_enviados: retry.enviados,
+        esfriados,
         detalhe: r.detalhe,
       },
     });
   }
 
-  return ok({ ...r, retry_enviados: retry.enviados }, { requestId });
+  return ok({ ...r, retry_enviados: retry.enviados, esfriados }, { requestId });
 }
 
 export async function GET(req: NextRequest): Promise<Response> {
