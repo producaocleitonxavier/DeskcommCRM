@@ -340,9 +340,25 @@ export default async function InstagramHubPage() {
           ? `${metricas.flowsAtivos} ativo${metricas.flowsAtivos !== 1 ? "s" : ""}`
           : null,
     },
-    // "Tokens de Webhook" foi retirado da vitrine do cliente: é encanamento técnico
-    // (setup único da equipe GIP, via Graph API), não uma função do político. A
-    // rota /app/instagram/webhooks continua existindo para a configuração inicial.
+    // "Tokens de Webhook" é encanamento técnico (conectar a conta do cliente aos
+    // eventos do Instagram, no onboarding). NÃO é função do político, então só
+    // aparece para a EQUIPE GIP (platform admin) — o cliente (admin da própria org)
+    // não vê. A rota /app/instagram/webhooks continua existindo.
+    ...(user.is_platform_admin
+      ? [
+          {
+            href: "/app/instagram/webhooks",
+            titulo: "Tokens de Webhook",
+            descricao:
+              "Conecta a conta do cliente aos eventos do Instagram — setup da equipe GIP (não aparece pro cliente).",
+            icon: "webhook",
+            badge:
+              metricas.tokensAtivos > 0
+                ? `${metricas.tokensAtivos} token${metricas.tokensAtivos !== 1 ? "s" : ""}`
+                : null,
+          },
+        ]
+      : []),
     {
       href: "/app/instagram/etiquetas",
       titulo: "Funil Político",
