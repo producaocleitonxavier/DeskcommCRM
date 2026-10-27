@@ -156,7 +156,7 @@ export default function AutomacoesInstagramPage() {
               style={{ background: "#0A0C10", boxShadow: "0 0 16px rgba(215,243,106,0.28)", border: "1px solid rgba(215,243,106,0.25)" }}
             >
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src="/gip-logo.jpg" alt="GIPCHAT" className="h-full w-full object-cover" style={{ transform: "scale(1.5)", objectPosition: "center 30%" }} />
+              <img src="/gipchat-elmo.png" alt="GIPCHAT" className="h-full w-full object-contain" />
             </span>
             <div className="min-w-0">
               <span className="text-[11px] font-bold uppercase tracking-[0.2em]" style={{ color: "#D7F36A" }}>Instagram · Automação</span>

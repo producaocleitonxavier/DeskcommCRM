@@ -340,17 +340,9 @@ export default async function InstagramHubPage() {
           ? `${metricas.flowsAtivos} ativo${metricas.flowsAtivos !== 1 ? "s" : ""}`
           : null,
     },
-    {
-      href: "/app/instagram/webhooks",
-      titulo: "Tokens de Webhook",
-      descricao:
-        "Gere os tokens de URL que conectam seu Instagram Business ao sistema via Graph API.",
-      icon: "webhook",
-      badge:
-        metricas.tokensAtivos > 0
-          ? `${metricas.tokensAtivos} token${metricas.tokensAtivos !== 1 ? "s" : ""}`
-          : null,
-    },
+    // "Tokens de Webhook" foi retirado da vitrine do cliente: é encanamento técnico
+    // (setup único da equipe GIP, via Graph API), não uma função do político. A
+    // rota /app/instagram/webhooks continua existindo para a configuração inicial.
     {
       href: "/app/instagram/etiquetas",
       titulo: "Funil Político",
@@ -478,7 +470,6 @@ export default async function InstagramHubPage() {
         <KpiCard label="Automações ativas" value={metricas.flowsAtivos} icon="zap" />
         <KpiCard label="Comentários hoje" value={metricas.comentariosHoje} icon="message" live />
         <KpiCard label="DMs enviadas hoje" value={metricas.dmsEnviadasHoje} icon="send" live />
-        <KpiCard label="Tokens ativos" value={metricas.tokensAtivos} icon="key" />
       </section>
 
       {/* ── Seções ──────────────────────────────────────────────── */}
