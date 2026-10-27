@@ -325,7 +325,7 @@ export default async function InstagramHubPage() {
       href: "/app/instagram/captacao",
       titulo: "Captação (Kanban)",
       descricao:
-        "Quem interage vira lead qualificado por MG/BH e, com WhatsApp, apoiador pronto pra 2028.",
+        "Quem interage vira lead qualificado pela sua região e, com o WhatsApp, apoiador ativo.",
       icon: "users",
       badge: null,
     },
@@ -333,7 +333,7 @@ export default async function InstagramHubPage() {
       href: "/app/instagram/automacoes",
       titulo: "Automações",
       descricao:
-        "Flows que respondem comentários e enviam DMs automaticamente — como o ManyChat, mas seu.",
+        "Respondem comentários e mandam DMs sozinhas — tudo seu, sem depender de ferramenta de fora.",
       icon: "zap",
       badge:
         metricas.flowsAtivos > 0
@@ -383,7 +383,7 @@ export default async function InstagramHubPage() {
               Instagram
             </h1>
             <p className="mt-0.5 text-[15px]" style={{ color: "var(--color-text-muted)" }}>
-              Motor ManyChat próprio — comentários e DMs no automático.
+              Comentários e DMs no automático — o seu motor de captação.
             </p>
           </div>
         </div>
@@ -475,7 +475,7 @@ export default async function InstagramHubPage() {
 
       {/* ── KPIs ─────────────────────────────────────────────────── */}
       <section aria-label="Métricas do dia" className="flex flex-wrap gap-3">
-        <KpiCard label="Flows ativos" value={metricas.flowsAtivos} icon="zap" />
+        <KpiCard label="Automações ativas" value={metricas.flowsAtivos} icon="zap" />
         <KpiCard label="Comentários hoje" value={metricas.comentariosHoje} icon="message" live />
         <KpiCard label="DMs enviadas hoje" value={metricas.dmsEnviadasHoje} icon="send" live />
         <KpiCard label="Tokens ativos" value={metricas.tokensAtivos} icon="key" />
