@@ -34,10 +34,10 @@ export default async function PersonalizacaoCaptacaoPage() {
           ← Captação
         </Link>
         <h1 className="font-heading text-[28px] font-bold leading-tight mt-2" style={{ color: "var(--color-text)" }}>
-          Personalização da captação
+          Configure sua captação
         </h1>
         <p className="text-[15px] mt-0.5" style={{ color: "var(--color-text-muted)" }}>
-          Defina a região-alvo do candidato e as mensagens. O Kanban e a qualificação se adaptam sozinhos — o mesmo motor serve qualquer cidade.
+          Em 4 passos simples. Já vem tudo pronto — você só ajusta o que quiser e salva. O Kanban e as respostas se adaptam sozinhos.
         </p>
       </header>
 
