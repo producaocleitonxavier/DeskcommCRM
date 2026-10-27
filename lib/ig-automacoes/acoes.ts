@@ -432,12 +432,18 @@ async function executarCaptarInstagram(
   const cfg = await lerCaptacaoConfig(db, ctx.organizationId);
   if (!cfg.ativo) return { tipo, status: "skipped", detail: "captacao_inativa" };
 
-  // ── RETORNANTE (já no funil) ─────────────────────────────────────────────
-  // NÃO duplica card, NÃO reenvia a pesquisa. Mas NUTRE o fã (CTA caloroso +
-  // link do material), com limite de 1x/12h pra não virar spam de quem comenta
-  // várias vezes seguidas. (Evita o erro do Gabinete Digital de duplicar o card.)
+  // ── RETORNANTE (já no funil) — por ESTÁGIO ───────────────────────────────
+  // NÃO duplica card e NÃO recomeça do zero. A resposta pública do comentário é
+  // DIFERENTE da 1ª vez (não "chama de novo" como se nunca tivesse falado), e a
+  // DM continua de ONDE A PESSOA PAROU, sem repedir o que ela já deu:
+  //   em_conversa/interagiu (não deu cidade) → re-convida (a pesquisa)
+  //   qualificado_mgbh (deu cidade, falta WhatsApp) → pede só o WhatsApp
+  //   apoiador_whatsapp (deu tudo) / fora_de_alvo → agradece + material, sem repergunta
+  // Tudo com trava de 1x/12h pra não virar spam de quem comenta vários vídeos.
+  // (Resolve a dor do DG Digital: mesma pessoa não leva 10 mensagens iguais.)
   if (existente && (existente.custom_fields as Record<string, unknown>)?.captacao_estagio) {
     const cf = (existente.custom_fields as Record<string, unknown>) ?? {};
+    const estagio = typeof cf.captacao_estagio === "string" ? cf.captacao_estagio : "";
     const ultimo =
       typeof cf.captacao_ultimo_retorno_at === "string"
         ? new Date(cf.captacao_ultimo_retorno_at).getTime()
@@ -450,8 +456,16 @@ async function executarCaptarInstagram(
       .update({ custom_fields: { ...cf, captacao_ultimo_retorno_at: new Date().toISOString() } })
       .eq("id", existente.id)
       .eq("organization_id", ctx.organizationId);
-    await emitirRespostaEDm(db, ctx, sub(cfg.textoRespostaComentario), cfg.textoDmRetorno || null);
-    return { tipo, status: "ok", detail: "retorno_nutrido" };
+
+    const dmPorEstagio =
+      estagio === "em_conversa" || estagio === "interagiu"
+        ? cfg.textoDmPesquisa.replace(/\{\{username\}\}/gi, ctx.fromUsername ?? "")
+        : estagio === "qualificado_mgbh"
+          ? cfg.textoDmWhatsapp
+          : cfg.textoDmRetorno; // apoiador_whatsapp (completo) ou fora_de_alvo
+
+    await emitirRespostaEDm(db, ctx, sub(cfg.textoRespostaComentarioRetorno), dmPorEstagio || null);
+    return { tipo, status: "ok", detail: `retorno_${estagio || "sem_estagio"}` };
   }
 
   // ── 1ª VEZ: cria o lead no funil + dispara resposta e a pesquisa ─────────

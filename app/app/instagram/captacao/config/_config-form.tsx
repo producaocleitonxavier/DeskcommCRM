@@ -64,6 +64,7 @@ export default function ConfigForm({ inicial }: { inicial: CaptacaoConfig }) {
   const [incluirRegiao, setIncluirRegiao] = useState(inicial.abrangencia === "cidade_rm");
   const [cidadesExtra, setCidadesExtra] = useState(inicial.cidadesExtra.join("\n"));
   const [textoRespostaComentario, setTextoResposta] = useState(inicial.textoRespostaComentario);
+  const [textoRespostaComentarioRetorno, setTextoRespostaRetorno] = useState(inicial.textoRespostaComentarioRetorno);
   const [textoDmPesquisa, setTextoDmPesquisa] = useState(inicial.textoDmPesquisa);
   const [textoDmWhatsapp, setTextoDmWhatsapp] = useState(inicial.textoDmWhatsapp);
   const [textoDmEntrega, setTextoDmEntrega] = useState(inicial.textoDmEntrega);
@@ -95,6 +96,7 @@ export default function ConfigForm({ inicial }: { inicial: CaptacaoConfig }) {
         abrangencia: abrangenciaFinal(),
         cidadesExtra: cidadesExtra.split(/[\n,]/).map((c) => c.trim()).filter(Boolean),
         textoRespostaComentario,
+        textoRespostaComentarioRetorno,
         textoDmPesquisa,
         textoDmWhatsapp,
         textoDmEntrega,
@@ -212,8 +214,13 @@ export default function ConfigForm({ inicial }: { inicial: CaptacaoConfig }) {
         {avancado && (
           <div className="space-y-4 border-t px-5 py-4" style={{ borderColor: "var(--color-border)" }}>
             <div>
-              <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide" style={{ color: "var(--color-text-subtle)" }}>Resposta pública no comentário</label>
+              <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide" style={{ color: "var(--color-text-subtle)" }}>Resposta pública no comentário (1ª vez)</label>
               <input className={inputCls} style={inputStyle} value={textoRespostaComentario} onChange={(e) => setTextoResposta(e.target.value)} />
+            </div>
+            <div>
+              <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide" style={{ color: "var(--color-text-subtle)" }}>Resposta no comentário de quem JÁ é da sua base</label>
+              <input className={inputCls} style={inputStyle} value={textoRespostaComentarioRetorno} onChange={(e) => setTextoRespostaRetorno(e.target.value)} />
+              <p className="mt-1 text-[11px]" style={{ color: "var(--color-text-subtle)" }}>Quem já respondeu antes vê esta — pra não parecer que você nunca falou com a pessoa.</p>
             </div>
             <div>
               <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide" style={{ color: "var(--color-text-subtle)" }}>Pedido de WhatsApp (se ainda faltar)</label>

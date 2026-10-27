@@ -18,6 +18,7 @@ export interface SalvarCaptacaoInput {
   abrangencia: Abrangencia;
   cidadesExtra: string[];
   textoRespostaComentario: string;
+  textoRespostaComentarioRetorno: string;
   textoDmPesquisa: string;
   textoDmWhatsapp: string;
   textoDmEntrega: string;
@@ -51,6 +52,7 @@ export async function salvarCaptacaoConfig(
       abrangencia: abr,
       cidades_extra: input.cidadesExtra.map((c) => c.trim()).filter(Boolean),
       texto_resposta_comentario: input.textoRespostaComentario.trim() || null,
+      texto_resposta_comentario_retorno: input.textoRespostaComentarioRetorno.trim() || null,
       texto_dm_pesquisa: input.textoDmPesquisa.trim() || null,
       texto_dm_whatsapp: input.textoDmWhatsapp.trim() || null,
       texto_dm_entrega: input.textoDmEntrega.trim() || null,

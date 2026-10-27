@@ -18,6 +18,8 @@ export interface CaptacaoConfig {
   abrangencia: Abrangencia;
   cidadesExtra: string[];
   textoRespostaComentario: string;
+  /** Resposta pública ao comentário de quem JÁ está no funil (diferente da 1ª vez). */
+  textoRespostaComentarioRetorno: string;
   textoDmPesquisa: string;
   textoDmWhatsapp: string;
   textoDmEntrega: string;
@@ -32,6 +34,7 @@ export const CAPTACAO_DEFAULTS: Omit<CaptacaoConfig, "organizationId"> = {
   abrangencia: "cidade",
   cidadesExtra: [],
   textoRespostaComentario: "Que bom te ver por aqui! 🙏 Te chamei no direct, dá uma conferida 📩",
+  textoRespostaComentarioRetorno: "Opa, de novo por aqui! 🙏 Já te respondi lá no direct, dá uma olhada 📩",
   // A mensagem que CONVERTE: oferece valor (material gratuito todo mês) e pede os
   // 4 dados de uma vez — estado, cidade, bairro e WhatsApp. A IA extrai tudo que
   // vier; o que faltar é reperguntado. (Lição do DG Digital: sem troca clara,
@@ -73,6 +76,7 @@ export async function lerCaptacaoConfig(
       : "cidade"),
     cidadesExtra: Array.isArray(d.cidades_extra) ? (d.cidades_extra as string[]) : [],
     textoRespostaComentario: str("texto_resposta_comentario", CAPTACAO_DEFAULTS.textoRespostaComentario)!,
+    textoRespostaComentarioRetorno: str("texto_resposta_comentario_retorno", CAPTACAO_DEFAULTS.textoRespostaComentarioRetorno)!,
     textoDmPesquisa: str("texto_dm_pesquisa", CAPTACAO_DEFAULTS.textoDmPesquisa)!,
     textoDmWhatsapp: str("texto_dm_whatsapp", CAPTACAO_DEFAULTS.textoDmWhatsapp)!,
     textoDmEntrega: str("texto_dm_entrega", CAPTACAO_DEFAULTS.textoDmEntrega)!,
