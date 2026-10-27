@@ -37,13 +37,11 @@ export interface PerfilProprio {
   midias: MidiaPropria[];
 }
 
-/**
- * Lê o perfil + mídias recentes da conta Instagram conectada da organização.
- * `null` = Instagram não conectado (ou token inválido/expirado).
- */
-export async function lerPerfilInstagram(organizationId: string): Promise<PerfilProprio | null> {
+/** Resolve o token/versão da conta IG conectada da org (ou null). Interno. */
+async function resolverContaIg(
+  organizationId: string,
+): Promise<{ v: string; tok: string } | null> {
   const admin = createAdminClient();
-
   const { data: sessao } = await admin
     .from("channel_sessions")
     .select("ig_business_account_id")
@@ -60,9 +58,58 @@ export async function lerPerfilInstagram(organizationId: string): Promise<Perfil
 
   const creds = await resolveIgCreds(admin, { organizationId, businessAccountId: baid });
   if (!creds) return null;
+  return { v: creds.graphVersion, tok: creds.token };
+}
 
-  const v = creds.graphVersion;
-  const tok = creds.token;
+/** Mapeia uma mídia bruta da Graph API para `MidiaPropria`. */
+function mapMidia(m: Record<string, unknown>): MidiaPropria {
+  return {
+    id: String(m.id ?? ""),
+    tipo: (m.media_type as string) ?? null,
+    legenda: (m.caption as string) ?? null,
+    permalink: (m.permalink as string) ?? null,
+    // vídeos trazem thumbnail_url; imagens trazem media_url.
+    thumb: (m.thumbnail_url as string) ?? (m.media_url as string) ?? null,
+    timestamp: (m.timestamp as string) ?? null,
+    likes: Number(m.like_count ?? 0),
+    comentarios: Number(m.comments_count ?? 0),
+  };
+}
+
+/**
+ * Lista só as mídias recentes da conta conectada — para o SELETOR DE VÍDEOS da
+ * automação (o cliente clica em quais posts terão captação). `id` = media_id, o
+ * mesmo que o webhook de comentário manda, então casa exato no motor.
+ * `null` = Instagram não conectado (ou token inválido/expirado).
+ */
+export async function listarMidiasDaConta(
+  organizationId: string,
+  limit = 24,
+): Promise<MidiaPropria[] | null> {
+  const conta = await resolverContaIg(organizationId);
+  if (!conta) return null;
+  try {
+    const res = await fetch(
+      `${IG_GRAPH}/${conta.v}/me/media?fields=id,caption,media_type,thumbnail_url,media_url,permalink,timestamp,like_count,comments_count&limit=${limit}&access_token=${conta.tok}`,
+    );
+    if (!res.ok) return null;
+    const json = (await res.json()) as { data?: Array<Record<string, unknown>> };
+    return (json.data ?? []).map(mapMidia);
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Lê o perfil + mídias recentes da conta Instagram conectada da organização.
+ * `null` = Instagram não conectado (ou token inválido/expirado).
+ */
+export async function lerPerfilInstagram(organizationId: string): Promise<PerfilProprio | null> {
+  const conta = await resolverContaIg(organizationId);
+  if (!conta) return null;
+
+  const v = conta.v;
+  const tok = conta.tok;
 
   try {
     const perfilRes = await fetch(

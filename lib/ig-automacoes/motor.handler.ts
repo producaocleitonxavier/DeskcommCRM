@@ -56,10 +56,15 @@ function avaliarKeyword(texto: string | null, config: TriggerConfigKeyword): boo
 /** Avalia se o post_id bate com a whitelist (se configurada) */
 function avaliarPostId(
   mediaId: string | null,
-  config: { post_ids?: string[] },
+  config: { post_ids?: string[]; lista_exata?: boolean },
 ): boolean {
   const postIds = Array.isArray(config.post_ids) ? config.post_ids : [];
-  if (postIds.length === 0) return true; // sem filtro de post = qualquer post
+  if (postIds.length === 0) {
+    // Modo allowlist ("só nos vídeos que eu marcar"): lista vazia = dispara em
+    // NADA (trava de segurança — vídeo político nunca dispara sem querer). Sem o
+    // marcador `lista_exata`, mantém a semântica antiga (vazio = qualquer post).
+    return config.lista_exata === true ? false : true;
+  }
   return mediaId !== null && postIds.includes(mediaId);
 }
 
@@ -94,8 +99,11 @@ function flowCasaComEvento(
     }
 
     case "comment_no_post": {
-      // Comentário SEM filtro de post específico (mas verifica se post_ids exclui este)
-      return avaliarPostId(payload.mediaId, flow.trigger_config as { post_ids?: string[] });
+      // "Só nestes posts": casa só os media_ids da allowlist (vazio+lista_exata = nenhum).
+      return avaliarPostId(
+        payload.mediaId,
+        flow.trigger_config as { post_ids?: string[]; lista_exata?: boolean },
+      );
     }
 
     case "story_reply": {

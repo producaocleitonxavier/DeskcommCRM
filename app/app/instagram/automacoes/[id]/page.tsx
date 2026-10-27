@@ -12,6 +12,7 @@ import { useRouter, useParams } from "next/navigation";
 import Link from "next/link";
 
 import { CommandHero } from "@/components/politico/command-hero";
+import SeletorPosts from "../_seletor-posts";
 
 export const dynamic = "force-dynamic";
 
@@ -58,7 +59,7 @@ interface FlowRow {
 const TRIGGER_OPTIONS: { value: TriggerTipo; label: string; descricao: string }[] = [
   { value: "novo_comentario", label: "Em qualquer comentário (recomendado)", descricao: "Responde quem comentar em qualquer post ou reel seu. É o modo da captação — o que mais traz gente." },
   { value: "comment_keyword", label: "Só quando o comentário tiver uma palavra", descricao: "Responde só quando o comentário contém uma palavra que você escolher (ex.: EU QUERO)." },
-  { value: "comment_no_post", label: "Só em posts específicos", descricao: "Responde só nos posts que você indicar." },
+  { value: "comment_no_post", label: "Só nos vídeos que eu escolher", descricao: "Você clica nos vídeos que terão a automação (os sensíveis ficam de fora). Mais seguro e mais controle." },
   { value: "story_reply", label: "Quando responderem seu Story", descricao: "Dispara quando alguém responde um Story seu." },
 ];
 
@@ -197,6 +198,7 @@ export default function EditarFlowPage() {
     }
     if (triggerTipo === "comment_no_post") {
       cfg.post_ids = postIds.split(",").map((p) => p.trim()).filter(Boolean);
+      cfg.lista_exata = true; // allowlist: vazio = não dispara em nada (trava de segurança)
     }
     return cfg;
   }
@@ -344,13 +346,10 @@ export default function EditarFlowPage() {
           )}
 
           {triggerTipo === "comment_no_post" && (
-            <div>
-              <label className="mb-1.5 block text-sm font-medium" style={{ color: "var(--color-text)" }}>Código interno dos posts (separados por vírgula)</label>
-              <input type="text" value={postIds} onChange={(e) => setPostIds(e.target.value)} placeholder="17891234567, 17898765432" className="wr-input w-full" />
-              <p className="mt-1.5 text-xs" style={{ color: "var(--color-text-subtle)" }}>
-                Atenção: o Instagram identifica o post por um <strong>código interno</strong>, que <strong>não é</strong> o do link (o <code>Dez9PdFNZq</code> do endereço não serve). Por isso o recomendado é deixar em <strong>“Em qualquer comentário”</strong>.
-              </p>
-            </div>
+            <SeletorPosts
+              selecionados={postIds.split(",").map((p) => p.trim()).filter(Boolean)}
+              onChange={(ids) => setPostIds(ids.join(","))}
+            />
           )}
         </div>
 
