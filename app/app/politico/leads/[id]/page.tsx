@@ -13,6 +13,7 @@ import { ArrowUpRight, GitBranch, MessageCircle, Pencil } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { requireAuth, resolveActiveOrg } from "@/lib/auth/server";
 import BotaoDescadastro from "./_descadastrar";
+import VideoDivulgar, { type VideoItem } from "./_video-divulgar";
 
 export const dynamic = "force-dynamic";
 
@@ -326,6 +327,18 @@ export default async function FichaPage({
 
   const { lead, contact, transitions, mobilizadorNome, origemCaptacao } = dados;
 
+  // Vídeos da biblioteca (posts do IG) para gerar o link pessoal de divulgação.
+  const dbVideos = await createClient();
+  const { data: videosData } = await dbVideos
+    .from("pol_materiais")
+    .select("id, titulo")
+    .eq("organization_id", org.orgId)
+    .eq("tipo", "video")
+    .eq("ativo", true)
+    .order("created_at", { ascending: false })
+    .limit(12);
+  const videos: VideoItem[] = ((videosData ?? []) as { id: string; titulo: string }[]).map((v) => ({ id: v.id, titulo: v.titulo }));
+
   // Cidade/bairro do contato — vários formatos de custom_fields coexistem na base
   // (cadastro novo: cidade/bairro + endereco; demanda/eventos/migração: endereco_gip).
   const cf = ((contact as { custom_fields?: Record<string, unknown> }).custom_fields ?? {}) as Record<string, unknown>;
@@ -549,6 +562,11 @@ export default async function FichaPage({
               </div>
             </div>
           </div>
+
+          {/* Vídeo pra divulgar — link pessoal rastreável (alcance do multiplicador) */}
+          {!contact.is_blocked && (
+            <VideoDivulgar contactId={contact.id} whatsDigits={whatsDigits} videos={videos} />
+          )}
 
           {/* KPIs do contato */}
           <div className="wr-card wr-hover p-5">
