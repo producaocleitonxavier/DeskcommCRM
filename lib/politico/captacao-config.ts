@@ -24,6 +24,8 @@ export interface CaptacaoConfig {
   textoDmWhatsapp: string;
   textoDmEntrega: string;
   textoDmRetorno: string;
+  /** Link do material (ebook/PDF/vídeo). Entra sozinho onde houver {{link}} nas mensagens. */
+  linkMaterial: string | null;
   pedirWhatsappSoAlvo: boolean;
 }
 
@@ -44,9 +46,10 @@ export const CAPTACAO_DEFAULTS: Omit<CaptacaoConfig, "organizationId"> = {
   textoDmWhatsapp:
     "Show! 🙌 Só falta o seu *WhatsApp* (com DDD) pra eu te enviar os materiais. Me manda assim: (31) 99999-9999",
   textoDmEntrega:
-    "Prontinho! 🎁 Seu material está aqui: [COLE O LINK]. Todo mês eu te mando novidades gratuitas por aqui — conta comigo! 💚",
+    "Prontinho! 🎁 Seu material está aqui: {{link}} — todo mês eu te mando novidades gratuitas por aqui. Conta comigo! 💚",
   textoDmRetorno:
-    "Que bom te ver de novo! 🙏 Muito obrigado pelo apoio de sempre. Se quiser, o material mais recente está aqui: [COLE O LINK]",
+    "Que bom te ver de novo! 🙏 Muito obrigado pelo apoio de sempre. O material mais recente está aqui: {{link}}",
+  linkMaterial: null,
   pedirWhatsappSoAlvo: true,
 };
 
@@ -81,8 +84,21 @@ export async function lerCaptacaoConfig(
     textoDmWhatsapp: str("texto_dm_whatsapp", CAPTACAO_DEFAULTS.textoDmWhatsapp)!,
     textoDmEntrega: str("texto_dm_entrega", CAPTACAO_DEFAULTS.textoDmEntrega)!,
     textoDmRetorno: str("texto_dm_retorno", CAPTACAO_DEFAULTS.textoDmRetorno)!,
+    linkMaterial: str("link_material", null),
     pedirWhatsappSoAlvo: d.pedir_whatsapp_so_alvo !== false,
   };
+}
+
+/**
+ * Substitui {{link}} (e o legado [COLE O LINK]) pelo link do material configurado.
+ * Se não houver link, o marcador some. Textos sem marcador passam intactos — por
+ * isso é seguro aplicar em qualquer mensagem.
+ */
+export function aplicarLinkMaterial(texto: string, c: CaptacaoConfig): string {
+  const link = (c.linkMaterial ?? "").trim();
+  return texto
+    .replace(/\{\{\s*link\s*\}\}/gi, link)
+    .replace(/\[COLE O LINK\]/gi, link);
 }
 
 /** Rótulo curto do alvo: "Belo Horizonte", "Belo Horizonte + região", "MG". */

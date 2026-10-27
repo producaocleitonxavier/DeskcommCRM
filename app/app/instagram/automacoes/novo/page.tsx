@@ -52,21 +52,27 @@ interface AcaoConfig {
 // "Palavra-chave em DM" foram removidos: o IG não envia webhook de follow (é um
 // beta fechado do Meta via parceiro) e o handler de DM por palavra-chave ainda
 // não existe — virariam flow morto.
+// Quando a automação dispara — em linguagem de pessoa, não de motor. A opção
+// recomendada ("em qualquer comentário") vem primeiro e é o padrão: é o que a
+// captação usa e o que mais traz gente.
 const TRIGGER_OPTIONS: { value: TriggerTipo; label: string; descricao: string }[] = [
-  { value: "comment_keyword", label: "Palavra-chave no comentário", descricao: "Dispara quando o comentário contém uma ou mais palavras-chave." },
-  { value: "comment_no_post", label: "Qualquer comentário em post específico", descricao: "Dispara em qualquer comentário num post específico." },
-  { value: "novo_comentario", label: "Qualquer comentário (catch-all)", descricao: "Dispara em qualquer comentário — use como fallback no final da lista." },
-  { value: "story_reply", label: "Resposta de Story", descricao: "Dispara quando alguém responde um Story." },
+  { value: "novo_comentario", label: "Em qualquer comentário (recomendado)", descricao: "Responde quem comentar em qualquer post ou reel seu. É o modo da captação — o que mais traz gente." },
+  { value: "comment_keyword", label: "Só quando o comentário tiver uma palavra", descricao: "Responde só quando o comentário contém uma palavra que você escolher (ex.: EU QUERO)." },
+  { value: "comment_no_post", label: "Só em posts específicos", descricao: "Responde só nos posts que você indicar." },
+  { value: "story_reply", label: "Quando responderem seu Story", descricao: "Dispara quando alguém responde um Story seu." },
 ];
 
+// O que a automação FAZ. A "Captação completa" vem primeiro e já faz tudo (responde
+// o comentário + chama no Direct + pergunta cidade/WhatsApp + joga no Kanban), então
+// o cliente não precisa montar nada. As demais são peças soltas, pra casos avançados.
 const ACAO_OPTIONS: { value: AcaoTipo; label: string; descricao: string }[] = [
-  { value: "enviar_dm", label: "Enviar DM", descricao: "Envia mensagem direta para quem comentou. Variáveis: {{username}}, {{comentario}}" },
-  { value: "responder_comentario", label: "Responder comentário", descricao: "Responde publicamente ao comentário. Variáveis: {{username}}, {{comentario}}" },
-  { value: "add_etiqueta", label: "Adicionar etiqueta", descricao: "Adiciona uma etiqueta ao contato no CRM." },
-  { value: "criar_contato", label: "Criar contato", descricao: "Cria ou atualiza o contato no CRM com dados do Instagram." },
-  { value: "notificar_equipe", label: "Notificar equipe", descricao: "Envia notificação para a equipe no canal de atendimento." },
-  { value: "add_funil_politico", label: "Funil político", descricao: "Classifica o contato no funil: Simpatizante, Apoiador ou Embaixador." },
-  { value: "captar_instagram", label: "Captação (funil + pesquisa)", descricao: "Capta o comentador no Kanban: responde, manda a pesquisa de cidade e começa a jornada. Usa os textos da Personalização. Dedup embutido (não duplica nem reenvia) e nutre quem retorna. Recomendado como ação única." },
+  { value: "captar_instagram", label: "Captação completa (recomendado)", descricao: "Faz tudo de uma vez: responde o comentário em público, chama a pessoa no Direct, pergunta estado/cidade/bairro/WhatsApp e coloca no Kanban. Usa os textos da sua Personalização. Não precisa adicionar mais nada." },
+  { value: "enviar_dm", label: "Só chamar no Direct", descricao: "Envia uma mensagem no Direct para quem comentou. Use {{username}} pra chamar pelo @." },
+  { value: "responder_comentario", label: "Só responder o comentário", descricao: "Responde em público, embaixo do comentário. Use {{username}} pra chamar pelo @." },
+  { value: "add_etiqueta", label: "Marcar com uma etiqueta", descricao: "Adiciona uma etiqueta ao contato." },
+  { value: "criar_contato", label: "Criar o contato", descricao: "Cria ou atualiza o contato com os dados do Instagram." },
+  { value: "notificar_equipe", label: "Avisar a equipe", descricao: "Abre um aviso na Central para alguém do time olhar." },
+  { value: "add_funil_politico", label: "Classificar no funil", descricao: "Marca o nível: Simpatizante, Apoiador ou Embaixador." },
 ];
 
 const NIVEIS_FUNIL = ["Simpatizante", "Apoiador", "Embaixador"];
@@ -160,11 +166,11 @@ export default function NovoFlowPage() {
 
   const [nome, setNome] = useState("");
   const [descricao, setDescricao] = useState("");
-  const [triggerTipo, setTriggerTipo] = useState<TriggerTipo>("comment_keyword");
+  const [triggerTipo, setTriggerTipo] = useState<TriggerTipo>("novo_comentario");
   const [keywords, setKeywords] = useState("");
   const [caseSensitive, setCaseSensitive] = useState(false);
   const [postIds, setPostIds] = useState("");
-  const [acoes, setAcoes] = useState<AcaoConfig[]>([{ tipo: "enviar_dm", texto: "" }]);
+  const [acoes, setAcoes] = useState<AcaoConfig[]>([{ tipo: "captar_instagram" }]);
   const [salvando, setSalvando] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
 
@@ -235,8 +241,8 @@ export default function NovoFlowPage() {
     <div className="mx-auto max-w-[720px] space-y-[18px] px-4 py-7" style={{ background: "var(--color-bg)" }}>
       <CommandHero
         eyebrow="Instagram · Automações"
-        titulo="Novo flow"
-        subtitulo="Defina o gatilho e as ações. O primeiro flow que bater executa — os demais são ignorados."
+        titulo="Nova automação"
+        subtitulo="Escolha quando ela dispara e o que faz. Já vem no modo recomendado — se quiser, é só salvar."
         acoes={[{ href: "/app/instagram/automacoes", label: "← Voltar" }]}
       />
 
@@ -246,12 +252,12 @@ export default function NovoFlowPage() {
           <p style={sectionLabelStyle}>Identificação</p>
           <div className="space-y-3">
             <div>
-              <label className="mb-1.5 block text-sm font-medium" style={{ color: "var(--color-text)" }}>Nome do flow *</label>
+              <label className="mb-1.5 block text-sm font-medium" style={{ color: "var(--color-text)" }}>Nome (só pra você lembrar) *</label>
               <input
                 type="text"
                 value={nome}
                 onChange={(e) => setNome(e.target.value)}
-                placeholder='Ex: "Responde palavra INFO"'
+                placeholder='Ex.: "Captação Instagram"'
                 required
                 className="wr-input w-full"
               />
@@ -262,7 +268,7 @@ export default function NovoFlowPage() {
                 type="text"
                 value={descricao}
                 onChange={(e) => setDescricao(e.target.value)}
-                placeholder="Explique brevemente o que este flow faz"
+                placeholder="Explique rapidinho o que esta automação faz"
                 className="wr-input w-full"
               />
             </div>
@@ -271,7 +277,7 @@ export default function NovoFlowPage() {
 
         {/* ── Gatilho ──────────────────────────────────────────── */}
         <div className="wr-card space-y-4 p-5">
-          <p style={sectionLabelStyle}>Gatilho</p>
+          <p style={sectionLabelStyle}>Quando disparar</p>
           <select value={triggerTipo} onChange={(e) => setTriggerTipo(e.target.value as TriggerTipo)} className="wr-input w-full">
             {TRIGGER_OPTIONS.map((opt) => (
               <option key={opt.value} value={opt.value}>{opt.label}</option>
@@ -301,15 +307,17 @@ export default function NovoFlowPage() {
 
           {triggerTipo === "comment_no_post" && (
             <div>
-              <label className="mb-1.5 block text-sm font-medium" style={{ color: "var(--color-text)" }}>IDs dos posts (separados por vírgula)</label>
+              <label className="mb-1.5 block text-sm font-medium" style={{ color: "var(--color-text)" }}>Código interno dos posts (separados por vírgula)</label>
               <input
                 type="text"
                 value={postIds}
                 onChange={(e) => setPostIds(e.target.value)}
-                placeholder="17891234567, 17898765432 (deixe vazio para qualquer post)"
+                placeholder="17891234567, 17898765432"
                 className="wr-input w-full"
               />
-              <p className="mt-1.5 text-xs" style={{ color: "var(--color-text-subtle)" }}>Deixe em branco para disparar em qualquer comentário em qualquer post.</p>
+              <p className="mt-1.5 text-xs" style={{ color: "var(--color-text-subtle)" }}>
+                Atenção: o Instagram identifica o post por um <strong>código interno</strong>, que <strong>não é</strong> o do link (o <code>Dez9PdFNZq</code> do endereço não serve). Por isso o recomendado é deixar em <strong>“Em qualquer comentário”</strong> — responde em todos os posts sem você mexer em código nenhum.
+              </p>
             </div>
           )}
         </div>
@@ -317,7 +325,7 @@ export default function NovoFlowPage() {
         {/* ── Ações ────────────────────────────────────────────── */}
         <div className="wr-card space-y-4 p-5">
           <div className="flex items-center justify-between">
-            <p style={sectionLabelStyle}>Ações</p>
+            <p style={sectionLabelStyle}>O que fazer</p>
             <button type="button" onClick={addAcao} className="text-xs font-semibold" style={{ color: "var(--color-accent)" }}>+ Adicionar ação</button>
           </div>
 
@@ -334,7 +342,7 @@ export default function NovoFlowPage() {
           </div>
 
           <p className="text-xs" style={{ color: "var(--color-text-subtle)" }}>
-            As ações executam em ordem. Todas são executadas (best-effort), mesmo que uma falhe.
+            Com a <strong>Captação completa</strong> você não precisa de mais nada — ela já responde o comentário e chama no Direct. Se adicionar outras, elas rodam em ordem.
           </p>
         </div>
 
@@ -348,7 +356,7 @@ export default function NovoFlowPage() {
         {/* ── Botões ───────────────────────────────────────────── */}
         <div className="flex items-center gap-3">
           <button type="submit" disabled={salvando} className="wr-btn-dark disabled:opacity-50">
-            {salvando ? "Salvando…" : "Criar flow"}
+            {salvando ? "Salvando…" : "Criar automação"}
           </button>
           <Link
             href="/app/instagram/automacoes"

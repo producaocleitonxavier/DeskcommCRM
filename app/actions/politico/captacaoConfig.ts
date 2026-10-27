@@ -23,6 +23,7 @@ export interface SalvarCaptacaoInput {
   textoDmWhatsapp: string;
   textoDmEntrega: string;
   textoDmRetorno: string;
+  linkMaterial: string;
   pedirWhatsappSoAlvo: boolean;
 }
 
@@ -57,6 +58,7 @@ export async function salvarCaptacaoConfig(
       texto_dm_whatsapp: input.textoDmWhatsapp.trim() || null,
       texto_dm_entrega: input.textoDmEntrega.trim() || null,
       texto_dm_retorno: input.textoDmRetorno.trim() || null,
+      link_material: input.linkMaterial.trim() || null,
       pedir_whatsapp_so_alvo: input.pedirWhatsappSoAlvo,
       updated_at: new Date().toISOString(),
     },

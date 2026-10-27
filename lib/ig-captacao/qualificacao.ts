@@ -26,6 +26,7 @@ import { cerebroDaOrg, modeloDoCerebro } from "@/lib/ai/cerebro";
 import {
   lerCaptacaoConfig,
   estaNoAlvo,
+  aplicarLinkMaterial,
   type CaptacaoConfig,
 } from "@/lib/politico/captacao-config";
 
@@ -228,6 +229,9 @@ export async function qualificarPorDm(
   const config = await lerCaptacaoConfig(db, orgId);
   if (!config.ativo) return { status: "skipped", detail: "captacao_inativa" };
 
+  // Mensagem de entrega já com o link do material resolvido ({{link}}).
+  const entregaDm = aplicarLinkMaterial(config.textoDmEntrega, config);
+
   const igIdentity = `instagram:${senderIgId}`;
   const { data: contato } = await db
     .from("contacts")
@@ -262,7 +266,7 @@ export async function qualificarPorDm(
     if (noAlvo) {
       // No alvo: se o WhatsApp veio junto, finaliza agora; senão, pede o WhatsApp.
       if (typeof tel === "object") {
-        await finalizarApoiador(db, orgId, contato, base, tel.fone, config.textoDmEntrega, emitir);
+        await finalizarApoiador(db, orgId, contato, base, tel.fone, entregaDm, emitir);
         return { status: "ok", detail: "apoiador_graduado_tacada_unica" };
       }
       await db
@@ -286,7 +290,7 @@ export async function qualificarPorDm(
       })
       .eq("id", contato.id)
       .eq("organization_id", orgId);
-    await emitir(config.textoDmEntrega);
+    await emitir(entregaDm);
     return { status: "ok", detail: "fora_de_alvo_entregou_isca" };
   }
 
@@ -301,7 +305,7 @@ export async function qualificarPorDm(
       await emitir(config.textoDmWhatsapp);
       return { status: "ok", detail: "telefone_nao_entendido_reperguntou" };
     }
-    await finalizarApoiador(db, orgId, contato, cf, tel.fone, config.textoDmEntrega, emitir);
+    await finalizarApoiador(db, orgId, contato, cf, tel.fone, entregaDm, emitir);
     return { status: "ok", detail: "apoiador_graduado" };
   }
 

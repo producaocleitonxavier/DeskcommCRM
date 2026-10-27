@@ -15,7 +15,7 @@
 
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { logger } from "@/lib/logger";
-import { lerCaptacaoConfig } from "@/lib/politico/captacao-config";
+import { lerCaptacaoConfig, aplicarLinkMaterial } from "@/lib/politico/captacao-config";
 
 export interface AcaoCtx {
   /** ID interno do comentário em ig_comment_events */
@@ -462,7 +462,7 @@ async function executarCaptarInstagram(
         ? cfg.textoDmPesquisa.replace(/\{\{username\}\}/gi, ctx.fromUsername ?? "")
         : estagio === "qualificado_mgbh"
           ? cfg.textoDmWhatsapp
-          : cfg.textoDmRetorno; // apoiador_whatsapp (completo) ou fora_de_alvo
+          : aplicarLinkMaterial(cfg.textoDmRetorno, cfg); // apoiador_whatsapp (completo) ou fora_de_alvo
 
     await emitirRespostaEDm(db, ctx, sub(cfg.textoRespostaComentarioRetorno), dmPorEstagio || null);
     return { tipo, status: "ok", detail: `retorno_${estagio || "sem_estagio"}` };

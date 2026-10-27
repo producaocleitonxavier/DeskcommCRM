@@ -11,7 +11,7 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { ChevronDown, Megaphone, MapPin, MessageCircle, Gift, Check } from "lucide-react";
+import { ChevronDown, Megaphone, MapPin, MessageCircle, Gift, Check, LinkIcon } from "lucide-react";
 import { salvarCaptacaoConfig } from "@/app/actions/politico/captacaoConfig";
 import type { CaptacaoConfig, Abrangencia } from "@/lib/politico/captacao-config";
 
@@ -69,6 +69,7 @@ export default function ConfigForm({ inicial }: { inicial: CaptacaoConfig }) {
   const [textoDmWhatsapp, setTextoDmWhatsapp] = useState(inicial.textoDmWhatsapp);
   const [textoDmEntrega, setTextoDmEntrega] = useState(inicial.textoDmEntrega);
   const [textoDmRetorno, setTextoDmRetorno] = useState(inicial.textoDmRetorno);
+  const [linkMaterial, setLinkMaterial] = useState(inicial.linkMaterial ?? "");
   const [pedirWhatsappSoAlvo, setPedirWhatsappSoAlvo] = useState(inicial.pedirWhatsappSoAlvo);
   const [avancado, setAvancado] = useState(false);
 
@@ -101,6 +102,7 @@ export default function ConfigForm({ inicial }: { inicial: CaptacaoConfig }) {
         textoDmWhatsapp,
         textoDmEntrega,
         textoDmRetorno,
+        linkMaterial,
         pedirWhatsappSoAlvo,
       });
       if (r.ok) {
@@ -201,7 +203,7 @@ export default function ConfigForm({ inicial }: { inicial: CaptacaoConfig }) {
       <Bloco n={4} icone={Gift} titulo="O material que você entrega">
         <textarea className={inputCls} style={{ ...inputStyle, minHeight: 90 }} value={textoDmEntrega} onChange={(e) => setTextoDmEntrega(e.target.value)} />
         <p className="mt-2 text-[11px]" style={{ color: "var(--color-text-subtle)" }}>
-          Cole aqui, dentro do texto, o <strong>link do seu ebook/vídeo</strong>. É isso que a pessoa recebe depois de responder.
+          É isso que a pessoa recebe depois de responder. Onde está <code>{"{{link}}"}</code> entra, sozinho, o <strong>link do material</strong> — cole o link lá no <strong>Avançado</strong>, uma vez só.
         </p>
       </Bloco>
 
@@ -213,6 +215,22 @@ export default function ConfigForm({ inicial }: { inicial: CaptacaoConfig }) {
         </button>
         {avancado && (
           <div className="space-y-4 border-t px-5 py-4" style={{ borderColor: "var(--color-border)" }}>
+            <div className="rounded-[12px] p-3.5" style={{ background: "rgba(215,243,106,0.08)", border: "1px solid rgba(215,243,106,0.25)" }}>
+              <label className="mb-1.5 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide" style={{ color: "#D7F36A" }}>
+                <LinkIcon className="h-3.5 w-3.5" aria-hidden /> Link do material (ebook, PDF, vídeo)
+              </label>
+              <input
+                className={inputCls}
+                style={inputStyle}
+                value={linkMaterial}
+                onChange={(e) => setLinkMaterial(e.target.value)}
+                placeholder="https://seusite.com.br/material.pdf"
+                inputMode="url"
+              />
+              <p className="mt-1.5 text-[11px]" style={{ color: "var(--color-text-subtle)" }}>
+                Cole o endereço <strong>uma vez</strong>. Ele entra sozinho na mensagem de entrega e na de retorno (onde está <code>{"{{link}}"}</code>). Trocou o material do mês? Troca só aqui.
+              </p>
+            </div>
             <div>
               <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide" style={{ color: "var(--color-text-subtle)" }}>Resposta pública no comentário (1ª vez)</label>
               <input className={inputCls} style={inputStyle} value={textoRespostaComentario} onChange={(e) => setTextoResposta(e.target.value)} />
