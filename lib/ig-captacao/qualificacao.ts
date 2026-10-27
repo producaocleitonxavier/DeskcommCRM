@@ -73,6 +73,8 @@ async function extrairLocalidade(
   // 2) IA leve: extrai cidade/UF/BAIRRO de uma frase curta.
   try {
     const cerebro = await cerebroDaOrg(db, orgId);
+    // Org sem cérebro de IA configurado → fica só na heurística (não quebra).
+    if ("erro" in cerebro) return { cidade: heurCidade, uf: heurUf, bairro: null };
     const { text } = await generateText({
       model: modeloDoCerebro(cerebro),
       system:
