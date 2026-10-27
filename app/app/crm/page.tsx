@@ -65,7 +65,7 @@ export default async function CrmHubPage() {
       modulosLigados={await modulosLigados(createAdminClient())}
       title={traduzir("CRM", idioma)}
       subtitle={traduzir(
-        "Onde a venda acontece — e o que você define uma vez para ela funcionar.",
+        "Onde o relacionamento com o seu público acontece — e o que você define uma vez para ele funcionar.",
         idioma,
       )}
       locale={idioma}

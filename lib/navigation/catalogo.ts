@@ -184,7 +184,7 @@ export const NAV_CATALOG = [
     icon: "Funnel",
     group: "operacao",
     minRole: "admin",
-    section: "O dia a dia da venda",
+    section: "O dia a dia do relacionamento",
   },
   // ---- Atendimento — onde o operador passa o dia ----
   {
@@ -251,10 +251,10 @@ export const NAV_CATALOG = [
     // sistema; "funil de vendas" é palavra de quem vende.
     href: "/app/kanban",
     label: "Funis",
-    description: "Seus funis de venda — clique em um para abrir o quadro de clientes.",
+    description: "Seus funis — clique em um para abrir o quadro de contatos.",
     icon: "Kanban",
     group: "operacao",
-    section: "O dia a dia da venda",
+    section: "O dia a dia do relacionamento",
     sidebar: true,
   },
   {
@@ -271,7 +271,7 @@ export const NAV_CATALOG = [
       "Dispare mensagens e materiais para a base que você escolhe — por origem e estágio no funil, no ritmo que não queima o número.",
     icon: "Megaphone",
     group: "operacao",
-    section: "O dia a dia da venda",
+    section: "O dia a dia do relacionamento",
     sidebar: true,
   },
   {
@@ -284,7 +284,7 @@ export const NAV_CATALOG = [
       "Gere QR codes e links por lugar (praça, escola, evento, bio). A pessoa escaneia, manda 'me cadastrei' e recebe o material na hora — sem link pra clicar.",
     icon: "QrCode",
     group: "operacao",
-    section: "O dia a dia da venda",
+    section: "O dia a dia do relacionamento",
     sidebar: true,
   },
   {
@@ -293,7 +293,7 @@ export const NAV_CATALOG = [
     description: "As pessoas do outro lado da conversa e seu histórico.",
     icon: "Users",
     group: "operacao",
-    section: "O dia a dia da venda",
+    section: "O dia a dia do relacionamento",
     sidebar: true,
   },
   {
@@ -302,7 +302,7 @@ export const NAV_CATALOG = [
     description: "Cadastro B2B — razão social, CNPJ e decisores.",
     icon: "Buildings",
     group: "operacao",
-    section: "O dia a dia da venda",
+    section: "O dia a dia do relacionamento",
     // SEM sidebar: o CRM já tem Funis/Contatos/Tarefas no menu diário; este trio
     // mora no hub "Ver tudo em CRM" para não reabrir a corrida por pixel.
     minRole: "viewer",
@@ -315,7 +315,7 @@ export const NAV_CATALOG = [
     description: "Decisores e contatos ligados a empresas, com vários telefones.",
     icon: "UserCircle",
     group: "operacao",
-    section: "O dia a dia da venda",
+    section: "O dia a dia do relacionamento",
     minRole: "viewer",
     // Módulo opcional da instalação, desligado por padrão (doc 68, #1621).
     modulo: "crm_b2b",
@@ -331,7 +331,7 @@ export const NAV_CATALOG = [
     description: "O que ficou combinado, com prazo — e o que já venceu sem ninguém fazer.",
     icon: "ListChecks",
     group: "operacao",
-    section: "O dia a dia da venda",
+    section: "O dia a dia do relacionamento",
     sidebar: true,
   },
   {
@@ -343,10 +343,10 @@ export const NAV_CATALOG = [
     // um pixel por isso.
     href: "/app/tasks/planos",
     label: "Planos de tarefa",
-    description: "Sequências reutilizáveis de tarefas — montar uma vez e aplicar a cada negócio.",
+    description: "Sequências reutilizáveis de tarefas — montar uma vez e aplicar a cada contato.",
     icon: "FlowArrow",
     group: "operacao",
-    section: "O dia a dia da venda",
+    section: "O dia a dia do relacionamento",
   },
   {
     // Módulo VoIP (migration 0347). No grupo do CRM pelo mesmo critério de
@@ -378,7 +378,7 @@ export const NAV_CATALOG = [
     description: "Histórico de ligações (voz por IA) com transcrição.",
     icon: "Phone",
     group: "operacao",
-    section: "O dia a dia da venda",
+    section: "O dia a dia do relacionamento",
     minRole: "manager",
   },
   {
@@ -489,7 +489,7 @@ export const NAV_CATALOG = [
     description: "O que foi feito, por quem, e quanto o cliente paga.",
     icon: "Receipt",
     group: "operacao",
-    section: "O dia a dia da venda",
+    section: "O dia a dia do relacionamento",
     // ⚠️ FORA do sidebar, e isto foi MEDIDO, não escolhido por gosto. Com
     // `sidebar: true` o menu passou a rolar em 1280×900 e o e2e
     // `navegacao.spec.ts` ("nenhum grupo fica fora da dobra") reprovou — grupo

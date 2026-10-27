@@ -131,7 +131,7 @@ export function FormularioDeTarefa({
               id="tarefa-titulo"
               value={titulo}
               onChange={(e) => setTitulo(e.target.value)}
-              placeholder={t("Ex.: ligar de volta para fechar a proposta")}
+              placeholder={t("Ex.: retornar a ligação de uma liderança")}
               autoFocus
             />
           </div>

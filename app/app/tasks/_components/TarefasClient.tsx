@@ -75,7 +75,7 @@ export function TarefasClient({ podeEditar }: { podeEditar: boolean }) {
           <h1 className="text-2xl font-semibold tracking-tight">{t("Tarefas")}</h1>
           <p className="mt-1 text-sm text-muted-foreground">
             {t(
-              "O que ficou combinado, com prazo. Tarefa presa a um negócio aparece na linha do tempo dele.",
+              "O que ficou combinado, com prazo. Tarefa ligada a uma pessoa aparece na linha do tempo dela.",
             )}
           </p>
         </div>
