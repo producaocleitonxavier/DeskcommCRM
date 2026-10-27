@@ -4,7 +4,8 @@
  * Formulário completo para criar um flow de automação: trigger + lista de ações.
  * Arquitetura ManyChat: trigger dispara, ações executam em ordem, first-match wins.
  *
- * Acesso: manager+
+ * Acesso: admin (gate no layout). Visual: padrão War Room dark (CommandHero +
+ * wr-input + tokens de tema).
  */
 
 "use client";
@@ -12,6 +13,8 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+
+import { CommandHero } from "@/components/politico/command-hero";
 
 export const dynamic = "force-dynamic";
 
@@ -65,17 +68,10 @@ const ACAO_OPTIONS: { value: AcaoTipo; label: string; descricao: string }[] = [
 
 const NIVEIS_FUNIL = ["Simpatizante", "Apoiador", "Embaixador"];
 
-// ── Estilos WR2 para inputs ────────────────────────────────────────────────────
-
-const inputStyle: React.CSSProperties = {
-  borderColor: "#DCDCD5",
-  background: "#FFFFFF",
-};
-
 const sectionLabelStyle: React.CSSProperties = {
   fontSize: "11px",
   fontWeight: 600,
-  color: "#9A9D8F",
+  color: "var(--color-text-subtle)",
   letterSpacing: ".08em",
   textTransform: "uppercase" as const,
 };
@@ -95,41 +91,23 @@ function AcaoEditor({
   const info = ACAO_OPTIONS.find((o) => o.value === acao.tipo);
 
   return (
-    <div
-      className="rounded-[16px] p-4 space-y-3"
-      style={{ background: "#F6F6F2", border: "1px solid #F0F0EB" }}
-    >
+    <div className="space-y-3 rounded-[16px] p-4" style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)" }}>
       <div className="flex items-center justify-between gap-2">
-        <select
-          value={acao.tipo}
-          onChange={(e) => onChange({ tipo: e.target.value as AcaoTipo })}
-          className="flex-1 rounded-full border px-3 py-2 text-sm focus:outline-none focus:ring-2"
-          style={inputStyle}
-        >
+        <select value={acao.tipo} onChange={(e) => onChange({ tipo: e.target.value as AcaoTipo })} className="wr-input flex-1">
           {ACAO_OPTIONS.map((opt) => (
-            <option key={opt.value} value={opt.value}>
-              {opt.label}
-            </option>
+            <option key={opt.value} value={opt.value}>{opt.label}</option>
           ))}
         </select>
         <button
           onClick={onRemove}
-          className="inline-flex items-center h-9 px-3.5 rounded-full text-xs font-semibold transition-colors shrink-0"
-          style={{
-            border: "1px solid #FBE4E2",
-            background: "#FFFFFF",
-            color: "#A3302A",
-          }}
+          className="inline-flex h-9 shrink-0 items-center rounded-full px-3.5 text-xs font-semibold transition-colors"
+          style={{ border: "1px solid rgba(239,68,68,0.3)", background: "var(--color-surface-elevated)", color: "#F87171" }}
         >
           Remover
         </button>
       </div>
 
-      {info && (
-        <p className="text-xs" style={{ color: "#5B606B" }}>
-          {info.descricao}
-        </p>
-      )}
+      {info && <p className="text-xs" style={{ color: "var(--color-text-muted)" }}>{info.descricao}</p>}
 
       {(acao.tipo === "enviar_dm" || acao.tipo === "responder_comentario") && (
         <textarea
@@ -137,8 +115,7 @@ function AcaoEditor({
           onChange={(e) => onChange({ ...acao, texto: e.target.value })}
           placeholder="Texto da mensagem (use {{username}} e {{comentario}})"
           rows={3}
-          className="w-full rounded-[12px] border px-3 py-2 text-sm resize-none focus:outline-none focus:ring-2"
-          style={inputStyle}
+          className="wr-input w-full resize-none"
         />
       )}
 
@@ -148,8 +125,7 @@ function AcaoEditor({
           value={acao.etiqueta ?? ""}
           onChange={(e) => onChange({ ...acao, etiqueta: e.target.value })}
           placeholder="Nome da etiqueta (ex: Lead Quente)"
-          className="w-full rounded-full border px-3 py-2 text-sm focus:outline-none focus:ring-2"
-          style={inputStyle}
+          className="wr-input w-full"
         />
       )}
 
@@ -159,22 +135,14 @@ function AcaoEditor({
           value={acao.mensagem ?? ""}
           onChange={(e) => onChange({ ...acao, mensagem: e.target.value })}
           placeholder="Mensagem para a equipe (use {{username}} e {{comentario}})"
-          className="w-full rounded-full border px-3 py-2 text-sm focus:outline-none focus:ring-2"
-          style={inputStyle}
+          className="wr-input w-full"
         />
       )}
 
       {acao.tipo === "add_funil_politico" && (
-        <select
-          value={acao.nivel ?? "Simpatizante"}
-          onChange={(e) => onChange({ ...acao, nivel: e.target.value })}
-          className="w-full rounded-full border px-3 py-2 text-sm focus:outline-none focus:ring-2"
-          style={inputStyle}
-        >
+        <select value={acao.nivel ?? "Simpatizante"} onChange={(e) => onChange({ ...acao, nivel: e.target.value })} className="wr-input w-full">
           {NIVEIS_FUNIL.map((n) => (
-            <option key={n} value={n}>
-              {n}
-            </option>
+            <option key={n} value={n}>{n}</option>
           ))}
         </select>
       )}
@@ -202,11 +170,9 @@ export default function NovoFlowPage() {
   function addAcao() {
     setAcoes((prev) => [...prev, { tipo: "criar_contato" }]);
   }
-
   function updateAcao(i: number, acao: AcaoConfig) {
     setAcoes((prev) => prev.map((a, idx) => (idx === i ? acao : a)));
   }
-
   function removeAcao(i: number) {
     setAcoes((prev) => prev.filter((_, idx) => idx !== i));
   }
@@ -214,17 +180,11 @@ export default function NovoFlowPage() {
   function buildTriggerConfig() {
     const cfg: Record<string, unknown> = {};
     if (triggerTipo === "comment_keyword" || triggerTipo === "dm_keyword") {
-      cfg.keywords = keywords
-        .split(",")
-        .map((k) => k.trim())
-        .filter(Boolean);
+      cfg.keywords = keywords.split(",").map((k) => k.trim()).filter(Boolean);
       cfg.case_sensitive = caseSensitive;
     }
     if (triggerTipo === "comment_no_post") {
-      cfg.post_ids = postIds
-        .split(",")
-        .map((p) => p.trim())
-        .filter(Boolean);
+      cfg.post_ids = postIds.split(",").map((p) => p.trim()).filter(Boolean);
     }
     return cfg;
   }
@@ -232,7 +192,6 @@ export default function NovoFlowPage() {
   async function salvar(e: React.FormEvent) {
     e.preventDefault();
     setErro(null);
-
     if (!nome.trim()) {
       setErro("Nome é obrigatório.");
       return;
@@ -270,219 +229,128 @@ export default function NovoFlowPage() {
   }
 
   return (
-    <div className="mx-auto max-w-[720px] px-4 py-7 space-y-[18px]">
-      {/* ── Header card ─────────────────────────────────────────── */}
-      <header className="wr-card p-6 sm:p-7">
-        <div className="flex items-center gap-2 text-sm mb-1" style={{ color: "#5B606B" }}>
-          <Link
-            href="/app/instagram"
-            className="hover:opacity-70 transition-colors font-medium"
-          >
-            Instagram
-          </Link>
-          <span style={{ color: "#9A9D8F" }}>/</span>
-          <Link
-            href="/app/instagram/automacoes"
-            className="hover:opacity-70 transition-colors font-medium"
-          >
-            Automações
-          </Link>
-          <span style={{ color: "#9A9D8F" }}>/</span>
-          <span className="font-medium">Novo flow</span>
-        </div>
-        <h1 className="font-heading text-[36px] font-bold leading-tight">Novo flow</h1>
-        <p className="mt-1.5 text-base" style={{ color: "#4A4F59" }}>
-          Defina o gatilho e as ações. O primeiro flow que bater executa — os demais são ignorados.
-        </p>
-      </header>
+    <div className="mx-auto max-w-[720px] space-y-[18px] px-4 py-7" style={{ background: "var(--color-bg)" }}>
+      <CommandHero
+        eyebrow="Instagram · Automações"
+        titulo="Novo flow"
+        subtitulo="Defina o gatilho e as ações. O primeiro flow que bater executa — os demais são ignorados."
+        acoes={[{ href: "/app/instagram/automacoes", label: "← Voltar" }]}
+      />
 
       <form onSubmit={salvar} className="space-y-[18px]">
         {/* ── Identificação ────────────────────────────────────── */}
-        <div className="wr-card p-5 space-y-4">
+        <div className="wr-card space-y-4 p-5">
           <p style={sectionLabelStyle}>Identificação</p>
           <div className="space-y-3">
             <div>
-              <label
-                className="block text-sm font-medium mb-1.5"
-                style={{ color: "#16181D" }}
-              >
-                Nome do flow *
-              </label>
+              <label className="mb-1.5 block text-sm font-medium" style={{ color: "var(--color-text)" }}>Nome do flow *</label>
               <input
                 type="text"
                 value={nome}
                 onChange={(e) => setNome(e.target.value)}
                 placeholder='Ex: "Responde palavra INFO"'
                 required
-                className="w-full rounded-full border px-4 py-2.5 text-sm focus:outline-none focus:ring-2"
-                style={inputStyle}
+                className="wr-input w-full"
               />
             </div>
             <div>
-              <label
-                className="block text-sm font-medium mb-1.5"
-                style={{ color: "#16181D" }}
-              >
-                Descrição (opcional)
-              </label>
+              <label className="mb-1.5 block text-sm font-medium" style={{ color: "var(--color-text)" }}>Descrição (opcional)</label>
               <input
                 type="text"
                 value={descricao}
                 onChange={(e) => setDescricao(e.target.value)}
                 placeholder="Explique brevemente o que este flow faz"
-                className="w-full rounded-full border px-4 py-2.5 text-sm focus:outline-none focus:ring-2"
-                style={inputStyle}
+                className="wr-input w-full"
               />
             </div>
           </div>
         </div>
 
         {/* ── Gatilho ──────────────────────────────────────────── */}
-        <div className="wr-card p-5 space-y-4">
+        <div className="wr-card space-y-4 p-5">
           <p style={sectionLabelStyle}>Gatilho</p>
-          <select
-            value={triggerTipo}
-            onChange={(e) => setTriggerTipo(e.target.value as TriggerTipo)}
-            className="w-full rounded-full border px-4 py-2.5 text-sm focus:outline-none focus:ring-2"
-            style={inputStyle}
-          >
+          <select value={triggerTipo} onChange={(e) => setTriggerTipo(e.target.value as TriggerTipo)} className="wr-input w-full">
             {TRIGGER_OPTIONS.map((opt) => (
-              <option key={opt.value} value={opt.value}>
-                {opt.label}
-              </option>
+              <option key={opt.value} value={opt.value}>{opt.label}</option>
             ))}
           </select>
 
-          {triggerInfo && (
-            <p className="text-xs" style={{ color: "#5B606B" }}>
-              {triggerInfo.descricao}
-            </p>
-          )}
+          {triggerInfo && <p className="text-xs" style={{ color: "var(--color-text-muted)" }}>{triggerInfo.descricao}</p>}
 
           {(triggerTipo === "comment_keyword" || triggerTipo === "dm_keyword") && (
             <div className="space-y-3">
               <div>
-                <label
-                  className="block text-sm font-medium mb-1.5"
-                  style={{ color: "#16181D" }}
-                >
-                  Palavras-chave (separadas por vírgula)
-                </label>
+                <label className="mb-1.5 block text-sm font-medium" style={{ color: "var(--color-text)" }}>Palavras-chave (separadas por vírgula)</label>
                 <input
                   type="text"
                   value={keywords}
                   onChange={(e) => setKeywords(e.target.value)}
                   placeholder="INFO, quero saber, saiba mais"
-                  className="w-full rounded-full border px-4 py-2.5 text-sm focus:outline-none focus:ring-2"
-                  style={inputStyle}
+                  className="wr-input w-full"
                 />
               </div>
-              <label className="flex items-center gap-2 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={caseSensitive}
-                  onChange={(e) => setCaseSensitive(e.target.checked)}
-                  className="rounded"
-                />
-                <span className="text-sm" style={{ color: "#4A4F59" }}>
-                  Case sensitive (diferencia maiúsculas)
-                </span>
+              <label className="flex cursor-pointer items-center gap-2">
+                <input type="checkbox" checked={caseSensitive} onChange={(e) => setCaseSensitive(e.target.checked)} className="rounded" />
+                <span className="text-sm" style={{ color: "var(--color-text-muted)" }}>Case sensitive (diferencia maiúsculas)</span>
               </label>
             </div>
           )}
 
           {triggerTipo === "comment_no_post" && (
             <div>
-              <label
-                className="block text-sm font-medium mb-1.5"
-                style={{ color: "#16181D" }}
-              >
-                IDs dos posts (separados por vírgula)
-              </label>
+              <label className="mb-1.5 block text-sm font-medium" style={{ color: "var(--color-text)" }}>IDs dos posts (separados por vírgula)</label>
               <input
                 type="text"
                 value={postIds}
                 onChange={(e) => setPostIds(e.target.value)}
                 placeholder="17891234567, 17898765432 (deixe vazio para qualquer post)"
-                className="w-full rounded-full border px-4 py-2.5 text-sm focus:outline-none focus:ring-2"
-                style={inputStyle}
+                className="wr-input w-full"
               />
-              <p className="mt-1.5 text-xs" style={{ color: "#9A9D8F" }}>
-                Deixe em branco para disparar em qualquer comentário em qualquer post.
-              </p>
+              <p className="mt-1.5 text-xs" style={{ color: "var(--color-text-subtle)" }}>Deixe em branco para disparar em qualquer comentário em qualquer post.</p>
             </div>
           )}
         </div>
 
         {/* ── Ações ────────────────────────────────────────────── */}
-        <div className="wr-card p-5 space-y-4">
+        <div className="wr-card space-y-4 p-5">
           <div className="flex items-center justify-between">
             <p style={sectionLabelStyle}>Ações</p>
-            <button
-              type="button"
-              onClick={addAcao}
-              className="text-xs font-semibold"
-              style={{ color: "#4352C4" }}
-            >
-              + Adicionar ação
-            </button>
+            <button type="button" onClick={addAcao} className="text-xs font-semibold" style={{ color: "var(--color-accent)" }}>+ Adicionar ação</button>
           </div>
 
           {acoes.length === 0 && (
-            <div
-              className="rounded-[16px] py-8 text-center text-sm"
-              style={{
-                border: "2px dashed #DCDCD5",
-                color: "#5B606B",
-              }}
-            >
+            <div className="rounded-[16px] py-8 text-center text-sm" style={{ border: "2px dashed var(--color-border)", color: "var(--color-text-muted)" }}>
               Nenhuma ação. Adicione pelo menos uma.
             </div>
           )}
 
           <div className="space-y-3">
             {acoes.map((acao, i) => (
-              <AcaoEditor
-                key={i}
-                acao={acao}
-                index={i}
-                onChange={(a) => updateAcao(i, a)}
-                onRemove={() => removeAcao(i)}
-              />
+              <AcaoEditor key={i} acao={acao} index={i} onChange={(a) => updateAcao(i, a)} onRemove={() => removeAcao(i)} />
             ))}
           </div>
 
-          <p className="text-xs" style={{ color: "#9A9D8F" }}>
+          <p className="text-xs" style={{ color: "var(--color-text-subtle)" }}>
             As ações executam em ordem. Todas são executadas (best-effort), mesmo que uma falhe.
           </p>
         </div>
 
         {/* ── Erro ─────────────────────────────────────────────── */}
         {erro && (
-          <div className="wr-card p-5" style={{ background: "#FBE4E2" }}>
-            <p className="text-sm font-semibold" style={{ color: "#A3302A" }}>
-              {erro}
-            </p>
+          <div className="wr-card p-5" style={{ background: "rgba(239,68,68,0.1)", borderColor: "rgba(239,68,68,0.3)" }}>
+            <p className="text-sm font-semibold" style={{ color: "#F87171" }}>{erro}</p>
           </div>
         )}
 
         {/* ── Botões ───────────────────────────────────────────── */}
         <div className="flex items-center gap-3">
-          <button
-            type="submit"
-            disabled={salvando}
-            className="wr-btn-dark disabled:opacity-50"
-          >
+          <button type="submit" disabled={salvando} className="wr-btn-dark disabled:opacity-50">
             {salvando ? "Salvando…" : "Criar flow"}
           </button>
           <Link
             href="/app/instagram/automacoes"
-            className="inline-flex items-center h-[44px] px-5 rounded-full text-sm font-semibold transition-colors"
-            style={{
-              border: "1px solid #DCDCD5",
-              background: "#FFFFFF",
-              color: "#4A4F59",
-            }}
+            className="inline-flex h-[44px] items-center rounded-full px-5 text-sm font-semibold transition-colors"
+            style={{ border: "1px solid var(--color-border)", background: "var(--color-surface-elevated)", color: "var(--color-text-muted)" }}
           >
             Cancelar
           </Link>

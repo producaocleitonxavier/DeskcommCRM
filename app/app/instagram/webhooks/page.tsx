@@ -1,23 +1,22 @@
 /**
  * /app/instagram/webhooks — Tokens de webhook do Instagram Graph API (War Room 2.0)
  *
- * Permite ao manager gerar e gerenciar tokens de URL para configurar o
- * webhook do Instagram Business no App Meta. Cada token mapeia para uma
- * organização + channel_session.
+ * Gera e gerencia tokens de URL para configurar o webhook do Instagram Business
+ * no App Meta. Acesso: admin (gate no layout). Visual: padrão War Room dark.
  *
- * URL de webhook resultante: https://<domínio>/api/v1/webhooks/instagram-comments/<token>
- *
- * Acesso: manager+
+ * URL resultante: https://<domínio>/api/v1/webhooks/instagram-comments/<token>
  */
 
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
-import Link from "next/link";
+import { Link2, CheckCircle2, PauseCircle } from "lucide-react";
+
+import { CommandHero } from "@/components/politico/command-hero";
+import { KpiCard } from "@/components/politico/kpi-card";
+import { EmptyState } from "@/components/politico/empty-state";
 
 export const dynamic = "force-dynamic";
-
-// ── Tipos ──────────────────────────────────────────────────────────────────────
 
 interface WebhookToken {
   id: string;
@@ -28,8 +27,6 @@ interface WebhookToken {
   ultimo_ping_at: string | null;
   created_at: string;
 }
-
-// ── Hook de dados ──────────────────────────────────────────────────────────────
 
 function useTokens() {
   const [tokens, setTokens] = useState<WebhookToken[]>([]);
@@ -58,7 +55,12 @@ function useTokens() {
   return { tokens, carregando, erro, recarregar: carregar };
 }
 
-// ── Componente principal ───────────────────────────────────────────────────────
+const BTN_SECUNDARIO: React.CSSProperties = {
+  border: "1px solid var(--color-border)",
+  background: "var(--color-surface-elevated)",
+  color: "var(--color-text-muted)",
+};
+const BOX_CODE: React.CSSProperties = { background: "var(--color-surface-elevated)" };
 
 export default function WebhooksInstagramPage() {
   const { tokens, carregando, erro, recarregar } = useTokens();
@@ -115,113 +117,50 @@ export default function WebhooksInstagramPage() {
   const ativos = tokens.filter((t) => t.ativo).length;
 
   return (
-    <div className="mx-auto max-w-[1140px] px-4 py-7 space-y-[18px]">
-      {/* ── Header card ─────────────────────────────────────────── */}
-      <header className="wr-card p-6 sm:p-7 flex flex-wrap items-center justify-between gap-4">
-        <div>
-          <div className="flex items-center gap-2 text-sm mb-1" style={{ color: "#5B606B" }}>
-            <Link
-              href="/app/instagram"
-              className="hover:opacity-70 transition-colors font-medium"
-            >
-              Instagram
-            </Link>
-            <span style={{ color: "#9A9D8F" }}>/</span>
-            <span className="font-medium">Tokens de Webhook</span>
-          </div>
-          <h1 className="font-heading text-[36px] font-bold leading-tight">
-            Tokens de Webhook
-          </h1>
-          <p className="mt-1.5 text-base" style={{ color: "#4A4F59" }}>
-            Configure o Instagram Business para entregar eventos aqui via Graph API.
-          </p>
-        </div>
-        <button
-          onClick={() => setMostrarFormulario(true)}
-          className="wr-btn-dark"
-        >
-          + Novo token
-        </button>
-      </header>
+    <div className="mx-auto max-w-[1140px] space-y-[18px] px-4 py-7" style={{ background: "var(--color-bg)" }}>
+      <CommandHero
+        eyebrow="Instagram · Webhooks"
+        titulo="Tokens de Webhook"
+        subtitulo="Configure o Instagram Business para entregar eventos aqui via Graph API."
+        extra={
+          <button
+            onClick={() => setMostrarFormulario(true)}
+            className="inline-flex min-h-[40px] items-center rounded-full px-4 text-sm font-semibold"
+            style={{ background: "#D7F36A", color: "#14181F" }}
+          >
+            + Novo token
+          </button>
+        }
+      />
 
       {/* ── KPI resumo ──────────────────────────────────────────── */}
       {!carregando && tokens.length > 0 && (
-        <section className="flex flex-wrap gap-3">
-          <div
-            className="flex-1 min-w-[120px] rounded-[20px] p-4"
-            style={{ background: "#FFFFFF", boxShadow: "var(--wr-card-shadow)" }}
-          >
-            <div className="text-[13px] font-medium" style={{ color: "#4A4F59" }}>
-              Total de tokens
-            </div>
-            <div className="font-heading text-[28px] font-bold mt-0.5 tabular-nums">
-              {tokens.length}
-            </div>
-          </div>
-          <div
-            className="flex-1 min-w-[120px] rounded-[20px] p-4"
-            style={{ background: "#E2F5EC", boxShadow: "var(--wr-card-shadow)" }}
-          >
-            <div className="text-[13px] font-medium" style={{ color: "#17784F" }}>
-              Ativos
-            </div>
-            <div
-              className="font-heading text-[28px] font-bold mt-0.5 tabular-nums"
-              style={{ color: "#17784F" }}
-            >
-              {ativos}
-            </div>
-          </div>
-          <div
-            className="flex-1 min-w-[120px] rounded-[20px] p-4"
-            style={{ background: "#FFFFFF", boxShadow: "var(--wr-card-shadow)" }}
-          >
-            <div className="text-[13px] font-medium" style={{ color: "#5B606B" }}>
-              Inativos
-            </div>
-            <div className="font-heading text-[28px] font-bold mt-0.5 tabular-nums">
-              {tokens.length - ativos}
-            </div>
-          </div>
+        <section className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+          <KpiCard label="Total de tokens" valor={tokens.length} icone={Link2} />
+          <KpiCard label="Ativos" valor={ativos} icone={CheckCircle2} cor="#4ADE80" />
+          <KpiCard label="Inativos" valor={tokens.length - ativos} icone={PauseCircle} />
         </section>
       )}
 
       {/* ── Formulário de criação ──────────────────────────────── */}
       {mostrarFormulario && (
-        <div className="wr-card p-5 space-y-4">
-          <h2
-            className="font-heading text-lg font-bold"
-            style={{ color: "#16181D" }}
-          >
-            Gerar novo token
-          </h2>
+        <div className="wr-card space-y-4 p-5">
+          <h2 className="font-heading text-lg font-bold" style={{ color: "var(--color-text)" }}>Gerar novo token</h2>
           <input
             type="text"
             placeholder="Descrição (ex: Conta @meupolitico)"
             value={descricaoNova}
             onChange={(e) => setDescricaoNova(e.target.value)}
-            className="w-full rounded-full border px-4 py-2.5 text-sm focus:outline-none focus:ring-2"
-            style={{
-              borderColor: "#DCDCD5",
-              background: "#FFFFFF",
-            }}
+            className="wr-input w-full"
           />
           <div className="flex gap-2">
-            <button
-              onClick={criarToken}
-              disabled={criando}
-              className="wr-btn-dark disabled:opacity-50"
-            >
+            <button onClick={criarToken} disabled={criando} className="wr-btn-dark disabled:opacity-50">
               {criando ? "Gerando…" : "Gerar token"}
             </button>
             <button
               onClick={() => setMostrarFormulario(false)}
-              className="inline-flex items-center h-[44px] px-5 rounded-full text-sm font-semibold transition-colors"
-              style={{
-                border: "1px solid #DCDCD5",
-                background: "#FFFFFF",
-                color: "#4A4F59",
-              }}
+              className="inline-flex h-[44px] items-center rounded-full px-5 text-sm font-semibold transition-colors"
+              style={BTN_SECUNDARIO}
             >
               Cancelar
             </button>
@@ -230,30 +169,13 @@ export default function WebhooksInstagramPage() {
       )}
 
       {/* ── Instrução de configuração ──────────────────────────── */}
-      <div
-        className="wr-card p-5 space-y-2"
-        style={{ background: "#F0F0EB" }}
-      >
-        <p
-          className="text-sm font-semibold"
-          style={{ color: "#16181D" }}
-        >
-          Como configurar no Meta
-        </p>
-        <ol
-          className="list-decimal list-inside space-y-1 text-sm"
-          style={{ color: "#4A4F59" }}
-        >
+      <div className="wr-card space-y-2 p-5" style={{ background: "var(--color-surface)" }}>
+        <p className="text-sm font-semibold" style={{ color: "var(--color-text)" }}>Como configurar no Meta</p>
+        <ol className="list-inside list-decimal space-y-1 text-sm" style={{ color: "var(--color-text-muted)" }}>
           <li>Gere um token abaixo e copie a URL completa</li>
           <li>
             No{" "}
-            <a
-              href="https://developers.facebook.com/apps"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="font-semibold underline underline-offset-4"
-              style={{ color: "#4352C4" }}
-            >
+            <a href="https://developers.facebook.com/apps" target="_blank" rel="noopener noreferrer" className="font-semibold underline underline-offset-4" style={{ color: "var(--color-accent)" }}>
               Meta for Developers
             </a>
             , vá em seu App → Instagram → Webhooks
@@ -261,19 +183,9 @@ export default function WebhooksInstagramPage() {
           <li>Cole a URL como <strong>Callback URL</strong> e o <strong>Verify Token</strong> abaixo (copie o do token). Objeto <strong>Instagram</strong> — não &quot;User&quot;.</li>
           <li>
             Assine os campos:{" "}
-            <code
-              className="rounded-md px-1.5 py-0.5 text-xs font-mono"
-              style={{ background: "#FFFFFF" }}
-            >
-              comments
-            </code>{" "}
+            <code className="rounded-md px-1.5 py-0.5 font-mono text-xs" style={BOX_CODE}>comments</code>{" "}
             e{" "}
-            <code
-              className="rounded-md px-1.5 py-0.5 text-xs font-mono"
-              style={{ background: "#FFFFFF" }}
-            >
-              mentions
-            </code>
+            <code className="rounded-md px-1.5 py-0.5 font-mono text-xs" style={BOX_CODE}>mentions</code>
           </li>
         </ol>
       </div>
@@ -281,24 +193,15 @@ export default function WebhooksInstagramPage() {
       {/* ── Estado de carregamento ──────────────────────────────── */}
       {carregando && (
         <div className="wr-card flex items-center justify-center py-16">
-          <div
-            className="h-6 w-6 animate-spin rounded-full border-2 border-t-transparent"
-            style={{ borderColor: "#4352C4", borderTopColor: "transparent" }}
-          />
+          <div className="h-6 w-6 animate-spin rounded-full border-2 border-t-transparent" style={{ borderColor: "var(--color-accent)", borderTopColor: "transparent" }} />
         </div>
       )}
 
       {/* ── Erro ────────────────────────────────────────────────── */}
       {erro && !carregando && (
-        <div className="wr-card p-5" style={{ background: "#FBE4E2" }}>
-          <p className="text-sm font-semibold" style={{ color: "#A3302A" }}>
-            {erro}
-          </p>
-          <button
-            onClick={recarregar}
-            className="mt-2 text-sm font-medium underline underline-offset-4"
-            style={{ color: "#A3302A" }}
-          >
+        <div className="wr-card p-5" style={{ background: "rgba(239,68,68,0.1)", borderColor: "rgba(239,68,68,0.3)" }}>
+          <p className="text-sm font-semibold" style={{ color: "#F87171" }}>{erro}</p>
+          <button onClick={recarregar} className="mt-2 text-sm font-medium underline underline-offset-4" style={{ color: "#F87171" }}>
             Tentar novamente
           </button>
         </div>
@@ -306,93 +209,50 @@ export default function WebhooksInstagramPage() {
 
       {/* ── Lista vazia ─────────────────────────────────────────── */}
       {!carregando && !erro && tokens.length === 0 && (
-        <div className="wr-card flex flex-col items-center gap-4 py-16 text-center">
-          <div
-            className="flex items-center justify-center w-14 h-14 rounded-full"
-            style={{ background: "#F0F0EB" }}
-          >
-            <span className="text-2xl">🔗</span>
-          </div>
-          <div>
-            <p
-              className="font-heading text-lg font-semibold"
-              style={{ color: "#16181D" }}
-            >
-              Nenhum token gerado ainda
-            </p>
-            <p className="text-sm mt-1 max-w-xs mx-auto" style={{ color: "#5B606B" }}>
-              Gere um token para começar a receber comentários do Instagram.
-            </p>
-          </div>
-          <button
-            onClick={() => setMostrarFormulario(true)}
-            className="wr-btn-dark mt-2"
-          >
-            Gerar primeiro token
-          </button>
+        <div className="wr-card">
+          <EmptyState
+            icon={Link2}
+            title="Nenhum token gerado ainda"
+            description="Gere um token para começar a receber comentários do Instagram."
+          />
         </div>
       )}
 
       {/* ── Lista de tokens ─────────────────────────────────────── */}
       {!carregando && tokens.length > 0 && (
-        <section className="wr-card pt-2 pb-0 px-0">
+        <section className="wr-card overflow-hidden p-0">
           {tokens.map((token, i) => {
             const url = `${urlBase}/${token.path_token}`;
             return (
               <div
                 key={token.id}
-                className="px-5 py-4 space-y-3"
-                style={{
-                  borderBottom:
-                    i < tokens.length - 1 ? "1px solid #F0F0EB" : undefined,
-                }}
+                className="space-y-3 px-5 py-4"
+                style={{ borderBottom: i < tokens.length - 1 ? "1px solid var(--color-border)" : undefined }}
               >
                 {/* Cabeçalho do token */}
-                <div className="flex items-center justify-between gap-2">
+                <div className="flex flex-wrap items-center justify-between gap-2">
                   <div className="flex items-center gap-2.5">
-                    <span
-                      className="h-2.5 w-2.5 rounded-full shrink-0"
-                      style={{
-                        background: token.ativo ? "#17784F" : "#9A9D8F",
-                      }}
-                    />
-                    <span
-                      className="font-semibold text-sm"
-                      style={{ color: "#16181D" }}
-                    >
-                      {token.descricao ?? "Sem descrição"}
-                    </span>
+                    <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ background: token.ativo ? "#4ADE80" : "var(--color-text-subtle)" }} />
+                    <span className="text-sm font-semibold" style={{ color: "var(--color-text)" }}>{token.descricao ?? "Sem descrição"}</span>
                     <span
                       className="inline-flex items-center rounded-full px-2.5 py-0.5 text-[11px] font-semibold"
-                      style={
-                        token.ativo
-                          ? { background: "#E2F5EC", color: "#17784F" }
-                          : { background: "#F0F0EB", color: "#5B606B" }
-                      }
+                      style={token.ativo ? { background: "rgba(34,197,94,0.15)", color: "#4ADE80" } : { background: "rgba(255,255,255,0.06)", color: "var(--color-text-subtle)" }}
                     >
                       {token.ativo ? "Ativo" : "Inativo"}
                     </span>
                   </div>
-                  <div className="flex items-center gap-2 shrink-0">
+                  <div className="flex shrink-0 items-center gap-2">
                     <button
                       onClick={() => copiar(token.path_token)}
-                      className="inline-flex items-center h-9 px-3.5 rounded-full text-xs font-semibold transition-colors"
-                      style={{
-                        border: "1px solid #DCDCD5",
-                        background: "#FFFFFF",
-                        color: copiado === token.path_token ? "#17784F" : "#4A4F59",
-                      }}
+                      className="inline-flex h-9 items-center rounded-full px-3.5 text-xs font-semibold transition-colors"
+                      style={{ border: "1px solid var(--color-border)", background: "var(--color-surface-elevated)", color: copiado === token.path_token ? "#4ADE80" : "var(--color-text-muted)" }}
                     >
                       {copiado === token.path_token ? "✓ Copiado!" : "Copiar URL"}
                     </button>
                     <button
                       onClick={() => revogar(token.id)}
-                      className="inline-flex items-center h-9 px-3.5 rounded-full text-xs font-semibold transition-colors"
-                      style={{
-                        border: "1px solid #FBE4E2",
-                        background: "#FFFFFF",
-                        color: "#A3302A",
-                      }}
+                      className="inline-flex h-9 items-center rounded-full px-3.5 text-xs font-semibold transition-colors"
+                      style={{ border: "1px solid rgba(239,68,68,0.3)", background: "var(--color-surface-elevated)", color: "#F87171" }}
                     >
                       Revogar
                     </button>
@@ -400,15 +260,8 @@ export default function WebhooksInstagramPage() {
                 </div>
 
                 {/* URL */}
-                <div
-                  className="flex items-center gap-2 rounded-[12px] px-3.5 py-2.5"
-                  style={{ background: "#F0F0EB" }}
-                >
-                  <code
-                    id={`token-${token.path_token}`}
-                    className="flex-1 min-w-0 truncate text-xs select-all font-mono"
-                    style={{ color: "#4A4F59" }}
-                  >
+                <div className="flex items-center gap-2 rounded-[12px] px-3.5 py-2.5" style={BOX_CODE}>
+                  <code id={`token-${token.path_token}`} className="min-w-0 flex-1 select-all truncate font-mono text-xs" style={{ color: "var(--color-text-muted)" }}>
                     {url}
                   </code>
                 </div>
@@ -416,18 +269,18 @@ export default function WebhooksInstagramPage() {
                 {/* Verify Token */}
                 {token.verify_token && (
                   <div>
-                    <div className="mb-1 text-[11px] font-semibold" style={{ color: "#9A9D8F" }}>
+                    <div className="mb-1 text-[11px] font-semibold" style={{ color: "var(--color-text-subtle)" }}>
                       Verify Token — cole no Meta (objeto Instagram)
                     </div>
-                    <div className="flex items-center gap-2 rounded-[12px] px-3.5 py-2.5" style={{ background: "#F0F0EB" }}>
-                      <code className="flex-1 min-w-0 truncate text-xs select-all font-mono" style={{ color: "#4A4F59" }}>
+                    <div className="flex items-center gap-2 rounded-[12px] px-3.5 py-2.5" style={BOX_CODE}>
+                      <code className="min-w-0 flex-1 select-all truncate font-mono text-xs" style={{ color: "var(--color-text-muted)" }}>
                         {token.verify_token}
                       </code>
                       <button
                         type="button"
                         onClick={() => { navigator.clipboard?.writeText(token.verify_token!).catch(() => {}); }}
-                        className="inline-flex h-7 items-center rounded-full px-3 text-[11px] font-semibold shrink-0"
-                        style={{ border: "1px solid #DCDCD5", background: "#FFFFFF", color: "#4A4F59" }}
+                        className="inline-flex h-7 shrink-0 items-center rounded-full px-3 text-[11px] font-semibold"
+                        style={BTN_SECUNDARIO}
                       >
                         Copiar
                       </button>
@@ -436,18 +289,12 @@ export default function WebhooksInstagramPage() {
                 )}
 
                 {/* Meta */}
-                <div className="flex items-center gap-4 text-[11px]" style={{ color: "#9A9D8F" }}>
-                  <span>
-                    Criado em{" "}
-                    {new Date(token.created_at).toLocaleDateString("pt-BR")}
-                  </span>
+                <div className="flex items-center gap-4 text-[11px]" style={{ color: "var(--color-text-subtle)" }}>
+                  <span>Criado em {new Date(token.created_at).toLocaleDateString("pt-BR")}</span>
                   {token.ultimo_ping_at && (
                     <span>
                       Último ping:{" "}
-                      {new Date(token.ultimo_ping_at).toLocaleString("pt-BR", {
-                        dateStyle: "short",
-                        timeStyle: "short",
-                      })}
+                      {new Date(token.ultimo_ping_at).toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" })}
                     </span>
                   )}
                 </div>

@@ -4,13 +4,19 @@
  * Lista todos os flows de automação (triggers + ações) da organização.
  * Permite criar, ativar/desativar e editar flows.
  *
- * Acesso: manager+
+ * Acesso: admin (gate no layout). Visual: padrão War Room dark (CommandHero +
+ * KpiCard + tokens de tema), igual às telas do módulo político.
  */
 
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
+import { Zap, CheckCircle2, PauseCircle, Pencil, Trash2 } from "lucide-react";
+
+import { CommandHero } from "@/components/politico/command-hero";
+import { KpiCard } from "@/components/politico/kpi-card";
+import { EmptyState } from "@/components/politico/empty-state";
 
 export const dynamic = "force-dynamic";
 
@@ -125,9 +131,7 @@ export default function AutomacoesInstagramPage() {
     if (!confirm(`Excluir flow "${flow.nome}"?`)) return;
     setAlterandoId(flow.id);
     try {
-      await fetch(`/api/v1/ig-automation-flows/${flow.id}`, {
-        method: "DELETE",
-      });
+      await fetch(`/api/v1/ig-automation-flows/${flow.id}`, { method: "DELETE" });
       await recarregar();
     } finally {
       setAlterandoId(null);
@@ -138,69 +142,20 @@ export default function AutomacoesInstagramPage() {
   const inativos = flows.length - ativos;
 
   return (
-    <div className="mx-auto max-w-[1140px] px-4 py-7 space-y-[18px]">
-      {/* ── Header card ─────────────────────────────────────────── */}
-      <header className="wr-card p-6 sm:p-7 flex flex-wrap items-center justify-between gap-4">
-        <div>
-          <div className="flex items-center gap-2 text-sm mb-1" style={{ color: "#5B606B" }}>
-            <Link
-              href="/app/instagram"
-              className="hover:opacity-70 transition-colors font-medium"
-            >
-              Instagram
-            </Link>
-            <span style={{ color: "#9A9D8F" }}>/</span>
-            <span className="font-medium">Automações</span>
-          </div>
-          <h1 className="font-heading text-[36px] font-bold leading-tight">Automações</h1>
-          <p className="mt-1.5 text-base" style={{ color: "#4A4F59" }}>
-            Flows de trigger + ação — primeiro que bater executa.
-          </p>
-        </div>
-        <Link href="/app/instagram/automacoes/novo" className="wr-btn-dark">
-          + Novo flow
-        </Link>
-      </header>
+    <div className="mx-auto max-w-[1140px] space-y-[18px] px-4 py-7" style={{ background: "var(--color-bg)" }}>
+      <CommandHero
+        eyebrow="Instagram · Automações"
+        titulo="Automações"
+        subtitulo="Flows de trigger + ação — o primeiro que bater executa."
+        acoes={[{ href: "/app/instagram/automacoes/novo", label: "+ Novo flow", primary: true }]}
+      />
 
       {/* ── KPI resumo ──────────────────────────────────────────── */}
       {!carregando && flows.length > 0 && (
-        <section className="flex flex-wrap gap-3">
-          <div
-            className="flex-1 min-w-[120px] rounded-[20px] p-4"
-            style={{ background: "#FFFFFF", boxShadow: "var(--wr-card-shadow)" }}
-          >
-            <div className="text-[13px] font-medium" style={{ color: "#4A4F59" }}>
-              Total de flows
-            </div>
-            <div className="font-heading text-[28px] font-bold mt-0.5 tabular-nums">
-              {flows.length}
-            </div>
-          </div>
-          <div
-            className="flex-1 min-w-[120px] rounded-[20px] p-4"
-            style={{ background: "#E2F5EC", boxShadow: "var(--wr-card-shadow)" }}
-          >
-            <div className="text-[13px] font-medium" style={{ color: "#17784F" }}>
-              Ativos
-            </div>
-            <div
-              className="font-heading text-[28px] font-bold mt-0.5 tabular-nums"
-              style={{ color: "#17784F" }}
-            >
-              {ativos}
-            </div>
-          </div>
-          <div
-            className="flex-1 min-w-[120px] rounded-[20px] p-4"
-            style={{ background: "#FFFFFF", boxShadow: "var(--wr-card-shadow)" }}
-          >
-            <div className="text-[13px] font-medium" style={{ color: "#5B606B" }}>
-              Inativos
-            </div>
-            <div className="font-heading text-[28px] font-bold mt-0.5 tabular-nums">
-              {inativos}
-            </div>
-          </div>
+        <section className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+          <KpiCard label="Total de flows" valor={flows.length} icone={Zap} />
+          <KpiCard label="Ativos" valor={ativos} icone={CheckCircle2} cor="#4ADE80" />
+          <KpiCard label="Inativos" valor={inativos} icone={PauseCircle} />
         </section>
       )}
 
@@ -209,24 +164,19 @@ export default function AutomacoesInstagramPage() {
         <div className="wr-card flex items-center justify-center py-16">
           <div
             className="h-6 w-6 animate-spin rounded-full border-2 border-t-transparent"
-            style={{ borderColor: "#4352C4", borderTopColor: "transparent" }}
+            style={{ borderColor: "var(--color-accent)", borderTopColor: "transparent" }}
           />
         </div>
       )}
 
       {/* ── Erro ────────────────────────────────────────────────── */}
       {erro && !carregando && (
-        <div
-          className="wr-card p-5"
-          style={{ background: "#FBE4E2" }}
-        >
-          <p className="text-sm font-semibold" style={{ color: "#A3302A" }}>
-            {erro}
-          </p>
+        <div className="wr-card p-5" style={{ background: "rgba(239,68,68,0.1)", borderColor: "rgba(239,68,68,0.3)" }}>
+          <p className="text-sm font-semibold" style={{ color: "#F87171" }}>{erro}</p>
           <button
             onClick={recarregar}
             className="mt-2 text-sm font-medium underline underline-offset-4"
-            style={{ color: "#A3302A" }}
+            style={{ color: "#F87171" }}
           >
             Tentar novamente
           </button>
@@ -235,61 +185,40 @@ export default function AutomacoesInstagramPage() {
 
       {/* ── Lista vazia ─────────────────────────────────────────── */}
       {!carregando && !erro && flows.length === 0 && (
-        <div className="wr-card flex flex-col items-center gap-4 py-16 text-center">
-          <div
-            className="flex items-center justify-center w-14 h-14 rounded-full"
-            style={{ background: "#F0F0EB" }}
-          >
-            <span className="text-2xl">⚡</span>
-          </div>
-          <div>
-            <p className="font-heading text-lg font-semibold" style={{ color: "#16181D" }}>
-              Nenhuma automação criada
-            </p>
-            <p className="text-sm mt-1 max-w-xs mx-auto" style={{ color: "#5B606B" }}>
-              Crie um flow para responder comentários automaticamente ou enviar DMs quando alguém
-              usar uma palavra-chave.
-            </p>
-          </div>
-          <Link href="/app/instagram/automacoes/novo" className="wr-btn-dark mt-2">
-            Criar primeiro flow
-          </Link>
-        </div>
+        <EmptyState
+          icon={Zap}
+          title="Nenhuma automação criada"
+          description="Crie um flow para responder comentários automaticamente ou enviar DMs quando alguém usar uma palavra-chave."
+          action={{ label: "Criar primeiro flow", href: "/app/instagram/automacoes/novo" }}
+        />
       )}
 
       {/* ── Lista de flows ──────────────────────────────────────── */}
       {!carregando && flows.length > 0 && (
-        <section className="wr-card pt-2 pb-0 px-0">
+        <section className="wr-card overflow-hidden p-0">
           {flows.map((flow, i) => (
             <div
               key={flow.id}
-              className="flex items-start gap-4 px-5 py-4 transition-colors hover:bg-[#F6F6F2]"
-              style={{
-                borderBottom: i < flows.length - 1 ? "1px solid #F0F0EB" : undefined,
-              }}
+              className="flex flex-wrap items-start gap-4 px-5 py-4 transition-colors hover:bg-[var(--color-surface-elevated)]"
+              style={{ borderBottom: i < flows.length - 1 ? "1px solid var(--color-border)" : undefined }}
             >
               {/* Info */}
               <div className="min-w-0 flex-1">
-                <div className="flex items-center gap-2.5 flex-wrap">
-                  <span
-                    className="font-semibold text-sm"
-                    style={{ color: "#16181D" }}
-                  >
-                    {flow.nome}
-                  </span>
+                <div className="flex flex-wrap items-center gap-2.5">
+                  <span className="text-sm font-semibold" style={{ color: "var(--color-text)" }}>{flow.nome}</span>
                   <span
                     className="inline-flex items-center rounded-full px-2.5 py-0.5 text-[11px] font-semibold"
                     style={
                       flow.ativo
-                        ? { background: "#E2F5EC", color: "#17784F" }
-                        : { background: "#F0F0EB", color: "#5B606B" }
+                        ? { background: "rgba(34,197,94,0.15)", color: "#4ADE80" }
+                        : { background: "rgba(255,255,255,0.06)", color: "var(--color-text-subtle)" }
                     }
                   >
                     {flow.ativo ? "Ativo" : "Inativo"}
                   </span>
                 </div>
 
-                <p className="mt-1 text-xs" style={{ color: "#5B606B" }}>
+                <p className="mt-1 text-xs" style={{ color: "var(--color-text-muted)" }}>
                   {TRIGGER_LABEL[flow.trigger_tipo]}
                   {(flow.trigger_config as { keywords?: string[] }).keywords?.length
                     ? ` — "${(flow.trigger_config as { keywords: string[] }).keywords.slice(0, 2).join('", "')}"`
@@ -302,7 +231,7 @@ export default function AutomacoesInstagramPage() {
                     <span
                       key={j}
                       className="inline-flex items-center rounded-full px-2.5 py-0.5 text-[11px] font-medium"
-                      style={{ background: "#E4E7F8", color: "#2F3DA8" }}
+                      style={{ background: "rgba(67,82,196,0.22)", color: "#B4BCF0" }}
                     >
                       {ACAO_LABEL[acao.tipo] ?? acao.tipo}
                     </span>
@@ -310,52 +239,37 @@ export default function AutomacoesInstagramPage() {
                 </div>
 
                 {flow.ultima_ativacao_at && (
-                  <p className="mt-1.5 text-[11px]" style={{ color: "#9A9D8F" }}>
+                  <p className="mt-1.5 text-[11px]" style={{ color: "var(--color-text-subtle)" }}>
                     Última ativação:{" "}
-                    {new Date(flow.ultima_ativacao_at).toLocaleString("pt-BR", {
-                      dateStyle: "short",
-                      timeStyle: "short",
-                    })}
+                    {new Date(flow.ultima_ativacao_at).toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" })}
                   </p>
                 )}
               </div>
 
               {/* Botões */}
-              <div className="flex items-center gap-2 shrink-0">
+              <div className="flex shrink-0 items-center gap-2">
                 <button
                   onClick={() => toggleAtivo(flow)}
                   disabled={alterandoId === flow.id}
-                  className="inline-flex items-center h-9 px-3.5 rounded-full text-xs font-semibold transition-colors disabled:opacity-50"
-                  style={{
-                    border: "1px solid #DCDCD5",
-                    background: "#FFFFFF",
-                    color: "#4A4F59",
-                  }}
+                  className="inline-flex h-9 items-center rounded-full px-3.5 text-xs font-semibold transition-colors disabled:opacity-50"
+                  style={{ border: "1px solid var(--color-border)", background: "var(--color-surface-elevated)", color: "var(--color-text-muted)" }}
                 >
                   {alterandoId === flow.id ? "…" : flow.ativo ? "Desativar" : "Ativar"}
                 </button>
                 <Link
                   href={`/app/instagram/automacoes/${flow.id}`}
-                  className="inline-flex items-center h-9 px-3.5 rounded-full text-xs font-semibold transition-colors"
-                  style={{
-                    border: "1px solid #DCDCD5",
-                    background: "#FFFFFF",
-                    color: "#4A4F59",
-                  }}
+                  className="inline-flex h-9 items-center gap-1.5 rounded-full px-3.5 text-xs font-semibold transition-colors"
+                  style={{ border: "1px solid var(--color-border)", background: "var(--color-surface-elevated)", color: "var(--color-text-muted)" }}
                 >
-                  Editar
+                  <Pencil className="h-3.5 w-3.5" aria-hidden /> Editar
                 </Link>
                 <button
                   onClick={() => excluir(flow)}
                   disabled={alterandoId === flow.id}
-                  className="inline-flex items-center h-9 px-3.5 rounded-full text-xs font-semibold transition-colors disabled:opacity-50"
-                  style={{
-                    border: "1px solid #FBE4E2",
-                    background: "#FFFFFF",
-                    color: "#A3302A",
-                  }}
+                  className="inline-flex h-9 items-center gap-1.5 rounded-full px-3.5 text-xs font-semibold transition-colors disabled:opacity-50"
+                  style={{ border: "1px solid rgba(239,68,68,0.3)", background: "var(--color-surface-elevated)", color: "#F87171" }}
                 >
-                  Excluir
+                  <Trash2 className="h-3.5 w-3.5" aria-hidden /> Excluir
                 </button>
               </div>
             </div>
@@ -365,7 +279,7 @@ export default function AutomacoesInstagramPage() {
 
       {/* ── Info first-match ────────────────────────────────────── */}
       {flows.length > 1 && (
-        <p className="text-xs text-center" style={{ color: "#9A9D8F" }}>
+        <p className="text-center text-xs" style={{ color: "var(--color-text-subtle)" }}>
           Os flows são avaliados em ordem de criação. O <strong>primeiro que bater</strong> executa
           — os demais são ignorados para o mesmo comentário.
         </p>
