@@ -34,13 +34,33 @@ interface Ligacao {
 const STATUS_LABELS: Record<string, string> = {
   pending: "Pendente",
   locked: "Reservada",
-  calling: "Em ligacao",
-  completed: "Concluida",
+  calling: "Em ligação",
+  completed: "Concluída",
   no_answer: "Sem resposta",
   busy: "Ocupado",
   callback: "Retorno",
   cancelled: "Cancelada",
 };
+
+const PRIORIDADE_LABELS: Record<string, string> = {
+  urgent: "Urgente", urgente: "Urgente",
+  high: "Alta", alta: "Alta",
+  medium: "Média", media: "Média", normal: "Normal",
+  low: "Baixa", baixa: "Baixa",
+};
+
+const RESULTADO_LABELS: Record<string, string> = {
+  apoio: "Apoio confirmado", apoiador: "Apoiador",
+  indeciso: "Indeciso", neutro: "Neutro",
+  recusa: "Recusa", contrario: "Contrário",
+  sem_resposta: "Sem resposta", nao_atende: "Não atende", retornar: "Retornar",
+};
+
+/** Rótulo pt-BR de um valor cru do banco; se não mapeado, humaniza (tira "_" e capitaliza). */
+function rotuloHumano(mapa: Record<string, string>, v: string | null): string {
+  if (!v) return "—";
+  return mapa[v.toLowerCase()] ?? v.replace(/_/g, " ").replace(/^\w/, (c) => c.toUpperCase());
+}
 
 // -- Data fetching -----------------------------------------------------------
 
@@ -150,7 +170,7 @@ export default async function LigacoesPage({
                     <StatusBadge status={l.call_status} />
                   </td>
                   <td className="px-4 py-3 text-muted-foreground">
-                    {l.political_result ?? "—"}
+                    {rotuloHumano(RESULTADO_LABELS, l.political_result)}
                   </td>
                   <td className="px-4 py-3 tabular-nums text-muted-foreground">
                     {l.attempt_count}
@@ -161,7 +181,7 @@ export default async function LigacoesPage({
                   <td className="px-4 py-3">
                     {l.priority ? (
                       <span className="rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">
-                        {l.priority}
+                        {rotuloHumano(PRIORIDADE_LABELS, l.priority)}
                       </span>
                     ) : (
                       <span className="text-muted-foreground">—</span>

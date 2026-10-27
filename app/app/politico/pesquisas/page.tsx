@@ -132,7 +132,7 @@ export default async function PesquisasPage({
       <div>
         <h1 className="text-2xl font-bold tracking-tight">Pesquisas</h1>
         <p className="mt-1 text-sm text-muted-foreground">
-          Pesquisas de opiniao e intencao de voto com links publicos e contagem de respostas.
+          Pesquisas de opinião e intenção de voto com links públicos e contagem de respostas.
         </p>
       </div>
 
@@ -200,6 +200,7 @@ export default async function PesquisasPage({
 
               {p.public_token && (
                 <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                  <span className="shrink-0">Código do link público:</span>
                   <span className="truncate font-mono bg-secondary px-2 py-1 rounded">
                     {p.public_token}
                   </span>

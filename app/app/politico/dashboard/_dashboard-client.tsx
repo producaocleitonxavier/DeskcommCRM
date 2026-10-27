@@ -79,7 +79,7 @@ export default function DashboardClient({ dash, funil, calls }: DashboardClientP
                   style={{ background: "rgba(215,243,106,0.14)", color: "#D7F36A", border: "1px solid rgba(215,243,106,0.3)" }}
                 >
                   <Users className="h-3.5 w-3.5" aria-hidden />
-                  {dash.total_leads.toLocaleString("pt-BR")} leads
+                  {dash.total_leads.toLocaleString("pt-BR")} contatos
                 </span>
               ) : undefined
             }
@@ -91,14 +91,14 @@ export default function DashboardClient({ dash, funil, calls }: DashboardClientP
         <EmptyState
           icon={BarChart3}
           title="Sem dados ainda"
-          description="Cadastre leads políticos para o painel preencher os indicadores da campanha."
+          description="Cadastre pessoas da sua base para o painel preencher os indicadores da campanha."
           action={{ label: "+ Cadastrar", href: "/app/politico/leads/novo" }}
         />
       ) : (
         <>
           {/* ── 2. KPIs principais ──────────────────────────────── */}
           <section aria-label="Indicadores principais" className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-            <KpiCard label="Total de leads" valor={dash.total_leads} icone={Users} />
+            <KpiCard label="Total de contatos" valor={dash.total_leads} icone={Users} />
             <KpiCard label="Votos certos" valor={dash.votos_certos} icone={BadgeCheck} variant="dark" />
             <KpiCard label="Militantes" valor={dash.militantes} icone={Megaphone} />
             <KpiCard label="Apoiadores" valor={dash.apoiadores} icone={Heart} />
@@ -198,9 +198,9 @@ export default function DashboardClient({ dash, funil, calls }: DashboardClientP
                 className="flex w-full items-center justify-between gap-3 text-left"
               >
                 <div>
-                  <h2 className="font-heading text-xl font-bold leading-tight">Funil Invisível</h2>
+                  <h2 className="font-heading text-xl font-bold leading-tight">Termômetro de Base</h2>
                   <p className="mt-0.5 text-sm text-muted-foreground">
-                    Jornada de engajamento ({funil.invisivel_total.toLocaleString("pt-BR")} no total)
+                    Quão engajada está a sua base ({funil.invisivel_total.toLocaleString("pt-BR")} pessoas no total)
                   </p>
                 </div>
                 <ChevronDown

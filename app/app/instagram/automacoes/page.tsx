@@ -149,28 +149,26 @@ export default function AutomacoesInstagramPage() {
         className="wr-card relative overflow-hidden p-6 sm:p-7"
         style={{ background: "linear-gradient(135deg,#0E1116 0%,#14181F 55%,#1A2410 100%)", border: "1px solid rgba(215,243,106,0.22)" }}
       >
-        <div aria-hidden className="pointer-events-none absolute -right-16 -top-20 h-56 w-56 rounded-full" style={{ background: "radial-gradient(closest-side,rgba(215,243,106,0.16),transparent)" }} />
-        <div className="relative flex flex-wrap items-center justify-between gap-5">
-          <div className="flex min-w-0 items-center gap-4">
-            {/* Elmo da Guerrilheiros (recortado pra focar no capacete, sem o texto de baixo). */}
-            <span
-              className="flex h-24 w-24 shrink-0 items-center justify-center overflow-hidden rounded-2xl"
-              style={{ background: "#0A0C10", boxShadow: "0 0 22px rgba(215,243,106,0.32)", border: "1px solid rgba(215,243,106,0.28)" }}
-            >
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src="/gipchat-elmo.png" alt="GIPCHAT" className="h-full w-full object-contain" />
-            </span>
-            <div className="min-w-0">
-              <span className="text-[11px] font-bold uppercase tracking-[0.2em]" style={{ color: "#D7F36A" }}>Instagram · Automação</span>
-              <h1 className="font-heading mt-1 text-3xl font-bold leading-tight" style={{ color: "#FFFFFF" }}>GIPCHAT</h1>
-              <p className="mt-1 max-w-2xl text-sm" style={{ color: "rgba(255,255,255,0.6)" }}>
-                Suas automações de comentário e DM — responde e capta sozinho, no seu Instagram.
-              </p>
-            </div>
+        <div aria-hidden className="pointer-events-none absolute left-1/2 -top-24 h-72 w-72 -translate-x-1/2 rounded-full" style={{ background: "radial-gradient(closest-side,rgba(215,243,106,0.20),transparent)" }} />
+        <div className="relative flex flex-col items-center gap-4 text-center">
+          {/* Elmo da Guerrilheiros em destaque (hero centralizado). */}
+          <span
+            className="flex h-32 w-32 shrink-0 items-center justify-center overflow-hidden rounded-[28px]"
+            style={{ background: "#0A0C10", boxShadow: "0 0 40px rgba(215,243,106,0.40)", border: "1px solid rgba(215,243,106,0.32)" }}
+          >
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/gipchat-elmo.png" alt="GIPCHAT" className="h-full w-full object-contain" />
+          </span>
+          <div>
+            <span className="text-[11px] font-bold uppercase tracking-[0.24em]" style={{ color: "#D7F36A" }}>Instagram · Automação</span>
+            <h1 className="font-heading mt-1 text-[40px] font-bold leading-none" style={{ color: "#FFFFFF" }}>GIPCHAT</h1>
+            <p className="mx-auto mt-2 max-w-xl text-sm" style={{ color: "rgba(255,255,255,0.65)" }}>
+              Suas automações de comentário e DM — responde e capta sozinho, no seu Instagram.
+            </p>
           </div>
           <Link
             href="/app/instagram/automacoes/novo"
-            className="inline-flex min-h-[40px] items-center rounded-full px-4 text-sm font-semibold"
+            className="inline-flex min-h-[44px] items-center rounded-full px-6 text-sm font-bold transition-transform hover:scale-[1.03]"
             style={{ background: "#D7F36A", color: "#14181F" }}
           >
             + Nova automação

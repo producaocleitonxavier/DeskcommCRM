@@ -141,7 +141,7 @@ export default async function RankingsPage({
                     <th className="px-4 py-3 font-medium w-8">#</th>
                     <th className="px-4 py-3 font-medium">Cidade</th>
                     <th className="px-4 py-3 font-medium">UF</th>
-                    <th className="px-4 py-3 font-medium text-right">Leads</th>
+                    <th className="px-4 py-3 font-medium text-right">Contatos</th>
                     <th className="px-4 py-3 font-medium text-right">Votos certos</th>
                     <th className="px-4 py-3 font-medium text-right">Penetracao</th>
                     <th className="px-4 py-3 font-medium text-right">Influencia</th>
@@ -183,7 +183,7 @@ export default async function RankingsPage({
         <>
           {liderancas.length === 0 ? (
             <div className="wr-card p-8 text-center text-sm text-muted-foreground">
-              Nenhuma lideranca encontrada. Marque leads como lider potencial ou atribua papel comunitario.
+              Nenhuma liderança encontrada. Marque contatos como líder potencial ou atribua papel na comunidade.
             </div>
           ) : (
             <div className="wr-card overflow-x-auto">
@@ -213,7 +213,7 @@ export default async function RankingsPage({
                       <td className="px-4 py-3">
                         {l.community_role ? (
                           <span className="rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">
-                            {l.community_role}
+                            {l.community_role.replace(/_/g, " ").replace(/^\w/, (c) => c.toUpperCase())}
                           </span>
                         ) : (
                           <span className="text-muted-foreground">—</span>
