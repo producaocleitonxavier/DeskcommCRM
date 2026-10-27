@@ -431,7 +431,7 @@ export default async function FichaPage({
                 </span>
               )}
               <span className="text-xs tabular-nums" style={{ color: "var(--color-text-subtle)" }}>
-                Score: {lead.political_score}
+                Pontuação: {lead.political_score}
               </span>
             </div>
           </div>
@@ -574,7 +574,7 @@ export default async function FichaPage({
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <div className="font-heading text-2xl font-bold tabular-nums leading-none">{lead.political_score}</div>
-                <div className="mt-1 text-xs text-muted-foreground">Score político</div>
+                <div className="mt-1 text-xs text-muted-foreground">Pontuação política</div>
               </div>
               <div>
                 <span className="inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold" style={{ background: tempS.bg, color: tempS.color }}>

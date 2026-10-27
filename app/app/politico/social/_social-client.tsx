@@ -126,7 +126,7 @@ export default function OpiniaoPublicaClient({ config, resumo, mencoes }: { conf
           </div>
           <div className="flex flex-wrap items-center gap-2">
             <button type="button" onClick={salvar} disabled={salvando} className="rounded-full px-4 py-2 text-sm font-semibold disabled:opacity-60" style={{ background: "#D7F36A", color: "#16181D" }}>{salvando ? "Salvando…" : "Salvar termos"}</button>
-            <span className="text-xs" style={{ color: "var(--color-text-subtle)" }}>Fase 1: imprensa (Google Notícias). Comentários do Instagram via ManyChat entram em seguida.</span>
+            <span className="text-xs" style={{ color: "var(--color-text-subtle)" }}>Por enquanto captamos a imprensa (Google Notícias). Os comentários do Instagram entram em breve.</span>
           </div>
         </section>
       )}

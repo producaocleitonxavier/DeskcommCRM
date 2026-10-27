@@ -53,7 +53,7 @@ export default function MotorViralClient({ kpis, serieSemanal, conteudos, pagina
       <section className="grid grid-cols-1 gap-4 sm:grid-cols-3">
         <KpiCard label="Total de conteúdos" valor={kpis.totalConteudos} icone={Share2} />
         <KpiCard label="Gerados por IA" valor={kpis.geradosPorIA} icone={Sparkles} />
-        <KpiCard label="Score viral médio" valor={kpis.scoreViralMedio} icone={Flame} />
+        <KpiCard label="Potencial de viralização médio" valor={kpis.scoreViralMedio} icone={Flame} />
       </section>
 
       {conteudos.length === 0 ? (

@@ -366,7 +366,7 @@ export default function DetalheEmendaClient({ emenda, liderancas, peso, mandatoN
           <div className="grid grid-cols-3 gap-3">
             <PesoBox valor={peso.meusVotos.toLocaleString("pt-BR")} label="Seus votos ali" sub={peso.universo > 0 ? `${((peso.meusVotos / peso.universo) * 100).toFixed(1)}% do bairro` : "no último pleito"} accent="#D7F36A" />
             <PesoBox valor={peso.universo.toLocaleString("pt-BR")} label="Votos do cargo" sub="tamanho eleitoral" />
-            <PesoBox valor={peso.leads.toLocaleString("pt-BR")} label="Sua base (CRM)" sub="contatos no bairro" accent="#7da9bf" />
+            <PesoBox valor={peso.leads.toLocaleString("pt-BR")} label="Sua base de contatos" sub="contatos no bairro" accent="#7da9bf" />
           </div>
         </section>
       )}

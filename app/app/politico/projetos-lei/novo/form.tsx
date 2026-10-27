@@ -176,7 +176,7 @@ export default function NovoProjetoForm({}: { orgId: string }) {
             <div><Label>Comissão atual</Label><input type="text" value={comissao} onChange={(e) => setComissao(e.target.value)} className="wr-input w-full" /></div>
             <div><Label>Relator</Label><input type="text" value={relator} onChange={(e) => setRelator(e.target.value)} className="wr-input w-full" /></div>
             <div><Label>Data de apresentação</Label><input type="date" value={dataApresentacao} onChange={(e) => setDataApresentacao(e.target.value)} className="wr-input w-full" /></div>
-            <div><Label>URL oficial</Label><input type="url" value={url} onChange={(e) => setUrl(e.target.value)} placeholder="https://" className="wr-input w-full" /></div>
+            <div><Label>Link oficial</Label><input type="url" value={url} onChange={(e) => setUrl(e.target.value)} placeholder="https://" className="wr-input w-full" /></div>
             <div><Label>Coautores (vírgula)</Label><input type="text" value={coautores} onChange={(e) => setCoautores(e.target.value)} className="wr-input w-full" /></div>
             <div><Label>Temas de campanha (vírgula)</Label><input type="text" value={temasCampanha} onChange={(e) => setTemasCampanha(e.target.value)} className="wr-input w-full" /></div>
           </div>

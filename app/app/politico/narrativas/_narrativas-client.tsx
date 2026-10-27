@@ -181,7 +181,7 @@ export default function NarrativasClient({ temMandato, mandatoNome, electionId, 
               {/* Fontes (o retrato de dados do bairro) */}
               <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-4">
                 <Fonte valor={narrativa.fontes.meusVotos.toLocaleString("pt-BR")} label="seus votos no bairro" sub={narrativa.fontes.universo > 0 ? `${((narrativa.fontes.meusVotos / narrativa.fontes.universo) * 100).toFixed(1)}% do bairro` : "—"} accent="#D7F36A" />
-                <Fonte valor={narrativa.fontes.leads.toLocaleString("pt-BR")} label="sua base (CRM)" sub={`${narrativa.fontes.quentes}q · ${narrativa.fontes.mornos}m · ${narrativa.fontes.frios}f`} />
+                <Fonte valor={narrativa.fontes.leads.toLocaleString("pt-BR")} label="sua base de contatos" sub={`${narrativa.fontes.quentes}q · ${narrativa.fontes.mornos}m · ${narrativa.fontes.frios}f`} />
                 <Fonte valor={String(narrativa.fontes.demAbertas)} label="demandas abertas" sub={`${narrativa.fontes.demResolvidas} resolvidas`} />
                 <Fonte valor={String(narrativa.fontes.liderancas)} label="lideranças aqui" sub={narrativa.fontes.adversarios[0] ? `rival: ${narrativa.fontes.adversarios[0].nome}` : "—"} />
               </div>

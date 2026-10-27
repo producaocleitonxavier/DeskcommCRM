@@ -257,7 +257,7 @@ export default function DetalheProjetoClient({ projeto }: { projeto: ProjetoDeta
               <Campo label="Tema"><input type="text" value={tema} onChange={(e) => setTema(e.target.value)} className="wr-input w-full" /></Campo>
               <Campo label="Comissão atual"><input type="text" value={comissao} onChange={(e) => setComissao(e.target.value)} className="wr-input w-full" /></Campo>
               <Campo label="Relator"><input type="text" value={relator} onChange={(e) => setRelator(e.target.value)} className="wr-input w-full" /></Campo>
-              <Campo label="URL oficial"><input type="url" value={url} onChange={(e) => setUrl(e.target.value)} className="wr-input w-full" /></Campo>
+              <Campo label="Link oficial"><input type="url" value={url} onChange={(e) => setUrl(e.target.value)} className="wr-input w-full" /></Campo>
               <Campo label="Coautores (vírgula)"><input type="text" value={coautores} onChange={(e) => setCoautores(e.target.value)} className="wr-input w-full" /></Campo>
               <Campo label="Temas de campanha (vírgula)"><input type="text" value={temasCampanha} onChange={(e) => setTemasCampanha(e.target.value)} className="wr-input w-full" /></Campo>
             </div>

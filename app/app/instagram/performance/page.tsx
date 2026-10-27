@@ -25,8 +25,8 @@ function compact(n: number): string {
 }
 
 const TIPO_CONTA: Record<string, string> = {
-  MEDIA_CREATOR: "Creator",
-  BUSINESS: "Business",
+  MEDIA_CREATOR: "Criador de conteúdo",
+  BUSINESS: "Comercial",
   PERSONAL: "Pessoal",
 };
 

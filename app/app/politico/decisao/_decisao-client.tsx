@@ -58,7 +58,7 @@ export interface DecisaoClientProps {
 export default function DecisaoClient({ kpis, sinais, alertas }: DecisaoClientProps) {
   return (
     <div className="mx-auto max-w-[1140px] px-4 py-7 space-y-6" style={{ background: "var(--color-bg)" }}>
-      <CommandHero eyebrow="Inteligência" titulo="Decision Engine" subtitulo="Sinais estratégicos e ações recomendadas por IA." />
+      <CommandHero eyebrow="Inteligência" titulo="Central de Decisões" subtitulo="Sinais estratégicos e ações recomendadas por IA." />
 
       <section className="grid grid-cols-2 gap-4 lg:grid-cols-4">
         <KpiCard label="Sinais totais" valor={kpis.total} icone={Lightbulb} />

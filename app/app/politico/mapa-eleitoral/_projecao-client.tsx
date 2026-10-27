@@ -132,7 +132,7 @@ export default function ProjecaoClient({ eleicoes, municipios }: { eleicoes: Ele
           {/* KPIs */}
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
             <Kpi label="Universo de votos" value={resumoAtivo.universoTotal.toLocaleString("pt-BR")} sub={`cargo em ${munNome}`} />
-            <Kpi label="Sua base (CRM)" value={resumoAtivo.baseTotal.toLocaleString("pt-BR")} sub="contatos mapeados" accent="#D7F36A" />
+            <Kpi label="Sua base de contatos" value={resumoAtivo.baseTotal.toLocaleString("pt-BR")} sub="contatos mapeados" accent="#D7F36A" />
             <Kpi label="Cobertura média" value={pct(resumoAtivo.coberturaMedia)} sub="base / universo" />
             <Kpi label={emRegional ? "Regionais" : "Zonas"} value={String(itens.length)} sub="no município" />
           </div>
@@ -218,7 +218,7 @@ export default function ProjecaoClient({ eleicoes, municipios }: { eleicoes: Ele
             {analise && (
               <div className="mt-4 rounded-lg p-4" style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.1)" }}>
                 <MiniMarkdown texto={analise} />
-                <p className="mt-3 text-[11px]" style={{ color: "rgba(255,255,255,0.45)" }}>Gerado por IA a partir do universo de votos (TSE) e da sua base (CRM). Confira antes de decidir.</p>
+                <p className="mt-3 text-[11px]" style={{ color: "rgba(255,255,255,0.45)" }}>Gerado por IA a partir do universo de votos (TSE) e da sua base de contatos. Confira antes de decidir.</p>
               </div>
             )}
           </section>

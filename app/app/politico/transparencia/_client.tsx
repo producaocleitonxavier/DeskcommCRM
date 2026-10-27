@@ -153,7 +153,7 @@ export default function TransparenciaClient({ config }: { config: PortalConfig }
         <div className="flex items-start gap-2.5">
           <ShieldCheck className="h-5 w-5 shrink-0" style={{ color: "#17784F" }} aria-hidden />
           <p className="text-xs" style={{ color: "var(--color-text-subtle)" }}>
-            <strong style={{ color: "var(--color-text-muted)" }}>Nada é publicado sem a sua escolha.</strong> Só aparecem no portal as obras e emendas que você marcar como públicas. Dados de pessoas da sua base (CRM) <strong style={{ color: "var(--color-text-muted)" }}>nunca</strong> aparecem aqui.
+            <strong style={{ color: "var(--color-text-muted)" }}>Nada é publicado sem a sua escolha.</strong> Só aparecem no portal as obras e emendas que você marcar como públicas. Dados de pessoas da sua base de contatos <strong style={{ color: "var(--color-text-muted)" }}>nunca</strong> aparecem aqui.
           </p>
         </div>
       </section>

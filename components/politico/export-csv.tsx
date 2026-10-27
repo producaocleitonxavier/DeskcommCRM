@@ -20,7 +20,7 @@ function celula(v: string | number | null | undefined): string {
   return /[";\n\r]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
 }
 
-export function ExportCsv({ filename, headers, rows, label = "Exportar CSV" }: ExportCsvProps) {
+export function ExportCsv({ filename, headers, rows, label = "Baixar planilha" }: ExportCsvProps) {
   function baixar() {
     if (typeof window === "undefined") return;
     const sep = ";";

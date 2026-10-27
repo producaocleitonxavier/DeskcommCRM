@@ -194,7 +194,7 @@ export default async function RankingsPage({
                     <th className="px-4 py-3 font-medium">Nome</th>
                     <th className="px-4 py-3 font-medium">Telefone</th>
                     <th className="px-4 py-3 font-medium">Nivel</th>
-                    <th className="px-4 py-3 font-medium text-right">Score</th>
+                    <th className="px-4 py-3 font-medium text-right">Pontuação</th>
                     <th className="px-4 py-3 font-medium">Papel</th>
                     <th className="px-4 py-3 font-medium">Territorio</th>
                     <th className="px-4 py-3 font-medium text-right">Mobilizados</th>

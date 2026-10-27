@@ -20,7 +20,7 @@ const ROTULO_FERRAMENTA: Record<string, string> = {
   peso_do_bairro: "força no bairro",
   projecao_cadeiras: "projeção de cadeiras",
   opiniao_publica: "opinião pública",
-  minha_base_no_bairro: "sua base (CRM)",
+  minha_base_no_bairro: "sua base de contatos",
 };
 
 export default function GipClient({ mandatoNome, cidade }: { mandatoNome: string | null; cidade: string | null }) {
@@ -74,7 +74,7 @@ export default function GipClient({ mandatoNome, cidade }: { mandatoNome: string
           <div className="flex h-full flex-col items-center justify-center text-center">
             <Sparkles className="h-10 w-10" style={{ color: "rgba(215,243,106,0.5)" }} aria-hidden />
             <p className="mt-4 max-w-md text-sm" style={{ color: "var(--color-text-subtle)" }}>
-              Respostas ancoradas nos SEUS dados reais (TSE + CRM). Comece com uma pergunta:
+              Respostas ancoradas nos SEUS dados reais (votos do TSE + sua base de contatos). Comece com uma pergunta:
             </p>
             <div className="mt-4 flex flex-wrap justify-center gap-2">
               {sugestoes.map((s) => (
@@ -135,7 +135,7 @@ export default function GipClient({ mandatoNome, cidade }: { mandatoNome: string
           <ArrowUp className="h-4 w-4" />
         </button>
       </form>
-      <p className="mt-1.5 text-center text-[11px]" style={{ color: "var(--color-text-subtle)" }}>O GIP responde só com os seus dados reais (TSE + CRM). Confira números sensíveis antes de divulgar.</p>
+      <p className="mt-1.5 text-center text-[11px]" style={{ color: "var(--color-text-subtle)" }}>O GIP responde só com os seus dados reais (votos do TSE + sua base de contatos). Confira números sensíveis antes de divulgar.</p>
     </div>
   );
 }

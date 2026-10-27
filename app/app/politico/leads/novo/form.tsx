@@ -320,7 +320,7 @@ export default function NovoCadastroForm() {
         <label className="block space-y-1.5">
           <Label required><IconeTelefone /> WhatsApp</Label>
           <input type="tel" required value={telefone} onChange={(e) => setTelefone(e.target.value)} placeholder="(31) 99999-9999" className="wr-input" />
-          <span className="text-xs" style={{ color: "var(--color-text-subtle)" }}>Formato E.164 aplicado automaticamente (+55...)</span>
+          <span className="text-xs" style={{ color: "var(--color-text-subtle)" }}>Adicionamos o +55 automaticamente.</span>
         </label>
 
         <label className="block space-y-1.5">

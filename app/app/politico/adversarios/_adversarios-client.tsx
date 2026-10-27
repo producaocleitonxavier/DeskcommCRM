@@ -64,7 +64,7 @@ export default function AdversariosClient({ kpis, comparativo, adversarios }: Ad
       ) : (
         <>
           {comparativo.length > 0 && (
-            <BarChartCard title="Comparativo de ameaça (threat score)" data={comparativo} horizontal height={320} />
+            <BarChartCard title="Comparativo de ameaça (nível de risco)" data={comparativo} horizontal height={320} />
           )}
 
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">

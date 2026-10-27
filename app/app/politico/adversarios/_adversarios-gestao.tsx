@@ -86,7 +86,7 @@ export default function AdversariosGestao({ adversarios, sinais }: { adversarios
             })}
           </div>
         )}
-        <p className="mt-2 text-xs" style={{ color: "var(--color-text-subtle)" }}>Cadastre os adversários e o motor detecta as menções a eles na imprensa (a partir da Opinião Pública). O score sobe com a presença na mídia.</p>
+        <p className="mt-2 text-xs" style={{ color: "var(--color-text-subtle)" }}>Cadastre os adversários e o motor detecta as menções a eles na imprensa (a partir da Opinião Pública). A pontuação de ameaça sobe conforme a presença na mídia.</p>
       </section>
 
       {/* Sinais */}

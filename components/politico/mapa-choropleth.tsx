@@ -124,7 +124,7 @@ export default function MapaChoropleth({ pontos, nomes, candidatoNome, candidato
           ))}
         </div>
         <span className="mt-2 block pt-1 text-[10px] opacity-70" style={{ borderTop: "1px solid rgba(255,255,255,0.1)" }}>
-          tiles © Esri · malha IBGE
+          Mapa © Esri · malha IBGE
         </span>
       </div>
     </div>

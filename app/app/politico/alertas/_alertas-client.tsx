@@ -38,9 +38,9 @@ const TYPE_LABELS: Record<string, string> = {
   crisis: "Crise",
   opponent: "Adversário",
   territory: "Território",
-  fake_news: "Fake News",
+  fake_news: "Boato",
   growth: "Crescimento",
-  momentum: "Momentum",
+  momentum: "Embalo",
   media: "Mídia",
   survey: "Pesquisa",
   custom: "Personalizado",
@@ -245,11 +245,12 @@ export default function AlertasClient({ alertas, filtros, criticosAtivos }: Aler
                     <button
                       type="button"
                       onClick={() => resolver(a.id)}
-                      disabled={pendentes[a.id]}
-                      className="wr-btn shrink-0 text-sm disabled:opacity-60"
+                      disabled
+                      title="Em breve"
+                      className="wr-btn shrink-0 cursor-not-allowed text-sm disabled:opacity-50"
                     >
                       {pendentes[a.id] && <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden />}
-                      Resolver
+                      Resolver (em breve)
                     </button>
                   )}
                 </div>

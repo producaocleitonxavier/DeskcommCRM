@@ -838,7 +838,7 @@ export const NAV_CATALOG = [
   {
     href: "/app/instagram/conectar",
     label: "Conectar Instagram",
-    description: "Vincule uma conta Instagram Business via OAuth do Facebook para enviar DMs e responder comentários.",
+    description: "Conecte sua conta do Instagram para responder comentários e mensagens no automático.",
     icon: "InstagramLogo",
     group: "canais",
     minRole: "admin",
@@ -1006,8 +1006,8 @@ export const NAV_CATALOG = [
   },
   {
     href: "/app/politico/decisao",
-    label: "Decision Engine",
-    description: "Motor de decisão com sinais estratégicos, oportunidades e ações recomendadas por IA.",
+    label: "Central de Decisões",
+    description: "Sinais estratégicos, oportunidades e ações recomendadas por IA.",
     icon: "Lightbulb",
     group: "inteligencia",
     minRole: "manager",
@@ -1020,7 +1020,7 @@ export const NAV_CATALOG = [
   {
     href: "/app/politico/motor-viral",
     label: "Motor Viral",
-    description: "Geração de conteúdo por IA — scripts de vídeo, captions e roteiros com scoring viral.",
+    description: "Geração de conteúdo por IA — roteiros de vídeo, legendas e textos com nota de potencial viral.",
     icon: "ShareNetwork",
     group: "engajamento",
     minRole: "manager",

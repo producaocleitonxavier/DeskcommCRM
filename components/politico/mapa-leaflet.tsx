@@ -176,7 +176,7 @@ export default function MapaLeaflet({ pontos }: MapaLeafletProps) {
           </>
         )}
         <span className="mt-2 block pt-1 text-[10px] opacity-70" style={{ borderTop: "1px solid rgba(255,255,255,0.1)" }}>
-          tiles © Esri
+          Mapa © Esri
         </span>
       </div>
     </div>

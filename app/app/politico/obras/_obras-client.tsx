@@ -180,7 +180,7 @@ function MandatoStrip({ eleicoes, inicial }: { eleicoes: EleicaoOpcao[]; inicial
     <div className="space-y-2 rounded-xl p-3.5" style={{ background: "rgba(215,243,106,0.06)", border: "1px dashed rgba(215,243,106,0.4)" }}>
       <div className="flex items-center gap-2 text-[13px]" style={{ color: "rgba(255,255,255,0.8)" }}>
         <Target className="h-4 w-4 shrink-0" aria-hidden style={{ color: "#D7F36A" }} />
-        <strong style={{ color: "#fff" }}>Vincule seu mandato (TSE)</strong> para ver, em cada obra, os votos que você fez naquele bairro — o ROI do recurso.
+        <strong style={{ color: "#fff" }}>Vincule seu mandato (TSE)</strong> para ver, em cada obra, os votos que você fez naquele bairro — o retorno em votos do recurso.
         {mandato && <button type="button" onClick={() => setAbrir(false)} className="ml-auto"><X className="h-4 w-4" style={{ color: "var(--color-text-subtle)" }} /></button>}
       </div>
       <div className="flex flex-wrap items-end gap-2">

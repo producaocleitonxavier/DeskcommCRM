@@ -32,21 +32,21 @@ const STATUS_LABELS: Record<string, string> = {
   scheduled: "Agendado",
   confirmed: "Confirmado",
   in_progress: "Em andamento",
-  completed: "Concluido",
+  completed: "Concluído",
   cancelled: "Cancelado",
   postponed: "Adiado",
 };
 
 const TYPE_LABELS: Record<string, string> = {
-  reuniao: "Reuniao",
-  comicio: "Comicio",
+  reuniao: "Reunião",
+  comicio: "Comício",
   caminhada: "Caminhada",
   carreata: "Carreata",
   debate: "Debate",
-  audiencia: "Audiencia",
+  audiencia: "Audiência",
   assembleia: "Assembleia",
-  workshop: "Workshop",
-  live: "Live",
+  workshop: "Oficina",
+  live: "Transmissão ao vivo",
   entrevista: "Entrevista",
   visita: "Visita",
   outro: "Outro",
@@ -109,7 +109,7 @@ export default async function EventosPage({
         href="/app/politico"
         className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors"
       >
-        &larr; War Room
+        &larr; Voltar
       </Link>
 
       {/* Cabecalho */}
@@ -117,7 +117,7 @@ export default async function EventosPage({
         <div>
           <h1 className="text-2xl font-bold tracking-tight">Eventos</h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            Gerencie eventos da campanha com audiencia estimada e presenca real.
+            Gerencie eventos da campanha com público estimado e presença real.
           </p>
         </div>
         <button
@@ -126,7 +126,7 @@ export default async function EventosPage({
           className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground opacity-50 cursor-not-allowed"
           title="Em breve"
         >
-          Novo evento
+          Novo evento (em breve)
         </button>
       </div>
 

@@ -154,8 +154,8 @@ export default function AutomacoesInstagramPage() {
           <div className="flex min-w-0 items-center gap-4">
             {/* Elmo da Guerrilheiros (recortado pra focar no capacete, sem o texto de baixo). */}
             <span
-              className="flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-xl"
-              style={{ background: "#0A0C10", boxShadow: "0 0 16px rgba(215,243,106,0.28)", border: "1px solid rgba(215,243,106,0.25)" }}
+              className="flex h-24 w-24 shrink-0 items-center justify-center overflow-hidden rounded-2xl"
+              style={{ background: "#0A0C10", boxShadow: "0 0 22px rgba(215,243,106,0.32)", border: "1px solid rgba(215,243,106,0.28)" }}
             >
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img src="/gipchat-elmo.png" alt="GIPCHAT" className="h-full w-full object-contain" />

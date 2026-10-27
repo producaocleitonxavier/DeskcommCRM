@@ -216,12 +216,12 @@ export default function DashboardClient({ dash, funil, calls }: DashboardClientP
                     horizontal
                     height={320}
                     data={[
-                      { name: "Awareness", value: funil.invisivel_awareness, fill: INVISIVEL_HEX[0]! },
-                      { name: "Interest", value: funil.invisivel_interest, fill: INVISIVEL_HEX[1]! },
-                      { name: "Consideration", value: funil.invisivel_consideration, fill: INVISIVEL_HEX[2]! },
-                      { name: "Intent", value: funil.invisivel_intent, fill: INVISIVEL_HEX[3]! },
-                      { name: "Evaluation", value: funil.invisivel_evaluation, fill: INVISIVEL_HEX[4]! },
-                      { name: "Conversion", value: funil.invisivel_conversion, fill: INVISIVEL_HEX[5]! },
+                      { name: "Descoberta", value: funil.invisivel_awareness, fill: INVISIVEL_HEX[0]! },
+                      { name: "Interesse", value: funil.invisivel_interest, fill: INVISIVEL_HEX[1]! },
+                      { name: "Consideração", value: funil.invisivel_consideration, fill: INVISIVEL_HEX[2]! },
+                      { name: "Intenção", value: funil.invisivel_intent, fill: INVISIVEL_HEX[3]! },
+                      { name: "Avaliação", value: funil.invisivel_evaluation, fill: INVISIVEL_HEX[4]! },
+                      { name: "Conversão", value: funil.invisivel_conversion, fill: INVISIVEL_HEX[5]! },
                     ]}
                   />
                 </div>

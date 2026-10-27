@@ -133,13 +133,13 @@ export default function ObraDetalhe({ data }: { data: ObraDetalheData }) {
           <div className="grid grid-cols-3 gap-3">
             <Peso valor={data.peso.meusVotos.toLocaleString("pt-BR")} label="Seus votos aqui" sub={data.peso.universo > 0 ? `${((data.peso.meusVotos / data.peso.universo) * 100).toFixed(1)}% do bairro` : "no último pleito"} accent="#D7F36A" />
             <Peso valor={data.peso.universo.toLocaleString("pt-BR")} label="Votos do cargo" sub="tamanho eleitoral" />
-            <Peso valor={data.peso.leads.toLocaleString("pt-BR")} label="Sua base (CRM)" sub="contatos no bairro" accent="#7da9bf" />
+            <Peso valor={data.peso.leads.toLocaleString("pt-BR")} label="Sua base de contatos" sub="contatos no bairro" accent="#7da9bf" />
           </div>
         </section>
       )}
       {!data.mandatoNome && data.temBairro && (
         <Link href="/app/politico/obras?mandato=1" className="block rounded-xl p-3.5 text-[13px]" style={{ background: "rgba(215,243,106,0.06)", border: "1px dashed rgba(215,243,106,0.4)", color: "var(--color-text-muted)" }}>
-          💡 <strong style={{ color: "var(--color-text)" }}>Vincule seu mandato no TSE</strong> (na lista de Obras) para ver, em cada obra, os votos que você fez naquele bairro — o ROI eleitoral do recurso.
+          💡 <strong style={{ color: "var(--color-text)" }}>Vincule seu mandato no TSE</strong> (na lista de Obras) para ver, em cada obra, os votos que você fez naquele bairro — o retorno eleitoral do recurso.
         </Link>
       )}
 
@@ -425,7 +425,7 @@ function FotosCard({ obraId, fotos, onMudou }: { obraId: string; fotos: FotoObra
         <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
           {fotos.map((f) => (
             <div key={f.id} className="group relative overflow-hidden rounded-lg" style={{ border: "1px solid var(--color-border)" }}>
-              {f.url ? <img src={f.url} alt={f.legenda ?? "foto da obra"} className="h-28 w-full object-cover" /> : <div className="flex h-28 items-center justify-center text-xs" style={{ color: "var(--color-text-subtle)" }}>sem preview</div>}
+              {f.url ? <img src={f.url} alt={f.legenda ?? "foto da obra"} className="h-28 w-full object-cover" /> : <div className="flex h-28 items-center justify-center text-xs" style={{ color: "var(--color-text-subtle)" }}>sem prévia</div>}
               {f.legenda && <div className="truncate px-1.5 py-1 text-[11px]" style={{ color: "var(--color-text-muted)" }}>{f.legenda}</div>}
               <button type="button" onClick={async () => { if (confirm("Remover foto?")) { await removerFotoObra(f.id); await onMudou(); } }}
                 className="absolute right-1 top-1 rounded-full p-1 opacity-0 transition-opacity group-hover:opacity-100" style={{ background: "rgba(0,0,0,0.6)" }} aria-label="remover">
