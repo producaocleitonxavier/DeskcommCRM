@@ -9,11 +9,15 @@ set search_path = public
 as $$
   with b as (
     select
-      btrim(coalesce(
+      -- Normaliza o bairro (lower+unaccent) para UNIR variações do mesmo bairro:
+      -- a base tem "UNIÀO"/"União"/"UNIÃO" como linhas diferentes (caixa + acento
+      -- corrompido). Sem isso o ranking fragmenta o mesmo bairro em vários. A tela
+      -- reexibe em Title Case; o acento se perde no display, mas a CONTAGEM fica exata.
+      lower(unaccent(btrim(coalesce(
         c.custom_fields->'endereco_gip'->>'bairro',
         c.custom_fields->'endereco'->>'bairro',
         c.custom_fields->>'bairro'
-      )) as bairro,
+      )))) as bairro_norm,
       lower(unaccent(btrim(coalesce(
         c.custom_fields->'endereco_gip'->>'cidade',
         c.custom_fields->'endereco'->>'cidade',
@@ -24,13 +28,13 @@ as $$
     where pl.organization_id = p_org
       and coalesce(c.is_blocked, false) = false
   )
-  select bairro, count(*)::bigint as total
+  select bairro_norm as bairro, count(*)::bigint as total
   from b
   where cidade_norm = lower(unaccent(btrim(p_cidade)))
-    and bairro is not null
-    and bairro <> ''
-  group by bairro
-  order by total desc, bairro asc
+    and bairro_norm is not null
+    and bairro_norm <> ''
+  group by bairro_norm
+  order by total desc, bairro_norm asc
   limit 40
 $$;
 
