@@ -331,9 +331,9 @@ export default async function InstagramHubPage() {
     },
     {
       href: "/app/instagram/automacoes",
-      titulo: "Automações",
+      titulo: "Automações (GIPCHAT)",
       descricao:
-        "Respondem comentários e mandam DMs sozinhas — tudo seu, sem depender de ferramenta de fora.",
+        "O GIPCHAT responde comentários e manda DMs sozinho — o seu motor de automação, sem ferramenta de fora.",
       icon: "zap",
       badge:
         metricas.flowsAtivos > 0
@@ -383,7 +383,7 @@ export default async function InstagramHubPage() {
               Instagram
             </h1>
             <p className="mt-0.5 text-[15px]" style={{ color: "var(--color-text-muted)" }}>
-              Comentários e DMs no automático — o seu motor de captação.
+              GIPCHAT — comentários e DMs no automático, o seu motor próprio de captação.
             </p>
           </div>
         </div>

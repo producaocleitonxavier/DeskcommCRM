@@ -14,7 +14,6 @@ import { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
 import { Zap, CheckCircle2, PauseCircle, Pencil, Trash2 } from "lucide-react";
 
-import { CommandHero } from "@/components/politico/command-hero";
 import { KpiCard } from "@/components/politico/kpi-card";
 import { EmptyState } from "@/components/politico/empty-state";
 
@@ -143,12 +142,33 @@ export default function AutomacoesInstagramPage() {
 
   return (
     <div className="mx-auto max-w-[1140px] space-y-[18px] px-4 py-7" style={{ background: "var(--color-bg)" }}>
-      <CommandHero
-        eyebrow="Instagram · Automações"
-        titulo="Automações"
-        subtitulo="Flows de trigger + ação — o primeiro que bater executa."
-        acoes={[{ href: "/app/instagram/automacoes/novo", label: "+ Novo flow", primary: true }]}
-      />
+      {/* Header branded GIPCHAT (com o elmo da Guerrilheiros) */}
+      <header
+        className="wr-card relative overflow-hidden p-6 sm:p-7"
+        style={{ background: "linear-gradient(135deg,#0E1116 0%,#14181F 55%,#1A2410 100%)", border: "1px solid rgba(215,243,106,0.22)" }}
+      >
+        <div aria-hidden className="pointer-events-none absolute -right-16 -top-20 h-56 w-56 rounded-full" style={{ background: "radial-gradient(closest-side,rgba(215,243,106,0.16),transparent)" }} />
+        <div className="relative flex flex-wrap items-center justify-between gap-5">
+          <div className="flex min-w-0 items-center gap-4">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/gipchat-elmo.png" alt="GIPCHAT" className="h-16 w-16 shrink-0 object-contain" style={{ filter: "drop-shadow(0 0 14px rgba(215,243,106,0.3))" }} />
+            <div className="min-w-0">
+              <span className="text-[11px] font-bold uppercase tracking-[0.2em]" style={{ color: "#D7F36A" }}>Instagram · Automação</span>
+              <h1 className="font-heading mt-1 text-3xl font-bold leading-tight" style={{ color: "#FFFFFF" }}>GIPCHAT</h1>
+              <p className="mt-1 max-w-2xl text-sm" style={{ color: "rgba(255,255,255,0.6)" }}>
+                Suas automações de comentário e DM — responde e capta sozinho, no seu Instagram.
+              </p>
+            </div>
+          </div>
+          <Link
+            href="/app/instagram/automacoes/novo"
+            className="inline-flex min-h-[40px] items-center rounded-full px-4 text-sm font-semibold"
+            style={{ background: "#D7F36A", color: "#14181F" }}
+          >
+            + Nova automação
+          </Link>
+        </div>
+      </header>
 
       {/* ── KPI resumo ──────────────────────────────────────────── */}
       {!carregando && flows.length > 0 && (
