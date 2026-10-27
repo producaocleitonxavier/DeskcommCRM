@@ -11,7 +11,7 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { requireAuth, resolveActiveOrg } from "@/lib/auth/server";
-import type { MapaBaseResumo } from "@/components/politico/mapa-base-hero";
+import type { BaseTerritorioResumo } from "@/components/politico/base-territorio-hero";
 import LeadsClient from "./_leads-client";
 
 export const dynamic = "force-dynamic";
@@ -108,7 +108,7 @@ async function buscarCidades(organizationId: string): Promise<CidadeOpcao[]> {
  * cidade do cadastro → IBGE por intel_municipios). `naoLocalizados` é preenchido
  * depois, no corpo da página, com o total da base menos os mapeados.
  */
-async function buscarMapaBase(organizationId: string): Promise<Omit<MapaBaseResumo, "naoLocalizados">> {
+async function buscarMapaBase(organizationId: string): Promise<Omit<BaseTerritorioResumo, "naoLocalizados">> {
   const db = await createClient();
   const { data } = await db.rpc("pol_mapa_base_municipios", { p_org: organizationId });
   const linhas = ((data ?? []) as { ibge_code: string; nome: string; total: number | string }[]).map((r) => ({
@@ -178,7 +178,7 @@ export default async function PessoasPage({
     buscarMapaBase(org.orgId),
   ]);
 
-  const mapaResumo: MapaBaseResumo = {
+  const mapaResumo: BaseTerritorioResumo = {
     ...mapaBase,
     naoLocalizados: Math.max(0, (contagens._total ?? 0) - mapaBase.mapeados),
   };

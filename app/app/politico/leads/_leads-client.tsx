@@ -13,7 +13,7 @@ import { Building2, MapPin, Search, Users } from "lucide-react";
 
 import { CommandHero } from "@/components/politico/command-hero";
 import { EmptyState } from "@/components/politico/empty-state";
-import MapaBaseHero, { type MapaBaseResumo } from "@/components/politico/mapa-base-hero";
+import BaseTerritorioHero, { type BaseTerritorioResumo } from "@/components/politico/base-territorio-hero";
 import { carimbarCidadesDosLeads, carimbarZonasDosLeads } from "@/app/actions/politico/gabinete-actions";
 import type { LeadRow } from "./page";
 
@@ -68,7 +68,7 @@ export interface LeadsClientProps {
   total: number;
   contagens: Record<string, number>;
   cidades: { id: string; name: string; n: number }[];
-  mapaResumo: MapaBaseResumo;
+  mapaResumo: BaseTerritorioResumo;
   filtros: Filtros;
   porPagina: number;
 }
@@ -243,8 +243,8 @@ export default function LeadsClient({ leads, total, contagens, cidades, mapaResu
         )}
       </div>
 
-      {/* ── Mapa de calor da base (cidades) — acima dos cards ────── */}
-      <MapaBaseHero resumo={mapaResumo} />
+      {/* ── Onde está a base: ranking de cidades + bairros — acima dos cards ── */}
+      <BaseTerritorioHero resumo={mapaResumo} />
 
       {/* ── Lista ───────────────────────────────────────────────── */}
       {leads.length === 0 ? (
