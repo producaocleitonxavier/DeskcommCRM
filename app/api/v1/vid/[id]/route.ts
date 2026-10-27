@@ -22,7 +22,9 @@ export async function GET(req: NextRequest, ctx: { params: Promise<{ id: string 
   if (!id.success) return paginaDeSaida(null);
 
   const ip = clientIp(req);
-  if (ip && !(await checkRateLimit(`vid:${id.data}:${ip}`, 30, 60)).allowed) {
+  // Sempre limita — inclusive sem IP (balde próprio), senão o teto seria pulável
+  // só não mandando header de proxy.
+  if (!(await checkRateLimit(`vid:${id.data}:${ip ?? "sem-ip"}`, 30, 60)).allowed) {
     return new NextResponse(null, { status: 429, headers: { "Retry-After": "60", "Cache-Control": "no-store" } });
   }
 
@@ -43,6 +45,18 @@ export async function GET(req: NextRequest, ctx: { params: Promise<{ id: string 
   const m = mat as { url: string | null; ativo: boolean } | null;
   if (!m || !m.ativo || !m.url) return paginaDeSaida(null);
 
+  // O destino é a URL do material (digitada por um membro do tenant). Só segue se
+  // for http/https ABSOLUTA — senão o redirect viraria open-redirect com o domínio
+  // da plataforma, ou `new URL` lançaria e devolveria 500 em vez do 404 neutro.
+  let destino: string | null = null;
+  try {
+    const u = new URL(m.url);
+    if (u.protocol === "http:" || u.protocol === "https:") destino = u.toString();
+  } catch {
+    destino = null;
+  }
+  if (!destino) return paginaDeSaida(null);
+
   // Conta o clique (best-effort, idempotente por visitante/dia). Não bloqueia o redirect.
   await registrarCliqueVideo(admin, {
     shareId: s.id,
@@ -50,7 +64,7 @@ export async function GET(req: NextRequest, ctx: { params: Promise<{ id: string 
     visitorHash: hashVisitante(ip, req.headers.get("user-agent")),
   });
 
-  const response = paginaDeSaida(m.url);
+  const response = paginaDeSaida(destino);
   response.headers.set("Cache-Control", "no-store");
   response.headers.set("Referrer-Policy", "no-referrer");
   return response;

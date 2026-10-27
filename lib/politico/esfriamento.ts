@@ -15,6 +15,19 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { logger } from "@/lib/logger";
 
 const DIA_MS = 86_400_000;
+// O gateway (Kong) devolve 414 quando `id=in.(...)` passa de ~8 KB (≈200 uuids),
+// e o catch engoliria o erro — a feature pararia em silêncio na escala real. Então
+// o UPDATE vai em lotes pequenos. Mesma lição de `lib/campanhas` (#2358).
+const LOTE_UPDATE = 100;
+
+async function rebaixarEmLotes(admin: SupabaseClient, ids: string[], temperatura: string): Promise<void> {
+  for (let i = 0; i < ids.length; i += LOTE_UPDATE) {
+    await admin
+      .from("pol_leads")
+      .update({ temperature: temperatura })
+      .in("id", ids.slice(i, i + LOTE_UPDATE));
+  }
+}
 
 export async function esfriarInativos(admin: SupabaseClient): Promise<{ esfriados: number }> {
   try {
@@ -22,6 +35,7 @@ export async function esfriarInativos(admin: SupabaseClient): Promise<{ esfriado
       .from("pol_leads")
       .select("id, temperature, contacts!contact_id(last_activity_at)")
       .in("temperature", ["morno", "quente"])
+      .order("id", { ascending: true })
       .limit(2000);
 
     const agora = Date.now();
@@ -40,11 +54,11 @@ export async function esfriarInativos(admin: SupabaseClient): Promise<{ esfriado
 
     let esfriados = 0;
     if (paraFrio.length > 0) {
-      await admin.from("pol_leads").update({ temperature: "frio" }).in("id", paraFrio);
+      await rebaixarEmLotes(admin, paraFrio, "frio");
       esfriados += paraFrio.length;
     }
     if (paraMorno.length > 0) {
-      await admin.from("pol_leads").update({ temperature: "morno" }).in("id", paraMorno);
+      await rebaixarEmLotes(admin, paraMorno, "morno");
       esfriados += paraMorno.length;
     }
     return { esfriados };
