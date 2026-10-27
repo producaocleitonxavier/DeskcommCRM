@@ -4,18 +4,19 @@
  * Máquina de estados dirigida pelo ESTÁGIO do lead (custom_fields.captacao_estagio),
  * sem flag separada: o próprio estágio diz o que a próxima resposta significa.
  *
- *   interagiu/em_conversa (sem cidade)  → a resposta é a CIDADE
+ *   interagiu/em_conversa (sem cidade)  → a resposta traz ESTADO/CIDADE/BAIRRO (+ talvez WhatsApp)
  *   qualificado_mgbh (sem whatsapp)     → a resposta é o WHATSAPP
  *
- * Fluxo quando chega a cidade:
- *   - no alvo (estaNoAlvo)  → estágio "qualificado_mgbh" + pede WhatsApp
- *   - fora do alvo          → estágio "fora_de_alvo" + entrega a isca (goodwill)
- * Quando chega o WhatsApp (de quem está no alvo):
- *   - grava telefone + consentimento → estágio "apoiador_whatsapp" → entrega a
- *     isca → GRADUA pro funil político (pol_leads simpatizante, só quando qualificado)
+ * A mensagem de captação pede os 4 dados de uma vez (estado, cidade, bairro,
+ * WhatsApp). Extraímos TUDO que vier na mesma resposta; se faltar, reperguntamos
+ * só o que faltou. Quando chega a cidade:
+ *   - no alvo (estaNoAlvo)  → se já veio o WhatsApp, finaliza na hora; senão pede
+ *                             o WhatsApp (estágio "qualificado_mgbh").
+ *   - fora do alvo          → entrega a isca (goodwill), guarda o que veio.
+ * Finalizar = grava telefone + consentimento + endereco_gip (estado/cidade/bairro)
+ * → "apoiador_whatsapp" → entrega a isca → GRADUA pro funil (pol_leads simpatizante).
  *
- * NUNCA faz HTTP: as DMs de saída são emitidas como `ig.dm_outbound` no event_log
- * (o handler de canal despacha). Doutrina trigger≠HTTP.
+ * NUNCA faz HTTP: as DMs de saída saem como `ig.dm_outbound` no event_log.
  */
 
 import type { SupabaseClient } from "@supabase/supabase-js";
@@ -44,6 +45,7 @@ function norm(s: string): string {
 interface Localidade {
   cidade: string | null;
   uf: string | null;
+  bairro: string | null;
 }
 
 /** Heurística (cidades do alvo mencionadas direto) + IA leve pra texto livre. */
@@ -55,28 +57,40 @@ async function extrairLocalidade(
 ): Promise<Localidade> {
   const t = norm(texto);
 
-  // 1) Heurística: a pessoa escreveu o nome de uma cidade do alvo.
+  // 1) Heurística: a pessoa escreveu o nome de uma cidade do alvo (cidade + UF só;
+  //    o bairro vem da IA, que entende "bairro tal").
   const doAlvo = [config.cidadeAlvo, ...config.cidadesExtra].filter(Boolean) as string[];
+  let heurCidade: string | null = null;
+  let heurUf: string | null = null;
   for (const c of doAlvo) {
-    if (t.includes(norm(c))) return { cidade: c, uf: config.estadoAlvo };
+    if (t.includes(norm(c))) {
+      heurCidade = c;
+      heurUf = config.estadoAlvo;
+      break;
+    }
   }
 
-  // 2) IA leve: extrai cidade/UF de uma frase curta ("sou de bh", "moro em contagem").
+  // 2) IA leve: extrai cidade/UF/BAIRRO de uma frase curta.
   try {
     const cerebro = await cerebroDaOrg(db, orgId);
     const { text } = await generateText({
       model: modeloDoCerebro(cerebro),
       system:
-        'Extraia a cidade e a UF (sigla de 2 letras) que a pessoa diz morar ou ser, a partir de uma mensagem curta em português do Brasil. Entenda apelidos (ex.: "BH" = Belo Horizonte/MG). Responda SOMENTE um JSON {"cidade": "<nome>"|null, "uf": "<XX>"|null}. Nada fora do JSON.',
+        'Extraia a CIDADE, a UF (sigla de 2 letras) e o BAIRRO que a pessoa diz morar ou ser, a partir de uma mensagem curta em português do Brasil. Entenda apelidos (ex.: "BH" = Belo Horizonte/MG). Ignore número de telefone. Responda SOMENTE um JSON {"cidade": "<nome>"|null, "uf": "<XX>"|null, "bairro": "<nome>"|null}. Nada fora do JSON.',
       prompt: texto.slice(0, 280),
-      maxOutputTokens: 60,
+      maxOutputTokens: 80,
     });
     const m = text.match(/\{[\s\S]*\}/);
     if (m) {
-      const j = JSON.parse(m[0]) as { cidade?: unknown; uf?: unknown };
+      const j = JSON.parse(m[0]) as { cidade?: unknown; uf?: unknown; bairro?: unknown };
+      const iaCidade = typeof j.cidade === "string" && j.cidade.trim() ? j.cidade.trim() : null;
+      const iaUf = typeof j.uf === "string" && j.uf.trim() ? j.uf.trim().toUpperCase().slice(0, 2) : null;
+      const iaBairro = typeof j.bairro === "string" && j.bairro.trim() ? j.bairro.trim() : null;
+      // A heurística ganha na cidade/UF (match exato do alvo); a IA complementa o bairro.
       return {
-        cidade: typeof j.cidade === "string" && j.cidade.trim() ? j.cidade.trim() : null,
-        uf: typeof j.uf === "string" && j.uf.trim() ? j.uf.trim().toUpperCase().slice(0, 2) : null,
+        cidade: heurCidade ?? iaCidade,
+        uf: heurUf ?? iaUf,
+        bairro: iaBairro,
       };
     }
   } catch (err) {
@@ -84,15 +98,14 @@ async function extrairLocalidade(
       error: err instanceof Error ? err.message : String(err),
     });
   }
-  return { cidade: null, uf: null };
+  return { cidade: heurCidade, uf: heurUf, bairro: null };
 }
 
 /**
- * Extrai um telefone BR do texto. DDD é OBRIGATÓRIO (a maioria manda só o número
- * ou "31 número" — não prestam atenção). Devolve:
- *  - { fone }   → E.164 (+55DDDNUMERO), formato do CHECK contacts_phone_e164_format
- *  - "sem_ddd"  → veio um número (8-9 dígitos) mas SEM DDD → repetir pedindo DDD
- *  - "invalido" → não parece telefone → repetir a pergunta padrão
+ * Extrai um telefone BR do texto. DDD é OBRIGATÓRIO. Devolve:
+ *  - { fone }   → E.164 (+55DDDNUMERO)
+ *  - "sem_ddd"  → número (8-9 dígitos) SEM DDD → repetir pedindo DDD
+ *  - "invalido" → não parece telefone
  */
 type ResultadoTelefone = { fone: string } | "sem_ddd" | "invalido";
 
@@ -127,11 +140,7 @@ async function emitirDm(
   });
 }
 
-/**
- * Cria o lead político (graduação) — SÓ quando qualificado. Idempotente.
- * NÃO toca em custom_fields (o caller já grava endereco_gip na mesma escrita do
- * contato, pra não haver 2ª escrita correndo com a 1ª e clobberando-a).
- */
+/** Cria o lead político (graduação) — SÓ quando qualificado. Idempotente. */
 async function graduar(db: SupabaseClient, orgId: string, contactId: string): Promise<void> {
   const { data: existe } = await db
     .from("pol_leads")
@@ -139,7 +148,6 @@ async function graduar(db: SupabaseClient, orgId: string, contactId: string): Pr
     .eq("organization_id", orgId)
     .eq("contact_id", contactId)
     .maybeSingle();
-
   if (existe) return;
 
   const { error } = await db.from("pol_leads").insert({
@@ -150,6 +158,58 @@ async function graduar(db: SupabaseClient, orgId: string, contactId: string): Pr
   if (error && error.code !== "23505") {
     logger.error("[captacao-qualificacao] falha ao graduar pol_lead", { error: error.message });
   }
+}
+
+/**
+ * Finaliza o apoiador: grava telefone + consentimento + endereco_gip
+ * (estado/cidade/bairro), entrega a isca e GRADUA. Uma escrita só do
+ * custom_fields pra não correr com outra. Fallback sem phone se o unique/CHECK
+ * do telefone recusar (não perde a captação).
+ */
+async function finalizarApoiador(
+  db: SupabaseClient,
+  orgId: string,
+  contato: { id: string; phone_number: string | null },
+  cf: Record<string, unknown>,
+  fone: string,
+  entregaDm: string | null,
+  emitir: (t: string | null) => Promise<void>,
+): Promise<void> {
+  const enderecoGip = {
+    ...((cf.endereco_gip as Record<string, unknown>) ?? {}),
+    cidade: (cf.cidade as string) ?? null,
+    uf: (cf.uf as string) ?? null,
+    bairro: (cf.bairro as string) ?? null,
+  };
+  const novoCf = {
+    ...cf,
+    whatsapp: fone,
+    consentimento: true,
+    consentimento_em: new Date().toISOString(),
+    captacao_estagio: "apoiador_whatsapp",
+    endereco_gip: enderecoGip,
+    origem_captacao: "instagram",
+  };
+
+  const { error: updErr } = await db
+    .from("contacts")
+    .update({ phone_number: contato.phone_number ?? fone, custom_fields: novoCf })
+    .eq("id", contato.id)
+    .eq("organization_id", orgId);
+
+  if (updErr) {
+    logger.warn("[captacao-qualificacao] update com phone falhou, salvando sem phone", {
+      error: updErr.message,
+    });
+    await db
+      .from("contacts")
+      .update({ custom_fields: novoCf })
+      .eq("id", contato.id)
+      .eq("organization_id", orgId);
+  }
+
+  await emitir(entregaDm);
+  await graduar(db, orgId, contato.id);
 }
 
 /**
@@ -183,18 +243,26 @@ export async function qualificarPorDm(
   const emitir = (t: string | null) =>
     emitirDm(db, orgId, channelSessionId, senderIgId, contato.id, t);
 
-  // ── Etapa CIDADE: aguardando a localização ───────────────────────────────
+  // ── Etapa LOCALIZAÇÃO: aguardando estado/cidade/bairro (+ talvez WhatsApp) ──
   if ((estagio === "interagiu" || estagio === "em_conversa") && !cf.cidade) {
     const loc = await extrairLocalidade(db, orgId, texto, config);
+    const tel = extrairTelefone(texto); // a pessoa pode ter mandado tudo junto
+
     if (!loc.cidade && !loc.uf) {
+      // Não entendeu a localização — repergunta (mantém o que já sabe do telefone).
       await emitir(config.textoDmPesquisa);
       return { status: "ok", detail: "cidade_nao_entendida_reperguntou" };
     }
 
     const noAlvo = estaNoAlvo(config, loc.cidade, loc.uf);
-    const base = { ...cf, cidade: loc.cidade, uf: loc.uf };
+    const base = { ...cf, cidade: loc.cidade, uf: loc.uf, bairro: loc.bairro ?? (cf.bairro ?? null) };
 
     if (noAlvo) {
+      // No alvo: se o WhatsApp veio junto, finaliza agora; senão, pede o WhatsApp.
+      if (typeof tel === "object") {
+        await finalizarApoiador(db, orgId, contato, base, tel.fone, config.textoDmEntrega, emitir);
+        return { status: "ok", detail: "apoiador_graduado_tacada_unica" };
+      }
       await db
         .from("contacts")
         .update({ custom_fields: { ...base, captacao_estagio: "qualificado_mgbh" } })
@@ -204,12 +272,19 @@ export async function qualificarPorDm(
       return { status: "ok", detail: "qualificado_pediu_whatsapp" };
     }
 
+    // Fora do alvo: entrega a isca (goodwill) e guarda o que veio (inclusive WhatsApp).
     await db
       .from("contacts")
-      .update({ custom_fields: { ...base, captacao_estagio: "fora_de_alvo" } })
+      .update({
+        custom_fields: {
+          ...base,
+          captacao_estagio: "fora_de_alvo",
+          ...(typeof tel === "object" ? { whatsapp: tel.fone } : {}),
+        },
+      })
       .eq("id", contato.id)
       .eq("organization_id", orgId);
-    await emitir(config.textoDmEntrega); // entrega a isca mesmo fora do alvo (goodwill)
+    await emitir(config.textoDmEntrega);
     return { status: "ok", detail: "fora_de_alvo_entregou_isca" };
   }
 
@@ -224,56 +299,7 @@ export async function qualificarPorDm(
       await emitir(config.textoDmWhatsapp);
       return { status: "ok", detail: "telefone_nao_entendido_reperguntou" };
     }
-    const fone = tel.fone;
-
-    const cidade = (cf.cidade as string) ?? null;
-    const uf = (cf.uf as string) ?? null;
-
-    // UMA escrita só do custom_fields (inclui endereco_gip pra inteligência
-    // territorial) — evita 2ª escrita correndo com esta. Checa o erro: o
-    // phone_number tem CHECK E.164 e unique por org.
-    const { error: updErr } = await db
-      .from("contacts")
-      .update({
-        phone_number: contato.phone_number ?? fone,
-        custom_fields: {
-          ...cf,
-          whatsapp: fone,
-          consentimento: true,
-          consentimento_em: new Date().toISOString(),
-          captacao_estagio: "apoiador_whatsapp",
-          endereco_gip: { ...((cf.endereco_gip as Record<string, unknown>) ?? {}), cidade, uf },
-          origem_captacao: "instagram",
-        },
-      })
-      .eq("id", contato.id)
-      .eq("organization_id", orgId);
-
-    if (updErr) {
-      // Telefone já existe em outro contato (unique) ou formato inesperado:
-      // grava só o custom_fields (sem phone_number) pra não perder a captação.
-      logger.warn("[captacao-qualificacao] update com phone falhou, salvando sem phone", {
-        error: updErr.message,
-      });
-      await db
-        .from("contacts")
-        .update({
-          custom_fields: {
-            ...cf,
-            whatsapp: fone,
-            consentimento: true,
-            consentimento_em: new Date().toISOString(),
-            captacao_estagio: "apoiador_whatsapp",
-            endereco_gip: { ...((cf.endereco_gip as Record<string, unknown>) ?? {}), cidade, uf },
-            origem_captacao: "instagram",
-          },
-        })
-        .eq("id", contato.id)
-        .eq("organization_id", orgId);
-    }
-
-    await emitir(config.textoDmEntrega);
-    await graduar(db, orgId, contato.id); // só cria o pol_lead
+    await finalizarApoiador(db, orgId, contato, cf, tel.fone, config.textoDmEntrega, emitir);
     return { status: "ok", detail: "apoiador_graduado" };
   }
 

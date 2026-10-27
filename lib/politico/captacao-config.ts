@@ -31,11 +31,19 @@ export const CAPTACAO_DEFAULTS: Omit<CaptacaoConfig, "organizationId"> = {
   cidadeAlvo: null,
   abrangencia: "cidade",
   cidadesExtra: [],
-  textoRespostaComentario: "Opa, te chamei no direct! 📩",
-  textoDmPesquisa: "Valeu por interagir! 🙌 De qual cidade você fala?",
-  textoDmWhatsapp: "Quer receber as novidades da campanha em primeira mão? Me passa seu WhatsApp (com DDD) 👇",
-  textoDmEntrega: "Prontinho! 🎁 Aqui estão os e-books gratuitos: [COLE O LINK AQUI]. Qualquer coisa, é só chamar!",
-  textoDmRetorno: "Que bom te ver de novo por aqui! 🙏 Muito obrigado pelo apoio de sempre. Se quiser, baixa o material aqui: [COLE O LINK]",
+  textoRespostaComentario: "Que bom te ver por aqui! 🙏 Te chamei no direct, dá uma conferida 📩",
+  // A mensagem que CONVERTE: oferece valor (material gratuito todo mês) e pede os
+  // 4 dados de uma vez — estado, cidade, bairro e WhatsApp. A IA extrai tudo que
+  // vier; o que faltar é reperguntado. (Lição do DG Digital: sem troca clara,
+  // ninguém passa WhatsApp nem de onde é.)
+  textoDmPesquisa:
+    "Que bom ter você nessa batalha! 🙏 Pra eu te mandar nossos materiais gratuitos todo mês — ebooks e vídeos exclusivos — direto no seu WhatsApp, me conta: de qual *estado, cidade e bairro* você fala? E qual seu *WhatsApp* (com DDD)? 👇",
+  textoDmWhatsapp:
+    "Show! 🙌 Só falta o seu *WhatsApp* (com DDD) pra eu te enviar os materiais. Me manda assim: (31) 99999-9999",
+  textoDmEntrega:
+    "Prontinho! 🎁 Seu material está aqui: [COLE O LINK]. Todo mês eu te mando novidades gratuitas por aqui — conta comigo! 💚",
+  textoDmRetorno:
+    "Que bom te ver de novo! 🙏 Muito obrigado pelo apoio de sempre. Se quiser, o material mais recente está aqui: [COLE O LINK]",
   pedirWhatsappSoAlvo: true,
 };
 
