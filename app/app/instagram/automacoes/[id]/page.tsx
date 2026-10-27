@@ -51,13 +51,14 @@ interface FlowRow {
   acoes: AcaoConfig[];
 }
 
+// Só os gatilhos reais (ver novo/page.tsx). "Novo seguidor"/"Palavra-chave em DM"
+// removidos por não dispararem. Flows antigos com esses tipos ainda abrem (a
+// união de tipos os mantém), mas não aparecem como opção nova.
 const TRIGGER_OPTIONS: { value: TriggerTipo; label: string; descricao: string }[] = [
   { value: "comment_keyword", label: "Palavra-chave no comentário", descricao: "Dispara quando o comentário contém uma ou mais palavras-chave." },
   { value: "comment_no_post", label: "Qualquer comentário em post específico", descricao: "Dispara em qualquer comentário num post específico." },
-  { value: "dm_keyword", label: "Palavra-chave em DM", descricao: "Dispara quando a DM contém uma palavra-chave." },
-  { value: "novo_seguidor", label: "Novo seguidor", descricao: "Dispara quando alguém segue o perfil." },
-  { value: "story_reply", label: "Resposta de Story", descricao: "Dispara quando alguém responde um Story." },
   { value: "novo_comentario", label: "Qualquer comentário (catch-all)", descricao: "Dispara em qualquer comentário — use como fallback no final da lista." },
+  { value: "story_reply", label: "Resposta de Story", descricao: "Dispara quando alguém responde um Story." },
 ];
 
 const ACAO_OPTIONS: { value: AcaoTipo; label: string; descricao: string }[] = [
