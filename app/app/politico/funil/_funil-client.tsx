@@ -169,7 +169,7 @@ export default function FunilClient({
       <section className="wr-card p-6 sm:p-7">
         <div className="mb-4 flex items-center justify-between gap-2">
           <h2 className="font-heading text-base font-bold">🏆 Multiplicadores</h2>
-          <span className="text-xs" style={{ color: "var(--color-text-subtle)" }}>quem trouxe mais gente pra base</span>
+          <span className="text-xs" style={{ color: "var(--color-text-subtle)" }}>quem mais traz e alcança gente</span>
         </div>
         {multiplicadores.length === 0 ? (
           <p className="text-sm" style={{ color: "var(--color-text-subtle)" }}>
@@ -194,8 +194,17 @@ export default function FunilClient({
                   {i + 1}
                 </span>
                 <span className="min-w-0 flex-1 truncate text-sm font-semibold" style={{ color: "var(--color-text)" }}>{m.nome}</span>
-                <span className="shrink-0 text-sm font-bold tabular-nums" style={{ color: "var(--color-accent)" }}>
-                  trouxe {m.trouxe}
+                <span className="flex shrink-0 items-center gap-2 text-sm font-bold tabular-nums">
+                  <span style={{ color: "var(--color-accent)" }}>trouxe {m.trouxe}</span>
+                  {m.alcancou > 0 && (
+                    <span
+                      className="rounded-full px-2 py-0.5 text-xs font-semibold"
+                      style={{ background: "rgba(255,255,255,0.06)", color: "var(--color-text-muted)" }}
+                      title="Alcance estimado dos vídeos que compartilhou (cliques distintos)"
+                    >
+                      alcançou {m.alcancou}
+                    </span>
+                  )}
                 </span>
               </li>
             ))}

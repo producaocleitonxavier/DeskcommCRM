@@ -5,6 +5,12 @@
 export const PUBLIC_PATHS: RegExp[] = [
   // Link público persistido: org e destino são resolvidos exclusivamente no servidor.
   /^\/api\/v1\/rastreio\/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i,
+  // LINK DE VÍDEO RASTREÁVEL (alcance do multiplicador). Quem chega é o NAVEGADOR
+  // de quem clicou no link compartilhado — sem sessão nossa. O id é o
+  // `pol_video_shares.id`; a org e o destino (post do Instagram) vêm SÓ da linha
+  // persistida. Mesma natureza de `/api/v1/rastreio/` acima. Âncora `$` + forma de
+  // UUID: nenhum sub-path nasce público de carona.
+  /^\/api\/v1\/vid\/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i,
   // CAPTAÇÃO PÚBLICA POR LIDERANÇA (War Room/Gabinete). A liderança compartilha
   // o link /c/<uuid>; quem se cadastra entra na base da org JÁ atribuído a ela.
   // Sem sessão: a org é derivada SÓ da liderança no servidor (nunca do corpo).

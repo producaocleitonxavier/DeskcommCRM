@@ -6,12 +6,13 @@
  * com prévia da capa e confirmação antes de excluir.
  */
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, Check, Image as ImageIcon, Trash2, ExternalLink } from "lucide-react";
+import { ArrowLeft, Check, Image as ImageIcon, Trash2, ExternalLink, Link2, Copy } from "lucide-react";
 
 import { atualizarRegistro, excluirRegistro } from "@/app/actions/politico/gabinete-actions";
+import { gerarLinkDeVideo } from "@/app/actions/politico/video-share-actions";
 
 export interface MaterialDetalhe {
   id: string;
@@ -73,6 +74,32 @@ export default function MaterialDetalheClient({ material }: { material: Material
   const [confirmar, setConfirmar] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
 
+  // Link rastreável — vídeos são posts do Instagram (compartilháveis por link).
+  // Ao abrir um vídeo, geramos o link base da org automaticamente (mede alcance).
+  const [linkRastreavel, setLinkRastreavel] = useState<string | null>(null);
+  const [copiado, setCopiado] = useState(false);
+  useEffect(() => {
+    if (tipo !== "video" || linkRastreavel) return;
+    let vivo = true;
+    void gerarLinkDeVideo(material.id).then((r) => {
+      if (vivo && r.ok) setLinkRastreavel(r.url);
+    });
+    return () => {
+      vivo = false;
+    };
+  }, [tipo, linkRastreavel, material.id]);
+
+  async function copiarLink() {
+    if (!linkRastreavel) return;
+    try {
+      await navigator.clipboard.writeText(linkRastreavel);
+      setCopiado(true);
+      setTimeout(() => setCopiado(false), 1800);
+    } catch {
+      setErro("Não consegui copiar — selecione e copie o link manualmente.");
+    }
+  }
+
   async function salvar(e: React.FormEvent) {
     e.preventDefault();
     setErro(null);
@@ -125,6 +152,44 @@ export default function MaterialDetalheClient({ material }: { material: Material
           <ExternalLink className="h-4 w-4" aria-hidden /> Abrir material atual
         </a>
       </div>
+
+      {tipo === "video" && (
+        <section className="wr-card space-y-3 p-5 sm:p-6">
+          <div className="flex items-center gap-2">
+            <Link2 className="h-4 w-4" style={{ color: "var(--color-accent)" }} aria-hidden />
+            <h2 className="font-heading text-base font-bold">Link rastreável do vídeo</h2>
+          </div>
+          <p className="text-sm" style={{ color: "var(--color-text-muted)" }}>
+            Compartilhe <strong>este link</strong> em vez do link direto do Instagram. Cada clique é
+            contado — é assim que medimos o <strong>alcance</strong> dos vídeos e de cada multiplicador.
+          </p>
+          {linkRastreavel ? (
+            <div className="flex items-center gap-2">
+              <input
+                type="text"
+                readOnly
+                value={linkRastreavel}
+                onFocus={(e) => e.currentTarget.select()}
+                className="wr-input w-full font-mono text-xs"
+              />
+              <button
+                type="button"
+                onClick={copiarLink}
+                className="wr-btn-dark inline-flex shrink-0 items-center gap-1.5"
+                title="Copiar link"
+              >
+                {copiado ? <Check className="h-4 w-4" aria-hidden /> : <Copy className="h-4 w-4" aria-hidden />}
+                {copiado ? "Copiado" : "Copiar"}
+              </button>
+            </div>
+          ) : (
+            <p className="text-xs" style={{ color: "var(--color-text-subtle)" }}>Gerando link…</p>
+          )}
+          <p className="text-xs" style={{ color: "var(--color-text-subtle)" }}>
+            Para medir o alcance de um multiplicador específico, gere o link pessoal dele na ficha do contato.
+          </p>
+        </section>
+      )}
 
       <form onSubmit={salvar} className="space-y-5">
         <section className="wr-card space-y-4 p-5 sm:p-6">

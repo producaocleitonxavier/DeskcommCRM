@@ -68,31 +68,44 @@ async function buscarContagemPorTemperatura(organizationId: string): Promise<Rec
 export interface MultiplicadorRow {
   contact_id: string;
   nome: string;
+  /** Quantas pessoas trouxe (indicação creditada) — o ouro. */
   trouxe: number;
+  /** Alcance estimado dos vídeos que compartilhou (cliques distintos). */
+  alcancou: number;
 }
 
-/** Quem TROUXE gente (member-get-member) — o ouro do funil. Top 10. */
+/**
+ * Os MULTIPLICADORES — quem TROUXE gente (indicação, o ouro) e/ou ALCANÇOU gente
+ * (cliques nos vídeos que compartilhou). Top 10, ordenado por trouxe e depois por
+ * alcance. União: quem só alcançou (sem indicar ainda) também é multiplicador.
+ */
 async function buscarMultiplicadores(organizationId: string): Promise<MultiplicadorRow[]> {
   const db = await createClient();
-  const { data } = await db
-    .from("pol_indicacoes")
-    .select("indicador_contact_id")
-    .eq("organization_id", organizationId)
-    .limit(5000);
-  const tally = new Map<string, number>();
-  for (const r of (data ?? []) as { indicador_contact_id: string }[]) {
-    tally.set(r.indicador_contact_id, (tally.get(r.indicador_contact_id) ?? 0) + 1);
+  const [{ data: inds }, { data: alc }] = await Promise.all([
+    db.from("pol_indicacoes").select("indicador_contact_id").eq("organization_id", organizationId).limit(5000),
+    db.rpc("fn_alcance_por_contato", { p_org: organizationId }),
+  ]);
+  const trouxeDe = new Map<string, number>();
+  for (const r of (inds ?? []) as { indicador_contact_id: string }[]) {
+    trouxeDe.set(r.indicador_contact_id, (trouxeDe.get(r.indicador_contact_id) ?? 0) + 1);
   }
-  const top = [...tally.entries()].sort((a, b) => b[1] - a[1]).slice(0, 10);
-  if (top.length === 0) return [];
-  const ids = top.map(([id]) => id);
+  const alcancouDe = new Map<string, number>();
+  for (const r of (alc ?? []) as { contact_id: string; alcancou: number | string }[]) {
+    alcancouDe.set(r.contact_id, Number(r.alcancou) || 0);
+  }
+  const ids = new Set<string>([...trouxeDe.keys(), ...alcancouDe.keys()]);
+  if (ids.size === 0) return [];
+  const ranked = [...ids]
+    .map((id) => ({ id, trouxe: trouxeDe.get(id) ?? 0, alcancou: alcancouDe.get(id) ?? 0 }))
+    .sort((a, b) => b.trouxe - a.trouxe || b.alcancou - a.alcancou)
+    .slice(0, 10);
   const { data: cts } = await db
     .from("contacts")
     .select("id, name")
     .eq("organization_id", organizationId)
-    .in("id", ids);
+    .in("id", ranked.map((r) => r.id));
   const nomeDe = new Map(((cts ?? []) as { id: string; name: string | null }[]).map((c) => [c.id, c.name]));
-  return top.map(([id, trouxe]) => ({ contact_id: id, nome: nomeDe.get(id) ?? "Sem nome", trouxe }));
+  return ranked.map((r) => ({ contact_id: r.id, nome: nomeDe.get(r.id) ?? "Sem nome", trouxe: r.trouxe, alcancou: r.alcancou }));
 }
 
 async function buscarTransicoesRecentes(organizationId: string): Promise<TransicaoRow[]> {
