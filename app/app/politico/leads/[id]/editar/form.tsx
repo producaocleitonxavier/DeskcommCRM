@@ -45,6 +45,32 @@ function Label({ children }: { children: ReactNode }) {
   );
 }
 
+/** Rótulos amigáveis dos campos, pra mensagem de erro não mostrar o nome técnico. */
+const ROTULO_CAMPO: Record<string, string> = {
+  name: "Nome",
+  phone_number: "WhatsApp",
+  email: "E-mail",
+  birthdate: "Data de nascimento",
+  custom_fields: "Cidade/Bairro/Profissão",
+  support_level: "Etapa no funil",
+  community_role: "Papel na comunidade",
+};
+
+/** Extrai a mensagem útil da resposta de erro (campo + motivo), não só "Validation failed". */
+function msgDoErro(payload: unknown, fallback: string): string {
+  const err = (payload as { error?: { message?: string; details?: { fieldErrors?: Record<string, string[]> } } } | null)?.error;
+  const base = err?.message ?? fallback;
+  const fe = err?.details?.fieldErrors;
+  if (fe) {
+    const primeiro = Object.entries(fe).find(([, v]) => Array.isArray(v) && v.length > 0);
+    if (primeiro) {
+      const rotulo = ROTULO_CAMPO[primeiro[0]] ?? primeiro[0];
+      return `${rotulo}: ${primeiro[1][0]}`;
+    }
+  }
+  return base;
+}
+
 function formatarTelefone(value: string): string {
   // Lê PELO DDD, ignorando "+"/código de país: um "+31..." (DDD 31 de BH) era
   // gravado como +31 e o WhatsApp não entregava. Tira tudo que não é dígito e
@@ -103,7 +129,7 @@ export default function EditarLeadForm({ inicial }: { inicial: LeadParaEdicao })
       });
       if (!resC.ok) {
         const e = await resC.json().catch(() => null);
-        setErro(e?.error?.message ?? `Erro ao salvar contato (${resC.status})`);
+        setErro(msgDoErro(e, `Erro ao salvar contato (${resC.status})`));
         setSalvando(false);
         return;
       }
@@ -120,7 +146,7 @@ export default function EditarLeadForm({ inicial }: { inicial: LeadParaEdicao })
       });
       if (!resL.ok) {
         const e = await resL.json().catch(() => null);
-        setErro(e?.error?.message ?? `Erro ao salvar classificação (${resL.status})`);
+        setErro(msgDoErro(e, `Erro ao salvar classificação (${resL.status})`));
         setSalvando(false);
         return;
       }

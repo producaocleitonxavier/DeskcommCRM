@@ -50,9 +50,14 @@ export const contactCreateSchema = z.object({
     .regex(PHONE_REGEX, "Telefone deve estar em formato E.164 (+5511999998888)")
     .optional(),
   cpf: z.string().refine(isValidCpf, "CPF inválido").optional(),
+  // `.nullable()` porque o PATCH precisa LIMPAR a data (enviar null): sem isso,
+  // salvar uma ficha com nascimento vazio dava "Validation failed" (o form manda
+  // `birthdate: null`, e `.optional()` sozinho só aceita `undefined`). O handler
+  // já grava null (contacts/_handler.ts) — faltava o schema deixar passar.
   birthdate: z
     .string()
     .regex(/^\d{4}-\d{2}-\d{2}$/)
+    .nullable()
     .optional(),
   // O marcador nasce em caixa baixa, pela MESMA regra da tag de conversa: o
   // "VIP" gravado verbatim não casava com o filtro `?tag=vip` (issue #1224).
