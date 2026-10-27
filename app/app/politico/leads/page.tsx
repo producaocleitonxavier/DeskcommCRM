@@ -11,6 +11,7 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { requireAuth, resolveActiveOrg } from "@/lib/auth/server";
+import type { MapaBaseResumo } from "@/components/politico/mapa-base-hero";
 import LeadsClient from "./_leads-client";
 
 export const dynamic = "force-dynamic";
@@ -102,6 +103,28 @@ async function buscarCidades(organizationId: string): Promise<CidadeOpcao[]> {
   }));
 }
 
+/**
+ * Mapa de calor da base por CIDADE (dado exato via pol_mapa_base_municipios:
+ * cidade do cadastro → IBGE por intel_municipios). `naoLocalizados` é preenchido
+ * depois, no corpo da página, com o total da base menos os mapeados.
+ */
+async function buscarMapaBase(organizationId: string): Promise<Omit<MapaBaseResumo, "naoLocalizados">> {
+  const db = await createClient();
+  const { data } = await db.rpc("pol_mapa_base_municipios", { p_org: organizationId });
+  const linhas = ((data ?? []) as { ibge_code: string; nome: string; total: number | string }[]).map((r) => ({
+    ibge: r.ibge_code,
+    nome: r.nome,
+    total: Number(r.total) || 0,
+  }));
+  linhas.sort((a, b) => b.total - a.total);
+  return {
+    pontos: linhas,
+    mapeados: linhas.reduce((s, p) => s + p.total, 0),
+    cidades: linhas.length,
+    cidadeTop: linhas[0]?.nome ?? "",
+  };
+}
+
 async function contarPorEtapa(organizationId: string): Promise<Record<string, number>> {
   const db = await createClient();
   const counts: Record<string, number> = {};
@@ -148,11 +171,17 @@ export default async function PessoasPage({
   const temp = typeof params.temp === "string" ? params.temp : "";
   const cidade = typeof params.cidade === "string" ? params.cidade : "";
 
-  const [{ leads, total }, contagens, cidades] = await Promise.all([
+  const [{ leads, total }, contagens, cidades, mapaBase] = await Promise.all([
     buscarLeads(org.orgId, pagina, etapa || undefined, busca || undefined, temp || undefined, cidade || undefined),
     contarPorEtapa(org.orgId),
     buscarCidades(org.orgId),
+    buscarMapaBase(org.orgId),
   ]);
+
+  const mapaResumo: MapaBaseResumo = {
+    ...mapaBase,
+    naoLocalizados: Math.max(0, (contagens._total ?? 0) - mapaBase.mapeados),
+  };
 
   return (
     <LeadsClient
@@ -160,6 +189,7 @@ export default async function PessoasPage({
       total={total}
       contagens={contagens}
       cidades={cidades}
+      mapaResumo={mapaResumo}
       filtros={{ etapa, busca, temp, cidade, pagina }}
       porPagina={POR_PAGINA}
     />

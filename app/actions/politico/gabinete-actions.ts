@@ -128,6 +128,21 @@ export async function carimbarZonasDosLeads(): Promise<{ ok: true; carimbados: n
   return { ok: true, carimbados: typeof data === "number" ? data : 0 };
 }
 
+/**
+ * Religa a CIDADE (pol_leads.territory_id) à cidade do contato (custom_fields).
+ * Necessário depois de importar/re-importar a base, que traz a cidade em
+ * custom_fields mas não preenche o territory_id — sem isso o filtro de Cidade e
+ * o mapa de calor ficam zerados. Idempotente (só onde territory_id é nulo).
+ */
+export async function carimbarCidadesDosLeads(): Promise<{ ok: true; carimbados: number } | { ok: false; erro: string }> {
+  const org = await orgAtiva();
+  if (!org) return { ok: false, erro: "Sessão ou organização inválida." };
+  const db = await createClient();
+  const { data, error } = await db.rpc("pol_carimbar_cidade_leads", { p_org: org });
+  if (error) return { ok: false, erro: traduzErro(error) };
+  return { ok: true, carimbados: typeof data === "number" ? data : 0 };
+}
+
 /** Insere um registro numa tabela do gabinete, escopado à org ativa. */
 export async function criarRegistro(tabela: string, dados: Record<string, unknown>): Promise<AcaoResultado> {
   if (!TABELAS.has(tabela)) return { ok: false, erro: "Tabela inválida." };

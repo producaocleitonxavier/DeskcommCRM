@@ -9,11 +9,12 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { MapPin, Search, Users } from "lucide-react";
+import { Building2, MapPin, Search, Users } from "lucide-react";
 
 import { CommandHero } from "@/components/politico/command-hero";
 import { EmptyState } from "@/components/politico/empty-state";
-import { carimbarZonasDosLeads } from "@/app/actions/politico/gabinete-actions";
+import MapaBaseHero, { type MapaBaseResumo } from "@/components/politico/mapa-base-hero";
+import { carimbarCidadesDosLeads, carimbarZonasDosLeads } from "@/app/actions/politico/gabinete-actions";
 import type { LeadRow } from "./page";
 
 const ETAPAS = [
@@ -67,14 +68,17 @@ export interface LeadsClientProps {
   total: number;
   contagens: Record<string, number>;
   cidades: { id: string; name: string; n: number }[];
+  mapaResumo: MapaBaseResumo;
   filtros: Filtros;
   porPagina: number;
 }
 
-export default function LeadsClient({ leads, total, contagens, cidades, filtros, porPagina }: LeadsClientProps) {
+export default function LeadsClient({ leads, total, contagens, cidades, mapaResumo, filtros, porPagina }: LeadsClientProps) {
   const router = useRouter();
   const [carimbando, setCarimbando] = useState(false);
   const [carimboMsg, setCarimboMsg] = useState<string | null>(null);
+  const [carimbandoCidade, setCarimbandoCidade] = useState(false);
+  const [carimboCidadeMsg, setCarimboCidadeMsg] = useState<string | null>(null);
   const totalPaginas = Math.max(1, Math.ceil(total / porPagina));
 
   function href(overrides: Partial<Filtros>): string {
@@ -114,11 +118,32 @@ export default function LeadsClient({ leads, total, contagens, cidades, filtros,
         acoes={[{ href: "/app/politico/leads/novo", label: "+ Novo cadastro", primary: true }]}
       />
 
-      {/* ── Carimbar zonas pelo bairro (dados do TSE) ───────────── */}
+      {/* ── Carimbar território: cidade (link) e zona (pelo bairro) ─ */}
       <div className="flex flex-wrap items-center justify-end gap-3">
-        {carimboMsg && (
-          <span className="text-xs" style={{ color: "var(--color-text-muted)" }}>{carimboMsg}</span>
+        {(carimboCidadeMsg || carimboMsg) && (
+          <span className="text-xs" style={{ color: "var(--color-text-muted)" }}>{carimboCidadeMsg ?? carimboMsg}</span>
         )}
+        <button
+          type="button"
+          disabled={carimbandoCidade}
+          onClick={async () => {
+            if (!window.confirm("Religar a cidade das pessoas (preenche o mapa e o filtro de Cidade a partir do cadastro). Só preenche quem está sem cidade. Pode levar alguns segundos.")) return;
+            setCarimboCidadeMsg(null);
+            setCarimbandoCidade(true);
+            const res = await carimbarCidadesDosLeads();
+            setCarimbandoCidade(false);
+            if (res.ok) {
+              setCarimboCidadeMsg(`${res.carimbados.toLocaleString("pt-BR")} pessoa(s) ganharam cidade.`);
+              router.refresh();
+            } else {
+              setCarimboCidadeMsg(res.erro);
+            }
+          }}
+          className="wr-btn inline-flex items-center gap-2 disabled:opacity-60"
+          title="Religa a cidade do cadastro ao mapa e ao filtro de Cidade. Só preenche quem está sem cidade."
+        >
+          <Building2 className="h-4 w-4" aria-hidden /> {carimbandoCidade ? "Religando cidades…" : "Carimbar cidades"}
+        </button>
         <button
           type="button"
           disabled={carimbando}
@@ -217,6 +242,9 @@ export default function LeadsClient({ leads, total, contagens, cidades, filtros,
           </div>
         )}
       </div>
+
+      {/* ── Mapa de calor da base (cidades) — acima dos cards ────── */}
+      <MapaBaseHero resumo={mapaResumo} />
 
       {/* ── Lista ───────────────────────────────────────────────── */}
       {leads.length === 0 ? (
