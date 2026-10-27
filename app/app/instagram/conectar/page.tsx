@@ -268,7 +268,7 @@ export default async function ConectarInstagramPage({
             </h3>
             <div className="grid gap-3 sm:grid-cols-3">
               <UnlockCard titulo="Opinião Pública" desc="Comentários viram escuta e sentimento, dentro da Inteligência." estado="a ativar" />
-              <UnlockCard titulo="Resposta automática" desc="Responder comentários e DMs no automático — o seu ManyChat." estado="a ativar" />
+              <UnlockCard titulo="Resposta automática" desc="Responder comentários e DMs no automático — tudo seu, sem ferramenta de fora." estado="a ativar" />
               <UnlockCard titulo="Captação no funil" desc="Quem chega por DM ou começa a seguir entra no seu Kanban de leads." estado="a ativar" />
             </div>
             <p className="text-xs mt-2.5" style={{ color: "var(--color-text-subtle)" }}>
@@ -327,7 +327,7 @@ export default async function ConectarInstagramPage({
 
           <section className="grid gap-3 sm:grid-cols-3">
             <UnlockCard titulo="Opinião Pública" desc="Comentários viram escuta e sentimento na Inteligência." estado="a ativar" />
-            <UnlockCard titulo="Resposta automática" desc="Comentários e DMs no automático — o seu ManyChat." estado="a ativar" />
+            <UnlockCard titulo="Resposta automática" desc="Comentários e DMs no automático, tudo seu." estado="a ativar" />
             <UnlockCard titulo="Captação no funil" desc="Quem chega por DM vira lead no seu Kanban." estado="a ativar" />
           </section>
         </>
