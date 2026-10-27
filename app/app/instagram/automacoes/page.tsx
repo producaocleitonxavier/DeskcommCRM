@@ -150,8 +150,14 @@ export default function AutomacoesInstagramPage() {
         <div aria-hidden className="pointer-events-none absolute -right-16 -top-20 h-56 w-56 rounded-full" style={{ background: "radial-gradient(closest-side,rgba(215,243,106,0.16),transparent)" }} />
         <div className="relative flex flex-wrap items-center justify-between gap-5">
           <div className="flex min-w-0 items-center gap-4">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/gipchat-elmo.png" alt="GIPCHAT" className="h-16 w-16 shrink-0 object-contain" style={{ filter: "drop-shadow(0 0 14px rgba(215,243,106,0.3))" }} />
+            {/* Elmo da Guerrilheiros (recortado pra focar no capacete, sem o texto de baixo). */}
+            <span
+              className="flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-xl"
+              style={{ background: "#0A0C10", boxShadow: "0 0 16px rgba(215,243,106,0.28)", border: "1px solid rgba(215,243,106,0.25)" }}
+            >
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src="/gip-logo.jpg" alt="GIPCHAT" className="h-full w-full object-cover" style={{ transform: "scale(1.5)", objectPosition: "center 30%" }} />
+            </span>
             <div className="min-w-0">
               <span className="text-[11px] font-bold uppercase tracking-[0.2em]" style={{ color: "#D7F36A" }}>Instagram · Automação</span>
               <h1 className="font-heading mt-1 text-3xl font-bold leading-tight" style={{ color: "#FFFFFF" }}>GIPCHAT</h1>
