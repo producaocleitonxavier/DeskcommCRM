@@ -257,10 +257,14 @@ export default async function GabinetePage({
             Demandas, lideranças e projetos de lei do mandato.
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto sm:justify-end">
           {ehAdmin && <AvisoAutoToggle ligadoInicial={avisoLigado} />}
           <RelatorioPdfButton filtroEstado={filtroEstado} />
-          <Link href="/app/politico/demandas/nova" className="wr-btn-dark">
+          <Link
+            href="/app/politico/demandas/nova"
+            className="inline-flex shrink-0 items-center justify-center whitespace-nowrap rounded-full px-5 py-2.5 text-sm font-bold transition-opacity hover:opacity-90"
+            style={{ background: "#D7F36A", color: "#16181D" }}
+          >
             + Nova demanda
           </Link>
         </div>

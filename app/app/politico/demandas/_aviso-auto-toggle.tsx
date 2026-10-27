@@ -40,7 +40,7 @@ export default function AvisoAutoToggle({ ligadoInicial }: { ligadoInicial: bool
       disabled={pend}
       title="Quando uma demanda é marcada como resolvida, o cidadão é avisado sozinho no WhatsApp (ciclo da demanda)."
       aria-pressed={ligado}
-      className="inline-flex items-center gap-2 rounded-full px-3 py-2 text-sm font-medium transition-colors disabled:opacity-60"
+      className="inline-flex shrink-0 items-center gap-2 whitespace-nowrap rounded-full px-3 py-2 text-sm font-medium transition-colors disabled:opacity-60"
       style={{ border: "1px solid var(--color-border)", color: "var(--color-text-muted)" }}
     >
       <span

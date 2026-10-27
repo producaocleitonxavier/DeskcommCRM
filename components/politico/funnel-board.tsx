@@ -107,7 +107,7 @@ export function FunnelBoard({ data, className, showConversion = true }: FunnelBo
               className={`group flex items-center gap-3 rounded-xl px-1 py-1 sm:gap-4 ${d.href ? "cursor-pointer transition-colors hover:bg-white/[0.045]" : ""}`}
             >
               {/* Rótulo do estágio */}
-              <div className="flex w-24 shrink-0 items-center gap-2 sm:w-32">
+              <div className="flex w-20 shrink-0 items-center gap-2 sm:w-32">
                 <span
                   className="h-2.5 w-2.5 shrink-0 rounded-full"
                   style={{
@@ -146,8 +146,10 @@ export function FunnelBoard({ data, className, showConversion = true }: FunnelBo
                   }}
                 >
                   {valorDentro && (
+                    // Dentro da barra só no desktop; no mobile a barra é estreita e
+                    // cortava o número (o "1" de 18.735). No mobile vai à direita.
                     <span
-                      className="text-sm font-bold tabular-nums"
+                      className="hidden text-sm font-bold tabular-nums sm:inline"
                       style={{ color: fgDentro, textShadow: fgDentro === "#FFFFFF" ? "0 1px 2px rgba(0,0,0,0.25)" : "none" }}
                     >
                       {d.value.toLocaleString("pt-BR")}
@@ -156,18 +158,17 @@ export function FunnelBoard({ data, className, showConversion = true }: FunnelBo
                 </div>
               </div>
 
-              {/* Métricas à direita */}
-              <div className="w-16 shrink-0 text-right sm:w-20">
-                {!valorDentro && (
-                  <div
-                    className="text-base font-bold leading-none tabular-nums"
-                    style={{ color: vazio ? "var(--color-text-subtle, rgba(255,255,255,0.45))" : "var(--color-text, #E8E8E4)" }}
-                  >
-                    {d.value.toLocaleString("pt-BR")}
-                  </div>
-                )}
+              {/* Métricas à direita. O valor aparece SEMPRE no mobile; no desktop,
+                  só quando não coube dentro da barra (senão fica duplicado). */}
+              <div className="w-[76px] shrink-0 text-right sm:w-24">
                 <div
-                  className={`${valorDentro ? "" : "mt-1"} text-xs tabular-nums`}
+                  className={`text-base font-bold leading-none tabular-nums ${valorDentro ? "sm:hidden" : ""}`}
+                  style={{ color: vazio ? "var(--color-text-subtle, rgba(255,255,255,0.45))" : "var(--color-text, #E8E8E4)" }}
+                >
+                  {d.value.toLocaleString("pt-BR")}
+                </div>
+                <div
+                  className="mt-1 text-xs tabular-nums"
                   style={{ color: "var(--color-text-muted, rgba(255,255,255,0.55))" }}
                 >
                   {fmtPct(share)}
