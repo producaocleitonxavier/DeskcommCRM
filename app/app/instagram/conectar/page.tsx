@@ -253,9 +253,9 @@ export default async function ConectarInstagramPage({
                 <Stat label="Posts" valor={nf(perfil.posts)} />
                 <Stat label="Engajamento" valor={`${perfil.engajamento.toLocaleString("pt-BR")}%`} sub="por post" />
                 <Stat
-                  label="Token"
+                  label="Conexão"
                   valor={dias !== null ? `${dias}d` : "—"}
-                  sub={tokenProximo ? "renovar em breve" : "renova sozinho"}
+                  sub={tokenProximo ? "renova em breve" : "renova sozinho"}
                 />
               </div>
             )}
@@ -272,14 +272,14 @@ export default async function ConectarInstagramPage({
               <UnlockCard titulo="Captação no funil" desc="Quem chega por DM ou começa a seguir entra no seu Kanban de leads." estado="a ativar" />
             </div>
             <p className="text-xs mt-2.5" style={{ color: "var(--color-text-subtle)" }}>
-              A conta já está conectada. Esses três motores dependem de ativar o webhook de eventos — próximo passo.
+              A conta já está conectada. Falta só um último passo técnico — que a nossa equipe ativa pra você — e os três ligam sozinhos.
             </p>
           </section>
 
           {/* ── Reconectar (slim) ─────────────────────────────────── */}
           <section className="wr-card-dark p-4 flex flex-wrap items-center justify-between gap-3">
             <p className="text-sm" style={{ color: "var(--color-text-muted)" }}>
-              Precisa renovar o token ou trocar de conta? O token atual será substituído.
+              Precisa trocar de conta ou reconectar? A conexão atual será substituída.
             </p>
             <a
               href="/api/v1/ig-oauth/authorize"

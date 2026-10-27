@@ -35,7 +35,8 @@ type AcaoTipo =
   | "add_etiqueta"
   | "criar_contato"
   | "notificar_equipe"
-  | "add_funil_politico";
+  | "add_funil_politico"
+  | "captar_instagram";
 
 interface AcaoConfig {
   tipo: AcaoTipo;
@@ -60,21 +61,22 @@ interface FlowRow {
 // ── Labels de display ────────────────────────────────────────────────────────
 
 const TRIGGER_LABEL: Record<TriggerTipo, string> = {
-  comment_keyword: "Palavra-chave no comentário",
-  comment_no_post: "Qualquer comentário no post",
+  comment_keyword: "Quando o comentário tiver uma palavra",
+  comment_no_post: "Só nos vídeos que eu escolher",
   dm_keyword: "Palavra-chave em DM",
   novo_seguidor: "Novo seguidor",
   story_reply: "Resposta de Story",
-  novo_comentario: "Qualquer comentário (catch-all)",
+  novo_comentario: "Em qualquer comentário",
 };
 
 const ACAO_LABEL: Record<AcaoTipo, string> = {
-  enviar_dm: "Enviar DM",
-  responder_comentario: "Responder comentário",
-  add_etiqueta: "Adicionar etiqueta",
+  captar_instagram: "Captação completa",
+  enviar_dm: "Chamar no Direct",
+  responder_comentario: "Responder o comentário",
+  add_etiqueta: "Etiqueta",
   criar_contato: "Criar contato",
-  notificar_equipe: "Notificar equipe",
-  add_funil_politico: "Funil político",
+  notificar_equipe: "Avisar a equipe",
+  add_funil_politico: "Funil",
 };
 
 // ── Hook de dados ────────────────────────────────────────────────────────────
@@ -127,7 +129,7 @@ export default function AutomacoesInstagramPage() {
   }
 
   async function excluir(flow: FlowRow) {
-    if (!confirm(`Excluir flow "${flow.nome}"?`)) return;
+    if (!confirm(`Excluir a automação "${flow.nome}"?`)) return;
     setAlterandoId(flow.id);
     try {
       await fetch(`/api/v1/ig-automation-flows/${flow.id}`, { method: "DELETE" });
@@ -179,7 +181,7 @@ export default function AutomacoesInstagramPage() {
       {/* ── KPI resumo ──────────────────────────────────────────── */}
       {!carregando && flows.length > 0 && (
         <section className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-          <KpiCard label="Total de flows" valor={flows.length} icone={Zap} />
+          <KpiCard label="Total de automações" valor={flows.length} icone={Zap} />
           <KpiCard label="Ativos" valor={ativos} icone={CheckCircle2} cor="#4ADE80" />
           <KpiCard label="Inativos" valor={inativos} icone={PauseCircle} />
         </section>
@@ -214,8 +216,8 @@ export default function AutomacoesInstagramPage() {
         <EmptyState
           icon={Zap}
           title="Nenhuma automação criada"
-          description="Crie um flow para responder comentários automaticamente ou enviar DMs quando alguém usar uma palavra-chave."
-          action={{ label: "Criar primeiro flow", href: "/app/instagram/automacoes/novo" }}
+          description="Crie uma automação para responder comentários e chamar as pessoas no Direct automaticamente, captando apoiadores sozinho."
+          action={{ label: "Criar primeira automação", href: "/app/instagram/automacoes/novo" }}
         />
       )}
 

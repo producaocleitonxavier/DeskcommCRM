@@ -793,7 +793,7 @@ export const NAV_CATALOG = [
   {
     href: "/app/instagram",
     label: "Instagram",
-    description: "Automações de DM e comentários — motor ManyChat próprio com flows, etiquetas e webhook do Instagram.",
+    description: "GIPCHAT — responde comentários e DMs no automático e capta apoiadores no seu Instagram.",
     icon: "InstagramLogo",
     group: "canais",
     minRole: "manager",
@@ -802,7 +802,7 @@ export const NAV_CATALOG = [
   {
     href: "/app/instagram/automacoes",
     label: "Automações Instagram",
-    description: "Crie e edite flows de automação para comentários e DMs do Instagram.",
+    description: "Crie e edite suas automações de comentário e DM do Instagram (GIPCHAT).",
     icon: "InstagramLogo",
     group: "canais",
     minRole: "manager",
@@ -810,8 +810,8 @@ export const NAV_CATALOG = [
   },
   {
     href: "/app/instagram/automacoes/novo",
-    label: "Novo Flow Instagram",
-    description: "Formulário de criação de um novo flow de automação de Instagram.",
+    label: "Nova Automação Instagram",
+    description: "Criação de uma nova automação de comentário/DM do Instagram.",
     icon: "InstagramLogo",
     group: "canais",
     minRole: "manager",
