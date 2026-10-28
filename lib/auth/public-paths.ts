@@ -39,6 +39,10 @@ export const PUBLIC_PATHS: RegExp[] = [
   // `$` + forma exata: nenhum sub-path nasce público de carona.
   /^\/pesquisa\/[0-9a-f]{32}$/i,
   /^\/api\/v1\/pol-surveys\/public\/[0-9a-f]{32}$/i,
+  // PÁGINA PÚBLICA DO MATERIAL (/m/<uuid>): landing com OpenGraph (capa) pro link
+  // mostrar preview no WhatsApp sem enviar mídia (Opção B da capa). Só material
+  // ATIVO, resolvido pelo id no servidor; sem dado pessoal. Âncora + forma de UUID.
+  /^\/m\/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i,
   /^\/$/,
   /^\/login(\/.*)?$/,
   /^\/signup$/,
