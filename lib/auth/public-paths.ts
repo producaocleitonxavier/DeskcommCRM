@@ -31,6 +31,14 @@ export const PUBLIC_PATHS: RegExp[] = [
   // servidor). Sem dado pessoal de cidadão. Âncora `$` + forma de UUID: nenhum
   // sub-path nasce público de carona.
   /^\/transparencia\/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i,
+  // PESQUISA PÚBLICA (opinião/intenção de voto). O cidadão responde pelo link
+  // /pesquisa/<public_token>; a org e a pesquisa vêm SÓ do token no servidor, e
+  // a rota só responde se status=active. O GET não traz dado pessoal; o POST
+  // grava a resposta com token gerado no servidor. Mesma natureza da
+  // transparência acima. O token é 32 hex (gen_random_uuid sem hífens); âncora
+  // `$` + forma exata: nenhum sub-path nasce público de carona.
+  /^\/pesquisa\/[0-9a-f]{32}$/i,
+  /^\/api\/v1\/pol-surveys\/public\/[0-9a-f]{32}$/i,
   /^\/$/,
   /^\/login(\/.*)?$/,
   /^\/signup$/,
