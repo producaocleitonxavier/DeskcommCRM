@@ -57,15 +57,13 @@ interface DemandaParaAviso {
   assunto: string | null;
   pol_orgao_destino: string | null;
   pol_encaminhamento_ia: string | null;
-  pol_oficio_numero: number | null;
-  pol_oficio_ano: number | null;
+  pol_oficio_rotulo: string | null;
   contacts: { name: string | null; phone_number: string | null } | null;
 }
 
 function protocoloDe(d: DemandaParaAviso): string {
-  if (d.pol_oficio_numero && d.pol_oficio_ano) {
-    return `OF ${String(d.pol_oficio_numero).padStart(3, "0")}/${d.pol_oficio_ano}`;
-  }
+  const rotulo = (d.pol_oficio_rotulo ?? "").trim();
+  if (rotulo) return rotulo;
   return `#${d.id.slice(0, 8).toUpperCase()}`;
 }
 
@@ -80,7 +78,7 @@ export async function avisarCidadao(
 
   const { data, error } = await db
     .from("demandas")
-    .select("id, estado, contact_id, assunto, pol_orgao_destino, pol_encaminhamento_ia, pol_oficio_numero, pol_oficio_ano, contacts(name, phone_number)")
+    .select("id, estado, contact_id, assunto, pol_orgao_destino, pol_encaminhamento_ia, pol_oficio_rotulo, contacts(name, phone_number)")
     .eq("organization_id", org.orgId)
     .eq("id", demandaId)
     .maybeSingle();
@@ -148,8 +146,7 @@ export async function avisarCidadao(
     textoJaEnviado = !!ja;
   }
 
-  let numero = d.pol_oficio_numero;
-  let ano = d.pol_oficio_ano;
+  let rotulo = (d.pol_oficio_rotulo ?? "").trim();
   let comOficio = false;
   let textoEnviado = false;
 
@@ -162,16 +159,13 @@ export async function avisarCidadao(
       let dl = await admin.storage.from("gabinete-anexos").download(oficioPath);
       if (dl.error || !dl.data) {
         const g = await gerarOficioDemanda(demandaId);
-        if (g.ok) {
-          numero = g.numero;
-          ano = g.ano;
-        }
+        if (g.ok) rotulo = g.rotulo;
         dl = await admin.storage.from("gabinete-anexos").download(oficioPath);
       }
       if (dl.data) oficioBytes = Buffer.from(await dl.data.arrayBuffer());
     }
 
-    const protocoloLocal = numero && ano ? `OF ${String(numero).padStart(3, "0")}/${ano}` : protocoloDe(d);
+    const protocoloLocal = rotulo || protocoloDe(d);
     const saudacao = primeiroNome ? `Olá, ${primeiroNome}!` : "Olá!";
 
     // Resolução: boa notícia (texto completo). Encaminhamento: texto CURTO — a
@@ -189,7 +183,7 @@ export async function avisarCidadao(
     // de legenda — uma única mensagem. Sem ofício: texto puro.
     let input: SendMessageInput;
     if (oficioBytes) {
-      const nomeArquivo = `Oficio-${String(numero ?? 0).padStart(3, "0")}-${ano ?? new Date().getFullYear()}.pdf`;
+      const nomeArquivo = `Oficio-${(rotulo || "gabinete").replace(/[\\/:*?"<>|]+/g, "-").slice(0, 80)}.pdf`;
       const waPath = `${org.orgId}/${conversationId}/${nomeArquivo}`;
       const up = await admin.storage
         .from("whatsapp-media")
@@ -236,7 +230,7 @@ export async function avisarCidadao(
     });
   }
 
-  const protocolo = numero && ano ? `OF ${String(numero).padStart(3, "0")}/${ano}` : protocoloDe(d);
+  const protocolo = rotulo || protocoloDe(d);
 
   // VOZ DO MANDATO: se o cliente pediu "incluir recado em áudio", manda a nota
   // de voz DEPOIS do texto (ou sozinha, se o texto já tinha ido). Nunca falha o

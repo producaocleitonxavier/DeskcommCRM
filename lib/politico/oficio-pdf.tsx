@@ -26,6 +26,8 @@ const styles = StyleSheet.create({
   assinaturaLinha: { width: 220, borderTopWidth: 1, borderTopColor: "#1A1A1A", marginBottom: 4 },
   assinaturaNome: { fontSize: 11, fontWeight: 700 },
   assinaturaCargo: { fontSize: 9, color: "#555" },
+  // Bloco do destinatário/autoridade no rodapé do corpo (como na praxe real).
+  destinatarioRodape: { marginTop: 32, fontSize: 11, lineHeight: 1.4 },
   footer: { position: "absolute", bottom: 28, left: 56, right: 56, fontSize: 8, color: "#888", textAlign: "center", borderTopWidth: 0.5, borderTopColor: "#CCC", paddingTop: 6 },
   // Timbrado: página sem padding (a imagem é o fundo) + faixa de conteúdo que
   // limpa o cabeçalho (~120pt) e o rodapé (~150pt) típicos do papel timbrado.
@@ -49,6 +51,19 @@ const A4_PT = { largura: 595.28, altura: 841.89 } as const;
 export interface OficioPdfInput {
   numero: number;
   ano: number;
+  /**
+   * Número/rótulo MANUAL do ofício (cada gabinete tem o seu método). Quando
+   * presente, é mostrado VERBATIM no lugar do "OFÍCIO Nº 00X/ano" automático.
+   * Ex.: "OF. GAB.VER.CX – 405/2026".
+   */
+  numeroLabel?: string | null;
+  /**
+   * Bloco do destinatário/autoridade (preenchido à mão — a IA não sabe), vai no
+   * RODAPÉ do ofício. Multi-linha. Ex.: "Ao Excelentíssimo Senhor\nFulano\n
+   * Secretário Municipal…\nAv. …". Quando presente, substitui o "Ao(À) órgão"
+   * genérico do topo.
+   */
+  destinatario?: string | null;
   /** Texto do encaminhamento — o corpo do ofício. */
   corpo: string;
   /** Órgão de destino (ex.: "Secretaria de Obras"); null vira genérico. */
@@ -100,16 +115,26 @@ function dataPorExtenso(iso: string, cidade: string | null): string {
 }
 
 /** Corpo do ofício (sem cabeçalho/rodapé) — compartilhado pelos dois layouts. */
+/** Número/rótulo mostrado no ofício: o MANUAL (verbatim) tem prioridade; sem
+ * ele, cai no "OFÍCIO Nº 00X/ano" automático. */
+function numeroDoOficio(d: OficioPdfInput): string {
+  const manual = (d.numeroLabel ?? "").trim();
+  if (manual) return manual;
+  return `OFÍCIO Nº ${String(d.numero ?? 0).padStart(3, "0")}/${d.ano ?? new Date().getFullYear()}`;
+}
+
 function Corpo({ d, nome, cargo }: { d: OficioPdfInput; nome: string; cargo: string }): React.ReactElement {
   const destino = d.orgao?.trim() ? `Ao(À) ${d.orgao.trim()}` : "Ao órgão competente";
-  const numeroFmt = `OFÍCIO Nº ${String(d.numero).padStart(3, "0")}/${d.ano}`;
+  const destinatarioManual = (d.destinatario ?? "").trim();
   return (
     <>
       <View style={styles.linhaTopo}>
-        <Text style={styles.numero}>{numeroFmt}</Text>
+        <Text style={styles.numero}>{numeroDoOficio(d)}</Text>
         <Text style={styles.data}>{dataPorExtenso(d.dataISO, d.cidade)}</Text>
       </View>
-      <Text style={styles.destinatario}>{destino}</Text>
+      {/* Topo: só o "Ao(À) órgão" genérico quando NÃO há bloco manual (senão ele
+          vai completo no rodapé, como no modelo real). */}
+      {destinatarioManual ? null : <Text style={styles.destinatario}>{destino}</Text>}
       <Text style={styles.corpo}>{d.corpo}</Text>
       <View style={styles.assinaturaBloco}>
         {d.assinaturaUrl ? <Image src={d.assinaturaUrl} style={styles.assinaturaImagem} /> : null}
@@ -117,6 +142,11 @@ function Corpo({ d, nome, cargo }: { d: OficioPdfInput; nome: string; cargo: str
         <Text style={styles.assinaturaNome}>{nome}</Text>
         <Text style={styles.assinaturaCargo}>{cargo}</Text>
       </View>
+      {destinatarioManual ? (
+        <View style={styles.destinatarioRodape}>
+          <Text>{destinatarioManual}</Text>
+        </View>
+      ) : null}
     </>
   );
 }
@@ -175,7 +205,7 @@ function OficioDoc({ d }: { d: OficioPdfInput }): React.ReactElement {
   const subtitulo = (d.subtitulo ?? "Gabinete — Atendimento ao cidadão").trim();
   const cargo = (d.cargo ?? "Gabinete Parlamentar").trim();
   const logoUrl = d.marca.logoUrl;
-  const numeroFmt = `OFÍCIO Nº ${String(d.numero).padStart(3, "0")}/${d.ano}`;
+  const numeroFmt = numeroDoOficio(d);
   const anexos = anexoPages(d, nome, accent, logoUrl);
 
   // Com papel timbrado: a imagem é o fundo da página inteira (cabeçalho e rodapé

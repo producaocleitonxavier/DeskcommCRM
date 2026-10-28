@@ -31,6 +31,8 @@ export interface DemandaDetalhe {
   pol_prioridade: string | null;
   pol_orgao_destino: string | null;
   pol_encaminhamento_ia: string | null;
+  pol_oficio_rotulo: string | null;
+  pol_oficio_destinatario: string | null;
   pol_municipio: string | null;
   pol_territory_id: string | null;
   pol_lideranca_id: string | null;
@@ -137,6 +139,8 @@ export default function DetalheDemandaClient({ demanda, assessores, eventos, voz
     d.pol_assessor_nome ?? (d.dono_kind === "humano" ? (assessores.find((a) => a.id === d.dono_user_id)?.nome ?? "") : ""),
   );
   const [encaminhamento, setEncaminhamento] = useState(d.pol_encaminhamento_ia ?? "");
+  const [numeroOficio, setNumeroOficio] = useState(d.pol_oficio_rotulo ?? "");
+  const [destinatarioOficio, setDestinatarioOficio] = useState(d.pol_oficio_destinatario ?? "");
 
   const fechada = d.estado === "resolvida" || d.estado === "encerrada";
 
@@ -170,6 +174,8 @@ export default function DetalheDemandaClient({ demanda, assessores, eventos, voz
       dono_user_id: membro ? membro.id : null,
       pol_assessor_nome: nomeAssessor || null,
       pol_encaminhamento_ia: encaminhamento.trim() || null,
+      pol_oficio_rotulo: numeroOficio.trim() || null,
+      pol_oficio_destinatario: destinatarioOficio.trim() || null,
       prazo_em: prazo ? new Date(prazo + "T12:00:00").toISOString() : null,
     };
     const ok = await persistir(campos, campos as Partial<DemandaDetalhe>);
@@ -482,7 +488,16 @@ export default function DetalheDemandaClient({ demanda, assessores, eventos, voz
               title={!d.pol_encaminhamento_ia?.trim() ? "Gere e salve o encaminhamento primeiro" : "Emitir ofício em PDF"}
               onClick={async () => {
                 setErro(null);
+                if (!numeroOficio.trim()) {
+                  setErro("Antes de imprimir, preencha o número do ofício (do jeito que o seu gabinete numera, ex.: OF. GAB.VER.CX – 405/2026).");
+                  return;
+                }
                 setGerandoOficio(true);
+                // Salva número e destinatário ANTES de gerar (a tela é a fonte).
+                await atualizarRegistro("demandas", d.id, {
+                  pol_oficio_rotulo: numeroOficio.trim(),
+                  pol_oficio_destinatario: destinatarioOficio.trim() || null,
+                });
                 const res = await gerarOficioDemanda(d.id);
                 setGerandoOficio(false);
                 if (res.ok) {
@@ -519,6 +534,43 @@ export default function DetalheDemandaClient({ demanda, assessores, eventos, voz
             </button>
           </div>
         </div>
+
+        {/* Dados do ofício — número MANUAL + destinatário (sempre visíveis, fáceis
+            de preencher: quem opera no gabinete pode não ter intimidade com tela). */}
+        <div className="mb-4 grid gap-3 rounded-xl p-4" style={{ background: "var(--color-surface-elevated)", border: "1px solid var(--color-border)" }}>
+          <div>
+            <label className="mb-1 block text-sm font-semibold" style={{ color: "var(--color-text)" }}>
+              Número do ofício
+            </label>
+            <input
+              value={numeroOficio}
+              onChange={(e) => setNumeroOficio(e.target.value)}
+              placeholder="Ex.: OF. GAB.VER.CX – 405/2026"
+              className="w-full rounded-lg px-3.5 py-2.5 text-sm outline-none"
+              style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)", color: "var(--color-text)" }}
+            />
+            <p className="mt-1 text-xs" style={{ color: "var(--color-text-subtle)" }}>
+              Escreva do jeito que o seu gabinete numera. É esse número que sai no ofício.
+            </p>
+          </div>
+          <div>
+            <label className="mb-1 block text-sm font-semibold" style={{ color: "var(--color-text)" }}>
+              Para quem vai o ofício (autoridade)
+            </label>
+            <textarea
+              value={destinatarioOficio}
+              onChange={(e) => setDestinatarioOficio(e.target.value)}
+              rows={4}
+              placeholder={"Ex.:\nAo Excelentíssimo Senhor\nGuilherme Catunda Daltro\nSecretário Municipal de Governo\nAv. Afonso Pena, 1212, 2º andar – Centro – BH/MG"}
+              className="w-full resize-y rounded-lg px-3.5 py-2.5 text-sm outline-none"
+              style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)", color: "var(--color-text)" }}
+            />
+            <p className="mt-1 text-xs" style={{ color: "var(--color-text-subtle)" }}>
+              Nome da autoridade, cargo e endereço — aparece no rodapé do ofício.
+            </p>
+          </div>
+        </div>
+
         {editando ? (
           <textarea
             value={encaminhamento}

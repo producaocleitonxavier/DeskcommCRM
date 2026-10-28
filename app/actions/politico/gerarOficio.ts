@@ -20,7 +20,7 @@ import { renderOficioPdf } from "@/lib/politico/oficio-pdf";
 const BUCKET = "gabinete-anexos";
 
 export type OficioResultado =
-  | { ok: true; url: string; numero: number; ano: number }
+  | { ok: true; url: string; rotulo: string }
   | { ok: false; erro: string };
 
 export async function gerarOficioDemanda(demandaId: string): Promise<OficioResultado> {
@@ -31,7 +31,7 @@ export async function gerarOficioDemanda(demandaId: string): Promise<OficioResul
 
   const { data: dem, error } = await db
     .from("demandas")
-    .select("id, pol_encaminhamento_ia, pol_orgao_destino, pol_oficio_numero, pol_oficio_ano")
+    .select("id, pol_encaminhamento_ia, pol_orgao_destino, pol_oficio_rotulo, pol_oficio_destinatario")
     .eq("organization_id", org.orgId)
     .eq("id", demandaId)
     .maybeSingle();
@@ -40,37 +40,21 @@ export async function gerarOficioDemanda(demandaId: string): Promise<OficioResul
   const d = dem as {
     pol_encaminhamento_ia: string | null;
     pol_orgao_destino: string | null;
-    pol_oficio_numero: number | null;
-    pol_oficio_ano: number | null;
+    pol_oficio_rotulo: string | null;
+    pol_oficio_destinatario: string | null;
   };
 
   const corpo = (d.pol_encaminhamento_ia ?? "").trim();
   if (!corpo) return { ok: false, erro: "Gere ou escreva o encaminhamento antes de emitir o ofício." };
 
-  // Número: atribui na primeira emissão (sequencial por org/ano) e persiste.
-  const agora = new Date();
-  let numero = d.pol_oficio_numero;
-  let ano = d.pol_oficio_ano;
-  const ehPrimeiraEmissao = !numero || !ano;
-  if (!numero || !ano) {
-    ano = agora.getFullYear();
-    const { data: ult } = await db
-      .from("demandas")
-      .select("pol_oficio_numero")
-      .eq("organization_id", org.orgId)
-      .eq("pol_oficio_ano", ano)
-      .not("pol_oficio_numero", "is", null)
-      .order("pol_oficio_numero", { ascending: false })
-      .limit(1)
-      .maybeSingle();
-    numero = ((ult?.pol_oficio_numero as number | null) ?? 0) + 1;
-    const upd = await db
-      .from("demandas")
-      .update({ pol_oficio_numero: numero, pol_oficio_ano: ano })
-      .eq("id", demandaId)
-      .eq("organization_id", org.orgId);
-    if (upd.error) return { ok: false, erro: "Não consegui numerar o ofício." };
+  // Número MANUAL: cada gabinete tem o seu método, o sistema não decide. Sem o
+  // número preenchido, não emite (nunca inventa um número).
+  const rotulo = (d.pol_oficio_rotulo ?? "").trim();
+  if (!rotulo) {
+    return { ok: false, erro: "Informe o número do ofício (cada gabinete usa a sua numeração) antes de gerar." };
   }
+  const destinatario = (d.pol_oficio_destinatario ?? "").trim() || null;
+  const agora = new Date();
 
   const marca = await marcaDaOrganizacaoParaPdf(db, org.orgId);
   const admin = createAdminClient();
@@ -128,8 +112,10 @@ export async function gerarOficioDemanda(demandaId: string): Promise<OficioResul
   let buffer: Buffer;
   try {
     buffer = await renderOficioPdf({
-      numero,
-      ano,
+      numero: 0,
+      ano: agora.getFullYear(),
+      numeroLabel: rotulo,
+      destinatario,
       corpo,
       orgao: d.pol_orgao_destino ?? null,
       cidade: ident?.cidade ?? null,
@@ -156,7 +142,8 @@ export async function gerarOficioDemanda(demandaId: string): Promise<OficioResul
   if (up.error) return { ok: false, erro: "Erro ao salvar o ofício no armazenamento." };
 
   // Uma linha de ofício por demanda (identificada pelo storage_path fixo).
-  const nome = `Ofício ${String(numero).padStart(3, "0")}-${ano}.pdf`;
+  const nomeSan = rotulo.replace(/[\\/:*?"<>|]+/g, "-").slice(0, 80);
+  const nome = `Ofício ${nomeSan}.pdf`;
   const { data: existente } = await db
     .from("pol_demanda_anexos")
     .select("id")
@@ -181,18 +168,26 @@ export async function gerarOficioDemanda(demandaId: string): Promise<OficioResul
     });
   }
 
-  // Histórico: ofício emitido (só na primeira emissão; reemissões não poluem).
-  if (ehPrimeiraEmissao) {
+  // Histórico: ofício emitido (uma vez; reemissões não poluem a timeline).
+  const { data: jaEmitido } = await db
+    .from("pol_demanda_eventos")
+    .select("id")
+    .eq("organization_id", org.orgId)
+    .eq("demanda_id", demandaId)
+    .eq("tipo", "oficio_emitido")
+    .limit(1)
+    .maybeSingle();
+  if (!jaEmitido) {
     await db.from("pol_demanda_eventos").insert({
       organization_id: org.orgId,
       demanda_id: demandaId,
       tipo: "oficio_emitido",
-      descricao: `Ofício OF ${String(numero).padStart(3, "0")}/${ano} emitido`,
+      descricao: `Ofício ${rotulo} emitido`,
       created_by: user.id,
     });
   }
 
   const { data: signed } = await admin.storage.from(BUCKET).createSignedUrl(path, 60 * 60);
   if (!signed?.signedUrl) return { ok: false, erro: "Ofício gerado, mas falhou ao assinar o link." };
-  return { ok: true, url: signed.signedUrl, numero, ano };
+  return { ok: true, url: signed.signedUrl, rotulo };
 }
