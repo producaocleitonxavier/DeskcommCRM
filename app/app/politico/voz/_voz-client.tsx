@@ -23,6 +23,7 @@ export default function VozClient({ inicial }: { inicial: Inicial }) {
   const [pending, start] = useTransition();
   const [textoPrevia, setTextoPrevia] = useState(TEXTO_PREVIA_PADRAO);
   const [audioUrl, setAudioUrl] = useState<string | null>(null);
+  const [nomeArquivo, setNomeArquivo] = useState<string | null>(null);
   const formRef = useRef<HTMLFormElement>(null);
 
   function enviar(e: React.FormEvent<HTMLFormElement>) {
@@ -35,6 +36,7 @@ export default function VozClient({ inicial }: { inicial: Inicial }) {
         setTemVoz(true);
         setMsg({ tipo: "ok", texto: "Voz clonada! Ouça a prévia abaixo antes de ligar." });
         formRef.current?.reset();
+        setNomeArquivo(null);
       } else {
         setMsg({ tipo: "erro", texto: r.erro ?? "Falha." });
       }
@@ -102,7 +104,30 @@ export default function VozClient({ inicial }: { inicial: Inicial }) {
         </p>
         <div>
           <label className={label} style={{ color: "var(--color-text-subtle)" }}>Arquivo de áudio</label>
-          <input name="amostra" type="file" accept="audio/*" required className="block w-full text-sm" style={{ color: "var(--color-text-muted)" }} />
+          <label
+            htmlFor="amostra-voz"
+            className="flex cursor-pointer flex-col items-center justify-center gap-2 rounded-[16px] px-4 py-8 text-center transition-transform hover:scale-[1.01]"
+            style={{ border: `2px dashed ${nomeArquivo ? "#D7F36A" : "rgba(215,243,106,0.5)"}`, background: "rgba(215,243,106,0.07)" }}
+          >
+            <span className="flex h-14 w-14 items-center justify-center rounded-full" style={{ background: "rgba(215,243,106,0.16)", color: "#D7F36A" }} aria-hidden>
+              {nomeArquivo ? <Check className="h-7 w-7" /> : <Upload className="h-7 w-7" />}
+            </span>
+            <span className="text-[16px] font-bold" style={{ color: "#D7F36A" }}>
+              {nomeArquivo ?? "Clique aqui para subir o áudio"}
+            </span>
+            <span className="text-xs" style={{ color: "var(--color-text-subtle)" }}>
+              {nomeArquivo ? "Arquivo pronto — agora é só clonar embaixo" : "Toque pra escolher · .ogg, .mp3 ou .wav · 2 a 3 min"}
+            </span>
+            <input
+              id="amostra-voz"
+              name="amostra"
+              type="file"
+              accept="audio/*"
+              required
+              className="hidden"
+              onChange={(e) => setNomeArquivo(e.target.files?.[0]?.name ?? null)}
+            />
+          </label>
         </div>
         <div>
           <label className={label} style={{ color: "var(--color-text-subtle)" }}>Quem autorizou (nome do político)</label>

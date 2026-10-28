@@ -82,6 +82,10 @@ const nextConfig: NextConfig = {
   typedRoutes: true,
   experimental: {
     optimizePackageImports: ["@phosphor-icons/react", "lucide-react", "date-fns"],
+    // Upload de amostra de voz (Voz do Mandato) chega como FormData num Server
+    // Action — o padrão de 1 MB estoura com áudio de 2-3 min. 26 MB cobre o teto
+    // de 25 MB que a action já valida.
+    serverActions: { bodySizeLimit: "26mb" },
   },
   images: {
     // O app não usa next/image de fato (só <img> raw); desligar o otimizador
