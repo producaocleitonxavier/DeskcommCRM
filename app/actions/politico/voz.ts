@@ -52,10 +52,16 @@ export async function clonarVozDoMandato(
   const blob = new Blob([await arquivo.arrayBuffer()], { type: arquivo.type || "audio/ogg" });
   const r = await clonarVoz(nome, blob, arquivo.name || "amostra.ogg");
   if (!r.ok) {
-    const amigavel =
-      r.erro === "sem_chave"
-        ? "Falta configurar a chave do ElevenLabs (ELEVENLABS_API_KEY) no servidor."
-        : `Falha ao clonar a voz: ${r.erro}`;
+    let amigavel: string;
+    if (r.erro === "sem_chave") {
+      amigavel = "Falta configurar a chave do ElevenLabs no servidor.";
+    } else if (/elevenlabs_40[013]|payment_required|paid_plan_required|can_not_use|voice_cloning|instant.?voice|clon/i.test(r.erro)) {
+      amigavel =
+        "Seu plano do ElevenLabs não permite clonar voz — o plano Free não inclui clonagem. " +
+        "Faça upgrade para o Starter (~US$5/mês) e clique em clonar de novo.";
+    } else {
+      amigavel = `Falha ao clonar a voz: ${r.erro}`;
+    }
     return { ok: false, erro: amigavel };
   }
 
