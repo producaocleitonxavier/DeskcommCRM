@@ -2,6 +2,7 @@ import { notFound, redirect } from "next/navigation";
 import { requireAuth, resolveActiveOrg } from "@/lib/auth/server";
 import { createClient } from "@/lib/supabase/server";
 import { listarVistorias, listarFotosObra, obterMandatoTse, pesoBairro, type PesoBairro } from "@/app/actions/politico/obras-actions";
+import { lerVozConfig, vozArmada } from "@/lib/voz/config";
 import ObraDetalhe, { type ObraDetalheData } from "./_detalhe-client";
 
 export const dynamic = "force-dynamic";
@@ -51,6 +52,11 @@ export default async function ObraDetalhePage({ params }: { params: Promise<{ id
     .eq("organization_id", org.orgId)
     .eq("pol_obra_id", id);
 
+  // Voz do Mandato: liga o botão "Recado em áudio" na lista de beneficiários.
+  const vozOk = vozArmada(await lerVozConfig(db, org.orgId));
+  const { data: gabNome } = await db.from("pol_gabinete_config").select("nome_parlamentar").eq("organization_id", org.orgId).maybeSingle();
+  const politicoNome = ((gabNome?.nome_parlamentar as string | null) ?? mandato?.nome ?? "").trim() || null;
+
   const data: ObraDetalheData = {
     obra: o as ObraDetalheData["obra"],
     beneficiarios: beneficiarios ?? 0,
@@ -62,6 +68,8 @@ export default async function ObraDetalhePage({ params }: { params: Promise<{ id
     vistorias,
     fotos,
     emendas: (emendasLista.data ?? []) as ObraDetalheData["emendas"],
+    vozArmada: vozOk,
+    politicoNome,
   };
 
   return <ObraDetalhe data={data} />;

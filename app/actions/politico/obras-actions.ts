@@ -205,7 +205,7 @@ export async function pesoBairro(electionId: number, sq: string, municipioTse: s
   return { meusVotos: Number(r.meus_votos), universo: Number(r.universo), leads: Number(r.leads) };
 }
 
-export interface BeneficiarioObra { nome: string | null; telefone: string | null; cidade: string | null; bairro: string | null; created_at: string }
+export interface BeneficiarioObra { contactId: string | null; nome: string | null; telefone: string | null; cidade: string | null; bairro: string | null; created_at: string }
 
 /** Beneficiários captados pelo link público da obra (pol_leads.pol_obra_id → contacts). */
 export async function listarBeneficiariosObra(obraId: string): Promise<BeneficiarioObra[]> {
@@ -215,15 +215,16 @@ export async function listarBeneficiariosObra(obraId: string): Promise<Beneficia
   const db = await createClient();
   const { data } = await db
     .from("pol_leads")
-    .select("created_at, contacts!contact_id(name, phone_number, custom_fields)")
+    .select("created_at, contact_id, contacts!contact_id(name, phone_number, custom_fields)")
     .eq("organization_id", org.orgId)
     .eq("pol_obra_id", obraId)
     .order("created_at", { ascending: false })
     .limit(500);
-  return ((data ?? []) as { created_at: string; contacts: { name: string | null; phone_number: string | null; custom_fields: Record<string, unknown> | null } | null }[]).map((r) => {
+  return ((data ?? []) as unknown as { created_at: string; contact_id: string | null; contacts: { name: string | null; phone_number: string | null; custom_fields: Record<string, unknown> | null } | null }[]).map((r) => {
     const cf = (r.contacts?.custom_fields ?? {}) as { endereco_gip?: { cidade?: string; bairro?: string }; cidade?: string; bairro?: string };
     const geo = cf.endereco_gip ?? {};
     return {
+      contactId: r.contact_id ?? null,
       nome: r.contacts?.name ?? null,
       telefone: r.contacts?.phone_number ?? null,
       cidade: geo.cidade ?? cf.cidade ?? null,
@@ -241,15 +242,15 @@ export async function listarBeneficiariosEmenda(emendaId: string): Promise<Benef
   const db = await createClient();
   const { data } = await db
     .from("pol_leads")
-    .select("created_at, contacts!contact_id(name, phone_number, custom_fields)")
+    .select("created_at, contact_id, contacts!contact_id(name, phone_number, custom_fields)")
     .eq("organization_id", org.orgId)
     .eq("pol_emenda_id", emendaId)
     .order("created_at", { ascending: false })
     .limit(500);
-  return ((data ?? []) as { created_at: string; contacts: { name: string | null; phone_number: string | null; custom_fields: Record<string, unknown> | null } | null }[]).map((r) => {
+  return ((data ?? []) as unknown as { created_at: string; contact_id: string | null; contacts: { name: string | null; phone_number: string | null; custom_fields: Record<string, unknown> | null } | null }[]).map((r) => {
     const cf = (r.contacts?.custom_fields ?? {}) as { endereco_gip?: { cidade?: string; bairro?: string }; cidade?: string; bairro?: string };
     const geo = cf.endereco_gip ?? {};
-    return { nome: r.contacts?.name ?? null, telefone: r.contacts?.phone_number ?? null, cidade: geo.cidade ?? cf.cidade ?? null, bairro: geo.bairro ?? cf.bairro ?? null, created_at: r.created_at };
+    return { contactId: r.contact_id ?? null, nome: r.contacts?.name ?? null, telefone: r.contacts?.phone_number ?? null, cidade: geo.cidade ?? cf.cidade ?? null, bairro: geo.bairro ?? cf.bairro ?? null, created_at: r.created_at };
   });
 }
 

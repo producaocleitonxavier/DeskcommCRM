@@ -9,6 +9,7 @@ import { notFound, redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { requireAuth, resolveActiveOrg } from "@/lib/auth/server";
 import { obterMandatoTse, pesoBairro, type PesoBairro } from "@/app/actions/politico/obras-actions";
+import { lerVozConfig, vozArmada } from "@/lib/voz/config";
 import DetalheEmendaClient, { type EmendaDetalhe } from "./_detalhe-client";
 
 export const dynamic = "force-dynamic";
@@ -64,5 +65,9 @@ export default async function EmendaDetalhePage({
     .eq("organization_id", org.orgId)
     .eq("pol_emenda_id", id);
 
-  return <DetalheEmendaClient emenda={emRes.data as unknown as EmendaDetalhe} territorios={territorios} liderancas={liderancas} peso={peso} mandatoNome={mandato?.nome ?? null} beneficiarios={beneficiarios ?? 0} />;
+  const vozOk = vozArmada(await lerVozConfig(db, org.orgId));
+  const { data: gabNome } = await db.from("pol_gabinete_config").select("nome_parlamentar").eq("organization_id", org.orgId).maybeSingle();
+  const politicoNome = ((gabNome?.nome_parlamentar as string | null) ?? mandato?.nome ?? "").trim() || null;
+
+  return <DetalheEmendaClient emenda={emRes.data as unknown as EmendaDetalhe} territorios={territorios} liderancas={liderancas} peso={peso} mandatoNome={mandato?.nome ?? null} beneficiarios={beneficiarios ?? 0} vozArmada={vozOk} politicoNome={politicoNome} />;
 }

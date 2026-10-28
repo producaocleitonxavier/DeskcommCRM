@@ -12,6 +12,7 @@ import { ArrowLeft, Camera, Check, Link2, Loader2, MessageCircle, Pencil, Trash2
 
 import { atualizarRegistro, excluirRegistro } from "@/app/actions/politico/gabinete-actions";
 import { uploadFotoLideranca } from "@/lib/politico/foto-lideranca";
+import { BotaoRecadoVoz } from "@/components/politico/botao-recado-voz";
 
 interface Opcao {
   id: string;
@@ -38,6 +39,7 @@ export interface LiderancaDetalhe {
   nivel_engajamento: string;
   status: string;
   observacoes: string | null;
+  contact_id: string | null;
   contacts: { name: string | null; phone_number: string | null } | null;
 }
 
@@ -45,6 +47,8 @@ export interface Props {
   lideranca: LiderancaDetalhe;
   fotoUrl: string | null;
   territorios: Opcao[];
+  vozArmada?: boolean;
+  politicoNome?: string | null;
 }
 
 function iniciais(nome: string): string {
@@ -88,7 +92,7 @@ function fmtData(d: string | null): string {
   return new Date(d).toLocaleDateString("pt-BR", { day: "2-digit", month: "short", year: "numeric" });
 }
 
-export default function DetalheLiderancaClient({ lideranca, fotoUrl, territorios }: Props) {
+export default function DetalheLiderancaClient({ lideranca, fotoUrl, territorios, vozArmada = false, politicoNome = null }: Props) {
   const router = useRouter();
 
   const [l, setL] = useState<LiderancaDetalhe>(lideranca);
@@ -235,6 +239,9 @@ export default function DetalheLiderancaClient({ lideranca, fotoUrl, territorios
               <a href={waLink} target="_blank" rel="noopener noreferrer" className="wr-btn inline-flex items-center gap-2" style={{ color: "#22C55E" }}>
                 <MessageCircle className="h-4 w-4" aria-hidden /> WhatsApp
               </a>
+            )}
+            {l.contact_id && l.whatsapp && (
+              <BotaoRecadoVoz contactId={l.contact_id} nome={l.nome} vozArmada={vozArmada} politico={politicoNome ? `o vereador ${politicoNome}` : "o vereador"} />
             )}
             <button type="button" onClick={copiarLinkCaptacao} className="wr-btn inline-flex items-center gap-2" title="Copiar link público de captação desta liderança">
               {linkCopiado ? <Check className="h-4 w-4" aria-hidden /> : <Link2 className="h-4 w-4" aria-hidden />}

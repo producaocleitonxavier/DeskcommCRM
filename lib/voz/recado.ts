@@ -13,8 +13,16 @@
 
 export type MomentoVoz = "resolucao" | "encaminhamento";
 
-const AVISO_IA_FALADO =
+export const AVISO_IA_FALADO =
   "Ah, este áudio foi gerado com apoio de inteligência artificial, com a minha voz e a minha autorização.";
+
+/** Acrescenta o aviso de IA falado ao fim de um texto livre (recado avulso).
+ * Guardrail TSE 23.755/2026 — centralizado pra viajar junto do componente. */
+export function comAvisoIA(texto: string, incluir = true): string {
+  const t = texto.trim();
+  if (!incluir || !t) return t;
+  return `${t} ${AVISO_IA_FALADO}`;
+}
 
 export interface OpcoesRecado {
   momento: MomentoVoz;

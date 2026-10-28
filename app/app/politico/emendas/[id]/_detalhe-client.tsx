@@ -14,6 +14,7 @@ import { ArrowLeft, Check, Pencil, Trash2, X, Users, Copy } from "lucide-react";
 
 import { atualizarRegistro, excluirRegistro } from "@/app/actions/politico/gabinete-actions";
 import { listarBeneficiariosEmenda, type BeneficiarioObra } from "@/app/actions/politico/obras-actions";
+import { BotaoRecadoVoz } from "@/components/politico/botao-recado-voz";
 
 interface Opcao {
   id: string;
@@ -58,6 +59,8 @@ export interface Props {
   peso?: import("@/app/actions/politico/obras-actions").PesoBairro | null;
   mandatoNome?: string | null;
   beneficiarios?: number;
+  vozArmada?: boolean;
+  politicoNome?: string | null;
 }
 
 const TIPOS: Opcao[] = [
@@ -134,7 +137,7 @@ function rotulo(lista: Opcao[], id: string | null): string {
   return lista.find((o) => o.id === id)?.nome ?? id;
 }
 
-export default function DetalheEmendaClient({ emenda, liderancas, peso, mandatoNome, beneficiarios: beneficiariosCaptados = 0 }: Props) {
+export default function DetalheEmendaClient({ emenda, liderancas, peso, mandatoNome, beneficiarios: beneficiariosCaptados = 0, vozArmada = false, politicoNome = null }: Props) {
   const router = useRouter();
 
   const [e, setE] = useState<EmendaDetalhe>(emenda);
@@ -371,7 +374,7 @@ export default function DetalheEmendaClient({ emenda, liderancas, peso, mandatoN
         </section>
       )}
 
-      <CaptacaoEmendaCard emendaId={e.id} beneficiarios={beneficiariosCaptados} />
+      <CaptacaoEmendaCard emendaId={e.id} beneficiarios={beneficiariosCaptados} vozArmada={vozArmada} politicoNome={politicoNome} />
 
       <section className="wr-card p-6 sm:p-7">
         {editando ? (
@@ -441,7 +444,7 @@ export default function DetalheEmendaClient({ emenda, liderancas, peso, mandatoN
   );
 }
 
-function CaptacaoEmendaCard({ emendaId, beneficiarios }: { emendaId: string; beneficiarios: number }) {
+function CaptacaoEmendaCard({ emendaId, beneficiarios, vozArmada, politicoNome }: { emendaId: string; beneficiarios: number; vozArmada: boolean; politicoNome: string | null }) {
   const [copiado, setCopiado] = useState(false);
   const [verando, setVerando] = useState(false);
   const [lista, setLista] = useState<BeneficiarioObra[] | null>(null);
@@ -474,13 +477,14 @@ function CaptacaoEmendaCard({ emendaId, beneficiarios }: { emendaId: string; ben
           {carregando ? <div className="p-4 text-center text-sm" style={{ color: "var(--color-text-subtle)" }}>Carregando…</div>
             : (lista && lista.length > 0) ? (
               <table className="w-full text-sm">
-                <thead><tr style={{ borderBottom: "1px solid var(--color-border)" }}>{["Nome", "WhatsApp", "Bairro", "Data"].map((h) => <th key={h} className="px-3 py-2 text-left text-[12px] font-medium" style={{ color: "var(--color-text-subtle)" }}>{h}</th>)}</tr></thead>
+                <thead><tr style={{ borderBottom: "1px solid var(--color-border)" }}>{["Nome", "WhatsApp", "Bairro", "Data", ...(vozArmada ? [""] : [])].map((h, hi) => <th key={h || `v${hi}`} className="px-3 py-2 text-left text-[12px] font-medium" style={{ color: "var(--color-text-subtle)" }}>{h}</th>)}</tr></thead>
                 <tbody>{lista.map((b, i) => (
                   <tr key={i} style={{ borderBottom: "1px solid var(--color-border)" }}>
                     <td className="px-3 py-2 font-medium" style={{ color: "var(--color-text)" }}>{b.nome ?? "—"}</td>
                     <td className="px-3 py-2 tabular-nums" style={{ color: "var(--color-text-muted)" }}>{b.telefone ?? "—"}</td>
                     <td className="px-3 py-2" style={{ color: "var(--color-text-muted)" }}>{[b.bairro, b.cidade].filter(Boolean).join(" · ") || "—"}</td>
                     <td className="px-3 py-2 text-[12px]" style={{ color: "var(--color-text-subtle)" }}>{new Date(b.created_at).toLocaleDateString("pt-BR")}</td>
+                    {vozArmada && <td className="px-3 py-2">{b.contactId && b.telefone ? <BotaoRecadoVoz contactId={b.contactId} nome={b.nome} vozArmada={vozArmada} politico={politicoNome ? `o vereador ${politicoNome}` : "o vereador"} compacto /> : null}</td>}
                   </tr>
                 ))}</tbody>
               </table>

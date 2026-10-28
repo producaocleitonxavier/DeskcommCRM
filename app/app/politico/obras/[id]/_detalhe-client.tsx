@@ -13,6 +13,7 @@ import { ArrowLeft, Loader2, Plus, Trash2, MapPin, Camera, X, HardHat, ShieldChe
 
 import { atualizarRegistro, excluirRegistro } from "@/app/actions/politico/gabinete-actions";
 import { registrarVistoria, listarVistorias, uploadFotoObra, listarFotosObra, removerFotoObra, listarBeneficiariosObra, type VistoriaObra, type FotoObra, type ChecklistItem, type PesoBairro, type BeneficiarioObra } from "@/app/actions/politico/obras-actions";
+import { BotaoRecadoVoz } from "@/components/politico/botao-recado-voz";
 import { STATUS, TIPO } from "../_obras-client";
 
 type Obra = Record<string, unknown> & { id: string; titulo: string; natureza: "execucao" | "fiscalizacao"; tipo: string; status: string; percentual: number; valor_cents: number };
@@ -27,6 +28,8 @@ export interface ObraDetalheData {
   vistorias: VistoriaObra[];
   fotos: FotoObra[];
   emendas: { id: string; numero: string | null; ano: number; descricao: string }[];
+  vozArmada: boolean;
+  politicoNome: string | null;
 }
 
 const AVANCA: Record<string, { para: string; label: string }[]> = {
@@ -147,7 +150,7 @@ export default function ObraDetalhe({ data }: { data: ObraDetalheData }) {
 
       <VistoriasCard obraId={obra.id} vistorias={vistorias} onMudou={async () => setVistorias(await listarVistorias(obra.id))} onPercentual={(p) => setObra((o) => ({ ...o, percentual: p }))} />
 
-      <CaptacaoObraCard obraId={obra.id} beneficiarios={data.beneficiarios} />
+      <CaptacaoObraCard obraId={obra.id} beneficiarios={data.beneficiarios} vozArmada={data.vozArmada} politicoNome={data.politicoNome} />
 
       <FotosCard obraId={obra.id} fotos={fotos} onMudou={async () => setFotos(await listarFotosObra(obra.id))} />
     </div>
@@ -155,7 +158,7 @@ export default function ObraDetalhe({ data }: { data: ObraDetalheData }) {
 }
 
 // ─── Captação de beneficiários (Camada 2 do ROI de Emenda) ──────────────────
-function CaptacaoObraCard({ obraId, beneficiarios }: { obraId: string; beneficiarios: number }) {
+function CaptacaoObraCard({ obraId, beneficiarios, vozArmada, politicoNome }: { obraId: string; beneficiarios: number; vozArmada: boolean; politicoNome: string | null }) {
   const [copiado, setCopiado] = useState(false);
   const [verando, setVerando] = useState(false);
   const [lista, setLista] = useState<BeneficiarioObra[] | null>(null);
@@ -202,7 +205,7 @@ function CaptacaoObraCard({ obraId, beneficiarios }: { obraId: string; beneficia
           ) : (lista && lista.length > 0) ? (
             <table className="w-full text-sm">
               <thead><tr style={{ borderBottom: "1px solid var(--color-border)" }}>
-                {["Nome", "WhatsApp", "Bairro", "Data"].map((h) => <th key={h} className="px-3 py-2 text-left text-[12px] font-medium" style={{ color: "var(--color-text-subtle)" }}>{h}</th>)}
+                {["Nome", "WhatsApp", "Bairro", "Data", ...(vozArmada ? [""] : [])].map((h, hi) => <th key={h || `v${hi}`} className="px-3 py-2 text-left text-[12px] font-medium" style={{ color: "var(--color-text-subtle)" }}>{h}</th>)}
               </tr></thead>
               <tbody>
                 {lista.map((b, i) => (
@@ -211,6 +214,13 @@ function CaptacaoObraCard({ obraId, beneficiarios }: { obraId: string; beneficia
                     <td className="px-3 py-2 tabular-nums" style={{ color: "var(--color-text-muted)" }}>{b.telefone ?? "—"}</td>
                     <td className="px-3 py-2" style={{ color: "var(--color-text-muted)" }}>{[b.bairro, b.cidade].filter(Boolean).join(" · ") || "—"}</td>
                     <td className="px-3 py-2 text-[12px]" style={{ color: "var(--color-text-subtle)" }}>{new Date(b.created_at).toLocaleDateString("pt-BR")}</td>
+                    {vozArmada && (
+                      <td className="px-3 py-2">
+                        {b.contactId && b.telefone ? (
+                          <BotaoRecadoVoz contactId={b.contactId} nome={b.nome} vozArmada={vozArmada} politico={politicoNome ? `o vereador ${politicoNome}` : "o vereador"} compacto />
+                        ) : null}
+                      </td>
+                    )}
                   </tr>
                 ))}
               </tbody>

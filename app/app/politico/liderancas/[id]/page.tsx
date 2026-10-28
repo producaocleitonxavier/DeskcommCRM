@@ -10,6 +10,7 @@
 import { notFound, redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { requireAuth, resolveActiveOrg } from "@/lib/auth/server";
+import { lerVozConfig, vozArmada } from "@/lib/voz/config";
 import DetalheLiderancaClient, { type LiderancaDetalhe } from "./_detalhe-client";
 
 export const dynamic = "force-dynamic";
@@ -29,7 +30,7 @@ export default async function LiderancaDetalhePage({
     db
       .from("pol_liderancas")
       .select(
-        "id, nome, apelido, cargo, tipo, whatsapp, email, instagram, aniversario, territory_id, cidade, bairro, zona_eleitoral, leads_mobilizados, eventos_organizados, ultimo_contato_em, nivel_engajamento, status, observacoes, foto_path, contacts(name, phone_number)",
+        "id, nome, apelido, cargo, tipo, whatsapp, email, instagram, aniversario, territory_id, cidade, bairro, zona_eleitoral, leads_mobilizados, eventos_organizados, ultimo_contato_em, nivel_engajamento, status, observacoes, foto_path, contact_id, contacts(name, phone_number)",
       )
       .eq("organization_id", org.orgId)
       .eq("id", id)
@@ -60,5 +61,9 @@ export default async function LiderancaDetalhePage({
     eventos_organizados: eventosRes.count ?? 0,
   };
 
-  return <DetalheLiderancaClient lideranca={lideranca} fotoUrl={fotoUrl} territorios={territorios} />;
+  const vozOk = vozArmada(await lerVozConfig(db, org.orgId));
+  const { data: gabNome } = await db.from("pol_gabinete_config").select("nome_parlamentar").eq("organization_id", org.orgId).maybeSingle();
+  const politicoNome = ((gabNome?.nome_parlamentar as string | null) ?? "").trim() || null;
+
+  return <DetalheLiderancaClient lideranca={lideranca} fotoUrl={fotoUrl} territorios={territorios} vozArmada={vozOk} politicoNome={politicoNome} />;
 }
