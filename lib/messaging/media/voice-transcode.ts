@@ -91,6 +91,41 @@ async function runFfmpeg(args: string[], cwd: string): Promise<void> {
 }
 
 /**
+ * MP3 → Ogg/Opus mono, pra nota de voz (bolha). Diferente de
+ * `transcodificarNotaDeVoz` (que só troca o container do webm, codec já opus),
+ * aqui o codec é outro — então RE-ENCODA com libopus. Usado pela "Voz do
+ * Mandato": o ElevenLabs entrega MP3, e o WhatsApp só aceita OGG/OPUS como nota
+ * de voz. `-ac 1` (mono) e 48 kbps bastam pra fala e deixam o arquivo pequeno.
+ *
+ * Falha devolve `null` (quem chama decide o fallback — não enviar o áudio e
+ * manter só o texto). Nunca lança.
+ */
+export async function mp3ParaNotaDeVoz(
+  buffer: Buffer,
+  deps: { run?: typeof runFfmpeg } = {},
+): Promise<{ buffer: Buffer; mime: string } | null> {
+  if (buffer.length === 0 || buffer.length > MAX_BYTES) return null;
+  const executar = deps.run ?? runFfmpeg;
+  const dir = await mkdtemp(join(tmpdir(), "voz-tts-"));
+  try {
+    const entrada = join(dir, "in.mp3");
+    const saida = join(dir, "out.ogg");
+    await writeFile(entrada, buffer);
+    await executar(
+      ["-i", entrada, "-vn", "-ac", "1", "-c:a", "libopus", "-b:a", "48k", "-f", "ogg", saida],
+      dir,
+    );
+    const out = await readFile(saida);
+    if (out.length === 0) return null;
+    return { buffer: out, mime: VOICE_MIME };
+  } catch {
+    return null;
+  } finally {
+    await rm(dir, { recursive: true, force: true }).catch(() => {});
+  }
+}
+
+/**
  * WebM/Opus → Ogg/Opus, trocando só o container.
  *
  * Falha devolve o original INTACTO, não erro: um áudio que talvez não saia é

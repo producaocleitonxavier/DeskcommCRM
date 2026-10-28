@@ -9,7 +9,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, Clock, Flag, MessageCircle, Pencil, Printer, Sparkles, Trash2, X } from "lucide-react";
+import { ArrowLeft, Clock, Flag, MessageCircle, Mic, Pencil, Printer, Sparkles, Trash2, X } from "lucide-react";
 
 import { gerarEncaminhamento } from "@/app/actions/politico/gerarEncaminhamento";
 import { gerarOficioDemanda } from "@/app/actions/politico/gerarOficio";
@@ -57,6 +57,9 @@ export interface Props {
   demanda: DemandaDetalhe;
   assessores: Opcao[];
   eventos: EventoDemanda[];
+  /** Voz do Mandato pronta (clone + consentimento + ligada)? Liga a opção de
+   * mandar o aviso também como recado em áudio na voz do político. */
+  vozArmada?: boolean;
 }
 
 const TIPOS: Opcao[] = [
@@ -108,7 +111,7 @@ function paraInputDate(d: string | null): string {
   return new Date(d).toISOString().slice(0, 10);
 }
 
-export default function DetalheDemandaClient({ demanda, assessores, eventos }: Props) {
+export default function DetalheDemandaClient({ demanda, assessores, eventos, vozArmada }: Props) {
   const router = useRouter();
 
   const [d, setD] = useState<DemandaDetalhe>(demanda);
@@ -118,6 +121,7 @@ export default function DetalheDemandaClient({ demanda, assessores, eventos }: P
   const [gerandoOficio, setGerandoOficio] = useState(false);
   const [avisando, setAvisando] = useState(false);
   const [avisoMsg, setAvisoMsg] = useState<string | null>(null);
+  const [incluirVoz, setIncluirVoz] = useState(false);
   const [excluindo, setExcluindo] = useState(false);
   const [anexoToken, setAnexoToken] = useState(0);
   const [erro, setErro] = useState<string | null>(null);
@@ -315,14 +319,28 @@ export default function DetalheDemandaClient({ demanda, assessores, eventos }: P
             disabled={avisando || !d.contacts?.phone_number}
             title={!d.contacts?.phone_number ? "O cidadão não tem telefone cadastrado" : "Enviar aviso ao cidadão por WhatsApp"}
             onClick={async () => {
-              if (!window.confirm("Enviar aviso ao cidadão por WhatsApp confirmando o registro da demanda?")) return;
+              const comVoz = !!vozArmada && incluirVoz;
+              const pergunta = comVoz
+                ? "Enviar o aviso por WhatsApp E um recado em áudio na voz do Cleiton?"
+                : "Enviar aviso ao cidadão por WhatsApp confirmando o registro da demanda?";
+              if (!window.confirm(pergunta)) return;
               setErro(null);
               setAvisoMsg(null);
               setAvisando(true);
-              const res = await avisarCidadao(d.id);
+              const res = await avisarCidadao(d.id, { incluirAudio: comVoz });
               setAvisando(false);
               if (res.ok) {
-                setAvisoMsg(`Cidadão avisado no WhatsApp (protocolo ${res.protocolo})${res.comOficio ? " com o ofício em anexo" : ""}.`);
+                const audioTxt =
+                  res.audio === "enviado"
+                    ? " + recado em áudio na voz do Cleiton"
+                    : res.audio === "blackout"
+                      ? " (o áudio ficou de fora: silêncio eleitoral de 72h)"
+                      : res.audio === "voz_desarmada"
+                        ? " (o áudio ficou de fora: a Voz do Mandato não está ligada)"
+                        : res.audio === "falha"
+                          ? " (o texto foi, mas o áudio falhou — tente de novo)"
+                          : "";
+                setAvisoMsg(`Cidadão avisado no WhatsApp (protocolo ${res.protocolo})${res.comOficio ? " com o ofício em anexo" : ""}${audioTxt}.`);
                 router.refresh();
               } else setErro(res.erro);
             }}
@@ -331,6 +349,20 @@ export default function DetalheDemandaClient({ demanda, assessores, eventos }: P
           >
             <MessageCircle className="h-4 w-4" aria-hidden /> {avisando ? "Enviando…" : "Avisar cidadão"}
           </button>
+          {vozArmada && (
+            <label
+              className="inline-flex cursor-pointer items-center gap-1.5 rounded-full px-3 py-1.5 text-[13px] font-semibold"
+              style={{
+                border: `1px solid ${incluirVoz ? "#D7F36A" : "var(--color-border)"}`,
+                background: incluirVoz ? "rgba(215,243,106,0.14)" : "transparent",
+                color: incluirVoz ? "#D7F36A" : "var(--color-text-muted)",
+              }}
+              title="Manda também um recado em áudio na voz do Cleiton, depois da mensagem de texto."
+            >
+              <input type="checkbox" checked={incluirVoz} onChange={(e) => setIncluirVoz(e.target.checked)} className="sr-only" />
+              <Mic className="h-3.5 w-3.5" aria-hidden /> Incluir recado na voz do Cleiton
+            </label>
+          )}
         </div>
       </header>
 

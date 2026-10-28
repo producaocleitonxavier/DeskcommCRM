@@ -21,9 +21,21 @@ import { sendMessageHandler } from "@/app/api/v1/messages/_handler";
 import { gerarOficioDemanda } from "@/app/actions/politico/gerarOficio";
 import { ApiError } from "@/lib/api/types";
 import { avisoDeResolucaoLigado } from "@/lib/politico/aviso-de-resolucao";
+import { lerVozConfig, vozArmada } from "@/lib/voz/config";
+import { gerarAudio } from "@/lib/voz/elevenlabs";
+import { lerVozSpeed } from "@/lib/voz/velocidade";
+import { scriptRecado, type MomentoVoz } from "@/lib/voz/recado";
+import { dentroDoBlackout } from "@/lib/voz/blackout";
+import { mp3ParaNotaDeVoz, VOICE_MIME } from "@/lib/messaging/media/voice-transcode";
+import type { SupabaseClient } from "@supabase/supabase-js";
 import type { SendMessageInput } from "@/lib/schemas";
 
-export type AvisoResultado = { ok: true; protocolo: string; comOficio: boolean } | { ok: false; erro: string };
+/** Status do recado em áudio (Voz do Mandato), quando pedido. */
+export type AudioRecadoStatus = "enviado" | "voz_desarmada" | "blackout" | "falha";
+
+export type AvisoResultado =
+  | { ok: true; protocolo: string; comOficio: boolean; audio?: AudioRecadoStatus }
+  | { ok: false; erro: string };
 
 /** Descrição EXATA do evento de histórico quando o cidadão é avisado da
  * resolução. É a chave de idempotência do ciclo automático (`avisarResolucaoAutomatica`)
@@ -57,7 +69,10 @@ function protocoloDe(d: DemandaParaAviso): string {
   return `#${d.id.slice(0, 8).toUpperCase()}`;
 }
 
-export async function avisarCidadao(demandaId: string): Promise<AvisoResultado> {
+export async function avisarCidadao(
+  demandaId: string,
+  opts?: { incluirAudio?: boolean },
+): Promise<AvisoResultado> {
   const user = await requireAuth();
   const org = await resolveActiveOrg(user);
   if (!org) return { ok: false, erro: "Sessão ou organização inválida." };
@@ -188,7 +203,90 @@ export async function avisarCidadao(demandaId: string): Promise<AvisoResultado> 
     created_by: user.id,
   });
 
-  return { ok: true, protocolo, comOficio };
+  // VOZ DO MANDATO (Fase A, manual): se o cliente pediu "incluir recado em
+  // áudio", manda uma nota de voz na voz do político DEPOIS do texto. Nunca
+  // falha o aviso por causa do áudio (o texto já foi): devolve só o status.
+  let audio: AudioRecadoStatus | undefined;
+  if (opts?.incluirAudio) {
+    audio = await enviarRecadoDeVoz({
+      db,
+      admin,
+      orgId: org.orgId,
+      userId: user.id,
+      conversationId,
+      demandaId,
+      momento: ehResolucao ? "resolucao" : "encaminhamento",
+      primeiroNome,
+      idioma: user.idioma,
+    });
+  }
+
+  return { ok: true, protocolo, comOficio, audio };
+}
+
+/**
+ * Gera e envia o recado em áudio na voz do Mandato (nota de voz no WhatsApp).
+ * Travas (nesta ordem): voz armada (ligada + clone + consentimento) → fora do
+ * blackout eleitoral → TTS → converte pra ogg/opus → sobe → envia. Qualquer
+ * tropeço devolve um status, nunca lança: o texto já saiu.
+ */
+async function enviarRecadoDeVoz(args: {
+  db: SupabaseClient;
+  admin: SupabaseClient;
+  orgId: string;
+  userId: string;
+  conversationId: string;
+  demandaId: string;
+  momento: MomentoVoz;
+  primeiroNome: string;
+  idioma: "es" | "pt-BR" | undefined;
+}): Promise<AudioRecadoStatus> {
+  const { db, admin, orgId, userId, conversationId, demandaId, momento, primeiroNome, idioma } = args;
+  try {
+    const cfg = await lerVozConfig(db, orgId);
+    if (!vozArmada(cfg) || !cfg.voiceId) return "voz_desarmada";
+    if (dentroDoBlackout()) return "blackout";
+
+    const { data: orgRow } = await db.from("organizations").select("settings").eq("id", orgId).maybeSingle();
+    const velocidade = lerVozSpeed(orgRow?.settings);
+
+    const texto = scriptRecado({ momento, primeiroNome: primeiroNome || null });
+    const r = await gerarAudio(cfg.voiceId, texto, velocidade);
+    if (!r.ok) return "falha";
+
+    const ogg = await mp3ParaNotaDeVoz(Buffer.from(r.audio));
+    if (!ogg) return "falha";
+
+    const waPath = `${orgId}/${conversationId}/recado-voz-${Date.now()}.ogg`;
+    const up = await admin.storage
+      .from("whatsapp-media")
+      .upload(waPath, ogg.buffer, { contentType: VOICE_MIME, upsert: true });
+    if (up.error) return "falha";
+
+    const input: SendMessageInput = {
+      conversation_id: conversationId,
+      type: "audio",
+      media_storage_path: waPath,
+      media_mime: VOICE_MIME,
+      media_size_bytes: ogg.buffer.length,
+    };
+    await sendMessageHandler(
+      db,
+      { organization_id: orgId, actor: { type: "user", id: userId }, requestId: randomUUID(), idioma },
+      input,
+    );
+
+    await db.from("pol_demanda_eventos").insert({
+      organization_id: orgId,
+      demanda_id: demandaId,
+      tipo: "cidadao_avisado",
+      descricao: "Recado em áudio na voz do Mandato enviado",
+      created_by: userId,
+    });
+    return "enviado";
+  } catch {
+    return "falha";
+  }
 }
 
 /**

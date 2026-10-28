@@ -12,6 +12,7 @@ import { notFound, redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { requireAuth, resolveActiveOrg } from "@/lib/auth/server";
 import { nomesDosAtendentes } from "@/lib/users/nome-do-atendente";
+import { lerVozConfig, vozArmada } from "@/lib/voz/config";
 import DetalheDemandaClient, { type DemandaDetalhe } from "./_detalhe-client";
 
 export const dynamic = "force-dynamic";
@@ -48,6 +49,9 @@ export default async function DemandaDetalhePage({
 
   if (!demRes.data) notFound();
 
+  // Voz do Mandato armada? (liga a opção "incluir recado em áudio" no aviso.)
+  const vozOk = vozArmada(await lerVozConfig(db, org.orgId));
+
   const membros = (membrosRes.data ?? []) as { user_id: string; role: string }[];
   const nomes = await nomesDosAtendentes(membros.map((m) => m.user_id));
   const assessores = membros
@@ -66,6 +70,7 @@ export default async function DemandaDetalhePage({
       demanda={demRes.data as unknown as DemandaDetalhe}
       assessores={assessores}
       eventos={eventos}
+      vozArmada={vozOk}
     />
   );
 }
