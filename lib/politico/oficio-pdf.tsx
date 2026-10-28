@@ -37,9 +37,14 @@ const styles = StyleSheet.create({
   // timbrado, cai num cabeçalho gerado com a marca.
   pageAnexo: { paddingTop: 48, paddingBottom: 48, paddingHorizontal: 56 },
   anexoHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", borderBottomWidth: 2, paddingBottom: 12, marginBottom: 20 },
-  anexoMoldura: { flexGrow: 1, alignItems: "center", justifyContent: "center" },
-  anexoImagem: { width: "100%", height: "100%", objectFit: "contain" },
 });
+
+// Dimensões da página A4 em PONTOS (@react-pdf). A foto do anexo usa a CAIXA de
+// conteúdo (A4 menos as margens) com tamanho FIXO em pontos — porcentagem
+// (height:"100%") faz o @react-pdf achar a imagem "maior que a página" e recusar
+// ("IMAGE can't wrap between pages"). Com caixa fixa + objectFit:contain, a foto
+// encaixa sempre, qualquer proporção, sem cobrir cabeçalho/rodapé do timbrado.
+const A4_PT = { largura: 595.28, altura: 841.89 } as const;
 
 export interface OficioPdfInput {
   numero: number;
@@ -132,33 +137,34 @@ function anexoPages(
 
   if (d.timbradoUrl) {
     const m = d.timbradoMargens ?? {};
-    const margens = {
-      paddingTop: m.topo ?? TIMBRADO_MARGENS_PADRAO.topo,
-      paddingBottom: m.base ?? TIMBRADO_MARGENS_PADRAO.base,
-      paddingHorizontal: m.lados ?? TIMBRADO_MARGENS_PADRAO.lados,
-    };
+    const topo = m.topo ?? TIMBRADO_MARGENS_PADRAO.topo;
+    const base = m.base ?? TIMBRADO_MARGENS_PADRAO.base;
+    const lados = m.lados ?? TIMBRADO_MARGENS_PADRAO.lados;
+    const boxW = A4_PT.largura - 2 * lados;
+    const boxH = A4_PT.altura - topo - base;
     const timbrado = d.timbradoUrl;
+    // A foto é posicionada ABSOLUTA na faixa de conteúdo (entre o cabeçalho e o
+    // rodapé do timbrado), com tamanho fixo em pontos + objectFit:contain.
     return imgs.map((a, i) => (
       <Page key={`anexo-${i}`} size="A4" style={styles.pageTimbrado}>
         <Image src={timbrado} style={styles.fundoTimbrado} fixed />
-        <View style={[margens, { flexGrow: 1 }]}>
-          <View style={styles.anexoMoldura}>
-            <Image src={a.url} style={styles.anexoImagem} />
-          </View>
-        </View>
+        <Image
+          src={a.url}
+          style={{ position: "absolute", top: topo, left: lados, width: boxW, height: boxH, objectFit: "contain" }}
+        />
       </Page>
     ));
   }
 
+  const boxW = A4_PT.largura - 2 * 56;
+  const boxH = A4_PT.altura - 48 - 48 - 60; // menos padding e o cabeçalho gerado
   return imgs.map((a, i) => (
     <Page key={`anexo-${i}`} size="A4" style={styles.pageAnexo}>
       <View style={[styles.anexoHeader, { borderBottomColor: accent }]}>
         <Text style={[styles.marcaNome, { color: accent }]}>{marcaNome}</Text>
         {logoUrl ? <Image src={logoUrl} style={styles.logo} /> : null}
       </View>
-      <View style={styles.anexoMoldura}>
-        <Image src={a.url} style={styles.anexoImagem} />
-      </View>
+      <Image src={a.url} style={{ width: boxW, height: boxH, objectFit: "contain" }} />
     </Page>
   ));
 }
