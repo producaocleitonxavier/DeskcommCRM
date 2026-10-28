@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, useTransition } from "react";
-import { Mic, ShieldCheck, Upload, Play, Loader2, Check, Gauge, Square, Trash2, RotateCcw } from "lucide-react";
+import { Mic, ShieldCheck, Upload, Play, Loader2, Check, Gauge, Square, Trash2, RotateCcw, FileText, Copy } from "lucide-react";
 import { CommandHero } from "@/components/politico/command-hero";
 import { clonarVozDoMandato, alternarVozAtiva, gerarPreviaVoz, definirVozSpeed } from "@/app/actions/politico/voz";
 import { VOZ_SPEED_PRESETS } from "@/lib/voz/velocidade";
@@ -33,6 +33,38 @@ interface Inicial {
 const TEXTO_PREVIA_PADRAO =
   "Olá! Aqui é o Cleiton Xavier. Passando pra te desejar um feliz aniversário e te agradecer por caminhar junto comigo. Um grande abraço!";
 
+/**
+ * Roteiro que o político LÊ enquanto grava a amostra. Pensado pra clonagem de
+ * qualidade: tem saudação, pergunta, exclamação, uma pequena história (muda o
+ * tom), números e um fecho caloroso — essa VARIAÇÃO de entonação é o que faz o
+ * clone soar natural. É genérico e NEUTRO de propósito (sem nome, cidade,
+ * partido ou promessa): serve pra qualquer cliente e respeita a lei eleitoral.
+ */
+const ROTEIRO_PARA_LER = `Oi! Tudo bem com você? Aqui quem fala sou eu, e eu quero começar te agradecendo de coração por esse tempinho que você está me dando agora.
+
+Sabe, todo dia eu aprendo uma coisa nova nesse trabalho. A parte de que eu mais gosto, de longe, é quando eu saio e vou pra rua conversar com as pessoas de verdade. É ali — no portão de uma casa, na feira, na saída da escola — que a gente entende o que realmente importa.
+
+Outro dia mesmo, uma senhora me parou e falou assim: "Olha, eu não quero muita coisa, não. Eu só quero ser ouvida." E ela tem toda a razão! Às vezes a gente complica o que é simples. Ouvir já é metade do caminho.
+
+Eu acredito numa ideia bem direta: trabalho bom é o que resolve. Não é discurso bonito, não é promessa grande. É o problema do dia a dia que alguém finalmente escuta e vai lá resolver. É a família que bate na porta precisando de ajuda e encontra a porta aberta.
+
+Deixa eu te contar os números que me movem: são milhares de pessoas, de dezenas de bairros, cada uma com uma história, um sonho, uma dificuldade. Como é que você escuta tanta gente? Com paciência, com respeito, e com uma equipe que veste a camisa.
+
+Eu já errei, claro. Quem trabalha erra. Mas aprendi uma coisa: o importante é nunca dar as costas pra quem confiou em você. Confiança é a coisa mais difícil de ganhar e a mais fácil de perder.
+
+Então, se eu puder te deixar um recado hoje, é esse: pode contar comigo. De manhã, de tarde, de noite. Nos dias bons e, principalmente, nos dias difíceis.
+
+Muito obrigado, viu? De verdade. Um abraço bem grande, e até a próxima!`;
+
+const DICAS_GRAVACAO = [
+  "Fique num lugar silencioso — sem TV, música, ventilador barulhento ou rua.",
+  "Segure o celular a um palmo da boca (nem colado, nem longe demais).",
+  "Fale natural, do seu jeito — como se conversasse com um amigo.",
+  "Varie o tom: sorria numas partes, fale sério em outras. Isso deixa o clone mais real.",
+  "Leia com calma, sem pressa. De 2 a 3 minutos é o ideal.",
+  "Errou uma palavra? Siga em frente — ou é só regravar no fim.",
+];
+
 export default function VozClient({ inicial }: { inicial: Inicial }) {
   const [temVoz, setTemVoz] = useState(inicial.temVoz);
   const [ativo, setAtivo] = useState(inicial.ativo);
@@ -42,7 +74,18 @@ export default function VozClient({ inicial }: { inicial: Inicial }) {
   const [audioUrl, setAudioUrl] = useState<string | null>(null);
   const [nomeArquivo, setNomeArquivo] = useState<string | null>(null);
   const [velocidade, setVelocidade] = useState(inicial.velocidade);
+  const [copiado, setCopiado] = useState(false);
   const formRef = useRef<HTMLFormElement>(null);
+
+  function copiarRoteiro() {
+    navigator.clipboard?.writeText(ROTEIRO_PARA_LER).then(
+      () => {
+        setCopiado(true);
+        setTimeout(() => setCopiado(false), 2000);
+      },
+      () => {},
+    );
+  }
 
   // --- Gravação ao vivo (mic do próprio aparelho) ---
   const [gravando, setGravando] = useState(false);
@@ -233,6 +276,44 @@ export default function VozClient({ inicial }: { inicial: Inicial }) {
         <p className="text-[13px]" style={{ color: "var(--color-text-muted)" }}>
           Peça pro político falar de <strong>2 a 3 minutos</strong>, em lugar quieto, com voz natural. Você pode <strong>gravar agora mesmo pelo celular</strong> — ou subir um áudio pronto.
         </p>
+
+        {/* GUIA DE GRAVAÇÃO — dicas + roteiro pronto pra ler (ninguém sabe o que falar) */}
+        <div className="rounded-[16px] p-4" style={{ border: "1px solid rgba(215,243,106,0.3)", background: "rgba(215,243,106,0.06)" }}>
+          <p className="flex items-center gap-1.5 text-sm font-bold" style={{ color: "#D7F36A" }}>
+            <FileText className="h-4 w-4" aria-hidden /> Não sabe o que falar? É só ler este texto
+          </p>
+
+          <ul className="mt-3 space-y-1.5 text-[13px]" style={{ color: "var(--color-text-muted)" }}>
+            {DICAS_GRAVACAO.map((d) => (
+              <li key={d} className="flex gap-2">
+                <Check className="mt-0.5 h-3.5 w-3.5 shrink-0" style={{ color: "#D7F36A" }} aria-hidden />
+                <span>{d}</span>
+              </li>
+            ))}
+          </ul>
+
+          <div className="mt-3 flex items-center justify-between gap-2">
+            <span className="text-xs font-semibold uppercase tracking-wide" style={{ color: "var(--color-text-subtle)" }}>Roteiro para ler</span>
+            <button
+              type="button"
+              onClick={copiarRoteiro}
+              className="inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold"
+              style={{ border: "1px solid var(--color-border)", background: "var(--color-surface-elevated)", color: copiado ? "#D7F36A" : "var(--color-text-muted)" }}
+            >
+              {copiado ? <Check className="h-3.5 w-3.5" aria-hidden /> : <Copy className="h-3.5 w-3.5" aria-hidden />}
+              {copiado ? "Copiado!" : "Copiar texto"}
+            </button>
+          </div>
+          <div
+            className="mt-2 max-h-72 overflow-y-auto whitespace-pre-line rounded-[12px] p-3.5 text-[15px] leading-relaxed"
+            style={{ background: "var(--color-surface-elevated)", border: "1px solid var(--color-border)", color: "var(--color-text)" }}
+          >
+            {ROTEIRO_PARA_LER}
+          </div>
+          <p className="mt-2 text-[12px]" style={{ color: "var(--color-text-subtle)" }}>
+            Dá pra ler direto da tela enquanto grava. Fale com o seu jeito — o texto é só um guia pra soltar a voz.
+          </p>
+        </div>
 
         {/* OPÇÃO 1 — Gravar ao vivo pelo microfone do aparelho */}
         <div className="rounded-[16px] p-4" style={{ border: "1px solid var(--color-border)", background: "var(--color-surface-elevated)" }}>
