@@ -81,6 +81,9 @@ export default function NovaDemandaForm({ assessores }: NovaDemandaFormProps) {
   const [prioridade, setPrioridade] = useState("normal");
   const [orgao, setOrgao] = useState("");
   const [municipio, setMunicipio] = useState("");
+  const [rua, setRua] = useState("");
+  const [numero, setNumero] = useState("");
+  const [bairro, setBairro] = useState("");
   const [assessorNome, setAssessorNome] = useState("");
   const [dataVisita, setDataVisita] = useState("");
 
@@ -168,6 +171,9 @@ export default function NovaDemandaForm({ assessores }: NovaDemandaFormProps) {
     if (tipo) payload.pol_tipo = tipo;
     if (orgao.trim()) payload.pol_orgao_destino = orgao.trim();
     if (municipio.trim()) payload.pol_municipio = municipio.trim();
+    if (rua.trim()) payload.pol_logradouro = rua.trim();
+    if (numero.trim()) payload.pol_numero = numero.trim();
+    if (bairro.trim()) payload.pol_bairro = bairro.trim();
     if (dataVisita) payload.prazo_em = new Date(dataVisita + "T12:00:00").toISOString();
 
     const res = await criarRegistro("demandas", payload);
@@ -313,10 +319,35 @@ export default function NovaDemandaForm({ assessores }: NovaDemandaFormProps) {
               value={assunto}
               onChange={(e) => setAssunto(e.target.value)}
               rows={3}
-              placeholder="Descreva a demanda: o que é, onde e para quê. Ex.: Falta de iluminação na Rua X, bairro Y."
+              placeholder="Descreva aqui o motivo da demanda — o que aconteceu e o que o cidadão precisa."
               className="wr-input w-full"
             />
           </div>
+
+          {/* Localização ESTRUTURADA do problema — separada da justificativa pra
+              não ficar solta / mal preenchida (credibilidade do registro). */}
+          <div>
+            <p className="mb-2 text-sm font-semibold" style={{ color: "var(--color-text)" }}>Onde fica o problema</p>
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-6">
+              <div className="sm:col-span-4">
+                <Label>Rua / Avenida</Label>
+                <input type="text" value={rua} onChange={(e) => setRua(e.target.value)} placeholder="Ex.: Rua Campinas" className="wr-input w-full" />
+              </div>
+              <div className="sm:col-span-2">
+                <Label>Número</Label>
+                <input type="text" value={numero} onChange={(e) => setNumero(e.target.value)} placeholder="Ex.: 715 (ou s/n)" className="wr-input w-full" />
+              </div>
+              <div className="sm:col-span-3">
+                <Label>Bairro</Label>
+                <input type="text" value={bairro} onChange={(e) => setBairro(e.target.value)} placeholder="Ex.: Esplanada" className="wr-input w-full" />
+              </div>
+              <div className="sm:col-span-3">
+                <Label>Cidade</Label>
+                <input type="text" value={municipio} onChange={(e) => setMunicipio(e.target.value)} placeholder="Ex.: Belo Horizonte" className="wr-input w-full" />
+              </div>
+            </div>
+          </div>
+
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div>
               <Label>Prioridade</Label>
@@ -348,10 +379,6 @@ export default function NovaDemandaForm({ assessores }: NovaDemandaFormProps) {
             <div>
               <Label>Data da visita</Label>
               <input type="date" value={dataVisita} onChange={(e) => setDataVisita(e.target.value)} className="wr-input w-full" />
-            </div>
-            <div>
-              <Label>Município</Label>
-              <input type="text" value={municipio} onChange={(e) => setMunicipio(e.target.value)} placeholder="Ex.: Belo Horizonte" className="wr-input w-full" />
             </div>
           </div>
         </section>
