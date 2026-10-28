@@ -11,6 +11,7 @@ import { redirect } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { requireAuth, resolveActiveOrg } from "@/lib/auth/server";
+import CopiarLink from "./_copiar-link";
 
 export const dynamic = "force-dynamic";
 
@@ -198,14 +199,7 @@ export default async function PesquisasPage({
                 )}
               </div>
 
-              {p.public_token && (
-                <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                  <span className="shrink-0">Código do link público:</span>
-                  <span className="truncate font-mono bg-secondary px-2 py-1 rounded">
-                    {p.public_token}
-                  </span>
-                </div>
-              )}
+              {p.public_token && <CopiarLink token={p.public_token} />}
             </div>
           ))}
         </div>
