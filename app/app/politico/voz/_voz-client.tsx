@@ -1,10 +1,25 @@
 "use client";
 
-import { useRef, useState, useTransition } from "react";
-import { Mic, ShieldCheck, Upload, Play, Loader2, Check, Gauge } from "lucide-react";
+import { useEffect, useRef, useState, useTransition } from "react";
+import { Mic, ShieldCheck, Upload, Play, Loader2, Check, Gauge, Square, Trash2, RotateCcw } from "lucide-react";
 import { CommandHero } from "@/components/politico/command-hero";
 import { clonarVozDoMandato, alternarVozAtiva, gerarPreviaVoz, definirVozSpeed } from "@/app/actions/politico/voz";
 import { VOZ_SPEED_PRESETS } from "@/lib/voz/velocidade";
+
+const MIMES_GRAVACAO = ["audio/ogg;codecs=opus", "audio/webm;codecs=opus"];
+function escolherMime(): string | undefined {
+  if (typeof MediaRecorder === "undefined") return undefined;
+  return MIMES_GRAVACAO.find((m) => MediaRecorder.isTypeSupported(m));
+}
+function extDoTipo(tipo: string): string {
+  if (tipo.includes("ogg")) return "ogg";
+  if (tipo.includes("webm")) return "webm";
+  if (tipo.includes("mp4") || tipo.includes("m4a")) return "m4a";
+  return "webm";
+}
+function fmtTempo(s: number): string {
+  return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
+}
 
 interface Inicial {
   temVoz: boolean;
@@ -29,10 +44,112 @@ export default function VozClient({ inicial }: { inicial: Inicial }) {
   const [velocidade, setVelocidade] = useState(inicial.velocidade);
   const formRef = useRef<HTMLFormElement>(null);
 
+  // --- Gravação ao vivo (mic do próprio aparelho) ---
+  const [gravando, setGravando] = useState(false);
+  const [elapsed, setElapsed] = useState(0);
+  const [gravacao, setGravacao] = useState<Blob | null>(null);
+  const [gravacaoUrl, setGravacaoUrl] = useState<string | null>(null);
+  const [gravacaoSeg, setGravacaoSeg] = useState(0);
+  const recorderRef = useRef<MediaRecorder | null>(null);
+  const streamRef = useRef<MediaStream | null>(null);
+  const chunksRef = useRef<Blob[]>([]);
+  const descartarRef = useRef(false);
+  const elapsedRef = useRef(0);
+
+  useEffect(() => {
+    if (!gravando) return;
+    const id = setInterval(() => {
+      setElapsed((s) => {
+        elapsedRef.current = s + 1;
+        return s + 1;
+      });
+    }, 1000);
+    return () => clearInterval(id);
+  }, [gravando]);
+
+  // Fecha o mic se sair da tela no meio da gravação.
+  useEffect(
+    () => () => {
+      descartarRef.current = true;
+      if (recorderRef.current?.state === "recording") recorderRef.current.stop();
+      streamRef.current?.getTracks().forEach((t) => t.stop());
+      streamRef.current = null;
+    },
+    [],
+  );
+
+  function limparGravacao() {
+    if (gravacaoUrl) URL.revokeObjectURL(gravacaoUrl);
+    setGravacao(null);
+    setGravacaoUrl(null);
+    setGravacaoSeg(0);
+  }
+
+  async function iniciarGravacao() {
+    if (gravando) return;
+    setMsg(null);
+    limparGravacao();
+    setNomeArquivo(null); // gravar substitui o arquivo escolhido
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      streamRef.current = stream;
+      const mime = escolherMime();
+      const rec = new MediaRecorder(stream, mime ? { mimeType: mime } : undefined);
+      chunksRef.current = [];
+      descartarRef.current = false;
+      rec.ondataavailable = (e) => {
+        if (e.data && e.data.size > 0) chunksRef.current.push(e.data);
+      };
+      rec.onstop = () => {
+        streamRef.current?.getTracks().forEach((t) => t.stop());
+        streamRef.current = null;
+        setGravando(false);
+        const segundos = elapsedRef.current;
+        setElapsed(0);
+        if (descartarRef.current || chunksRef.current.length === 0) return;
+        const tipo = rec.mimeType || "audio/webm";
+        const blob = new Blob(chunksRef.current, { type: tipo });
+        setGravacao(blob);
+        setGravacaoUrl(URL.createObjectURL(blob));
+        setGravacaoSeg(segundos);
+      };
+      recorderRef.current = rec;
+      elapsedRef.current = 0;
+      setElapsed(0);
+      rec.start();
+      setGravando(true);
+    } catch {
+      streamRef.current?.getTracks().forEach((t) => t.stop());
+      streamRef.current = null;
+      setMsg({
+        tipo: "erro",
+        texto: "Não consegui acessar o microfone. Toque em permitir quando o navegador pedir, ou verifique a permissão.",
+      });
+    }
+  }
+
+  function pararGravacao() {
+    if (recorderRef.current?.state === "recording") recorderRef.current.stop();
+  }
+  function cancelarGravacao() {
+    descartarRef.current = true;
+    pararGravacao();
+    setElapsed(0);
+  }
+
   function enviar(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setMsg(null);
     const fd = new FormData(e.currentTarget);
+    // Gravação ao vivo tem prioridade sobre o arquivo (se houver as duas).
+    if (gravacao) {
+      fd.set("amostra", gravacao, `gravacao.${extDoTipo(gravacao.type || "audio/webm")}`);
+    }
+    const amostra = fd.get("amostra");
+    if (!(amostra instanceof File) || amostra.size === 0) {
+      setMsg({ tipo: "erro", texto: "Grave a voz agora ou suba um arquivo de áudio antes de clonar." });
+      return;
+    }
     start(async () => {
       const r = await clonarVozDoMandato(fd);
       if (r.ok) {
@@ -40,6 +157,7 @@ export default function VozClient({ inicial }: { inicial: Inicial }) {
         setMsg({ tipo: "ok", texto: "Voz clonada! Ouça a prévia abaixo antes de ligar." });
         formRef.current?.reset();
         setNomeArquivo(null);
+        limparGravacao();
       } else {
         setMsg({ tipo: "erro", texto: r.erro ?? "Falha." });
       }
@@ -113,35 +231,96 @@ export default function VozClient({ inicial }: { inicial: Inicial }) {
           <Mic className="h-4 w-4" aria-hidden /> 1. A amostra de voz
         </h2>
         <p className="text-[13px]" style={{ color: "var(--color-text-muted)" }}>
-          Grave o político lendo um texto por <strong>2 a 3 minutos</strong>, em lugar quieto, com voz natural. Depois é só subir o arquivo aqui (.ogg, .mp3 ou .wav).
+          Peça pro político falar de <strong>2 a 3 minutos</strong>, em lugar quieto, com voz natural. Você pode <strong>gravar agora mesmo pelo celular</strong> — ou subir um áudio pronto.
         </p>
-        <div>
-          <label className={label} style={{ color: "var(--color-text-subtle)" }}>Arquivo de áudio</label>
-          <label
-            htmlFor="amostra-voz"
-            className="flex cursor-pointer flex-col items-center justify-center gap-2 rounded-[16px] px-4 py-8 text-center transition-transform hover:scale-[1.01]"
-            style={{ border: `2px dashed ${nomeArquivo ? "#D7F36A" : "rgba(215,243,106,0.5)"}`, background: "rgba(215,243,106,0.07)" }}
-          >
-            <span className="flex h-14 w-14 items-center justify-center rounded-full" style={{ background: "rgba(215,243,106,0.16)", color: "#D7F36A" }} aria-hidden>
-              {nomeArquivo ? <Check className="h-7 w-7" /> : <Upload className="h-7 w-7" />}
-            </span>
-            <span className="text-[16px] font-bold" style={{ color: "#D7F36A" }}>
-              {nomeArquivo ?? "Clique aqui para subir o áudio"}
-            </span>
-            <span className="text-xs" style={{ color: "var(--color-text-subtle)" }}>
-              {nomeArquivo ? "Arquivo pronto — agora é só clonar embaixo" : "Toque pra escolher · .ogg, .mp3 ou .wav · 2 a 3 min"}
-            </span>
-            <input
-              id="amostra-voz"
-              name="amostra"
-              type="file"
-              accept="audio/*"
-              required
-              className="hidden"
-              onChange={(e) => setNomeArquivo(e.target.files?.[0]?.name ?? null)}
-            />
-          </label>
+
+        {/* OPÇÃO 1 — Gravar ao vivo pelo microfone do aparelho */}
+        <div className="rounded-[16px] p-4" style={{ border: "1px solid var(--color-border)", background: "var(--color-surface-elevated)" }}>
+          <p className="mb-3 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide" style={{ color: "var(--color-text-subtle)" }}>
+            <Mic className="h-3.5 w-3.5" aria-hidden /> Gravar agora (pelo aparelho)
+          </p>
+
+          {!gravando && !gravacao && (
+            <button
+              type="button"
+              onClick={iniciarGravacao}
+              className="flex w-full cursor-pointer flex-col items-center justify-center gap-2 rounded-[14px] px-4 py-7 text-center transition-transform hover:scale-[1.01]"
+              style={{ border: "2px dashed rgba(215,243,106,0.5)", background: "rgba(215,243,106,0.07)" }}
+            >
+              <span className="flex h-14 w-14 items-center justify-center rounded-full" style={{ background: "rgba(215,243,106,0.16)", color: "#D7F36A" }} aria-hidden>
+                <Mic className="h-7 w-7" />
+              </span>
+              <span className="text-[16px] font-bold" style={{ color: "#D7F36A" }}>Toque para gravar a voz</span>
+              <span className="text-xs" style={{ color: "var(--color-text-subtle)" }}>Permita o microfone quando pedir · fale 2 a 3 min</span>
+            </button>
+          )}
+
+          {gravando && (
+            <div className="flex flex-col items-center gap-3 rounded-[14px] px-4 py-6" style={{ border: "2px solid rgba(239,68,68,0.5)", background: "rgba(239,68,68,0.08)" }}>
+              <span className="flex items-center gap-2 text-2xl font-bold tabular-nums" style={{ color: "#F87171" }}>
+                <span className="h-3 w-3 animate-pulse rounded-full" style={{ background: "#F87171" }} aria-hidden />
+                {fmtTempo(elapsed)}
+              </span>
+              <span className="text-xs" style={{ color: "var(--color-text-subtle)" }}>Gravando… fale com voz natural. Pare quando passar de ~2 minutos.</span>
+              <div className="flex gap-2">
+                <button type="button" onClick={cancelarGravacao} className="inline-flex items-center gap-1.5 rounded-full px-4 py-2 text-sm font-semibold" style={{ border: "1px solid var(--color-border)", background: "var(--color-surface)", color: "var(--color-text-muted)" }}>
+                  <Trash2 className="h-4 w-4" aria-hidden /> Cancelar
+                </button>
+                <button type="button" onClick={pararGravacao} className="inline-flex items-center gap-1.5 rounded-full px-5 py-2 text-sm font-bold" style={{ background: "#D7F36A", color: "#1B2206" }}>
+                  <Square className="h-4 w-4" aria-hidden /> Parar
+                </button>
+              </div>
+            </div>
+          )}
+
+          {!gravando && gravacao && (
+            <div className="flex flex-col gap-3 rounded-[14px] px-4 py-4" style={{ border: "2px solid #D7F36A", background: "rgba(215,243,106,0.08)" }}>
+              <span className="flex items-center gap-2 text-[15px] font-bold" style={{ color: "#D7F36A" }}>
+                <Check className="h-5 w-5" aria-hidden /> Gravação pronta {gravacaoSeg > 0 ? `(${fmtTempo(gravacaoSeg)})` : ""}
+              </span>
+              {gravacaoUrl && <audio controls src={gravacaoUrl} className="w-full" />}
+              <div className="flex gap-2">
+                <button type="button" onClick={iniciarGravacao} className="inline-flex items-center gap-1.5 rounded-full px-4 py-2 text-sm font-semibold" style={{ border: "1px solid var(--color-border)", background: "var(--color-surface)", color: "var(--color-text-muted)" }}>
+                  <RotateCcw className="h-4 w-4" aria-hidden /> Regravar
+                </button>
+                <button type="button" onClick={() => limparGravacao()} className="inline-flex items-center gap-1.5 rounded-full px-4 py-2 text-sm font-semibold" style={{ border: "1px solid var(--color-border)", background: "var(--color-surface)", color: "var(--color-text-muted)" }}>
+                  <Trash2 className="h-4 w-4" aria-hidden /> Descartar
+                </button>
+              </div>
+              <span className="text-xs" style={{ color: "var(--color-text-subtle)" }}>Ouça pra conferir. Se ficou boa, confirme o consentimento e clone embaixo.</span>
+            </div>
+          )}
         </div>
+
+        {/* OPÇÃO 2 — Subir arquivo pronto (só aparece se não gravou) */}
+        {!gravacao && (
+          <div>
+            <p className="mb-2 text-center text-xs font-semibold uppercase tracking-wide" style={{ color: "var(--color-text-subtle)" }}>ou suba um arquivo pronto</p>
+            <label
+              htmlFor="amostra-voz"
+              className="flex cursor-pointer flex-col items-center justify-center gap-2 rounded-[16px] px-4 py-6 text-center transition-transform hover:scale-[1.01]"
+              style={{ border: `2px dashed ${nomeArquivo ? "#D7F36A" : "var(--color-border)"}`, background: "var(--color-surface-elevated)" }}
+            >
+              <span className="flex h-11 w-11 items-center justify-center rounded-full" style={{ background: "rgba(215,243,106,0.12)", color: "#D7F36A" }} aria-hidden>
+                {nomeArquivo ? <Check className="h-6 w-6" /> : <Upload className="h-6 w-6" />}
+              </span>
+              <span className="text-[15px] font-bold" style={{ color: nomeArquivo ? "#D7F36A" : "var(--color-text)" }}>
+                {nomeArquivo ?? "Clique para subir o áudio"}
+              </span>
+              <span className="text-xs" style={{ color: "var(--color-text-subtle)" }}>
+                {nomeArquivo ? "Arquivo pronto — agora é só clonar embaixo" : ".ogg, .mp3 ou .wav · 2 a 3 min"}
+              </span>
+              <input
+                id="amostra-voz"
+                name="amostra"
+                type="file"
+                accept="audio/*"
+                className="hidden"
+                onChange={(e) => setNomeArquivo(e.target.files?.[0]?.name ?? null)}
+              />
+            </label>
+          </div>
+        )}
         <div>
           <label className={label} style={{ color: "var(--color-text-subtle)" }}>Quem autorizou (nome do político)</label>
           <input name="consentido_por" type="text" required placeholder="Ex.: Cleiton Xavier" className="w-full rounded-[12px] px-3.5 py-2.5 text-sm" style={{ background: "var(--color-surface-elevated)", border: "1px solid var(--color-border)", color: "var(--color-text)" }} />
