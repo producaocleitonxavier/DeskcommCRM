@@ -22,6 +22,7 @@ export const dynamic = "force-dynamic";
 const ESTADO_COR: Record<string, string> = {
   aberta: "#F59E0B",
   em_atendimento: "#3B82F6",
+  encaminhada: "#A855F7",
   aguardando_cliente: "#FCD34D",
   resolvida: "#22C55E",
   encerrada: "#9CA3AF",
@@ -52,8 +53,9 @@ function estadoLabel(estado: string): string {
   const mapa: Record<string, string> = {
     aberta: "Nova",
     em_atendimento: "Em atendimento",
+    encaminhada: "Encaminhada",
     aguardando_cliente: "Aguardando",
-    resolvida: "Resolvida",
+    resolvida: "Atendida",
     encerrada: "Encerrada",
   };
   return mapa[estado] ?? estado;
@@ -63,6 +65,7 @@ function estadoEstilo(estado: string): { bg: string; color: string } {
   const mapa: Record<string, { bg: string; color: string }> = {
     aberta: { bg: "#F0F0EB", color: "var(--color-text-muted)" },
     em_atendimento: { bg: "#E4E7F8", color: "#2F3DA8" },
+    encaminhada: { bg: "#F0E7FB", color: "#7C3AED" },
     aguardando_cliente: { bg: "#FCF1DC", color: "#8A5A10" },
     resolvida: { bg: "#E2F5EC", color: "#17784F" },
     encerrada: { bg: "#F0F0EB", color: "var(--color-text-subtle)" },
@@ -213,7 +216,7 @@ export default async function GabinetePage({
 
   // Distribuição por status + tempo médio de resolução (para os gráficos).
   const dbCharts = await createClient();
-  const ESTADOS_PIE = ["aberta", "em_atendimento", "aguardando_cliente", "resolvida", "encerrada"];
+  const ESTADOS_PIE = ["aberta", "em_atendimento", "encaminhada", "resolvida", "encerrada"];
   const [distRes, resolvidasRes] = await Promise.all([
     Promise.all(
       ESTADOS_PIE.map((e) =>
@@ -298,7 +301,7 @@ export default async function GabinetePage({
               >
                 Todas
               </Link>
-              {["aberta", "em_atendimento", "aguardando_cliente", "resolvida"].map((est) => (
+              {["aberta", "em_atendimento", "encaminhada", "resolvida"].map((est) => (
                 <Link
                   key={est}
                   href={`/app/politico/demandas${montarQuery({ estado: est, pagina: "1" })}`}

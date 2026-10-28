@@ -179,8 +179,8 @@ async function buscarGabineteHoje(organizationId: string): Promise<GabineteHoje>
   const lifecycle = [
     { label: "Novas", count: porEstado("aberta") },
     { label: "Em atendimento", count: porEstado("em_atendimento") },
-    { label: "Aguardando", count: porEstado("aguardando_cliente") },
-    { label: "Resolvidas", count: resolvidas },
+    { label: "Encaminhadas", count: porEstado("encaminhada") },
+    { label: "Atendidas", count: resolvidas },
   ];
 
   // Demandas por área (pol_tipo), top 6.

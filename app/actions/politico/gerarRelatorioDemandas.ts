@@ -19,18 +19,20 @@ export type RelatorioResultado = { ok: true; url: string } | { ok: false; erro: 
 const ESTADO_LABEL: Record<string, string> = {
   aberta: "Nova",
   em_atendimento: "Em atendimento",
+  encaminhada: "Encaminhada",
   aguardando_cliente: "Aguardando",
-  resolvida: "Resolvida",
+  resolvida: "Atendida",
   encerrada: "Encerrada",
 };
 const ESTADO_COR: Record<string, string> = {
   aberta: "#F59E0B",
   em_atendimento: "#3B82F6",
+  encaminhada: "#A855F7",
   aguardando_cliente: "#FCD34D",
   resolvida: "#22C55E",
   encerrada: "#9CA3AF",
 };
-const ESTADOS = ["aberta", "em_atendimento", "aguardando_cliente", "resolvida", "encerrada"];
+const ESTADOS = ["aberta", "em_atendimento", "encaminhada", "resolvida", "encerrada"];
 
 function dataBR(iso: string | null): string {
   return iso ? new Date(iso).toLocaleDateString("pt-BR") : "—";

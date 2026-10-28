@@ -87,13 +87,15 @@ const PRIORIDADES: Opcao[] = [
 const ESTADO_LABEL: Record<string, string> = {
   aberta: "Nova",
   em_atendimento: "Em atendimento",
-  aguardando_cliente: "Aguardando cidadão",
-  resolvida: "Resolvida",
+  encaminhada: "Encaminhada",
+  aguardando_cliente: "Aguardando cidadão", // legado (fora do fluxo novo)
+  resolvida: "Atendida",
   encerrada: "Encerrada",
 };
 const ESTADO_COR: Record<string, { bg: string; color: string }> = {
   aberta: { bg: "rgba(245,158,11,0.15)", color: "#F59E0B" },
   em_atendimento: { bg: "rgba(59,130,246,0.15)", color: "#60A5FA" },
+  encaminhada: { bg: "rgba(168,85,247,0.15)", color: "#C084FC" },
   aguardando_cliente: { bg: "rgba(252,211,77,0.15)", color: "#FCD34D" },
   resolvida: { bg: "rgba(34,197,94,0.15)", color: "#22C55E" },
   encerrada: { bg: "rgba(156,163,175,0.15)", color: "#9CA3AF" },
@@ -222,21 +224,28 @@ export default function DetalheDemandaClient({ demanda, assessores, eventos, voz
     }
   }
 
-  // Ações de estado disponíveis conforme o estado atual.
+  // Ações de estado — fluxo do gabinete: Nova → Em atendimento → Encaminhada →
+  // Atendida / Encerrada.
   const acoes: { label: string; estado: string; tom?: "dark" | "ok" | "mut" }[] = (() => {
     switch (d.estado) {
       case "aberta":
         return [{ label: "Iniciar atendimento", estado: "em_atendimento", tom: "dark" }];
       case "em_atendimento":
         return [
-          { label: "Aguardar cidadão", estado: "aguardando_cliente", tom: "mut" },
-          { label: "Marcar resolvida", estado: "resolvida", tom: "ok" },
+          { label: "Marcar como encaminhada", estado: "encaminhada", tom: "dark" },
+          { label: "Marcar como atendida", estado: "resolvida", tom: "ok" },
           { label: "Encerrar", estado: "encerrada", tom: "mut" },
         ];
-      case "aguardando_cliente":
+      case "encaminhada":
         return [
-          { label: "Retomar atendimento", estado: "em_atendimento", tom: "dark" },
-          { label: "Marcar resolvida", estado: "resolvida", tom: "ok" },
+          { label: "Marcar como atendida", estado: "resolvida", tom: "ok" },
+          { label: "Retomar atendimento", estado: "em_atendimento", tom: "mut" },
+          { label: "Encerrar", estado: "encerrada", tom: "mut" },
+        ];
+      case "aguardando_cliente": // legado — oferece o fluxo novo pra sair dele
+        return [
+          { label: "Marcar como encaminhada", estado: "encaminhada", tom: "dark" },
+          { label: "Marcar como atendida", estado: "resolvida", tom: "ok" },
           { label: "Encerrar", estado: "encerrada", tom: "mut" },
         ];
       default:
