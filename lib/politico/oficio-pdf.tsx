@@ -92,6 +92,13 @@ export interface OficioPdfInput {
   /** URL da imagem da assinatura (acima do nome); null omite. */
   assinaturaUrl: string | null;
   /**
+   * Modo da assinatura (config do gabinete): "imagem" desenha a linha + nome +
+   * imagem; "gov_br" NÃO desenha bloco nenhum (assina depois no gov.br com hora
+   * oficial, ou a assinatura já vem embutida no papel timbrado — evita duplicar).
+   * Padrão "imagem".
+   */
+  assinaturaModo?: "imagem" | "gov_br";
+  /**
    * Imagem A4 do papel timbrado (fundo de página inteira). Quando presente, o
    * cabeçalho/rodapé gerados são omitidos e o texto é sobreposto na faixa do
    * corpo (margens generosas que limpam o cabeçalho e o rodapé do timbrado).
@@ -156,12 +163,16 @@ function Corpo({ d, nome, cargo }: { d: OficioPdfInput; nome: string; cargo: str
       {/* Linha "Assunto:" (quando preenchida). */}
       {assunto ? <Text style={styles.assuntoLinha}>Assunto: {assunto}</Text> : null}
       <Text style={styles.corpo}>{d.corpo}</Text>
-      <View style={styles.assinaturaBloco}>
-        {d.assinaturaUrl ? <Image src={d.assinaturaUrl} style={styles.assinaturaImagem} /> : null}
-        <View style={styles.assinaturaLinha} />
-        <Text style={styles.assinaturaNome}>{nome}</Text>
-        <Text style={styles.assinaturaCargo}>{cargo}</Text>
-      </View>
+      {/* Bloco de assinatura: só no modo "imagem". No "gov_br" não desenha nada
+          (assina no gov.br com hora oficial, ou a assinatura já vem no timbrado). */}
+      {d.assinaturaModo === "gov_br" ? null : (
+        <View style={styles.assinaturaBloco}>
+          {d.assinaturaUrl ? <Image src={d.assinaturaUrl} style={styles.assinaturaImagem} /> : null}
+          <View style={styles.assinaturaLinha} />
+          <Text style={styles.assinaturaNome}>{nome}</Text>
+          <Text style={styles.assinaturaCargo}>{cargo}</Text>
+        </View>
+      )}
       {/* Destinatário no RODAPÉ (estilo Cleiton) — após a assinatura. */}
       {destinatarioManual && !noTopo ? (
         <View style={styles.destinatarioRodape}>

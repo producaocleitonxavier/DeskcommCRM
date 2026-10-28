@@ -65,7 +65,7 @@ export async function gerarOficioDemanda(demandaId: string): Promise<OficioResul
   const { data: cfg } = await db
     .from("pol_gabinete_config")
     .select(
-      "nome_parlamentar, cargo, subtitulo, cidade, logo_path, assinatura_path, timbrado_path, timbrado_margem_topo_mm, timbrado_margem_base_mm, timbrado_margem_lados_mm, oficio_destinatario_posicao",
+      "nome_parlamentar, cargo, subtitulo, cidade, logo_path, assinatura_path, timbrado_path, timbrado_margem_topo_mm, timbrado_margem_base_mm, timbrado_margem_lados_mm, oficio_destinatario_posicao, oficio_assinatura_modo",
     )
     .eq("organization_id", org.orgId)
     .maybeSingle();
@@ -81,6 +81,7 @@ export async function gerarOficioDemanda(demandaId: string): Promise<OficioResul
     timbrado_margem_base_mm: number | null;
     timbrado_margem_lados_mm: number | null;
     oficio_destinatario_posicao: string | null;
+    oficio_assinatura_modo: string | null;
   } | null;
   // mm → pontos (1mm ≈ 2.8346pt). null = usa o padrão do renderizador.
   const mmParaPt = (v: number | null | undefined): number | null =>
@@ -128,6 +129,7 @@ export async function gerarOficioDemanda(demandaId: string): Promise<OficioResul
       subtitulo: ident?.subtitulo ?? null,
       cargo: ident?.cargo ?? null,
       assinaturaUrl,
+      assinaturaModo: ident?.oficio_assinatura_modo === "gov_br" ? "gov_br" : "imagem",
       timbradoUrl,
       timbradoMargens: {
         topo: mmParaPt(ident?.timbrado_margem_topo_mm),

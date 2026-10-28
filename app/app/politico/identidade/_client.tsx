@@ -44,6 +44,7 @@ export default function IdentidadeClient({ inicial }: { inicial: IdentidadeGabin
   const [margensOk, setMargensOk] = useState(false);
   const [destPosicao, setDestPosicao] = useState<"topo" | "rodape">(inicial.oficioDestinatarioPosicao);
   const [mostrarAssunto, setMostrarAssunto] = useState(inicial.oficioMostrarAssunto);
+  const [assinaturaModo, setAssinaturaModo] = useState<"imagem" | "gov_br">(inicial.oficioAssinaturaModo);
   const [salvandoEstilo, setSalvandoEstilo] = useState(false);
   const [estiloOk, setEstiloOk] = useState(false);
 
@@ -90,7 +91,7 @@ export default function IdentidadeClient({ inicial }: { inicial: IdentidadeGabin
     setErro(null);
     setEstiloOk(false);
     setSalvandoEstilo(true);
-    const res = await salvarIdentidade({ oficio_destinatario_posicao: destPosicao, oficio_mostrar_assunto: mostrarAssunto });
+    const res = await salvarIdentidade({ oficio_destinatario_posicao: destPosicao, oficio_mostrar_assunto: mostrarAssunto, oficio_assinatura_modo: assinaturaModo });
     setSalvandoEstilo(false);
     if (!res.ok) return setErro(res.erro);
     setEstiloOk(true);
@@ -284,6 +285,35 @@ export default function IdentidadeClient({ inicial }: { inicial: IdentidadeGabin
             </span>
           </span>
         </label>
+
+        <div>
+          <label className="mb-1.5 block text-sm font-semibold" style={{ color: "var(--color-text)" }}>
+            Como é a sua assinatura?
+          </label>
+          <div className="flex flex-col gap-2">
+            {([
+              { v: "gov_br", l: "Assino depois no gov.br (ou já vem no meu timbrado)", d: "O sistema deixa o espaço e NÃO desenha assinatura — você assina no gov.br (carimbo com hora oficial)." },
+              { v: "imagem", l: "Tenho uma imagem da minha assinatura", d: "Suba a imagem no cartão \"Assinatura\" acima — ela entra sozinha em todo ofício." },
+            ] as const).map((opt) => {
+              const ativo = assinaturaModo === opt.v;
+              return (
+                <button
+                  key={opt.v}
+                  type="button"
+                  onClick={() => setAssinaturaModo(opt.v)}
+                  className="rounded-xl px-4 py-3 text-left transition-colors"
+                  style={{
+                    border: `1px solid ${ativo ? "#D7F36A" : "var(--color-border)"}`,
+                    background: ativo ? "rgba(215,243,106,0.1)" : "var(--color-surface-elevated)",
+                  }}
+                >
+                  <span className="block text-sm font-semibold" style={{ color: ativo ? "#D7F36A" : "var(--color-text)" }}>{opt.l}</span>
+                  <span className="mt-0.5 block text-xs" style={{ color: "var(--color-text-subtle)" }}>{opt.d}</span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
 
         <div className="flex items-center gap-3">
           <button type="button" disabled={salvandoEstilo} onClick={salvarEstilo} className="wr-btn-dark inline-flex items-center gap-2 disabled:opacity-60">
