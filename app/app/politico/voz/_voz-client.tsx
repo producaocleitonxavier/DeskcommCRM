@@ -40,7 +40,7 @@ const TEXTO_PREVIA_PADRAO =
  * clone soar natural. É genérico e NEUTRO de propósito (sem nome, cidade,
  * partido ou promessa): serve pra qualquer cliente e respeita a lei eleitoral.
  */
-const ROTEIRO_PARA_LER = `Oi! Tudo bem com você? Aqui quem fala sou eu, e eu quero começar te agradecendo de coração por esse tempinho que você está me dando agora.
+const ROTEIRO_PARA_LER = `Oi! Tudo bem com você? Aqui quem fala sou eu, e eu quero começar te agradecendo de coração por esse tempo que você está me dando agora.
 
 Sabe, todo dia eu aprendo uma coisa nova nesse trabalho. A parte de que eu mais gosto, de longe, é quando eu saio e vou pra rua conversar com as pessoas de verdade. É ali — no portão de uma casa, na feira, na saída da escola — que a gente entende o que realmente importa.
 
@@ -50,7 +50,7 @@ Eu acredito numa ideia bem direta: trabalho bom é o que resolve. Não é discur
 
 Deixa eu te contar os números que me movem: são milhares de pessoas, de dezenas de bairros, cada uma com uma história, um sonho, uma dificuldade. Como é que você escuta tanta gente? Com paciência, com respeito, e com uma equipe que veste a camisa.
 
-Eu já errei, claro. Quem trabalha erra. Mas aprendi uma coisa: o importante é nunca dar as costas pra quem confiou em você. Confiança é a coisa mais difícil de ganhar e a mais fácil de perder.
+E o que eu aprendi ao longo dessa jornada é nunca dar as costas pra quem confiou em você. Confiança é a coisa mais difícil de ganhar e a mais fácil de perder.
 
 Então, se eu puder te deixar um recado hoje, é esse: pode contar comigo. De manhã, de tarde, de noite. Nos dias bons e, principalmente, nos dias difíceis.
 
