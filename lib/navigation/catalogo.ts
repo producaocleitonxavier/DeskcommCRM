@@ -242,6 +242,18 @@ export const NAV_CATALOG = [
     group: "atendimento",
     sidebar: true,
   },
+  {
+    // Voz do Mandato: clone da voz do próprio político (com consentimento TSE)
+    // para recados pessoais em áudio. É admin-only (a tela já redireciona quem
+    // não é), por isso `minRole: "admin"` — some do menu para os demais papéis.
+    href: "/app/politico/voz",
+    label: "Voz do Mandato",
+    description: "Clone da sua voz para mandar recados em áudio, com as travas da lei eleitoral.",
+    icon: "Microphone",
+    group: "atendimento",
+    minRole: "admin",
+    sidebar: true,
+  },
 
   // ---- CRM — o funil ----
   {

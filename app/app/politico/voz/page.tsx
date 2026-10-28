@@ -1,9 +1,9 @@
 /**
  * /app/politico/voz — "Voz do Mandato" (Fase 2, scaffold).
  *
- * Setup do clone de voz do próprio político (ElevenLabs): sobe a amostra, assina
- * o consentimento, ouve a prévia e liga/desliga. DORMENTE por padrão e FORA do
- * menu (acesso por URL até a Fase 2 ser liberada). Acesso: admin.
+ * Setup do clone de voz do próprio político (ElevenLabs): grava/sobe a amostra,
+ * assina o consentimento, ouve a prévia e liga/desliga. DORMENTE por padrão.
+ * No menu em Atendimento (minRole admin). Acesso: admin.
  */
 
 import { redirect } from "next/navigation";
