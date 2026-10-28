@@ -1409,6 +1409,7 @@ export const DICIONARIO: Traducoes = {
   Desempenho: { es: "Rendimiento" },
   "Evolução da IA": { es: "Evolución de la IA" },
   "Audit Log": { es: "Registro de auditoría" },
+  "Registro de auditoria": { es: "Registro de auditoría" },
   Configurações: { es: "Configuración" },
   Recolher: { es: "Contraer" },
   Buscar: { es: "Buscar" },

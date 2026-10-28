@@ -1323,7 +1323,7 @@ export const NAV_CATALOG = [
   },
   {
     href: "/app/audit",
-    label: "Audit Log",
+    label: "Registro de auditoria",
     description: "Quem fez o quê, quando — o histórico que não se apaga.",
     icon: "ClockCounterClockwise",
     group: "analise",
