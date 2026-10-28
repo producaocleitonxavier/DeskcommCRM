@@ -12,6 +12,7 @@ import { ROLE_RANK, type Role } from "@/lib/auth/types";
 import { createClient } from "@/lib/supabase/server";
 import { lerVozConfig } from "@/lib/voz/config";
 import { vozProviderConfigurado } from "@/lib/voz/elevenlabs";
+import { lerVozSpeed } from "@/lib/voz/velocidade";
 import VozClient from "./_voz-client";
 
 export const dynamic = "force-dynamic";
@@ -24,6 +25,8 @@ export default async function VozPage() {
 
   const db = await createClient();
   const cfg = await lerVozConfig(db, org.orgId);
+  const { data: orgRow } = await db.from("organizations").select("settings").eq("id", org.orgId).maybeSingle();
+  const velocidade = lerVozSpeed(orgRow?.settings);
 
   return (
     <VozClient
@@ -33,6 +36,7 @@ export default async function VozPage() {
         consentimentoPor: cfg.consentimentoPor,
         consentimentoEm: cfg.consentimentoEm,
         providerConfigurado: vozProviderConfigurado(),
+        velocidade,
       }}
     />
   );

@@ -1,0 +1,4250 @@
+From f7d4e431a04b59485a5787dfa6ecfc523c74a577 Mon Sep 17 00:00:00 2001
+From: Claude <noreply@anthropic.com>
+Date: Sun, 11 Oct 2026 00:29:28 +0000
+Subject: [PATCH] =?UTF-8?q?feat:=20add=20Fase=203=20=E2=80=94=20Operaciona?=
+ =?UTF-8?q?l=20+=20Intelig=C3=AAncia=20(War=20Room=202.0)?=
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Fase 3 do módulo político: fila de ligações, eventos, funil invisível,
+pesquisas de campo e sistema de inteligência/alertas.
+
+Schema (15 tabelas, migrations 0635-0639):
+- pol_call_queue (fila de ligações com lock otimista)
+- pol_events, pol_event_attendance, pol_event_participants
+- pol_invisible_funnel, pol_invisible_funnel_content, pol_invisible_funnel_events
+- pol_surveys, pol_survey_questions, pol_survey_responses
+- pol_decision_signals, pol_alerts, pol_crisis_predictions, pol_fake_news, pol_engagement_weights
+
+API (6 rotas):
+- /api/v1/pol-call-queue (GET+POST)
+- /api/v1/pol-events (GET+POST)
+- /api/v1/pol-invisible-funnel (GET+POST)
+- /api/v1/pol-surveys (GET+POST)
+- /api/v1/pol-surveys/public/[token] (GET+POST, rota pública)
+- /api/v1/pol-alerts (GET+POST)
+
+UI (5 páginas):
+- /app/politico/ligacoes — fila de ligações
+- /app/politico/eventos — eventos da campanha
+- /app/politico/funil-invisivel — nurturing comportamental
+- /app/politico/pesquisas — pesquisas de campo
+- /app/politico/alertas — alertas e inteligência
+
+Também: hub page atualizado com 5 novos cards, catálogo de navegação
+atualizado, e apêndice do baseline com as 15 tabelas idempotentes.
+
+Co-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_01NViZYR2ZtGJLWjE9EiKwya
+---
+ app/api/v1/pol-alerts/route.ts                | 178 +++++
+ app/api/v1/pol-call-queue/route.ts            | 181 +++++
+ app/api/v1/pol-events/route.ts                | 184 +++++
+ app/api/v1/pol-invisible-funnel/route.ts      | 175 +++++
+ .../v1/pol-surveys/public/[token]/route.ts    | 136 ++++
+ app/api/v1/pol-surveys/route.ts               | 164 ++++
+ app/app/politico/alertas/page.tsx             | 263 +++++++
+ app/app/politico/eventos/page.tsx             | 260 +++++++
+ app/app/politico/funil-invisivel/page.tsx     | 265 +++++++
+ app/app/politico/ligacoes/page.tsx            | 212 +++++
+ app/app/politico/page.tsx                     |  40 +
+ app/app/politico/pesquisas/page.tsx           | 259 +++++++
+ lib/navigation/catalogo.ts                    |  50 ++
+ supabase/baseline.sql                         | 721 ++++++++++++++++++
+ .../20261011200000_0635_pol_call_queue.sql    |  83 ++
+ .../20261011200100_0636_pol_events.sql        | 186 +++++
+ ...261011200200_0637_pol_invisible_funnel.sql | 193 +++++
+ .../20261011200300_0638_pol_surveys.sql       | 181 +++++
+ .../20261011200400_0639_pol_intelligence.sql  | 313 ++++++++
+ 19 files changed, 4044 insertions(+)
+ create mode 100644 app/api/v1/pol-alerts/route.ts
+ create mode 100644 app/api/v1/pol-call-queue/route.ts
+ create mode 100644 app/api/v1/pol-events/route.ts
+ create mode 100644 app/api/v1/pol-invisible-funnel/route.ts
+ create mode 100644 app/api/v1/pol-surveys/public/[token]/route.ts
+ create mode 100644 app/api/v1/pol-surveys/route.ts
+ create mode 100644 app/app/politico/alertas/page.tsx
+ create mode 100644 app/app/politico/eventos/page.tsx
+ create mode 100644 app/app/politico/funil-invisivel/page.tsx
+ create mode 100644 app/app/politico/ligacoes/page.tsx
+ create mode 100644 app/app/politico/pesquisas/page.tsx
+ create mode 100644 supabase/migrations/20261011200000_0635_pol_call_queue.sql
+ create mode 100644 supabase/migrations/20261011200100_0636_pol_events.sql
+ create mode 100644 supabase/migrations/20261011200200_0637_pol_invisible_funnel.sql
+ create mode 100644 supabase/migrations/20261011200300_0638_pol_surveys.sql
+ create mode 100644 supabase/migrations/20261011200400_0639_pol_intelligence.sql
+
+diff --git a/app/api/v1/pol-alerts/route.ts b/app/api/v1/pol-alerts/route.ts
+new file mode 100644
+index 0000000..71c7832
+--- /dev/null
++++ b/app/api/v1/pol-alerts/route.ts
+@@ -0,0 +1,178 @@
++/**
++ * GET|POST /api/v1/pol-alerts
++ *
++ * Alertas politicos — War Room 2.0 Fase 3.
++ *
++ * GET  — lista pol_alerts da organizacao. Aceita ?status=, ?alert_type=, ?severity=.
++ *        Paginacao com limit/offset.
++ * POST — cria um novo alerta. Requer role manager.
++ *
++ * Seguranca: organizacao resolvida do cookie/JWT (fonte confiavel). Nunca do body.
++ */
++
++import { randomUUID } from "node:crypto";
++import { z } from "zod";
++import { NextResponse, type NextRequest } from "next/server";
++
++import { ok, fail } from "@/lib/api/wrappers";
++import { requireRole } from "@/lib/auth/require-role";
++import { createAdminClient } from "@/lib/supabase/admin";
++import { requireSupportWrite } from "@/lib/impersonate/support";
++
++export const dynamic = "force-dynamic";
++export const runtime = "nodejs";
++
++// -- Validacao ----------------------------------------------------------------
++
++const ALERT_TYPES = [
++  "sentiment",
++  "engagement",
++  "crisis",
++  "opponent",
++  "territory",
++  "fake_news",
++  "growth",
++  "momentum",
++  "media",
++  "survey",
++  "custom",
++] as const;
++
++const SEVERITIES = [
++  "info",
++  "low",
++  "medium",
++  "high",
++  "critical",
++] as const;
++
++const ALERT_STATUSES = [
++  "open",
++  "acknowledged",
++  "investigating",
++  "resolved",
++  "dismissed",
++] as const;
++
++const criarPolAlertSchema = z.object({
++  alert_type: z.enum(ALERT_TYPES),
++  severity: z.enum(SEVERITIES).default("medium"),
++  source_type: z.string().max(120).nullable().optional(),
++  source_id: z.string().uuid().nullable().optional(),
++  title: z.string().min(1).max(255),
++  description: z.string().max(5000).nullable().optional(),
++});
++
++// -- GET — listar pol_alerts --------------------------------------------------
++
++export async function GET(req: NextRequest): Promise<NextResponse> {
++  const requestId = randomUUID();
++
++  const authz = await requireRole("viewer", { requestId, resource: "pol_alerts" });
++  if (!authz.ok) return authz.response;
++
++  const { organizationId } = authz;
++  const db = createAdminClient();
++  const params = req.nextUrl.searchParams;
++
++  let query = db
++    .from("pol_alerts")
++    .select("*")
++    .eq("organization_id", organizationId)
++    .order("created_at", { ascending: false });
++
++  // Filtros opcionais
++  const status = params.get("status");
++  if (status) query = query.eq("status", status);
++
++  const alertType = params.get("alert_type");
++  if (alertType) query = query.eq("alert_type", alertType);
++
++  const severity = params.get("severity");
++  if (severity) query = query.eq("severity", severity);
++
++  // Paginacao simples
++  const limit = Math.min(parseInt(params.get("limit") ?? "50", 10), 100);
++  const offset = parseInt(params.get("offset") ?? "0", 10);
++  query = query.range(offset, offset + limit - 1);
++
++  const { data, error, count } = await query;
++
++  if (error) {
++    return fail("internal_error", "Erro ao buscar pol_alerts", 500, { requestId });
++  }
++
++  return ok(
++    { pol_alerts: data ?? [] },
++    {
++      headers: { "x-request-id": requestId },
++      meta: { total: count ?? (data?.length ?? 0), limit, offset },
++    },
++  );
++}
++
++// -- POST — criar pol_alert ---------------------------------------------------
++
++export async function POST(req: NextRequest): Promise<NextResponse> {
++  const requestId = randomUUID();
++
++  const authz = await requireRole("manager", { requestId, resource: "pol_alerts" });
++  if (!authz.ok) return authz.response;
++
++  const { organizationId, userId } = authz;
++
++  const guardaSuporteWrite = await requireSupportWrite({ requestId, resource: "pol_alerts.create" });
++  if (!guardaSuporteWrite.ok) return guardaSuporteWrite.response;
++
++  let body: unknown;
++  try {
++    body = await req.json();
++  } catch {
++    return fail("bad_request", "JSON invalido", 400, { requestId });
++  }
++
++  const parsed = criarPolAlertSchema.safeParse(body);
++  if (!parsed.success) {
++    return fail("validation_error", "Dados invalidos", 422, {
++      requestId,
++      details: parsed.error.flatten(),
++    });
++  }
++
++  const db = createAdminClient();
++
++  const { data: alert, error } = await db
++    .from("pol_alerts")
++    .insert({
++      organization_id: organizationId,
++      alert_type: parsed.data.alert_type,
++      severity: parsed.data.severity,
++      status: "open" as const,
++      source_type: parsed.data.source_type ?? null,
++      source_id: parsed.data.source_id ?? null,
++      title: parsed.data.title,
++      description: parsed.data.description ?? null,
++    })
++    .select()
++    .single();
++
++  if (error) {
++    if (error.code === "23505") {
++      return fail("conflict", "Alerta duplicado nesta organizacao", 409, { requestId });
++    }
++    return fail("internal_error", "Erro ao criar pol_alert", 500, { requestId });
++  }
++
++  // Audit log
++  db.from("api_audit_log").insert({
++    organization_id: organizationId,
++    user_id: userId,
++    action: "pol_alerts.create",
++    resource_type: "pol_alerts",
++    resource_id: alert.id,
++    request_id: requestId,
++    metadata: { title: alert.title, alert_type: alert.alert_type, severity: alert.severity },
++  }).then(() => {});
++
++  return ok({ pol_alert: alert }, { status: 201, headers: { "x-request-id": requestId } });
++}
+diff --git a/app/api/v1/pol-call-queue/route.ts b/app/api/v1/pol-call-queue/route.ts
+new file mode 100644
+index 0000000..c7139ee
+--- /dev/null
++++ b/app/api/v1/pol-call-queue/route.ts
+@@ -0,0 +1,181 @@
++/**
++ * GET|POST /api/v1/pol-call-queue
++ *
++ * Fila de ligacoes politicas — War Room 2.0 Fase 3.
++ *
++ * GET  — lista pol_call_queue da organizacao. Aceita ?call_status=, ?assigned_to=, ?political_result=.
++ *        Paginacao com limit/offset.
++ * POST — cria um novo item na fila. Requer role manager.
++ *
++ * Seguranca: organizacao resolvida do cookie/JWT (fonte confiavel). Nunca do body.
++ */
++
++import { randomUUID } from "node:crypto";
++import { z } from "zod";
++import { NextResponse, type NextRequest } from "next/server";
++
++import { ok, fail } from "@/lib/api/wrappers";
++import { requireRole } from "@/lib/auth/require-role";
++import { createAdminClient } from "@/lib/supabase/admin";
++import { requireSupportWrite } from "@/lib/impersonate/support";
++
++export const dynamic = "force-dynamic";
++export const runtime = "nodejs";
++
++// -- Validacao ----------------------------------------------------------------
++
++const CALL_STATUSES = [
++  "pending",
++  "locked",
++  "calling",
++  "completed",
++  "no_answer",
++  "busy",
++  "callback",
++  "cancelled",
++] as const;
++
++const POLITICAL_RESULTS = [
++  "apoio_confirmado",
++  "indeciso",
++  "recusa",
++  "mudou_apoio",
++  "sem_contato",
++  "agendou_visita",
++  "pediu_retorno",
++  "outro",
++] as const;
++
++const criarPolCallQueueSchema = z.object({
++  contact_id: z.string().uuid(),
++  assigned_to: z.string().uuid().nullable().optional(),
++  call_status: z.enum(CALL_STATUSES).default("pending"),
++  priority: z.number().int().default(0),
++  notes: z.string().max(2000).nullable().optional(),
++});
++
++// -- GET — listar pol_call_queue ----------------------------------------------
++
++export async function GET(req: NextRequest): Promise<NextResponse> {
++  const requestId = randomUUID();
++
++  const authz = await requireRole("viewer", { requestId, resource: "pol_call_queue" });
++  if (!authz.ok) return authz.response;
++
++  const { organizationId } = authz;
++  const db = createAdminClient();
++  const params = req.nextUrl.searchParams;
++
++  let query = db
++    .from("pol_call_queue")
++    .select("*")
++    .eq("organization_id", organizationId)
++    .order("created_at", { ascending: false });
++
++  // Filtros opcionais
++  const callStatus = params.get("call_status");
++  if (callStatus) query = query.eq("call_status", callStatus);
++
++  const assignedTo = params.get("assigned_to");
++  if (assignedTo) query = query.eq("assigned_to", assignedTo);
++
++  const politicalResult = params.get("political_result");
++  if (politicalResult) query = query.eq("political_result", politicalResult);
++
++  // Paginacao simples
++  const limit = Math.min(parseInt(params.get("limit") ?? "50", 10), 100);
++  const offset = parseInt(params.get("offset") ?? "0", 10);
++  query = query.range(offset, offset + limit - 1);
++
++  const { data, error, count } = await query;
++
++  if (error) {
++    return fail("internal_error", "Erro ao buscar pol_call_queue", 500, { requestId });
++  }
++
++  return ok(
++    { pol_call_queue: data ?? [] },
++    {
++      headers: { "x-request-id": requestId },
++      meta: { total: count ?? (data?.length ?? 0), limit, offset },
++    },
++  );
++}
++
++// -- POST — criar item na fila ------------------------------------------------
++
++export async function POST(req: NextRequest): Promise<NextResponse> {
++  const requestId = randomUUID();
++
++  const authz = await requireRole("manager", { requestId, resource: "pol_call_queue" });
++  if (!authz.ok) return authz.response;
++
++  const { organizationId, userId } = authz;
++
++  const guardaSuporteWrite = await requireSupportWrite({ requestId, resource: "pol_call_queue.create" });
++  if (!guardaSuporteWrite.ok) return guardaSuporteWrite.response;
++
++  let body: unknown;
++  try {
++    body = await req.json();
++  } catch {
++    return fail("bad_request", "JSON invalido", 400, { requestId });
++  }
++
++  const parsed = criarPolCallQueueSchema.safeParse(body);
++  if (!parsed.success) {
++    return fail("validation_error", "Dados invalidos", 422, {
++      requestId,
++      details: parsed.error.flatten(),
++    });
++  }
++
++  const db = createAdminClient();
++
++  // Verificar se contact_id existe e pertence a organizacao
++  const { data: contact, error: errContact } = await db
++    .from("contacts")
++    .select("id")
++    .eq("id", parsed.data.contact_id)
++    .eq("organization_id", organizationId)
++    .single();
++
++  if (errContact || !contact) {
++    return fail("not_found", "Contato nao encontrado nesta organizacao", 404, { requestId });
++  }
++
++  const { data: callItem, error } = await db
++    .from("pol_call_queue")
++    .insert({
++      organization_id: organizationId,
++      contact_id: parsed.data.contact_id,
++      assigned_to: parsed.data.assigned_to ?? null,
++      call_status: parsed.data.call_status,
++      priority: parsed.data.priority,
++      notes: parsed.data.notes ?? null,
++    })
++    .select()
++    .single();
++
++  if (error) {
++    if (error.code === "23505") {
++      return fail("conflict", "Este contato ja possui um registro na fila nesta organizacao", 409, {
++        requestId,
++      });
++    }
++    return fail("internal_error", "Erro ao criar item na fila", 500, { requestId });
++  }
++
++  // Audit log
++  db.from("api_audit_log").insert({
++    organization_id: organizationId,
++    user_id: userId,
++    action: "pol_call_queue.create",
++    resource_type: "pol_call_queue",
++    resource_id: callItem.id,
++    request_id: requestId,
++    metadata: { contact_id: callItem.contact_id, call_status: callItem.call_status },
++  }).then(() => {});
++
++  return ok({ pol_call_queue_item: callItem }, { status: 201, headers: { "x-request-id": requestId } });
++}
+diff --git a/app/api/v1/pol-events/route.ts b/app/api/v1/pol-events/route.ts
+new file mode 100644
+index 0000000..b3c8694
+--- /dev/null
++++ b/app/api/v1/pol-events/route.ts
+@@ -0,0 +1,184 @@
++/**
++ * GET|POST /api/v1/pol-events
++ *
++ * Eventos politicos — War Room 2.0 Fase 3.
++ *
++ * GET  — lista pol_events da organizacao. Aceita ?status=, ?type=, ?city=.
++ *        Paginacao com limit/offset.
++ * POST — cria um novo evento. Requer role manager.
++ *
++ * Seguranca: organizacao resolvida do cookie/JWT (fonte confiavel). Nunca do body.
++ */
++
++import { randomUUID } from "node:crypto";
++import { z } from "zod";
++import { NextResponse, type NextRequest } from "next/server";
++
++import { ok, fail } from "@/lib/api/wrappers";
++import { requireRole } from "@/lib/auth/require-role";
++import { createAdminClient } from "@/lib/supabase/admin";
++import { requireSupportWrite } from "@/lib/impersonate/support";
++
++export const dynamic = "force-dynamic";
++export const runtime = "nodejs";
++
++// -- Validacao ----------------------------------------------------------------
++
++const EVENT_TYPES = [
++  "reuniao",
++  "comicio",
++  "caminhada",
++  "carreata",
++  "debate",
++  "audiencia",
++  "assembleia",
++  "workshop",
++  "live",
++  "entrevista",
++  "visita",
++  "outro",
++] as const;
++
++const EVENT_STATUSES = [
++  "scheduled",
++  "confirmed",
++  "in_progress",
++  "completed",
++  "cancelled",
++  "postponed",
++] as const;
++
++const criarPolEventSchema = z.object({
++  title: z.string().min(1).max(255),
++  type: z.enum(EVENT_TYPES),
++  theme: z.string().max(255).nullable().optional(),
++  description: z.string().max(5000).nullable().optional(),
++  city: z.string().max(120).nullable().optional(),
++  state: z.string().length(2).nullable().optional(),
++  neighborhood: z.string().max(120).nullable().optional(),
++  venue: z.string().max(255).nullable().optional(),
++  event_date: z.string().datetime(),
++  event_end_date: z.string().datetime().nullable().optional(),
++  estimated_audience: z.number().int().min(0).nullable().optional(),
++  organizer_contact_id: z.string().uuid().nullable().optional(),
++});
++
++// -- GET — listar pol_events --------------------------------------------------
++
++export async function GET(req: NextRequest): Promise<NextResponse> {
++  const requestId = randomUUID();
++
++  const authz = await requireRole("viewer", { requestId, resource: "pol_events" });
++  if (!authz.ok) return authz.response;
++
++  const { organizationId } = authz;
++  const db = createAdminClient();
++  const params = req.nextUrl.searchParams;
++
++  let query = db
++    .from("pol_events")
++    .select("*")
++    .eq("organization_id", organizationId)
++    .order("event_date", { ascending: false });
++
++  // Filtros opcionais
++  const status = params.get("status");
++  if (status) query = query.eq("status", status);
++
++  const type = params.get("type");
++  if (type) query = query.eq("type", type);
++
++  const city = params.get("city");
++  if (city) query = query.eq("city", city);
++
++  // Paginacao simples
++  const limit = Math.min(parseInt(params.get("limit") ?? "50", 10), 100);
++  const offset = parseInt(params.get("offset") ?? "0", 10);
++  query = query.range(offset, offset + limit - 1);
++
++  const { data, error, count } = await query;
++
++  if (error) {
++    return fail("internal_error", "Erro ao buscar pol_events", 500, { requestId });
++  }
++
++  return ok(
++    { pol_events: data ?? [] },
++    {
++      headers: { "x-request-id": requestId },
++      meta: { total: count ?? (data?.length ?? 0), limit, offset },
++    },
++  );
++}
++
++// -- POST — criar pol_event ---------------------------------------------------
++
++export async function POST(req: NextRequest): Promise<NextResponse> {
++  const requestId = randomUUID();
++
++  const authz = await requireRole("manager", { requestId, resource: "pol_events" });
++  if (!authz.ok) return authz.response;
++
++  const { organizationId, userId } = authz;
++
++  const guardaSuporteWrite = await requireSupportWrite({ requestId, resource: "pol_events.create" });
++  if (!guardaSuporteWrite.ok) return guardaSuporteWrite.response;
++
++  let body: unknown;
++  try {
++    body = await req.json();
++  } catch {
++    return fail("bad_request", "JSON invalido", 400, { requestId });
++  }
++
++  const parsed = criarPolEventSchema.safeParse(body);
++  if (!parsed.success) {
++    return fail("validation_error", "Dados invalidos", 422, {
++      requestId,
++      details: parsed.error.flatten(),
++    });
++  }
++
++  const db = createAdminClient();
++
++  const { data: polEvent, error } = await db
++    .from("pol_events")
++    .insert({
++      organization_id: organizationId,
++      title: parsed.data.title,
++      type: parsed.data.type,
++      status: "scheduled" as const,
++      theme: parsed.data.theme ?? null,
++      description: parsed.data.description ?? null,
++      city: parsed.data.city ?? null,
++      state: parsed.data.state ?? null,
++      neighborhood: parsed.data.neighborhood ?? null,
++      venue: parsed.data.venue ?? null,
++      event_date: parsed.data.event_date,
++      event_end_date: parsed.data.event_end_date ?? null,
++      estimated_audience: parsed.data.estimated_audience ?? null,
++      organizer_contact_id: parsed.data.organizer_contact_id ?? null,
++    })
++    .select()
++    .single();
++
++  if (error) {
++    if (error.code === "23505") {
++      return fail("conflict", "Evento duplicado nesta organizacao", 409, { requestId });
++    }
++    return fail("internal_error", "Erro ao criar pol_event", 500, { requestId });
++  }
++
++  // Audit log
++  db.from("api_audit_log").insert({
++    organization_id: organizationId,
++    user_id: userId,
++    action: "pol_events.create",
++    resource_type: "pol_events",
++    resource_id: polEvent.id,
++    request_id: requestId,
++    metadata: { title: polEvent.title, type: polEvent.type },
++  }).then(() => {});
++
++  return ok({ pol_event: polEvent }, { status: 201, headers: { "x-request-id": requestId } });
++}
+diff --git a/app/api/v1/pol-invisible-funnel/route.ts b/app/api/v1/pol-invisible-funnel/route.ts
+new file mode 100644
+index 0000000..65234ce
+--- /dev/null
++++ b/app/api/v1/pol-invisible-funnel/route.ts
+@@ -0,0 +1,175 @@
++/**
++ * GET|POST /api/v1/pol-invisible-funnel
++ *
++ * Funil invisivel politico — War Room 2.0 Fase 3.
++ *
++ * GET  — lista pol_invisible_funnel da organizacao. Aceita ?funnel_stage=, ?interaction_class=.
++ *        Paginacao com limit/offset.
++ * POST — cria um novo registro no funil. Requer role manager.
++ *
++ * Seguranca: organizacao resolvida do cookie/JWT (fonte confiavel). Nunca do body.
++ */
++
++import { randomUUID } from "node:crypto";
++import { z } from "zod";
++import { NextResponse, type NextRequest } from "next/server";
++
++import { ok, fail } from "@/lib/api/wrappers";
++import { requireRole } from "@/lib/auth/require-role";
++import { createAdminClient } from "@/lib/supabase/admin";
++import { requireSupportWrite } from "@/lib/impersonate/support";
++
++export const dynamic = "force-dynamic";
++export const runtime = "nodejs";
++
++// -- Validacao ----------------------------------------------------------------
++
++const FUNNEL_STAGES = [
++  "awareness",
++  "interest",
++  "consideration",
++  "intent",
++  "evaluation",
++  "conversion",
++] as const;
++
++const INTERACTION_CLASSES = [
++  "cold",
++  "warm",
++  "hot",
++  "engaged",
++  "advocate",
++] as const;
++
++const criarPolInvisibleFunnelSchema = z.object({
++  contact_id: z.string().uuid(),
++  funnel_stage: z.enum(FUNNEL_STAGES).default("awareness"),
++  funnel_score: z.number().int().default(0),
++  theme_affinity: z.string().max(255).nullable().optional(),
++  interaction_class: z.enum(INTERACTION_CLASSES).default("cold"),
++  next_action: z.string().max(500).nullable().optional(),
++});
++
++// -- GET — listar pol_invisible_funnel ----------------------------------------
++
++export async function GET(req: NextRequest): Promise<NextResponse> {
++  const requestId = randomUUID();
++
++  const authz = await requireRole("viewer", { requestId, resource: "pol_invisible_funnel" });
++  if (!authz.ok) return authz.response;
++
++  const { organizationId } = authz;
++  const db = createAdminClient();
++  const params = req.nextUrl.searchParams;
++
++  let query = db
++    .from("pol_invisible_funnel")
++    .select("*")
++    .eq("organization_id", organizationId)
++    .order("created_at", { ascending: false });
++
++  // Filtros opcionais
++  const funnelStage = params.get("funnel_stage");
++  if (funnelStage) query = query.eq("funnel_stage", funnelStage);
++
++  const interactionClass = params.get("interaction_class");
++  if (interactionClass) query = query.eq("interaction_class", interactionClass);
++
++  // Paginacao simples
++  const limit = Math.min(parseInt(params.get("limit") ?? "50", 10), 100);
++  const offset = parseInt(params.get("offset") ?? "0", 10);
++  query = query.range(offset, offset + limit - 1);
++
++  const { data, error, count } = await query;
++
++  if (error) {
++    return fail("internal_error", "Erro ao buscar pol_invisible_funnel", 500, { requestId });
++  }
++
++  return ok(
++    { pol_invisible_funnel: data ?? [] },
++    {
++      headers: { "x-request-id": requestId },
++      meta: { total: count ?? (data?.length ?? 0), limit, offset },
++    },
++  );
++}
++
++// -- POST — criar registro no funil -------------------------------------------
++
++export async function POST(req: NextRequest): Promise<NextResponse> {
++  const requestId = randomUUID();
++
++  const authz = await requireRole("manager", { requestId, resource: "pol_invisible_funnel" });
++  if (!authz.ok) return authz.response;
++
++  const { organizationId, userId } = authz;
++
++  const guardaSuporteWrite = await requireSupportWrite({ requestId, resource: "pol_invisible_funnel.create" });
++  if (!guardaSuporteWrite.ok) return guardaSuporteWrite.response;
++
++  let body: unknown;
++  try {
++    body = await req.json();
++  } catch {
++    return fail("bad_request", "JSON invalido", 400, { requestId });
++  }
++
++  const parsed = criarPolInvisibleFunnelSchema.safeParse(body);
++  if (!parsed.success) {
++    return fail("validation_error", "Dados invalidos", 422, {
++      requestId,
++      details: parsed.error.flatten(),
++    });
++  }
++
++  const db = createAdminClient();
++
++  // Verificar se contact_id existe e pertence a organizacao
++  const { data: contact, error: errContact } = await db
++    .from("contacts")
++    .select("id")
++    .eq("id", parsed.data.contact_id)
++    .eq("organization_id", organizationId)
++    .single();
++
++  if (errContact || !contact) {
++    return fail("not_found", "Contato nao encontrado nesta organizacao", 404, { requestId });
++  }
++
++  const { data: funnelRecord, error } = await db
++    .from("pol_invisible_funnel")
++    .insert({
++      organization_id: organizationId,
++      contact_id: parsed.data.contact_id,
++      funnel_stage: parsed.data.funnel_stage,
++      funnel_score: parsed.data.funnel_score,
++      theme_affinity: parsed.data.theme_affinity ?? null,
++      interaction_class: parsed.data.interaction_class,
++      next_action: parsed.data.next_action ?? null,
++    })
++    .select()
++    .single();
++
++  if (error) {
++    if (error.code === "23505") {
++      return fail("conflict", "Este contato ja possui registro no funil invisivel nesta organizacao", 409, {
++        requestId,
++      });
++    }
++    return fail("internal_error", "Erro ao criar registro no funil invisivel", 500, { requestId });
++  }
++
++  // Audit log
++  db.from("api_audit_log").insert({
++    organization_id: organizationId,
++    user_id: userId,
++    action: "pol_invisible_funnel.create",
++    resource_type: "pol_invisible_funnel",
++    resource_id: funnelRecord.id,
++    request_id: requestId,
++    metadata: { contact_id: funnelRecord.contact_id, funnel_stage: funnelRecord.funnel_stage },
++  }).then(() => {});
++
++  return ok({ pol_invisible_funnel: funnelRecord }, { status: 201, headers: { "x-request-id": requestId } });
++}
+diff --git a/app/api/v1/pol-surveys/public/[token]/route.ts b/app/api/v1/pol-surveys/public/[token]/route.ts
+new file mode 100644
+index 0000000..337fa04
+--- /dev/null
++++ b/app/api/v1/pol-surveys/public/[token]/route.ts
+@@ -0,0 +1,136 @@
++/**
++ * GET|POST /api/v1/pol-surveys/public/[token]
++ *
++ * Rota PUBLICA de pesquisa politica — War Room 2.0 Fase 3.
++ * Nao requer autenticacao. Resolve a pesquisa pelo public_token.
++ *
++ * GET  — retorna pesquisa + perguntas (ordenadas por `order`) para o token dado.
++ *        Apenas pesquisas ativas.
++ * POST — submete uma resposta. Cria uma linha em pol_survey_responses.
++ *        Token da resposta gerado server-side.
++ *
++ * Seguranca: sem auth — rota publica por design (formulario de pesquisa).
++ */
++
++import { randomUUID } from "node:crypto";
++import { z } from "zod";
++import { NextResponse, type NextRequest } from "next/server";
++
++import { ok, fail } from "@/lib/api/wrappers";
++import { createAdminClient } from "@/lib/supabase/admin";
++
++export const dynamic = "force-dynamic";
++export const runtime = "nodejs";
++
++// -- Validacao ----------------------------------------------------------------
++
++const submeterRespostaSchema = z.object({
++  answers: z.record(z.unknown()),
++  contact_id: z.string().uuid().nullable().optional(),
++  city: z.string().max(120).nullable().optional(),
++  state: z.string().length(2).nullable().optional(),
++  duration_seconds: z.number().int().min(0).nullable().optional(),
++});
++
++// -- GET — pesquisa publica por token -----------------------------------------
++
++export async function GET(
++  _req: NextRequest,
++  { params }: { params: Promise<{ token: string }> },
++): Promise<NextResponse> {
++  const requestId = randomUUID();
++  const { token } = await params;
++
++  const db = createAdminClient();
++
++  // Buscar pesquisa ativa pelo public_token
++  const { data: survey, error: errSurvey } = await db
++    .from("pol_surveys")
++    .select("id, title, description, type, status, start_date, end_date")
++    .eq("public_token", token)
++    .eq("status", "active")
++    .single();
++
++  if (errSurvey || !survey) {
++    return fail("not_found", "Pesquisa nao encontrada ou nao esta ativa", 404, { requestId });
++  }
++
++  // Buscar perguntas ordenadas
++  const { data: questions, error: errQuestions } = await db
++    .from("pol_survey_questions")
++    .select("id, question, response_type, options, required, \"order\"")
++    .eq("survey_id", survey.id)
++    .order("order", { ascending: true });
++
++  if (errQuestions) {
++    return fail("internal_error", "Erro ao buscar perguntas", 500, { requestId });
++  }
++
++  return ok(
++    { survey, questions: questions ?? [] },
++    { headers: { "x-request-id": requestId } },
++  );
++}
++
++// -- POST — submeter resposta -------------------------------------------------
++
++export async function POST(
++  req: NextRequest,
++  { params }: { params: Promise<{ token: string }> },
++): Promise<NextResponse> {
++  const requestId = randomUUID();
++  const { token } = await params;
++
++  let body: unknown;
++  try {
++    body = await req.json();
++  } catch {
++    return fail("bad_request", "JSON invalido", 400, { requestId });
++  }
++
++  const parsed = submeterRespostaSchema.safeParse(body);
++  if (!parsed.success) {
++    return fail("validation_error", "Dados invalidos", 422, {
++      requestId,
++      details: parsed.error.flatten(),
++    });
++  }
++
++  const db = createAdminClient();
++
++  // Buscar pesquisa ativa pelo public_token
++  const { data: survey, error: errSurvey } = await db
++    .from("pol_surveys")
++    .select("id, organization_id")
++    .eq("public_token", token)
++    .eq("status", "active")
++    .single();
++
++  if (errSurvey || !survey) {
++    return fail("not_found", "Pesquisa nao encontrada ou nao esta ativa", 404, { requestId });
++  }
++
++  // Token da resposta gerado server-side
++  const responseToken = randomUUID().replace(/-/g, "");
++
++  const { data: response, error } = await db
++    .from("pol_survey_responses")
++    .insert({
++      organization_id: survey.organization_id,
++      survey_id: survey.id,
++      token: responseToken,
++      answers: parsed.data.answers,
++      contact_id: parsed.data.contact_id ?? null,
++      city: parsed.data.city ?? null,
++      state: parsed.data.state ?? null,
++      duration_seconds: parsed.data.duration_seconds ?? null,
++    })
++    .select()
++    .single();
++
++  if (error) {
++    return fail("internal_error", "Erro ao registrar resposta", 500, { requestId });
++  }
++
++  return ok({ response }, { status: 201, headers: { "x-request-id": requestId } });
++}
+diff --git a/app/api/v1/pol-surveys/route.ts b/app/api/v1/pol-surveys/route.ts
+new file mode 100644
+index 0000000..ffc0ab8
+--- /dev/null
++++ b/app/api/v1/pol-surveys/route.ts
+@@ -0,0 +1,164 @@
++/**
++ * GET|POST /api/v1/pol-surveys
++ *
++ * Pesquisas politicas — War Room 2.0 Fase 3.
++ *
++ * GET  — lista pol_surveys da organizacao. Aceita ?status=, ?type=.
++ *        Paginacao com limit/offset.
++ * POST — cria uma nova pesquisa. Requer role manager.
++ *        public_token gerado server-side, NUNCA aceito do cliente.
++ *
++ * Seguranca: organizacao resolvida do cookie/JWT (fonte confiavel). Nunca do body.
++ */
++
++import { randomUUID } from "node:crypto";
++import { z } from "zod";
++import { NextResponse, type NextRequest } from "next/server";
++
++import { ok, fail } from "@/lib/api/wrappers";
++import { requireRole } from "@/lib/auth/require-role";
++import { createAdminClient } from "@/lib/supabase/admin";
++import { requireSupportWrite } from "@/lib/impersonate/support";
++
++export const dynamic = "force-dynamic";
++export const runtime = "nodejs";
++
++// -- Validacao ----------------------------------------------------------------
++
++const SURVEY_TYPES = [
++  "field",
++  "online",
++  "phone",
++  "door_to_door",
++  "other",
++] as const;
++
++const SURVEY_STATUSES = [
++  "draft",
++  "active",
++  "paused",
++  "completed",
++  "archived",
++] as const;
++
++const criarPolSurveySchema = z.object({
++  title: z.string().min(1).max(255),
++  description: z.string().max(5000).nullable().optional(),
++  type: z.enum(SURVEY_TYPES).default("field"),
++  start_date: z.string().datetime().nullable().optional(),
++  end_date: z.string().datetime().nullable().optional(),
++});
++
++// -- GET — listar pol_surveys -------------------------------------------------
++
++export async function GET(req: NextRequest): Promise<NextResponse> {
++  const requestId = randomUUID();
++
++  const authz = await requireRole("viewer", { requestId, resource: "pol_surveys" });
++  if (!authz.ok) return authz.response;
++
++  const { organizationId } = authz;
++  const db = createAdminClient();
++  const params = req.nextUrl.searchParams;
++
++  let query = db
++    .from("pol_surveys")
++    .select("*")
++    .eq("organization_id", organizationId)
++    .order("created_at", { ascending: false });
++
++  // Filtros opcionais
++  const status = params.get("status");
++  if (status) query = query.eq("status", status);
++
++  const type = params.get("type");
++  if (type) query = query.eq("type", type);
++
++  // Paginacao simples
++  const limit = Math.min(parseInt(params.get("limit") ?? "50", 10), 100);
++  const offset = parseInt(params.get("offset") ?? "0", 10);
++  query = query.range(offset, offset + limit - 1);
++
++  const { data, error, count } = await query;
++
++  if (error) {
++    return fail("internal_error", "Erro ao buscar pol_surveys", 500, { requestId });
++  }
++
++  return ok(
++    { pol_surveys: data ?? [] },
++    {
++      headers: { "x-request-id": requestId },
++      meta: { total: count ?? (data?.length ?? 0), limit, offset },
++    },
++  );
++}
++
++// -- POST — criar pol_survey --------------------------------------------------
++
++export async function POST(req: NextRequest): Promise<NextResponse> {
++  const requestId = randomUUID();
++
++  const authz = await requireRole("manager", { requestId, resource: "pol_surveys" });
++  if (!authz.ok) return authz.response;
++
++  const { organizationId, userId } = authz;
++
++  const guardaSuporteWrite = await requireSupportWrite({ requestId, resource: "pol_surveys.create" });
++  if (!guardaSuporteWrite.ok) return guardaSuporteWrite.response;
++
++  let body: unknown;
++  try {
++    body = await req.json();
++  } catch {
++    return fail("bad_request", "JSON invalido", 400, { requestId });
++  }
++
++  const parsed = criarPolSurveySchema.safeParse(body);
++  if (!parsed.success) {
++    return fail("validation_error", "Dados invalidos", 422, {
++      requestId,
++      details: parsed.error.flatten(),
++    });
++  }
++
++  const db = createAdminClient();
++
++  // public_token gerado server-side — NUNCA aceito do cliente
++  const publicToken = randomUUID().replace(/-/g, "");
++
++  const { data: survey, error } = await db
++    .from("pol_surveys")
++    .insert({
++      organization_id: organizationId,
++      title: parsed.data.title,
++      description: parsed.data.description ?? null,
++      type: parsed.data.type,
++      status: "draft" as const,
++      public_token: publicToken,
++      start_date: parsed.data.start_date ?? null,
++      end_date: parsed.data.end_date ?? null,
++    })
++    .select()
++    .single();
++
++  if (error) {
++    if (error.code === "23505") {
++      return fail("conflict", "Pesquisa duplicada nesta organizacao", 409, { requestId });
++    }
++    return fail("internal_error", "Erro ao criar pol_survey", 500, { requestId });
++  }
++
++  // Audit log
++  db.from("api_audit_log").insert({
++    organization_id: organizationId,
++    user_id: userId,
++    action: "pol_surveys.create",
++    resource_type: "pol_surveys",
++    resource_id: survey.id,
++    request_id: requestId,
++    metadata: { title: survey.title, type: survey.type, public_token: publicToken },
++  }).then(() => {});
++
++  return ok({ pol_survey: survey }, { status: 201, headers: { "x-request-id": requestId } });
++}
+diff --git a/app/app/politico/alertas/page.tsx b/app/app/politico/alertas/page.tsx
+new file mode 100644
+index 0000000..87824b1
+--- /dev/null
++++ b/app/app/politico/alertas/page.tsx
+@@ -0,0 +1,263 @@
++/**
++ * /app/politico/alertas — Alertas (War Room 2.0 Fase 3)
++ *
++ * Lista de alertas politicos com severidade, tipo e status.
++ * Tabela: pol_alerts.
++ *
++ * Acesso: manager+
++ */
++
++import { redirect } from "next/navigation";
++import Link from "next/link";
++import { createServerClient } from "@/lib/supabase/server";
++import { getUser } from "@/lib/auth/get-user";
++import { resolverOrganizacaoAtiva } from "@/lib/organizations/resolver";
++
++// -- Tipos -------------------------------------------------------------------
++
++interface Alerta {
++  id: string;
++  title: string;
++  alert_type: string | null;
++  severity: string;
++  status: string;
++  description: string | null;
++  acknowledged_by: string | null;
++  created_at: string;
++}
++
++const STATUS_LABELS: Record<string, string> = {
++  open: "Aberto",
++  acknowledged: "Reconhecido",
++  investigating: "Investigando",
++  resolved: "Resolvido",
++  dismissed: "Descartado",
++};
++
++const SEVERITY_LABELS: Record<string, string> = {
++  info: "Info",
++  low: "Baixo",
++  medium: "Medio",
++  high: "Alto",
++  critical: "Critico",
++};
++
++const SEVERITY_COLORS: Record<string, string> = {
++  info: "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200",
++  low: "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200",
++  medium: "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200",
++  high: "bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200",
++  critical: "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200",
++};
++
++const TYPE_LABELS: Record<string, string> = {
++  sentiment: "Sentimento",
++  engagement: "Engajamento",
++  crisis: "Crise",
++  opponent: "Adversario",
++  territory: "Territorio",
++  fake_news: "Fake News",
++  growth: "Crescimento",
++  momentum: "Momentum",
++  media: "Midia",
++  survey: "Pesquisa",
++  custom: "Personalizado",
++};
++
++// -- Data fetching -----------------------------------------------------------
++
++async function buscarAlertas(
++  organizationId: string,
++  filtroStatus?: string,
++  filtroSeverity?: string,
++): Promise<Alerta[]> {
++  const db = createServerClient();
++
++  let query = db
++    .from("pol_alerts")
++    .select("id, title, alert_type, severity, status, description, acknowledged_by, created_at")
++    .eq("organization_id", organizationId)
++    .order("created_at", { ascending: false })
++    .limit(100);
++
++  if (filtroStatus) {
++    query = query.eq("status", filtroStatus);
++  }
++  if (filtroSeverity) {
++    query = query.eq("severity", filtroSeverity);
++  }
++
++  const { data, error } = await query;
++  if (error) {
++    console.error("Erro ao buscar alertas:", error.message);
++    return [];
++  }
++
++  return (data ?? []) as Alerta[];
++}
++
++// -- Componente --------------------------------------------------------------
++
++export default async function AlertasPage({
++  searchParams,
++}: {
++  searchParams: Promise<{ status?: string; severity?: string }>;
++}) {
++  const user = await getUser();
++  if (!user) redirect("/login");
++
++  const org = await resolverOrganizacaoAtiva(user.id);
++  if (!org) redirect("/app/onboarding");
++
++  const params = await searchParams;
++  const filtroStatus = params.status ?? "";
++  const filtroSeverity = params.severity ?? "";
++
++  const alertas = await buscarAlertas(org.id, filtroStatus || undefined, filtroSeverity || undefined);
++
++  return (
++    <div className="mx-auto max-w-5xl px-4 py-8 space-y-6">
++      {/* Voltar */}
++      <Link
++        href="/app/politico"
++        className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors"
++      >
++        &larr; War Room
++      </Link>
++
++      {/* Cabecalho */}
++      <div>
++        <h1 className="text-2xl font-bold tracking-tight">Alertas</h1>
++        <p className="mt-1 text-sm text-muted-foreground">
++          Alertas politicos com severidade, tipo e acompanhamento.
++        </p>
++      </div>
++
++      {/* Filtros */}
++      <div className="space-y-2">
++        <div className="flex flex-wrap gap-2">
++          <span className="text-xs text-muted-foreground self-center mr-1">Status:</span>
++          <FilterLink href={buildHref("", filtroSeverity)} label="Todos" active={!filtroStatus} />
++          {Object.entries(STATUS_LABELS).map(([value, label]) => (
++            <FilterLink
++              key={value}
++              href={buildHref(value, filtroSeverity)}
++              label={label}
++              active={filtroStatus === value}
++            />
++          ))}
++        </div>
++        <div className="flex flex-wrap gap-2">
++          <span className="text-xs text-muted-foreground self-center mr-1">Severidade:</span>
++          <FilterLink href={buildHref(filtroStatus, "")} label="Todas" active={!filtroSeverity} />
++          {Object.entries(SEVERITY_LABELS).map(([value, label]) => (
++            <FilterLink
++              key={value}
++              href={buildHref(filtroStatus, value)}
++              label={label}
++              active={filtroSeverity === value}
++            />
++          ))}
++        </div>
++      </div>
++
++      {/* Cards */}
++      {alertas.length === 0 ? (
++        <div className="rounded-xl border bg-card p-8 text-center text-sm text-muted-foreground">
++          Nenhum alerta encontrado.
++        </div>
++      ) : (
++        <div className="space-y-3">
++          {alertas.map((a) => (
++            <div
++              key={a.id}
++              className="flex flex-col gap-3 rounded-xl border bg-card p-5"
++            >
++              <div className="flex items-start justify-between gap-2">
++                <div className="flex items-center gap-2 min-w-0">
++                  <SeverityBadge severity={a.severity} />
++                  <h2 className="font-semibold leading-snug truncate">{a.title}</h2>
++                </div>
++                <span className="rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary shrink-0">
++                  {STATUS_LABELS[a.status] ?? a.status}
++                </span>
++              </div>
++
++              {a.description && (
++                <p className="text-sm text-muted-foreground leading-relaxed">
++                  {a.description}
++                </p>
++              )}
++
++              <div className="flex flex-wrap gap-3 text-xs text-muted-foreground">
++                {a.alert_type && (
++                  <span className="rounded-full bg-secondary px-2 py-0.5 font-medium">
++                    {TYPE_LABELS[a.alert_type] ?? a.alert_type}
++                  </span>
++                )}
++                {a.acknowledged_by && (
++                  <span>Reconhecido por: {a.acknowledged_by}</span>
++                )}
++                <span>
++                  {new Date(a.created_at).toLocaleDateString("pt-BR", {
++                    day: "2-digit",
++                    month: "short",
++                    year: "numeric",
++                    hour: "2-digit",
++                    minute: "2-digit",
++                  })}
++                </span>
++              </div>
++            </div>
++          ))}
++        </div>
++      )}
++    </div>
++  );
++}
++
++// -- Helpers -----------------------------------------------------------------
++
++function buildHref(status: string, severity: string): string {
++  const params = new URLSearchParams();
++  if (status) params.set("status", status);
++  if (severity) params.set("severity", severity);
++  const qs = params.toString();
++  return `/app/politico/alertas${qs ? `?${qs}` : ""}`;
++}
++
++// -- Sub-componentes ---------------------------------------------------------
++
++function FilterLink({
++  href,
++  label,
++  active,
++}: {
++  href: string;
++  label: string;
++  active: boolean;
++}) {
++  return (
++    <Link
++      href={href}
++      className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${
++        active
++          ? "bg-primary text-primary-foreground"
++          : "bg-secondary text-secondary-foreground hover:bg-secondary/80"
++      }`}
++    >
++      {label}
++    </Link>
++  );
++}
++
++function SeverityBadge({ severity }: { severity: string }) {
++  const label = SEVERITY_LABELS[severity] ?? severity;
++  const color = SEVERITY_COLORS[severity] ?? "bg-primary/10 text-primary";
++
++  return (
++    <span className={`rounded-full px-2 py-0.5 text-xs font-medium shrink-0 ${color}`}>
++      {label}
++    </span>
++  );
++}
+diff --git a/app/app/politico/eventos/page.tsx b/app/app/politico/eventos/page.tsx
+new file mode 100644
+index 0000000..c589705
+--- /dev/null
++++ b/app/app/politico/eventos/page.tsx
+@@ -0,0 +1,260 @@
++/**
++ * /app/politico/eventos — Eventos (War Room 2.0 Fase 3)
++ *
++ * Lista de eventos da campanha com tipo, status e metricas de audiencia.
++ * Tabela: pol_events.
++ *
++ * Acesso: manager+
++ */
++
++import { redirect } from "next/navigation";
++import Link from "next/link";
++import { createServerClient } from "@/lib/supabase/server";
++import { getUser } from "@/lib/auth/get-user";
++import { resolverOrganizacaoAtiva } from "@/lib/organizations/resolver";
++
++// -- Tipos -------------------------------------------------------------------
++
++interface Evento {
++  id: string;
++  title: string;
++  type: string | null;
++  status: string;
++  event_date: string | null;
++  city: string | null;
++  estimated_audience: number | null;
++  actual_attendance: number | null;
++  created_at: string;
++}
++
++const STATUS_LABELS: Record<string, string> = {
++  scheduled: "Agendado",
++  confirmed: "Confirmado",
++  in_progress: "Em andamento",
++  completed: "Concluido",
++  cancelled: "Cancelado",
++  postponed: "Adiado",
++};
++
++const TYPE_LABELS: Record<string, string> = {
++  reuniao: "Reuniao",
++  comicio: "Comicio",
++  caminhada: "Caminhada",
++  carreata: "Carreata",
++  debate: "Debate",
++  audiencia: "Audiencia",
++  assembleia: "Assembleia",
++  workshop: "Workshop",
++  live: "Live",
++  entrevista: "Entrevista",
++  visita: "Visita",
++  outro: "Outro",
++};
++
++// -- Data fetching -----------------------------------------------------------
++
++async function buscarEventos(
++  organizationId: string,
++  filtroStatus?: string,
++  filtroType?: string,
++): Promise<Evento[]> {
++  const db = createServerClient();
++
++  let query = db
++    .from("pol_events")
++    .select("id, title, type, status, event_date, city, estimated_audience, actual_attendance, created_at")
++    .eq("organization_id", organizationId)
++    .order("event_date", { ascending: false, nullsFirst: false })
++    .limit(100);
++
++  if (filtroStatus) {
++    query = query.eq("status", filtroStatus);
++  }
++  if (filtroType) {
++    query = query.eq("type", filtroType);
++  }
++
++  const { data, error } = await query;
++  if (error) {
++    console.error("Erro ao buscar eventos:", error.message);
++    return [];
++  }
++
++  return (data ?? []) as Evento[];
++}
++
++// -- Componente --------------------------------------------------------------
++
++export default async function EventosPage({
++  searchParams,
++}: {
++  searchParams: Promise<{ status?: string; type?: string }>;
++}) {
++  const user = await getUser();
++  if (!user) redirect("/login");
++
++  const org = await resolverOrganizacaoAtiva(user.id);
++  if (!org) redirect("/app/onboarding");
++
++  const params = await searchParams;
++  const filtroStatus = params.status ?? "";
++  const filtroType = params.type ?? "";
++
++  const eventos = await buscarEventos(org.id, filtroStatus || undefined, filtroType || undefined);
++
++  return (
++    <div className="mx-auto max-w-5xl px-4 py-8 space-y-6">
++      {/* Voltar */}
++      <Link
++        href="/app/politico"
++        className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors"
++      >
++        &larr; War Room
++      </Link>
++
++      {/* Cabecalho */}
++      <div className="flex items-center justify-between">
++        <div>
++          <h1 className="text-2xl font-bold tracking-tight">Eventos</h1>
++          <p className="mt-1 text-sm text-muted-foreground">
++            Gerencie eventos da campanha com audiencia estimada e presenca real.
++          </p>
++        </div>
++        <button
++          type="button"
++          disabled
++          className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground opacity-50 cursor-not-allowed"
++          title="Em breve"
++        >
++          Novo evento
++        </button>
++      </div>
++
++      {/* Filtros */}
++      <div className="space-y-2">
++        <div className="flex flex-wrap gap-2">
++          <span className="text-xs text-muted-foreground self-center mr-1">Status:</span>
++          <FilterLink href={buildHref("", filtroType)} label="Todos" active={!filtroStatus} />
++          {Object.entries(STATUS_LABELS).map(([value, label]) => (
++            <FilterLink
++              key={value}
++              href={buildHref(value, filtroType)}
++              label={label}
++              active={filtroStatus === value}
++            />
++          ))}
++        </div>
++        <div className="flex flex-wrap gap-2">
++          <span className="text-xs text-muted-foreground self-center mr-1">Tipo:</span>
++          <FilterLink href={buildHref(filtroStatus, "")} label="Todos" active={!filtroType} />
++          {Object.entries(TYPE_LABELS).map(([value, label]) => (
++            <FilterLink
++              key={value}
++              href={buildHref(filtroStatus, value)}
++              label={label}
++              active={filtroType === value}
++            />
++          ))}
++        </div>
++      </div>
++
++      {/* Cards */}
++      {eventos.length === 0 ? (
++        <div className="rounded-xl border bg-card p-8 text-center text-sm text-muted-foreground">
++          Nenhum evento encontrado.
++        </div>
++      ) : (
++        <div className="grid gap-4 sm:grid-cols-2">
++          {eventos.map((e) => (
++            <div
++              key={e.id}
++              className="flex flex-col gap-3 rounded-xl border bg-card p-5"
++            >
++              <div className="flex items-start justify-between gap-2">
++                <h2 className="font-semibold leading-snug">{e.title}</h2>
++                <StatusBadge status={e.status} />
++              </div>
++
++              <div className="flex flex-wrap gap-2">
++                {e.type && (
++                  <span className="rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">
++                    {TYPE_LABELS[e.type] ?? e.type}
++                  </span>
++                )}
++                {e.city && (
++                  <span className="text-xs text-muted-foreground">{e.city}</span>
++                )}
++              </div>
++
++              <div className="flex flex-wrap gap-4 text-sm text-muted-foreground">
++                {e.event_date && (
++                  <span>
++                    {new Date(e.event_date).toLocaleDateString("pt-BR", {
++                      day: "2-digit",
++                      month: "short",
++                      year: "numeric",
++                    })}
++                  </span>
++                )}
++                {e.estimated_audience != null && (
++                  <span>
++                    Estimado: {e.estimated_audience.toLocaleString("pt-BR")}
++                  </span>
++                )}
++                {e.actual_attendance != null && (
++                  <span>
++                    Real: {e.actual_attendance.toLocaleString("pt-BR")}
++                  </span>
++                )}
++              </div>
++            </div>
++          ))}
++        </div>
++      )}
++    </div>
++  );
++}
++
++// -- Helpers -----------------------------------------------------------------
++
++function buildHref(status: string, type: string): string {
++  const params = new URLSearchParams();
++  if (status) params.set("status", status);
++  if (type) params.set("type", type);
++  const qs = params.toString();
++  return `/app/politico/eventos${qs ? `?${qs}` : ""}`;
++}
++
++// -- Sub-componentes ---------------------------------------------------------
++
++function FilterLink({
++  href,
++  label,
++  active,
++}: {
++  href: string;
++  label: string;
++  active: boolean;
++}) {
++  return (
++    <Link
++      href={href}
++      className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${
++        active
++          ? "bg-primary text-primary-foreground"
++          : "bg-secondary text-secondary-foreground hover:bg-secondary/80"
++      }`}
++    >
++      {label}
++    </Link>
++  );
++}
++
++function StatusBadge({ status }: { status: string }) {
++  const label = STATUS_LABELS[status] ?? status;
++  return (
++    <span className="rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">
++      {label}
++    </span>
++  );
++}
+diff --git a/app/app/politico/funil-invisivel/page.tsx b/app/app/politico/funil-invisivel/page.tsx
+new file mode 100644
+index 0000000..70b3422
+--- /dev/null
++++ b/app/app/politico/funil-invisivel/page.tsx
+@@ -0,0 +1,265 @@
++/**
++ * /app/politico/funil-invisivel — Funil Invisivel (War Room 2.0 Fase 3)
++ *
++ * Rastreamento comportamental de contatos por engajamento passivo.
++ * Tabela: pol_invisible_funnel joined com contacts.
++ *
++ * Acesso: manager+
++ */
++
++import { redirect } from "next/navigation";
++import Link from "next/link";
++import { createServerClient } from "@/lib/supabase/server";
++import { getUser } from "@/lib/auth/get-user";
++import { resolverOrganizacaoAtiva } from "@/lib/organizations/resolver";
++
++// -- Tipos -------------------------------------------------------------------
++
++interface FunilEntry {
++  id: string;
++  contact_id: string;
++  funnel_stage: string;
++  interaction_class: string | null;
++  funnel_score: number;
++  total_clicks: number;
++  total_replies: number;
++  consecutive_weeks_active: number;
++  updated_at: string;
++  contacts: {
++    name: string | null;
++    phone: string | null;
++  } | null;
++}
++
++const STAGE_LABELS: Record<string, string> = {
++  awareness: "Consciencia",
++  interest: "Interesse",
++  consideration: "Consideracao",
++  intent: "Intencao",
++  evaluation: "Avaliacao",
++  conversion: "Conversao",
++};
++
++const CLASS_LABELS: Record<string, string> = {
++  cold: "Frio",
++  warm: "Morno",
++  hot: "Quente",
++  engaged: "Engajado",
++  advocate: "Defensor",
++};
++
++// -- Data fetching -----------------------------------------------------------
++
++async function buscarFunil(
++  organizationId: string,
++  filtroStage?: string,
++  filtroClass?: string,
++): Promise<FunilEntry[]> {
++  const db = createServerClient();
++
++  let query = db
++    .from("pol_invisible_funnel")
++    .select("id, contact_id, funnel_stage, interaction_class, funnel_score, total_clicks, total_replies, consecutive_weeks_active, updated_at, contacts(name, phone)")
++    .eq("organization_id", organizationId)
++    .order("funnel_score", { ascending: false })
++    .limit(100);
++
++  if (filtroStage) {
++    query = query.eq("funnel_stage", filtroStage);
++  }
++  if (filtroClass) {
++    query = query.eq("interaction_class", filtroClass);
++  }
++
++  const { data, error } = await query;
++  if (error) {
++    console.error("Erro ao buscar funil invisivel:", error.message);
++    return [];
++  }
++
++  return (data ?? []) as unknown as FunilEntry[];
++}
++
++// -- Componente --------------------------------------------------------------
++
++export default async function FunilInvisivelPage({
++  searchParams,
++}: {
++  searchParams: Promise<{ stage?: string; class?: string }>;
++}) {
++  const user = await getUser();
++  if (!user) redirect("/login");
++
++  const org = await resolverOrganizacaoAtiva(user.id);
++  if (!org) redirect("/app/onboarding");
++
++  const params = await searchParams;
++  const filtroStage = params.stage ?? "";
++  const filtroClass = params.class ?? "";
++
++  const entradas = await buscarFunil(org.id, filtroStage || undefined, filtroClass || undefined);
++
++  return (
++    <div className="mx-auto max-w-5xl px-4 py-8 space-y-6">
++      {/* Voltar */}
++      <Link
++        href="/app/politico"
++        className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors"
++      >
++        &larr; War Room
++      </Link>
++
++      {/* Cabecalho */}
++      <div>
++        <h1 className="text-2xl font-bold tracking-tight">Funil Invisivel</h1>
++        <p className="mt-1 text-sm text-muted-foreground">
++          Rastreamento comportamental — engajamento passivo por cliques, respostas e semanas ativas.
++        </p>
++      </div>
++
++      {/* Filtros */}
++      <div className="space-y-2">
++        <div className="flex flex-wrap gap-2">
++          <span className="text-xs text-muted-foreground self-center mr-1">Estagio:</span>
++          <FilterLink href={buildHref("", filtroClass)} label="Todos" active={!filtroStage} />
++          {Object.entries(STAGE_LABELS).map(([value, label]) => (
++            <FilterLink
++              key={value}
++              href={buildHref(value, filtroClass)}
++              label={label}
++              active={filtroStage === value}
++            />
++          ))}
++        </div>
++        <div className="flex flex-wrap gap-2">
++          <span className="text-xs text-muted-foreground self-center mr-1">Classe:</span>
++          <FilterLink href={buildHref(filtroStage, "")} label="Todos" active={!filtroClass} />
++          {Object.entries(CLASS_LABELS).map(([value, label]) => (
++            <FilterLink
++              key={value}
++              href={buildHref(filtroStage, value)}
++              label={label}
++              active={filtroClass === value}
++            />
++          ))}
++        </div>
++      </div>
++
++      {/* Tabela */}
++      {entradas.length === 0 ? (
++        <div className="rounded-xl border bg-card p-8 text-center text-sm text-muted-foreground">
++          Nenhum contato no funil invisivel.
++        </div>
++      ) : (
++        <div className="rounded-xl border bg-card overflow-x-auto">
++          <table className="w-full text-sm">
++            <thead>
++              <tr className="border-b text-left text-xs text-muted-foreground">
++                <th className="px-4 py-3 font-medium">Contato</th>
++                <th className="px-4 py-3 font-medium">Telefone</th>
++                <th className="px-4 py-3 font-medium">Estagio</th>
++                <th className="px-4 py-3 font-medium">Classe</th>
++                <th className="px-4 py-3 font-medium">Score</th>
++                <th className="px-4 py-3 font-medium">Cliques</th>
++                <th className="px-4 py-3 font-medium">Respostas</th>
++                <th className="px-4 py-3 font-medium">Semanas ativas</th>
++              </tr>
++            </thead>
++            <tbody>
++              {entradas.map((e) => (
++                <tr key={e.id} className="border-b last:border-b-0 hover:bg-accent/30 transition-colors">
++                  <td className="px-4 py-3 font-medium">
++                    {e.contacts?.name ?? "Sem nome"}
++                  </td>
++                  <td className="px-4 py-3 text-muted-foreground">
++                    {e.contacts?.phone ?? "—"}
++                  </td>
++                  <td className="px-4 py-3">
++                    <StageBadge stage={e.funnel_stage} />
++                  </td>
++                  <td className="px-4 py-3">
++                    {e.interaction_class ? (
++                      <span className="rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">
++                        {CLASS_LABELS[e.interaction_class] ?? e.interaction_class}
++                      </span>
++                    ) : (
++                      <span className="text-muted-foreground">—</span>
++                    )}
++                  </td>
++                  <td className="px-4 py-3 tabular-nums font-medium">
++                    {e.funnel_score}
++                  </td>
++                  <td className="px-4 py-3 tabular-nums text-muted-foreground">
++                    {e.total_clicks}
++                  </td>
++                  <td className="px-4 py-3 tabular-nums text-muted-foreground">
++                    {e.total_replies}
++                  </td>
++                  <td className="px-4 py-3 tabular-nums text-muted-foreground">
++                    {e.consecutive_weeks_active}
++                  </td>
++                </tr>
++              ))}
++            </tbody>
++          </table>
++        </div>
++      )}
++    </div>
++  );
++}
++
++// -- Helpers -----------------------------------------------------------------
++
++function buildHref(stage: string, interactionClass: string): string {
++  const params = new URLSearchParams();
++  if (stage) params.set("stage", stage);
++  if (interactionClass) params.set("class", interactionClass);
++  const qs = params.toString();
++  return `/app/politico/funil-invisivel${qs ? `?${qs}` : ""}`;
++}
++
++// -- Sub-componentes ---------------------------------------------------------
++
++function FilterLink({
++  href,
++  label,
++  active,
++}: {
++  href: string;
++  label: string;
++  active: boolean;
++}) {
++  return (
++    <Link
++      href={href}
++      className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${
++        active
++          ? "bg-primary text-primary-foreground"
++          : "bg-secondary text-secondary-foreground hover:bg-secondary/80"
++      }`}
++    >
++      {label}
++    </Link>
++  );
++}
++
++function StageBadge({ stage }: { stage: string }) {
++  const label = STAGE_LABELS[stage] ?? stage;
++
++  const colorMap: Record<string, string> = {
++    awareness: "bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200",
++    interest: "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200",
++    consideration: "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200",
++    intent: "bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200",
++    evaluation: "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200",
++    conversion: "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200",
++  };
++
++  const color = colorMap[stage] ?? "bg-primary/10 text-primary";
++
++  return (
++    <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${color}`}>
++      {label}
++    </span>
++  );
++}
+diff --git a/app/app/politico/ligacoes/page.tsx b/app/app/politico/ligacoes/page.tsx
+new file mode 100644
+index 0000000..540d2ec
+--- /dev/null
++++ b/app/app/politico/ligacoes/page.tsx
+@@ -0,0 +1,212 @@
++/**
++ * /app/politico/ligacoes — Fila de Ligacoes (War Room 2.0 Fase 3)
++ *
++ * Lista de ligacoes da campanha com status, resultado e prioridade.
++ * Tabela: pol_call_queue joined com contacts.
++ *
++ * Acesso: manager+
++ */
++
++import { redirect } from "next/navigation";
++import Link from "next/link";
++import { createServerClient } from "@/lib/supabase/server";
++import { getUser } from "@/lib/auth/get-user";
++import { resolverOrganizacaoAtiva } from "@/lib/organizations/resolver";
++
++// -- Tipos -------------------------------------------------------------------
++
++interface Ligacao {
++  id: string;
++  contact_id: string;
++  call_status: string;
++  political_result: string | null;
++  attempt_count: number;
++  assigned_to: string | null;
++  priority: string | null;
++  created_at: string;
++  contacts: {
++    name: string | null;
++    phone: string | null;
++  } | null;
++}
++
++const STATUS_LABELS: Record<string, string> = {
++  pending: "Pendente",
++  locked: "Reservada",
++  calling: "Em ligacao",
++  completed: "Concluida",
++  no_answer: "Sem resposta",
++  busy: "Ocupado",
++  callback: "Retorno",
++  cancelled: "Cancelada",
++};
++
++// -- Data fetching -----------------------------------------------------------
++
++async function buscarLigacoes(
++  organizationId: string,
++  filtroStatus?: string,
++): Promise<Ligacao[]> {
++  const db = createServerClient();
++
++  let query = db
++    .from("pol_call_queue")
++    .select("id, contact_id, call_status, political_result, attempt_count, assigned_to, priority, created_at, contacts(name, phone)")
++    .eq("organization_id", organizationId)
++    .order("created_at", { ascending: false })
++    .limit(100);
++
++  if (filtroStatus) {
++    query = query.eq("call_status", filtroStatus);
++  }
++
++  const { data, error } = await query;
++  if (error) {
++    console.error("Erro ao buscar ligacoes:", error.message);
++    return [];
++  }
++
++  return (data ?? []) as unknown as Ligacao[];
++}
++
++// -- Componente --------------------------------------------------------------
++
++export default async function LigacoesPage({
++  searchParams,
++}: {
++  searchParams: Promise<{ status?: string }>;
++}) {
++  const user = await getUser();
++  if (!user) redirect("/login");
++
++  const org = await resolverOrganizacaoAtiva(user.id);
++  if (!org) redirect("/app/onboarding");
++
++  const params = await searchParams;
++  const filtroStatus = params.status ?? "";
++
++  const ligacoes = await buscarLigacoes(org.id, filtroStatus || undefined);
++
++  return (
++    <div className="mx-auto max-w-5xl px-4 py-8 space-y-6">
++      {/* Voltar */}
++      <Link
++        href="/app/politico"
++        className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors"
++      >
++        &larr; War Room
++      </Link>
++
++      {/* Cabecalho */}
++      <div>
++        <h1 className="text-2xl font-bold tracking-tight">Fila de Ligacoes</h1>
++        <p className="mt-1 text-sm text-muted-foreground">
++          Gerencie as ligacoes da campanha com status, resultado politico e prioridade.
++        </p>
++      </div>
++
++      {/* Filtro */}
++      <div className="flex flex-wrap gap-2">
++        <FilterLink href="/app/politico/ligacoes" label="Todos" active={!filtroStatus} />
++        {Object.entries(STATUS_LABELS).map(([value, label]) => (
++          <FilterLink
++            key={value}
++            href={`/app/politico/ligacoes?status=${value}`}
++            label={label}
++            active={filtroStatus === value}
++          />
++        ))}
++      </div>
++
++      {/* Tabela */}
++      {ligacoes.length === 0 ? (
++        <div className="rounded-xl border bg-card p-8 text-center text-sm text-muted-foreground">
++          Nenhuma ligacao encontrada.
++        </div>
++      ) : (
++        <div className="rounded-xl border bg-card overflow-x-auto">
++          <table className="w-full text-sm">
++            <thead>
++              <tr className="border-b text-left text-xs text-muted-foreground">
++                <th className="px-4 py-3 font-medium">Contato</th>
++                <th className="px-4 py-3 font-medium">Telefone</th>
++                <th className="px-4 py-3 font-medium">Status</th>
++                <th className="px-4 py-3 font-medium">Resultado</th>
++                <th className="px-4 py-3 font-medium">Tentativas</th>
++                <th className="px-4 py-3 font-medium">Responsavel</th>
++                <th className="px-4 py-3 font-medium">Prioridade</th>
++              </tr>
++            </thead>
++            <tbody>
++              {ligacoes.map((l) => (
++                <tr key={l.id} className="border-b last:border-b-0 hover:bg-accent/30 transition-colors">
++                  <td className="px-4 py-3 font-medium">
++                    {l.contacts?.name ?? "Sem nome"}
++                  </td>
++                  <td className="px-4 py-3 text-muted-foreground">
++                    {l.contacts?.phone ?? "—"}
++                  </td>
++                  <td className="px-4 py-3">
++                    <StatusBadge status={l.call_status} />
++                  </td>
++                  <td className="px-4 py-3 text-muted-foreground">
++                    {l.political_result ?? "—"}
++                  </td>
++                  <td className="px-4 py-3 tabular-nums text-muted-foreground">
++                    {l.attempt_count}
++                  </td>
++                  <td className="px-4 py-3 text-muted-foreground">
++                    {l.assigned_to ?? "—"}
++                  </td>
++                  <td className="px-4 py-3">
++                    {l.priority ? (
++                      <span className="rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">
++                        {l.priority}
++                      </span>
++                    ) : (
++                      <span className="text-muted-foreground">—</span>
++                    )}
++                  </td>
++                </tr>
++              ))}
++            </tbody>
++          </table>
++        </div>
++      )}
++    </div>
++  );
++}
++
++// -- Sub-componentes ---------------------------------------------------------
++
++function FilterLink({
++  href,
++  label,
++  active,
++}: {
++  href: string;
++  label: string;
++  active: boolean;
++}) {
++  return (
++    <Link
++      href={href}
++      className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${
++        active
++          ? "bg-primary text-primary-foreground"
++          : "bg-secondary text-secondary-foreground hover:bg-secondary/80"
++      }`}
++    >
++      {label}
++    </Link>
++  );
++}
++
++function StatusBadge({ status }: { status: string }) {
++  const label = STATUS_LABELS[status] ?? status;
++  return (
++    <span className="rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">
++      {label}
++    </span>
++  );
++}
+diff --git a/app/app/politico/page.tsx b/app/app/politico/page.tsx
+index 01b713e..1cf1fca 100644
+--- a/app/app/politico/page.tsx
++++ b/app/app/politico/page.tsx
+@@ -139,6 +139,46 @@ export default async function PoliticoHubPage() {
+       icone: "\u{26A1}",
+       badge: null,
+     },
++    {
++      href: "/app/politico/ligacoes",
++      titulo: "Ligacoes",
++      descricao:
++        "Fila de ligacoes com lock otimista, resultado politico e controle de tentativas.",
++      icone: "\u{1F4DE}",
++      badge: null,
++    },
++    {
++      href: "/app/politico/eventos",
++      titulo: "Eventos",
++      descricao:
++        "Eventos politicos com controle de presenca, participantes e dados institucionais.",
++      icone: "\u{1F4C5}",
++      badge: null,
++    },
++    {
++      href: "/app/politico/funil-invisivel",
++      titulo: "Funil Invisivel",
++      descricao:
++        "Nurturing automatico com scoring de afinidade e rastreamento de engajamento.",
++      icone: "\u{1F441}️",
++      badge: null,
++    },
++    {
++      href: "/app/politico/pesquisas",
++      titulo: "Pesquisas",
++      descricao:
++        "Pesquisas de campo com formularios publicos e respostas geolocalizadas.",
++      icone: "\u{1F4CB}",
++      badge: null,
++    },
++    {
++      href: "/app/politico/alertas",
++      titulo: "Alertas",
++      descricao:
++        "Sistema unificado de alertas — sentimento, crise, fake news e adversarios.",
++      icone: "\u{1F514}",
++      badge: null,
++    },
+   ];
+ 
+   return (
+diff --git a/app/app/politico/pesquisas/page.tsx b/app/app/politico/pesquisas/page.tsx
+new file mode 100644
+index 0000000..6d43779
+--- /dev/null
++++ b/app/app/politico/pesquisas/page.tsx
+@@ -0,0 +1,259 @@
++/**
++ * /app/politico/pesquisas — Pesquisas (War Room 2.0 Fase 3)
++ *
++ * Lista de pesquisas de opiniao da campanha com status e contagem de respostas.
++ * Tabela: pol_surveys + pol_survey_responses (count).
++ *
++ * Acesso: manager+
++ */
++
++import { redirect } from "next/navigation";
++import Link from "next/link";
++import { createServerClient } from "@/lib/supabase/server";
++import { getUser } from "@/lib/auth/get-user";
++import { resolverOrganizacaoAtiva } from "@/lib/organizations/resolver";
++
++// -- Tipos -------------------------------------------------------------------
++
++interface Pesquisa {
++  id: string;
++  title: string;
++  type: string | null;
++  status: string;
++  start_date: string | null;
++  end_date: string | null;
++  public_token: string | null;
++  created_at: string;
++}
++
++interface PesquisaComRespostas extends Pesquisa {
++  response_count: number;
++}
++
++const STATUS_LABELS: Record<string, string> = {
++  draft: "Rascunho",
++  active: "Ativa",
++  paused: "Pausada",
++  completed: "Concluida",
++  archived: "Arquivada",
++};
++
++const TYPE_LABELS: Record<string, string> = {
++  field: "Campo",
++  online: "Online",
++  phone: "Telefone",
++  door_to_door: "Porta a porta",
++  other: "Outra",
++};
++
++// -- Data fetching -----------------------------------------------------------
++
++async function buscarPesquisas(
++  organizationId: string,
++  filtroStatus?: string,
++): Promise<PesquisaComRespostas[]> {
++  const db = createServerClient();
++
++  let query = db
++    .from("pol_surveys")
++    .select("id, title, type, status, start_date, end_date, public_token, created_at")
++    .eq("organization_id", organizationId)
++    .order("created_at", { ascending: false })
++    .limit(100);
++
++  if (filtroStatus) {
++    query = query.eq("status", filtroStatus);
++  }
++
++  const { data, error } = await query;
++  if (error) {
++    console.error("Erro ao buscar pesquisas:", error.message);
++    return [];
++  }
++
++  const pesquisas = (data ?? []) as Pesquisa[];
++
++  // Buscar contagem de respostas por pesquisa
++  if (pesquisas.length === 0) return [];
++
++  const ids = pesquisas.map((p) => p.id);
++
++  const { data: counts, error: countError } = await db
++    .from("pol_survey_responses")
++    .select("survey_id")
++    .in("survey_id", ids);
++
++  if (countError) {
++    console.error("Erro ao buscar contagem de respostas:", countError.message);
++    return pesquisas.map((p) => ({ ...p, response_count: 0 }));
++  }
++
++  const countMap = new Map<string, number>();
++  for (const row of counts ?? []) {
++    const current = countMap.get(row.survey_id) ?? 0;
++    countMap.set(row.survey_id, current + 1);
++  }
++
++  return pesquisas.map((p) => ({
++    ...p,
++    response_count: countMap.get(p.id) ?? 0,
++  }));
++}
++
++// -- Componente --------------------------------------------------------------
++
++export default async function PesquisasPage({
++  searchParams,
++}: {
++  searchParams: Promise<{ status?: string }>;
++}) {
++  const user = await getUser();
++  if (!user) redirect("/login");
++
++  const org = await resolverOrganizacaoAtiva(user.id);
++  if (!org) redirect("/app/onboarding");
++
++  const params = await searchParams;
++  const filtroStatus = params.status ?? "";
++
++  const pesquisas = await buscarPesquisas(org.id, filtroStatus || undefined);
++
++  return (
++    <div className="mx-auto max-w-5xl px-4 py-8 space-y-6">
++      {/* Voltar */}
++      <Link
++        href="/app/politico"
++        className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors"
++      >
++        &larr; War Room
++      </Link>
++
++      {/* Cabecalho */}
++      <div>
++        <h1 className="text-2xl font-bold tracking-tight">Pesquisas</h1>
++        <p className="mt-1 text-sm text-muted-foreground">
++          Pesquisas de opiniao e intencao de voto com links publicos e contagem de respostas.
++        </p>
++      </div>
++
++      {/* Filtro */}
++      <div className="flex flex-wrap gap-2">
++        <FilterLink href="/app/politico/pesquisas" label="Todas" active={!filtroStatus} />
++        {Object.entries(STATUS_LABELS).map(([value, label]) => (
++          <FilterLink
++            key={value}
++            href={`/app/politico/pesquisas?status=${value}`}
++            label={label}
++            active={filtroStatus === value}
++          />
++        ))}
++      </div>
++
++      {/* Cards */}
++      {pesquisas.length === 0 ? (
++        <div className="rounded-xl border bg-card p-8 text-center text-sm text-muted-foreground">
++          Nenhuma pesquisa encontrada.
++        </div>
++      ) : (
++        <div className="grid gap-4 sm:grid-cols-2">
++          {pesquisas.map((p) => (
++            <div
++              key={p.id}
++              className="flex flex-col gap-3 rounded-xl border bg-card p-5"
++            >
++              <div className="flex items-start justify-between gap-2">
++                <h2 className="font-semibold leading-snug">{p.title}</h2>
++                <StatusBadge status={p.status} />
++              </div>
++
++              <div className="flex flex-wrap gap-2">
++                {p.type && (
++                  <span className="rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">
++                    {TYPE_LABELS[p.type] ?? p.type}
++                  </span>
++                )}
++                <span className="rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">
++                  {p.response_count} {p.response_count === 1 ? "resposta" : "respostas"}
++                </span>
++              </div>
++
++              <div className="flex flex-wrap gap-4 text-sm text-muted-foreground">
++                {p.start_date && (
++                  <span>
++                    Inicio:{" "}
++                    {new Date(p.start_date).toLocaleDateString("pt-BR", {
++                      day: "2-digit",
++                      month: "short",
++                    })}
++                  </span>
++                )}
++                {p.end_date && (
++                  <span>
++                    Fim:{" "}
++                    {new Date(p.end_date).toLocaleDateString("pt-BR", {
++                      day: "2-digit",
++                      month: "short",
++                    })}
++                  </span>
++                )}
++              </div>
++
++              {p.public_token && (
++                <div className="flex items-center gap-2 text-xs text-muted-foreground">
++                  <span className="truncate font-mono bg-secondary px-2 py-1 rounded">
++                    {p.public_token}
++                  </span>
++                </div>
++              )}
++            </div>
++          ))}
++        </div>
++      )}
++    </div>
++  );
++}
++
++// -- Sub-componentes ---------------------------------------------------------
++
++function FilterLink({
++  href,
++  label,
++  active,
++}: {
++  href: string;
++  label: string;
++  active: boolean;
++}) {
++  return (
++    <Link
++      href={href}
++      className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${
++        active
++          ? "bg-primary text-primary-foreground"
++          : "bg-secondary text-secondary-foreground hover:bg-secondary/80"
++      }`}
++    >
++      {label}
++    </Link>
++  );
++}
++
++function StatusBadge({ status }: { status: string }) {
++  const label = STATUS_LABELS[status] ?? status;
++
++  const colorMap: Record<string, string> = {
++    draft: "bg-secondary text-secondary-foreground",
++    active: "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200",
++    paused: "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200",
++    completed: "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200",
++    archived: "bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200",
++  };
++
++  const color = colorMap[status] ?? "bg-primary/10 text-primary";
++
++  return (
++    <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${color}`}>
++      {label}
++    </span>
++  );
++}
+diff --git a/lib/navigation/catalogo.ts b/lib/navigation/catalogo.ts
+index 80e8759..92128d8 100644
+--- a/lib/navigation/catalogo.ts
++++ b/lib/navigation/catalogo.ts
+@@ -896,6 +896,56 @@ export const NAV_CATALOG = [
+     minRole: "manager",
+     sidebar: false, // acessa pelo hub /app/politico
+   },
++  {
++    href: "/app/politico/ligacoes",
++    label: "Ligações",
++    description: "Fila de ligações políticas com lock otimista, resultado e controle de tentativas.",
++    icon: "phone",
++    group: "crm",
++    section: "Campanha política",
++    minRole: "manager",
++    sidebar: false, // acessa pelo hub /app/politico
++  },
++  {
++    href: "/app/politico/eventos",
++    label: "Eventos",
++    description: "Eventos políticos com controle de presença, participantes e dados institucionais.",
++    icon: "calendar",
++    group: "crm",
++    section: "Campanha política",
++    minRole: "manager",
++    sidebar: false,
++  },
++  {
++    href: "/app/politico/funil-invisivel",
++    label: "Funil Invisível",
++    description: "Nurturing automático com scoring de afinidade e rastreamento de engajamento.",
++    icon: "eye-off",
++    group: "crm",
++    section: "Campanha política",
++    minRole: "manager",
++    sidebar: false,
++  },
++  {
++    href: "/app/politico/pesquisas",
++    label: "Pesquisas",
++    description: "Pesquisas de campo com formulários públicos via token e respostas geolocalizadas.",
++    icon: "clipboard-list",
++    group: "crm",
++    section: "Campanha política",
++    minRole: "manager",
++    sidebar: false,
++  },
++  {
++    href: "/app/politico/alertas",
++    label: "Alertas",
++    description: "Sistema unificado de alertas — sentimento, crise, fake news, adversários e engajamento.",
++    icon: "bell",
++    group: "crm",
++    section: "Campanha política",
++    minRole: "manager",
++    sidebar: false,
++  },
+ 
+   // ---- Análise — olhar o sistema funcionando ----
+   //
+diff --git a/supabase/baseline.sql b/supabase/baseline.sql
+index 556aa8f..5691b8c 100644
+--- a/supabase/baseline.sql
++++ b/supabase/baseline.sql
+@@ -53836,3 +53836,724 @@ create policy tenant_isolation_pol_video_analyses_all
+   on public.pol_video_analyses for all
+   using (organization_id = any(public.fn_user_org_ids()))
+   with check (organization_id = any(public.fn_user_org_ids()));
++
++-- ---- pol_call_queue (migration 0635) ----
++
++create table if not exists public.pol_call_queue (
++  id                      uuid         primary key default gen_random_uuid(),
++  organization_id         uuid         not null references public.organizations(id) on delete cascade,
++  contact_id              uuid         not null references public.contacts(id) on delete cascade,
++  assigned_to             uuid         references auth.users(id),
++  locked_by               uuid         references auth.users(id),
++  locked_at               timestamptz,
++  call_status             text         not null default 'pending'
++                          check (call_status in (
++                            'pending', 'locked', 'calling', 'completed',
++                            'no_answer', 'busy', 'callback', 'cancelled'
++                          )),
++  political_result        text
++                          check (political_result is null or political_result in (
++                            'apoio_confirmado', 'indeciso', 'recusa',
++                            'mudou_apoio', 'sem_contato', 'agendou_visita',
++                            'pediu_retorno', 'outro'
++                          )),
++  attempt_count           integer      not null default 0,
++  return_after            timestamptz,
++  notes                   text,
++  call_started_at         timestamptz,
++  call_finished_at        timestamptz,
++  priority                integer      not null default 0,
++  created_at              timestamptz  not null default now(),
++  updated_at              timestamptz  not null default now()
++);
++
++create index if not exists pol_call_queue_org_status_idx
++  on public.pol_call_queue (organization_id, call_status);
++
++create index if not exists pol_call_queue_org_assigned_idx
++  on public.pol_call_queue (organization_id, assigned_to)
++  where assigned_to is not null;
++
++create index if not exists pol_call_queue_org_priority_idx
++  on public.pol_call_queue (organization_id, priority desc, created_at);
++
++create index if not exists pol_call_queue_org_pending_idx
++  on public.pol_call_queue (organization_id, return_after)
++  where call_status in ('pending', 'callback');
++
++create index if not exists pol_call_queue_contact_idx
++  on public.pol_call_queue (contact_id);
++
++create index if not exists pol_call_queue_created_idx
++  on public.pol_call_queue (created_at);
++
++create or replace trigger pol_call_queue_touch
++  before update on public.pol_call_queue
++  for each row execute function public.fn_touch_updated_at();
++
++alter table public.pol_call_queue enable row level security;
++
++drop policy if exists tenant_isolation_pol_call_queue_all on public.pol_call_queue;
++create policy tenant_isolation_pol_call_queue_all
++  on public.pol_call_queue for all
++  using (organization_id = any(public.fn_user_org_ids()))
++  with check (organization_id = any(public.fn_user_org_ids()));
++
++-- ---- pol_events (migration 0636) ----
++
++create table if not exists public.pol_events (
++  id                      uuid         primary key default gen_random_uuid(),
++  organization_id         uuid         not null references public.organizations(id) on delete cascade,
++  title                   text         not null,
++  type                    text         not null default 'reuniao'
++                          check (type in (
++                            'reuniao', 'comicio', 'caminhada', 'carreata',
++                            'debate', 'audiencia', 'assembleia', 'workshop',
++                            'live', 'entrevista', 'visita', 'outro'
++                          )),
++  theme                   text,
++  description             text,
++  city                    text,
++  state                   char(2),
++  neighborhood            text,
++  venue                   text,
++  event_date              timestamptz  not null,
++  event_end_date          timestamptz,
++  estimated_audience      integer,
++  actual_attendance       integer,
++  organizer_contact_id    uuid         references public.contacts(id),
++  status                  text         not null default 'scheduled'
++                          check (status in (
++                            'scheduled', 'confirmed', 'in_progress',
++                            'completed', 'cancelled', 'postponed'
++                          )),
++  created_at              timestamptz  not null default now(),
++  updated_at              timestamptz  not null default now()
++);
++
++create index if not exists pol_events_org_status_idx
++  on public.pol_events (organization_id, status);
++
++create index if not exists pol_events_org_type_idx
++  on public.pol_events (organization_id, type);
++
++create index if not exists pol_events_org_date_idx
++  on public.pol_events (organization_id, event_date);
++
++create index if not exists pol_events_org_city_idx
++  on public.pol_events (organization_id, city)
++  where city is not null;
++
++create index if not exists pol_events_created_idx
++  on public.pol_events (created_at);
++
++create or replace trigger pol_events_touch
++  before update on public.pol_events
++  for each row execute function public.fn_touch_updated_at();
++
++alter table public.pol_events enable row level security;
++
++drop policy if exists tenant_isolation_pol_events_all on public.pol_events;
++create policy tenant_isolation_pol_events_all
++  on public.pol_events for all
++  using (organization_id = any(public.fn_user_org_ids()))
++  with check (organization_id = any(public.fn_user_org_ids()));
++
++-- ---- pol_event_attendance (migration 0636) ----
++
++create table if not exists public.pol_event_attendance (
++  id                      uuid         primary key default gen_random_uuid(),
++  organization_id         uuid         not null references public.organizations(id) on delete cascade,
++  event_id                uuid         not null references public.pol_events(id) on delete cascade,
++  contact_id              uuid         not null references public.contacts(id) on delete cascade,
++  role                    text         not null default 'participante'
++                          check (role in (
++                            'organizador', 'palestrante', 'moderador',
++                            'voluntario', 'participante', 'imprensa', 'outro'
++                          )),
++  checked_in_at           timestamptz,
++  notes                   text,
++  created_at              timestamptz  not null default now(),
++  constraint pol_event_attendance_event_contact_uq unique (organization_id, event_id, contact_id)
++);
++
++create index if not exists pol_event_attendance_org_event_idx
++  on public.pol_event_attendance (organization_id, event_id);
++
++create index if not exists pol_event_attendance_contact_idx
++  on public.pol_event_attendance (contact_id);
++
++create index if not exists pol_event_attendance_checked_idx
++  on public.pol_event_attendance (checked_in_at)
++  where checked_in_at is not null;
++
++alter table public.pol_event_attendance enable row level security;
++
++drop policy if exists tenant_isolation_pol_event_attendance_all on public.pol_event_attendance;
++create policy tenant_isolation_pol_event_attendance_all
++  on public.pol_event_attendance for all
++  using (organization_id = any(public.fn_user_org_ids()))
++  with check (organization_id = any(public.fn_user_org_ids()));
++
++-- ---- pol_event_participants (migration 0636) ----
++
++create table if not exists public.pol_event_participants (
++  id                      uuid         primary key default gen_random_uuid(),
++  organization_id         uuid         not null references public.organizations(id) on delete cascade,
++  contact_id              uuid         not null references public.contacts(id) on delete cascade,
++  institution_name        text,
++  institution_type        text
++                          check (institution_type is null or institution_type in (
++                            'partido', 'sindicato', 'associacao', 'ong',
++                            'igreja', 'empresa', 'governo', 'universidade',
++                            'midia', 'outro'
++                          )),
++  role_in_institution     text,
++  influence_score         numeric(5,2) not null default 0,
++  created_at              timestamptz  not null default now(),
++  updated_at              timestamptz  not null default now(),
++  constraint pol_event_participants_contact_org_uq unique (organization_id, contact_id)
++);
++
++create index if not exists pol_event_participants_org_idx
++  on public.pol_event_participants (organization_id);
++
++create index if not exists pol_event_participants_contact_idx
++  on public.pol_event_participants (contact_id);
++
++create index if not exists pol_event_participants_org_type_idx
++  on public.pol_event_participants (organization_id, institution_type)
++  where institution_type is not null;
++
++create index if not exists pol_event_participants_org_influence_idx
++  on public.pol_event_participants (organization_id, influence_score)
++  where influence_score > 0;
++
++create or replace trigger pol_event_participants_touch
++  before update on public.pol_event_participants
++  for each row execute function public.fn_touch_updated_at();
++
++alter table public.pol_event_participants enable row level security;
++
++drop policy if exists tenant_isolation_pol_event_participants_all on public.pol_event_participants;
++create policy tenant_isolation_pol_event_participants_all
++  on public.pol_event_participants for all
++  using (organization_id = any(public.fn_user_org_ids()))
++  with check (organization_id = any(public.fn_user_org_ids()));
++
++-- ---- pol_invisible_funnel (migration 0637) ----
++
++create table if not exists public.pol_invisible_funnel (
++  id                      uuid         primary key default gen_random_uuid(),
++  organization_id         uuid         not null references public.organizations(id) on delete cascade,
++  contact_id              uuid         not null references public.contacts(id) on delete cascade,
++  funnel_stage            text         not null default 'awareness'
++                          check (funnel_stage in (
++                            'awareness', 'interest', 'consideration',
++                            'intent', 'evaluation', 'conversion'
++                          )),
++  funnel_score            numeric(5,2) not null default 0,
++  theme_affinity          text,
++  interaction_class       text         not null default 'cold'
++                          check (interaction_class in (
++                            'cold', 'warm', 'hot', 'engaged', 'advocate'
++                          )),
++  total_clicks            integer      not null default 0,
++  total_replies           integer      not null default 0,
++  contents_received       integer      not null default 0,
++  consecutive_weeks_active integer     not null default 0,
++  next_action             text,
++  created_at              timestamptz  not null default now(),
++  updated_at              timestamptz  not null default now(),
++  constraint pol_invisible_funnel_contact_org_uq unique (organization_id, contact_id)
++);
++
++create index if not exists pol_invisible_funnel_org_stage_idx
++  on public.pol_invisible_funnel (organization_id, funnel_stage);
++
++create index if not exists pol_invisible_funnel_org_class_idx
++  on public.pol_invisible_funnel (organization_id, interaction_class);
++
++create index if not exists pol_invisible_funnel_contact_idx
++  on public.pol_invisible_funnel (contact_id);
++
++create index if not exists pol_invisible_funnel_org_score_idx
++  on public.pol_invisible_funnel (organization_id, funnel_score)
++  where funnel_score > 0;
++
++create or replace trigger pol_invisible_funnel_touch
++  before update on public.pol_invisible_funnel
++  for each row execute function public.fn_touch_updated_at();
++
++alter table public.pol_invisible_funnel enable row level security;
++
++drop policy if exists tenant_isolation_pol_invisible_funnel_all on public.pol_invisible_funnel;
++create policy tenant_isolation_pol_invisible_funnel_all
++  on public.pol_invisible_funnel for all
++  using (organization_id = any(public.fn_user_org_ids()))
++  with check (organization_id = any(public.fn_user_org_ids()));
++
++-- ---- pol_invisible_funnel_content (migration 0637) ----
++
++create table if not exists public.pol_invisible_funnel_content (
++  id                      uuid         primary key default gen_random_uuid(),
++  organization_id         uuid         not null references public.organizations(id) on delete cascade,
++  title                   text         not null,
++  theme                   text,
++  stage                   text         not null default 'awareness'
++                          check (stage in (
++                            'awareness', 'interest', 'consideration',
++                            'intent', 'evaluation', 'conversion'
++                          )),
++  format                  text         not null default 'text'
++                          check (format in (
++                            'text', 'image', 'video', 'link', 'carousel',
++                            'audio', 'document', 'other'
++                          )),
++  url                     text,
++  cta                     text,
++  body                    text,
++  sends                   integer      not null default 0,
++  clicks                  integer      not null default 0,
++  replies                 integer      not null default 0,
++  conversion_rate         numeric(5,2) not null default 0,
++  active                  boolean      not null default true,
++  created_at              timestamptz  not null default now(),
++  updated_at              timestamptz  not null default now()
++);
++
++create index if not exists pol_invisible_funnel_content_org_stage_idx
++  on public.pol_invisible_funnel_content (organization_id, stage);
++
++create index if not exists pol_invisible_funnel_content_org_format_idx
++  on public.pol_invisible_funnel_content (organization_id, format);
++
++create index if not exists pol_invisible_funnel_content_org_active_idx
++  on public.pol_invisible_funnel_content (organization_id, active)
++  where active = true;
++
++create index if not exists pol_invisible_funnel_content_org_conversion_idx
++  on public.pol_invisible_funnel_content (organization_id, conversion_rate)
++  where conversion_rate > 0;
++
++create or replace trigger pol_invisible_funnel_content_touch
++  before update on public.pol_invisible_funnel_content
++  for each row execute function public.fn_touch_updated_at();
++
++alter table public.pol_invisible_funnel_content enable row level security;
++
++drop policy if exists tenant_isolation_pol_invisible_funnel_content_all on public.pol_invisible_funnel_content;
++create policy tenant_isolation_pol_invisible_funnel_content_all
++  on public.pol_invisible_funnel_content for all
++  using (organization_id = any(public.fn_user_org_ids()))
++  with check (organization_id = any(public.fn_user_org_ids()));
++
++-- ---- pol_invisible_funnel_events (migration 0637) ----
++
++create table if not exists public.pol_invisible_funnel_events (
++  id                      uuid         primary key default gen_random_uuid(),
++  organization_id         uuid         not null references public.organizations(id) on delete cascade,
++  contact_id              uuid         not null references public.contacts(id) on delete cascade,
++  event_type              text         not null
++                          check (event_type in (
++                            'content_sent', 'content_opened', 'link_clicked',
++                            'reply_received', 'shared', 'unsubscribed',
++                            'stage_changed', 'score_updated', 'other'
++                          )),
++  content_id              uuid         references public.pol_invisible_funnel_content(id) on delete set null,
++  metadata                jsonb,
++  created_at              timestamptz  not null default now()
++);
++
++create index if not exists pol_invisible_funnel_events_org_contact_idx
++  on public.pol_invisible_funnel_events (organization_id, contact_id);
++
++create index if not exists pol_invisible_funnel_events_org_type_idx
++  on public.pol_invisible_funnel_events (organization_id, event_type);
++
++create index if not exists pol_invisible_funnel_events_content_idx
++  on public.pol_invisible_funnel_events (content_id)
++  where content_id is not null;
++
++create index if not exists pol_invisible_funnel_events_created_idx
++  on public.pol_invisible_funnel_events (created_at);
++
++alter table public.pol_invisible_funnel_events enable row level security;
++
++drop policy if exists tenant_isolation_pol_invisible_funnel_events_all on public.pol_invisible_funnel_events;
++create policy tenant_isolation_pol_invisible_funnel_events_all
++  on public.pol_invisible_funnel_events for all
++  using (organization_id = any(public.fn_user_org_ids()))
++  with check (organization_id = any(public.fn_user_org_ids()));
++
++-- ---- pol_surveys (migration 0638) ----
++
++create table if not exists public.pol_surveys (
++  id                      uuid         primary key default gen_random_uuid(),
++  organization_id         uuid         not null references public.organizations(id) on delete cascade,
++  title                   text         not null,
++  description             text,
++  type                    text         not null default 'field'
++                          check (type in (
++                            'field', 'online', 'phone', 'door_to_door', 'other'
++                          )),
++  status                  text         not null default 'draft'
++                          check (status in (
++                            'draft', 'active', 'paused', 'completed', 'archived'
++                          )),
++  start_date              timestamptz,
++  end_date                timestamptz,
++  public_token            text         not null default replace(gen_random_uuid()::text, '-', ''),
++  created_at              timestamptz  not null default now(),
++  updated_at              timestamptz  not null default now(),
++  constraint pol_surveys_public_token_uq unique (public_token)
++);
++
++create index if not exists pol_surveys_org_status_idx
++  on public.pol_surveys (organization_id, status);
++
++create index if not exists pol_surveys_org_type_idx
++  on public.pol_surveys (organization_id, type);
++
++create index if not exists pol_surveys_token_idx
++  on public.pol_surveys (public_token);
++
++create index if not exists pol_surveys_created_idx
++  on public.pol_surveys (created_at);
++
++create or replace trigger pol_surveys_touch
++  before update on public.pol_surveys
++  for each row execute function public.fn_touch_updated_at();
++
++alter table public.pol_surveys enable row level security;
++
++drop policy if exists tenant_isolation_pol_surveys_all on public.pol_surveys;
++create policy tenant_isolation_pol_surveys_all
++  on public.pol_surveys for all
++  using (organization_id = any(public.fn_user_org_ids()))
++  with check (organization_id = any(public.fn_user_org_ids()));
++
++-- ---- pol_survey_questions (migration 0638) ----
++
++create table if not exists public.pol_survey_questions (
++  id                      uuid         primary key default gen_random_uuid(),
++  organization_id         uuid         not null references public.organizations(id) on delete cascade,
++  survey_id               uuid         not null references public.pol_surveys(id) on delete cascade,
++  "order"                 integer      not null default 0,
++  theme                   text,
++  question                text         not null,
++  response_type           text         not null default 'text'
++                          check (response_type in (
++                            'text', 'choice', 'scale', 'boolean',
++                            'number', 'date', 'multi_choice'
++                          )),
++  options                 jsonb,
++  required                boolean      not null default true,
++  created_at              timestamptz  not null default now(),
++  updated_at              timestamptz  not null default now()
++);
++
++create index if not exists pol_survey_questions_org_survey_idx
++  on public.pol_survey_questions (organization_id, survey_id);
++
++create index if not exists pol_survey_questions_survey_order_idx
++  on public.pol_survey_questions (survey_id, "order");
++
++create or replace trigger pol_survey_questions_touch
++  before update on public.pol_survey_questions
++  for each row execute function public.fn_touch_updated_at();
++
++alter table public.pol_survey_questions enable row level security;
++
++drop policy if exists tenant_isolation_pol_survey_questions_all on public.pol_survey_questions;
++create policy tenant_isolation_pol_survey_questions_all
++  on public.pol_survey_questions for all
++  using (organization_id = any(public.fn_user_org_ids()))
++  with check (organization_id = any(public.fn_user_org_ids()));
++
++-- ---- pol_survey_responses (migration 0638) ----
++
++create table if not exists public.pol_survey_responses (
++  id                      uuid         primary key default gen_random_uuid(),
++  organization_id         uuid         not null references public.organizations(id) on delete cascade,
++  survey_id               uuid         not null references public.pol_surveys(id) on delete cascade,
++  contact_id              uuid         references public.contacts(id) on delete set null,
++  token                   text         not null default replace(gen_random_uuid()::text, '-', ''),
++  answers                 jsonb        not null default '{}'::jsonb,
++  completed               boolean      not null default false,
++  duration_seconds        integer,
++  city                    text,
++  state                   char(2),
++  shared_by               uuid         references auth.users(id),
++  created_at              timestamptz  not null default now(),
++  updated_at              timestamptz  not null default now()
++);
++
++create index if not exists pol_survey_responses_org_survey_idx
++  on public.pol_survey_responses (organization_id, survey_id);
++
++create index if not exists pol_survey_responses_survey_completed_idx
++  on public.pol_survey_responses (survey_id, completed)
++  where completed = true;
++
++create index if not exists pol_survey_responses_contact_idx
++  on public.pol_survey_responses (contact_id)
++  where contact_id is not null;
++
++create index if not exists pol_survey_responses_token_idx
++  on public.pol_survey_responses (token);
++
++create index if not exists pol_survey_responses_created_idx
++  on public.pol_survey_responses (created_at);
++
++create or replace trigger pol_survey_responses_touch
++  before update on public.pol_survey_responses
++  for each row execute function public.fn_touch_updated_at();
++
++alter table public.pol_survey_responses enable row level security;
++
++drop policy if exists tenant_isolation_pol_survey_responses_all on public.pol_survey_responses;
++create policy tenant_isolation_pol_survey_responses_all
++  on public.pol_survey_responses for all
++  using (organization_id = any(public.fn_user_org_ids()))
++  with check (organization_id = any(public.fn_user_org_ids()));
++
++-- ---- pol_decision_signals (migration 0639) ----
++
++create table if not exists public.pol_decision_signals (
++  id                      uuid         primary key default gen_random_uuid(),
++  organization_id         uuid         not null references public.organizations(id) on delete cascade,
++  signal_type             text         not null
++                          check (signal_type in (
++                            'survey_result', 'social_mention', 'sentiment_shift',
++                            'territory_change', 'opponent_action', 'media_coverage',
++                            'engagement_spike', 'crisis_indicator', 'other'
++                          )),
++  source                  text         not null,
++  entity_type             text,
++  entity_id               uuid,
++  severity                text         not null default 'info'
++                          check (severity in (
++                            'info', 'low', 'medium', 'high', 'critical'
++                          )),
++  data                    jsonb        not null default '{}'::jsonb,
++  processed_at            timestamptz,
++  action_taken            text,
++  created_at              timestamptz  not null default now()
++);
++
++create index if not exists pol_decision_signals_org_type_idx
++  on public.pol_decision_signals (organization_id, signal_type);
++
++create index if not exists pol_decision_signals_org_severity_idx
++  on public.pol_decision_signals (organization_id, severity);
++
++create index if not exists pol_decision_signals_org_unprocessed_idx
++  on public.pol_decision_signals (organization_id, created_at)
++  where processed_at is null;
++
++create index if not exists pol_decision_signals_entity_idx
++  on public.pol_decision_signals (entity_type, entity_id)
++  where entity_id is not null;
++
++create index if not exists pol_decision_signals_created_idx
++  on public.pol_decision_signals (created_at);
++
++alter table public.pol_decision_signals enable row level security;
++
++drop policy if exists tenant_isolation_pol_decision_signals_all on public.pol_decision_signals;
++create policy tenant_isolation_pol_decision_signals_all
++  on public.pol_decision_signals for all
++  using (organization_id = any(public.fn_user_org_ids()))
++  with check (organization_id = any(public.fn_user_org_ids()));
++
++-- ---- pol_alerts (migration 0639) ----
++
++create table if not exists public.pol_alerts (
++  id                      uuid         primary key default gen_random_uuid(),
++  organization_id         uuid         not null references public.organizations(id) on delete cascade,
++  alert_type              text         not null
++                          check (alert_type in (
++                            'sentiment', 'engagement', 'crisis', 'opponent',
++                            'territory', 'fake_news', 'growth', 'momentum',
++                            'media', 'survey', 'custom'
++                          )),
++  severity                text         not null default 'medium'
++                          check (severity in (
++                            'info', 'low', 'medium', 'high', 'critical'
++                          )),
++  source_type             text,
++  source_id               uuid,
++  title                   text         not null,
++  description             text,
++  status                  text         not null default 'open'
++                          check (status in (
++                            'open', 'acknowledged', 'investigating',
++                            'resolved', 'dismissed'
++                          )),
++  acknowledged_by         uuid         references auth.users(id),
++  acknowledged_at         timestamptz,
++  created_at              timestamptz  not null default now(),
++  updated_at              timestamptz  not null default now()
++);
++
++create index if not exists pol_alerts_org_status_idx
++  on public.pol_alerts (organization_id, status);
++
++create index if not exists pol_alerts_org_type_idx
++  on public.pol_alerts (organization_id, alert_type);
++
++create index if not exists pol_alerts_org_severity_idx
++  on public.pol_alerts (organization_id, severity);
++
++create index if not exists pol_alerts_org_open_idx
++  on public.pol_alerts (organization_id, created_at)
++  where status = 'open';
++
++create index if not exists pol_alerts_source_idx
++  on public.pol_alerts (source_type, source_id)
++  where source_id is not null;
++
++create index if not exists pol_alerts_created_idx
++  on public.pol_alerts (created_at);
++
++create or replace trigger pol_alerts_touch
++  before update on public.pol_alerts
++  for each row execute function public.fn_touch_updated_at();
++
++alter table public.pol_alerts enable row level security;
++
++drop policy if exists tenant_isolation_pol_alerts_all on public.pol_alerts;
++create policy tenant_isolation_pol_alerts_all
++  on public.pol_alerts for all
++  using (organization_id = any(public.fn_user_org_ids()))
++  with check (organization_id = any(public.fn_user_org_ids()));
++
++-- ---- pol_crisis_predictions (migration 0639) ----
++
++create table if not exists public.pol_crisis_predictions (
++  id                      uuid         primary key default gen_random_uuid(),
++  organization_id         uuid         not null references public.organizations(id) on delete cascade,
++  prediction_type         text         not null
++                          check (prediction_type in (
++                            'reputation', 'electoral', 'media', 'social',
++                            'legal', 'political', 'security', 'other'
++                          )),
++  probability             numeric(5,2) not null default 0
++                          check (probability >= 0 and probability <= 100),
++  impact                  text         not null default 'medium'
++                          check (impact in (
++                            'negligible', 'low', 'medium', 'high', 'catastrophic'
++                          )),
++  description             text         not null,
++  recommended_actions     jsonb,
++  metadata                jsonb,
++  expires_at              timestamptz,
++  created_at              timestamptz  not null default now(),
++  updated_at              timestamptz  not null default now()
++);
++
++create index if not exists pol_crisis_predictions_org_type_idx
++  on public.pol_crisis_predictions (organization_id, prediction_type);
++
++create index if not exists pol_crisis_predictions_org_impact_idx
++  on public.pol_crisis_predictions (organization_id, impact);
++
++create index if not exists pol_crisis_predictions_org_active_idx
++  on public.pol_crisis_predictions (organization_id, expires_at)
++  where expires_at is null or expires_at > now();
++
++create index if not exists pol_crisis_predictions_created_idx
++  on public.pol_crisis_predictions (created_at);
++
++create or replace trigger pol_crisis_predictions_touch
++  before update on public.pol_crisis_predictions
++  for each row execute function public.fn_touch_updated_at();
++
++alter table public.pol_crisis_predictions enable row level security;
++
++drop policy if exists tenant_isolation_pol_crisis_predictions_all on public.pol_crisis_predictions;
++create policy tenant_isolation_pol_crisis_predictions_all
++  on public.pol_crisis_predictions for all
++  using (organization_id = any(public.fn_user_org_ids()))
++  with check (organization_id = any(public.fn_user_org_ids()));
++
++-- ---- pol_fake_news (migration 0639) ----
++
++create table if not exists public.pol_fake_news (
++  id                      uuid         primary key default gen_random_uuid(),
++  organization_id         uuid         not null references public.organizations(id) on delete cascade,
++  title                   text         not null,
++  description             text,
++  source_url              text,
++  platform                text
++                          check (platform is null or platform in (
++                            'whatsapp', 'facebook', 'instagram', 'twitter',
++                            'tiktok', 'youtube', 'telegram', 'website',
++                            'radio', 'tv', 'print', 'other'
++                          )),
++  status                  text         not null default 'detected'
++                          check (status in (
++                            'detected', 'analyzing', 'confirmed',
++                            'responding', 'contained', 'resolved'
++                          )),
++  severity                text         not null default 'medium'
++                          check (severity in (
++                            'low', 'medium', 'high', 'critical'
++                          )),
++  counter_narrative       text,
++  created_at              timestamptz  not null default now(),
++  updated_at              timestamptz  not null default now()
++);
++
++create index if not exists pol_fake_news_org_status_idx
++  on public.pol_fake_news (organization_id, status);
++
++create index if not exists pol_fake_news_org_severity_idx
++  on public.pol_fake_news (organization_id, severity);
++
++create index if not exists pol_fake_news_org_platform_idx
++  on public.pol_fake_news (organization_id, platform)
++  where platform is not null;
++
++create index if not exists pol_fake_news_created_idx
++  on public.pol_fake_news (created_at);
++
++create or replace trigger pol_fake_news_touch
++  before update on public.pol_fake_news
++  for each row execute function public.fn_touch_updated_at();
++
++alter table public.pol_fake_news enable row level security;
++
++drop policy if exists tenant_isolation_pol_fake_news_all on public.pol_fake_news;
++create policy tenant_isolation_pol_fake_news_all
++  on public.pol_fake_news for all
++  using (organization_id = any(public.fn_user_org_ids()))
++  with check (organization_id = any(public.fn_user_org_ids()));
++
++-- ---- pol_engagement_weights (migration 0639) ----
++
++create table if not exists public.pol_engagement_weights (
++  id                      uuid         primary key default gen_random_uuid(),
++  organization_id         uuid         not null references public.organizations(id) on delete cascade,
++  event_type              text         not null,
++  weight                  numeric(5,2) not null default 1.0,
++  created_at              timestamptz  not null default now(),
++  updated_at              timestamptz  not null default now(),
++  constraint pol_engagement_weights_type_org_uq unique (organization_id, event_type)
++);
++
++create index if not exists pol_engagement_weights_org_idx
++  on public.pol_engagement_weights (organization_id);
++
++create or replace trigger pol_engagement_weights_touch
++  before update on public.pol_engagement_weights
++  for each row execute function public.fn_touch_updated_at();
++
++alter table public.pol_engagement_weights enable row level security;
++
++drop policy if exists tenant_isolation_pol_engagement_weights_all on public.pol_engagement_weights;
++create policy tenant_isolation_pol_engagement_weights_all
++  on public.pol_engagement_weights for all
++  using (organization_id = any(public.fn_user_org_ids()))
++  with check (organization_id = any(public.fn_user_org_ids()));
+diff --git a/supabase/migrations/20261011200000_0635_pol_call_queue.sql b/supabase/migrations/20261011200000_0635_pol_call_queue.sql
+new file mode 100644
+index 0000000..1b4b3bd
+--- /dev/null
++++ b/supabase/migrations/20261011200000_0635_pol_call_queue.sql
+@@ -0,0 +1,83 @@
++-- manifest: tabela pol_call_queue — fila de ligações políticas do War Room 2.0, consolidando call_queue do WR1 com status de chamada, resultado político e controle de lock/tentativas
++
++-- ══════════════════════════════════════════════════════════════════
++-- pol_call_queue — fila de ligações políticas
++--
++-- Consolida call_queue do WR1.
++-- Cada item é uma ligação pendente/em andamento para um contato,
++-- com atribuição de operador, lock otimista, contagem de tentativas
++-- e resultado político da chamada.
++-- ══════════════════════════════════════════════════════════════════
++
++create table if not exists public.pol_call_queue (
++  id                      uuid         primary key default gen_random_uuid(),
++  organization_id         uuid         not null references public.organizations(id) on delete cascade,
++  -- Contato alvo da ligação
++  contact_id              uuid         not null references public.contacts(id) on delete cascade,
++  -- Atribuição
++  assigned_to             uuid         references auth.users(id),
++  locked_by               uuid         references auth.users(id),
++  locked_at               timestamptz,
++  -- Status da chamada
++  call_status             text         not null default 'pending'
++                          check (call_status in (
++                            'pending', 'locked', 'calling', 'completed',
++                            'no_answer', 'busy', 'callback', 'cancelled'
++                          )),
++  -- Resultado político da ligação
++  political_result        text
++                          check (political_result is null or political_result in (
++                            'apoio_confirmado', 'indeciso', 'recusa',
++                            'mudou_apoio', 'sem_contato', 'agendou_visita',
++                            'pediu_retorno', 'outro'
++                          )),
++  -- Controle de tentativas
++  attempt_count           integer      not null default 0,
++  return_after            timestamptz,
++  -- Notas do operador
++  notes                   text,
++  -- Timestamps da chamada
++  call_started_at         timestamptz,
++  call_finished_at        timestamptz,
++  -- Prioridade
++  priority                integer      not null default 0,
++  created_at              timestamptz  not null default now(),
++  updated_at              timestamptz  not null default now()
++);
++
++comment on table public.pol_call_queue is
++  'Fila de ligações políticas — consolida call_queue do WR1. Status de chamada, resultado político, lock otimista e controle de tentativas.';
++
++-- Índices
++create index if not exists pol_call_queue_org_status_idx
++  on public.pol_call_queue (organization_id, call_status);
++
++create index if not exists pol_call_queue_org_assigned_idx
++  on public.pol_call_queue (organization_id, assigned_to)
++  where assigned_to is not null;
++
++create index if not exists pol_call_queue_org_priority_idx
++  on public.pol_call_queue (organization_id, priority desc, created_at);
++
++create index if not exists pol_call_queue_org_pending_idx
++  on public.pol_call_queue (organization_id, return_after)
++  where call_status in ('pending', 'callback');
++
++create index if not exists pol_call_queue_contact_idx
++  on public.pol_call_queue (contact_id);
++
++create index if not exists pol_call_queue_created_idx
++  on public.pol_call_queue (created_at);
++
++-- Touch updated_at
++create or replace trigger pol_call_queue_touch
++  before update on public.pol_call_queue
++  for each row execute function public.fn_touch_updated_at();
++
++-- RLS
++alter table public.pol_call_queue enable row level security;
++
++create policy tenant_isolation_pol_call_queue_all
++  on public.pol_call_queue for all
++  using (organization_id = any(public.fn_user_org_ids()))
++  with check (organization_id = any(public.fn_user_org_ids()));
+diff --git a/supabase/migrations/20261011200100_0636_pol_events.sql b/supabase/migrations/20261011200100_0636_pol_events.sql
+new file mode 100644
+index 0000000..b1d08e3
+--- /dev/null
++++ b/supabase/migrations/20261011200100_0636_pol_events.sql
+@@ -0,0 +1,186 @@
++-- manifest: tabelas pol_events, pol_event_attendance, pol_event_participants — eventos políticos do War Room 2.0 com controle de presença, papéis de participantes e dados institucionais
++
++-- ══════════════════════════════════════════════════════════════════
++-- pol_events — eventos políticos
++--
++-- Consolida events + political_events do WR1.
++-- Cada evento tem tipo, tema, localização, data e controle
++-- de público estimado vs real (actual_attendance).
++-- ══════════════════════════════════════════════════════════════════
++
++create table if not exists public.pol_events (
++  id                      uuid         primary key default gen_random_uuid(),
++  organization_id         uuid         not null references public.organizations(id) on delete cascade,
++  -- Identificação do evento
++  title                   text         not null,
++  type                    text         not null default 'reuniao'
++                          check (type in (
++                            'reuniao', 'comicio', 'caminhada', 'carreata',
++                            'debate', 'audiencia', 'assembleia', 'workshop',
++                            'live', 'entrevista', 'visita', 'outro'
++                          )),
++  theme                   text,
++  description             text,
++  -- Localização
++  city                    text,
++  state                   char(2),
++  neighborhood            text,
++  venue                   text,
++  -- Data e hora
++  event_date              timestamptz  not null,
++  event_end_date          timestamptz,
++  -- Público
++  estimated_audience      integer,
++  actual_attendance       integer,
++  -- Organizador
++  organizer_contact_id    uuid         references public.contacts(id),
++  -- Status
++  status                  text         not null default 'scheduled'
++                          check (status in (
++                            'scheduled', 'confirmed', 'in_progress',
++                            'completed', 'cancelled', 'postponed'
++                          )),
++  created_at              timestamptz  not null default now(),
++  updated_at              timestamptz  not null default now()
++);
++
++comment on table public.pol_events is
++  'Eventos políticos — consolida events e political_events do WR1. Tipo, tema, localização e controle de público estimado vs real.';
++
++-- Índices
++create index if not exists pol_events_org_status_idx
++  on public.pol_events (organization_id, status);
++
++create index if not exists pol_events_org_type_idx
++  on public.pol_events (organization_id, type);
++
++create index if not exists pol_events_org_date_idx
++  on public.pol_events (organization_id, event_date);
++
++create index if not exists pol_events_org_city_idx
++  on public.pol_events (organization_id, city)
++  where city is not null;
++
++create index if not exists pol_events_created_idx
++  on public.pol_events (created_at);
++
++-- Touch updated_at
++create or replace trigger pol_events_touch
++  before update on public.pol_events
++  for each row execute function public.fn_touch_updated_at();
++
++-- RLS
++alter table public.pol_events enable row level security;
++
++create policy tenant_isolation_pol_events_all
++  on public.pol_events for all
++  using (organization_id = any(public.fn_user_org_ids()))
++  with check (organization_id = any(public.fn_user_org_ids()));
++
++-- ══════════════════════════════════════════════════════════════════
++-- pol_event_attendance — presença em eventos
++--
++-- Consolida event_attendance do WR1.
++-- Registra check-in de cada contato em cada evento,
++-- com papel desempenhado e notas.
++-- ══════════════════════════════════════════════════════════════════
++
++create table if not exists public.pol_event_attendance (
++  id                      uuid         primary key default gen_random_uuid(),
++  organization_id         uuid         not null references public.organizations(id) on delete cascade,
++  event_id                uuid         not null references public.pol_events(id) on delete cascade,
++  contact_id              uuid         not null references public.contacts(id) on delete cascade,
++  -- Presença
++  role                    text         not null default 'participante'
++                          check (role in (
++                            'organizador', 'palestrante', 'moderador',
++                            'voluntario', 'participante', 'imprensa', 'outro'
++                          )),
++  checked_in_at           timestamptz,
++  notes                   text,
++  created_at              timestamptz  not null default now(),
++  -- Um contato por evento
++  constraint pol_event_attendance_event_contact_uq unique (organization_id, event_id, contact_id)
++);
++
++comment on table public.pol_event_attendance is
++  'Presença em eventos políticos — check-in de contatos com papel e notas.';
++
++-- Índices
++create index if not exists pol_event_attendance_org_event_idx
++  on public.pol_event_attendance (organization_id, event_id);
++
++create index if not exists pol_event_attendance_contact_idx
++  on public.pol_event_attendance (contact_id);
++
++create index if not exists pol_event_attendance_checked_idx
++  on public.pol_event_attendance (checked_in_at)
++  where checked_in_at is not null;
++
++-- RLS
++alter table public.pol_event_attendance enable row level security;
++
++create policy tenant_isolation_pol_event_attendance_all
++  on public.pol_event_attendance for all
++  using (organization_id = any(public.fn_user_org_ids()))
++  with check (organization_id = any(public.fn_user_org_ids()));
++
++-- ══════════════════════════════════════════════════════════════════
++-- pol_event_participants — dados extras de participantes
++--
++-- Consolida participants do WR1.
++-- Extensão de contacts com dados institucionais para contexto
++-- político: instituição, tipo, papel e score de influência.
++-- ══════════════════════════════════════════════════════════════════
++
++create table if not exists public.pol_event_participants (
++  id                      uuid         primary key default gen_random_uuid(),
++  organization_id         uuid         not null references public.organizations(id) on delete cascade,
++  contact_id              uuid         not null references public.contacts(id) on delete cascade,
++  -- Dados institucionais
++  institution_name        text,
++  institution_type        text
++                          check (institution_type is null or institution_type in (
++                            'partido', 'sindicato', 'associacao', 'ong',
++                            'igreja', 'empresa', 'governo', 'universidade',
++                            'midia', 'outro'
++                          )),
++  role_in_institution     text,
++  -- Influência
++  influence_score         numeric(5,2) not null default 0,
++  created_at              timestamptz  not null default now(),
++  updated_at              timestamptz  not null default now(),
++  -- Um registro por contato por organização
++  constraint pol_event_participants_contact_org_uq unique (organization_id, contact_id)
++);
++
++comment on table public.pol_event_participants is
++  'Dados extras de participantes — extensão de contacts com dados institucionais, papel e score de influência para contexto político.';
++
++-- Índices
++create index if not exists pol_event_participants_org_idx
++  on public.pol_event_participants (organization_id);
++
++create index if not exists pol_event_participants_contact_idx
++  on public.pol_event_participants (contact_id);
++
++create index if not exists pol_event_participants_org_type_idx
++  on public.pol_event_participants (organization_id, institution_type)
++  where institution_type is not null;
++
++create index if not exists pol_event_participants_org_influence_idx
++  on public.pol_event_participants (organization_id, influence_score)
++  where influence_score > 0;
++
++-- Touch updated_at
++create or replace trigger pol_event_participants_touch
++  before update on public.pol_event_participants
++  for each row execute function public.fn_touch_updated_at();
++
++-- RLS
++alter table public.pol_event_participants enable row level security;
++
++create policy tenant_isolation_pol_event_participants_all
++  on public.pol_event_participants for all
++  using (organization_id = any(public.fn_user_org_ids()))
++  with check (organization_id = any(public.fn_user_org_ids()));
+diff --git a/supabase/migrations/20261011200200_0637_pol_invisible_funnel.sql b/supabase/migrations/20261011200200_0637_pol_invisible_funnel.sql
+new file mode 100644
+index 0000000..8a8d7ad
+--- /dev/null
++++ b/supabase/migrations/20261011200200_0637_pol_invisible_funnel.sql
+@@ -0,0 +1,193 @@
++-- manifest: tabelas pol_invisible_funnel, pol_invisible_funnel_content, pol_invisible_funnel_events — funil invisível do War Room 2.0 para nurturing automático de contatos com scoring de afinidade, rastreamento de eventos e conteúdo com métricas de conversão
++
++-- ══════════════════════════════════════════════════════════════════
++-- pol_invisible_funnel — perfis no funil invisível
++--
++-- Consolida invisible_funnel_profiles do WR1.
++-- Cada contato tem um perfil no funil invisível com stage,
++-- score, afinidade temática, classe de interação e métricas
++-- de engajamento acumulado.
++-- ══════════════════════════════════════════════════════════════════
++
++create table if not exists public.pol_invisible_funnel (
++  id                      uuid         primary key default gen_random_uuid(),
++  organization_id         uuid         not null references public.organizations(id) on delete cascade,
++  contact_id              uuid         not null references public.contacts(id) on delete cascade,
++  -- Posição no funil
++  funnel_stage            text         not null default 'awareness'
++                          check (funnel_stage in (
++                            'awareness', 'interest', 'consideration',
++                            'intent', 'evaluation', 'conversion'
++                          )),
++  funnel_score            numeric(5,2) not null default 0,
++  -- Afinidade temática
++  theme_affinity          text,
++  -- Classificação de interação
++  interaction_class       text         not null default 'cold'
++                          check (interaction_class in (
++                            'cold', 'warm', 'hot', 'engaged', 'advocate'
++                          )),
++  -- Métricas acumuladas
++  total_clicks            integer      not null default 0,
++  total_replies           integer      not null default 0,
++  contents_received       integer      not null default 0,
++  consecutive_weeks_active integer     not null default 0,
++  -- Próxima ação recomendada
++  next_action             text,
++  created_at              timestamptz  not null default now(),
++  updated_at              timestamptz  not null default now(),
++  -- Um perfil por contato por organização
++  constraint pol_invisible_funnel_contact_org_uq unique (organization_id, contact_id)
++);
++
++comment on table public.pol_invisible_funnel is
++  'Perfis no funil invisível — nurturing automático com stage, score de afinidade, classe de interação e métricas de engajamento acumulado.';
++
++-- Índices
++create index if not exists pol_invisible_funnel_org_stage_idx
++  on public.pol_invisible_funnel (organization_id, funnel_stage);
++
++create index if not exists pol_invisible_funnel_org_class_idx
++  on public.pol_invisible_funnel (organization_id, interaction_class);
++
++create index if not exists pol_invisible_funnel_contact_idx
++  on public.pol_invisible_funnel (contact_id);
++
++create index if not exists pol_invisible_funnel_org_score_idx
++  on public.pol_invisible_funnel (organization_id, funnel_score)
++  where funnel_score > 0;
++
++-- Touch updated_at
++create or replace trigger pol_invisible_funnel_touch
++  before update on public.pol_invisible_funnel
++  for each row execute function public.fn_touch_updated_at();
++
++-- RLS
++alter table public.pol_invisible_funnel enable row level security;
++
++create policy tenant_isolation_pol_invisible_funnel_all
++  on public.pol_invisible_funnel for all
++  using (organization_id = any(public.fn_user_org_ids()))
++  with check (organization_id = any(public.fn_user_org_ids()));
++
++-- ══════════════════════════════════════════════════════════════════
++-- pol_invisible_funnel_content — conteúdo do funil invisível
++--
++-- Consolida invisible_funnel_content do WR1.
++-- Peças de conteúdo que alimentam o funil: textos, vídeos, links
++-- com tema, stage alvo, formato e métricas de performance.
++-- DEVE ser criada ANTES de pol_invisible_funnel_events (FK).
++-- ══════════════════════════════════════════════════════════════════
++
++create table if not exists public.pol_invisible_funnel_content (
++  id                      uuid         primary key default gen_random_uuid(),
++  organization_id         uuid         not null references public.organizations(id) on delete cascade,
++  -- Identificação do conteúdo
++  title                   text         not null,
++  theme                   text,
++  -- Stage alvo
++  stage                   text         not null default 'awareness'
++                          check (stage in (
++                            'awareness', 'interest', 'consideration',
++                            'intent', 'evaluation', 'conversion'
++                          )),
++  -- Formato e conteúdo
++  format                  text         not null default 'text'
++                          check (format in (
++                            'text', 'image', 'video', 'link', 'carousel',
++                            'audio', 'document', 'other'
++                          )),
++  url                     text,
++  cta                     text,
++  body                    text,
++  -- Métricas de performance
++  sends                   integer      not null default 0,
++  clicks                  integer      not null default 0,
++  replies                 integer      not null default 0,
++  conversion_rate         numeric(5,2) not null default 0,
++  -- Status
++  active                  boolean      not null default true,
++  created_at              timestamptz  not null default now(),
++  updated_at              timestamptz  not null default now()
++);
++
++comment on table public.pol_invisible_funnel_content is
++  'Conteúdo do funil invisível — peças de nurturing com tema, stage alvo, formato e métricas de conversão.';
++
++-- Índices
++create index if not exists pol_invisible_funnel_content_org_stage_idx
++  on public.pol_invisible_funnel_content (organization_id, stage);
++
++create index if not exists pol_invisible_funnel_content_org_format_idx
++  on public.pol_invisible_funnel_content (organization_id, format);
++
++create index if not exists pol_invisible_funnel_content_org_active_idx
++  on public.pol_invisible_funnel_content (organization_id, active)
++  where active = true;
++
++create index if not exists pol_invisible_funnel_content_org_conversion_idx
++  on public.pol_invisible_funnel_content (organization_id, conversion_rate)
++  where conversion_rate > 0;
++
++-- Touch updated_at
++create or replace trigger pol_invisible_funnel_content_touch
++  before update on public.pol_invisible_funnel_content
++  for each row execute function public.fn_touch_updated_at();
++
++-- RLS
++alter table public.pol_invisible_funnel_content enable row level security;
++
++create policy tenant_isolation_pol_invisible_funnel_content_all
++  on public.pol_invisible_funnel_content for all
++  using (organization_id = any(public.fn_user_org_ids()))
++  with check (organization_id = any(public.fn_user_org_ids()));
++
++-- ══════════════════════════════════════════════════════════════════
++-- pol_invisible_funnel_events — eventos rastreados do funil
++--
++-- Consolida invisible_funnel_events do WR1.
++-- Cada evento registra uma interação do contato com conteúdo
++-- do funil: clique, resposta, abertura, compartilhamento etc.
++-- ══════════════════════════════════════════════════════════════════
++
++create table if not exists public.pol_invisible_funnel_events (
++  id                      uuid         primary key default gen_random_uuid(),
++  organization_id         uuid         not null references public.organizations(id) on delete cascade,
++  contact_id              uuid         not null references public.contacts(id) on delete cascade,
++  -- Evento
++  event_type              text         not null
++                          check (event_type in (
++                            'content_sent', 'content_opened', 'link_clicked',
++                            'reply_received', 'shared', 'unsubscribed',
++                            'stage_changed', 'score_updated', 'other'
++                          )),
++  content_id              uuid         references public.pol_invisible_funnel_content(id) on delete set null,
++  -- Metadados do evento
++  metadata                jsonb,
++  created_at              timestamptz  not null default now()
++);
++
++comment on table public.pol_invisible_funnel_events is
++  'Eventos rastreados do funil invisível — cliques, respostas, aberturas e mudanças de stage por contato.';
++
++-- Índices
++create index if not exists pol_invisible_funnel_events_org_contact_idx
++  on public.pol_invisible_funnel_events (organization_id, contact_id);
++
++create index if not exists pol_invisible_funnel_events_org_type_idx
++  on public.pol_invisible_funnel_events (organization_id, event_type);
++
++create index if not exists pol_invisible_funnel_events_content_idx
++  on public.pol_invisible_funnel_events (content_id)
++  where content_id is not null;
++
++create index if not exists pol_invisible_funnel_events_created_idx
++  on public.pol_invisible_funnel_events (created_at);
++
++-- RLS
++alter table public.pol_invisible_funnel_events enable row level security;
++
++create policy tenant_isolation_pol_invisible_funnel_events_all
++  on public.pol_invisible_funnel_events for all
++  using (organization_id = any(public.fn_user_org_ids()))
++  with check (organization_id = any(public.fn_user_org_ids()));
+diff --git a/supabase/migrations/20261011200300_0638_pol_surveys.sql b/supabase/migrations/20261011200300_0638_pol_surveys.sql
+new file mode 100644
+index 0000000..4e71c24
+--- /dev/null
++++ b/supabase/migrations/20261011200300_0638_pol_surveys.sql
+@@ -0,0 +1,181 @@
++-- manifest: tabelas pol_surveys, pol_survey_questions, pol_survey_responses — pesquisas de campo do War Room 2.0 com formulários públicos via token, perguntas tipadas e respostas com geolocalização
++
++-- ══════════════════════════════════════════════════════════════════
++-- pol_surveys — pesquisas de campo
++--
++-- Consolida pesquisas do WR1.
++-- Cada pesquisa tem tipo, status, período de vigência
++-- e um token público para acesso externo sem autenticação.
++-- ══════════════════════════════════════════════════════════════════
++
++create table if not exists public.pol_surveys (
++  id                      uuid         primary key default gen_random_uuid(),
++  organization_id         uuid         not null references public.organizations(id) on delete cascade,
++  -- Identificação
++  title                   text         not null,
++  description             text,
++  -- Tipo e status
++  type                    text         not null default 'field'
++                          check (type in (
++                            'field', 'online', 'phone', 'door_to_door', 'other'
++                          )),
++  status                  text         not null default 'draft'
++                          check (status in (
++                            'draft', 'active', 'paused', 'completed', 'archived'
++                          )),
++  -- Período de vigência
++  start_date              timestamptz,
++  end_date                timestamptz,
++  -- Token público (gerado server-side)
++  public_token            text         not null default replace(gen_random_uuid()::text, '-', ''),
++  created_at              timestamptz  not null default now(),
++  updated_at              timestamptz  not null default now(),
++  -- Token único por organização
++  constraint pol_surveys_public_token_uq unique (public_token)
++);
++
++comment on table public.pol_surveys is
++  'Pesquisas de campo — formulários com tipo, status, período de vigência e token público para acesso externo.';
++
++-- Índices
++create index if not exists pol_surveys_org_status_idx
++  on public.pol_surveys (organization_id, status);
++
++create index if not exists pol_surveys_org_type_idx
++  on public.pol_surveys (organization_id, type);
++
++create index if not exists pol_surveys_token_idx
++  on public.pol_surveys (public_token);
++
++create index if not exists pol_surveys_created_idx
++  on public.pol_surveys (created_at);
++
++-- Touch updated_at
++create or replace trigger pol_surveys_touch
++  before update on public.pol_surveys
++  for each row execute function public.fn_touch_updated_at();
++
++-- RLS
++alter table public.pol_surveys enable row level security;
++
++create policy tenant_isolation_pol_surveys_all
++  on public.pol_surveys for all
++  using (organization_id = any(public.fn_user_org_ids()))
++  with check (organization_id = any(public.fn_user_org_ids()));
++
++-- ══════════════════════════════════════════════════════════════════
++-- pol_survey_questions — perguntas das pesquisas
++--
++-- Consolida pesquisa_perguntas do WR1.
++-- Cada pergunta tem ordem, tema, tipo de resposta (text, choice,
++-- scale, boolean, number, date, multi_choice) e opções em jsonb.
++-- ══════════════════════════════════════════════════════════════════
++
++create table if not exists public.pol_survey_questions (
++  id                      uuid         primary key default gen_random_uuid(),
++  organization_id         uuid         not null references public.organizations(id) on delete cascade,
++  survey_id               uuid         not null references public.pol_surveys(id) on delete cascade,
++  -- Ordem e agrupamento
++  "order"                 integer      not null default 0,
++  theme                   text,
++  -- Conteúdo
++  question                text         not null,
++  response_type           text         not null default 'text'
++                          check (response_type in (
++                            'text', 'choice', 'scale', 'boolean',
++                            'number', 'date', 'multi_choice'
++                          )),
++  -- Opções para choice/multi_choice/scale
++  options                 jsonb,
++  required                boolean      not null default true,
++  created_at              timestamptz  not null default now(),
++  updated_at              timestamptz  not null default now()
++);
++
++comment on table public.pol_survey_questions is
++  'Perguntas das pesquisas — ordenadas, com tema, tipo de resposta e opções configuráveis em jsonb.';
++
++-- Índices
++create index if not exists pol_survey_questions_org_survey_idx
++  on public.pol_survey_questions (organization_id, survey_id);
++
++create index if not exists pol_survey_questions_survey_order_idx
++  on public.pol_survey_questions (survey_id, "order");
++
++-- Touch updated_at
++create or replace trigger pol_survey_questions_touch
++  before update on public.pol_survey_questions
++  for each row execute function public.fn_touch_updated_at();
++
++-- RLS
++alter table public.pol_survey_questions enable row level security;
++
++create policy tenant_isolation_pol_survey_questions_all
++  on public.pol_survey_questions for all
++  using (organization_id = any(public.fn_user_org_ids()))
++  with check (organization_id = any(public.fn_user_org_ids()));
++
++-- ══════════════════════════════════════════════════════════════════
++-- pol_survey_responses — respostas coletadas
++--
++-- Consolida pesquisa_respostas do WR1.
++-- Cada resposta associa pesquisa + contato (opcional para anônimas),
++-- com token de sessão, respostas em jsonb, duração, geo e referral.
++-- ══════════════════════════════════════════════════════════════════
++
++create table if not exists public.pol_survey_responses (
++  id                      uuid         primary key default gen_random_uuid(),
++  organization_id         uuid         not null references public.organizations(id) on delete cascade,
++  survey_id               uuid         not null references public.pol_surveys(id) on delete cascade,
++  -- Respondente (nullable para respostas anônimas)
++  contact_id              uuid         references public.contacts(id) on delete set null,
++  -- Token de sessão da resposta
++  token                   text         not null default replace(gen_random_uuid()::text, '-', ''),
++  -- Respostas: { "question_id": "resposta" }
++  answers                 jsonb        not null default '{}'::jsonb,
++  -- Status
++  completed               boolean      not null default false,
++  -- Métricas
++  duration_seconds        integer,
++  -- Geolocalização
++  city                    text,
++  state                   char(2),
++  -- Referral
++  shared_by               uuid         references auth.users(id),
++  created_at              timestamptz  not null default now(),
++  updated_at              timestamptz  not null default now()
++);
++
++comment on table public.pol_survey_responses is
++  'Respostas de pesquisas — jsonb com respostas por pergunta, duração, geolocalização e referral.';
++
++-- Índices
++create index if not exists pol_survey_responses_org_survey_idx
++  on public.pol_survey_responses (organization_id, survey_id);
++
++create index if not exists pol_survey_responses_survey_completed_idx
++  on public.pol_survey_responses (survey_id, completed)
++  where completed = true;
++
++create index if not exists pol_survey_responses_contact_idx
++  on public.pol_survey_responses (contact_id)
++  where contact_id is not null;
++
++create index if not exists pol_survey_responses_token_idx
++  on public.pol_survey_responses (token);
++
++create index if not exists pol_survey_responses_created_idx
++  on public.pol_survey_responses (created_at);
++
++-- Touch updated_at
++create or replace trigger pol_survey_responses_touch
++  before update on public.pol_survey_responses
++  for each row execute function public.fn_touch_updated_at();
++
++-- RLS
++alter table public.pol_survey_responses enable row level security;
++
++create policy tenant_isolation_pol_survey_responses_all
++  on public.pol_survey_responses for all
++  using (organization_id = any(public.fn_user_org_ids()))
++  with check (organization_id = any(public.fn_user_org_ids()));
+diff --git a/supabase/migrations/20261011200400_0639_pol_intelligence.sql b/supabase/migrations/20261011200400_0639_pol_intelligence.sql
+new file mode 100644
+index 0000000..1c5f8aa
+--- /dev/null
++++ b/supabase/migrations/20261011200400_0639_pol_intelligence.sql
+@@ -0,0 +1,313 @@
++-- manifest: tabelas pol_decision_signals, pol_alerts, pol_crisis_predictions, pol_fake_news, pol_engagement_weights — inteligência e alertas do War Room 2.0, consolidando motor de decisão, alertas unificados, predições de crise, fake news e pesos de engajamento
++
++-- ══════════════════════════════════════════════════════════════════
++-- pol_decision_signals — sinais para o motor de decisão
++--
++-- Consolida decision_signals do WR1.
++-- Cada sinal representa um dado de entrada para decisões
++-- automatizadas: pesquisas, redes sociais, denúncias, etc.
++-- ══════════════════════════════════════════════════════════════════
++
++create table if not exists public.pol_decision_signals (
++  id                      uuid         primary key default gen_random_uuid(),
++  organization_id         uuid         not null references public.organizations(id) on delete cascade,
++  -- Tipo e fonte do sinal
++  signal_type             text         not null
++                          check (signal_type in (
++                            'survey_result', 'social_mention', 'sentiment_shift',
++                            'territory_change', 'opponent_action', 'media_coverage',
++                            'engagement_spike', 'crisis_indicator', 'other'
++                          )),
++  source                  text         not null,
++  -- Entidade referenciada (polimórfico)
++  entity_type             text,
++  entity_id               uuid,
++  -- Severidade e payload
++  severity                text         not null default 'info'
++                          check (severity in (
++                            'info', 'low', 'medium', 'high', 'critical'
++                          )),
++  data                    jsonb        not null default '{}'::jsonb,
++  -- Processamento
++  processed_at            timestamptz,
++  action_taken            text,
++  created_at              timestamptz  not null default now()
++);
++
++comment on table public.pol_decision_signals is
++  'Sinais para o motor de decisão — entradas de pesquisas, redes sociais, sentimento, territórios e adversários com severidade e processamento.';
++
++-- Índices
++create index if not exists pol_decision_signals_org_type_idx
++  on public.pol_decision_signals (organization_id, signal_type);
++
++create index if not exists pol_decision_signals_org_severity_idx
++  on public.pol_decision_signals (organization_id, severity);
++
++create index if not exists pol_decision_signals_org_unprocessed_idx
++  on public.pol_decision_signals (organization_id, created_at)
++  where processed_at is null;
++
++create index if not exists pol_decision_signals_entity_idx
++  on public.pol_decision_signals (entity_type, entity_id)
++  where entity_id is not null;
++
++create index if not exists pol_decision_signals_created_idx
++  on public.pol_decision_signals (created_at);
++
++-- RLS
++alter table public.pol_decision_signals enable row level security;
++
++create policy tenant_isolation_pol_decision_signals_all
++  on public.pol_decision_signals for all
++  using (organization_id = any(public.fn_user_org_ids()))
++  with check (organization_id = any(public.fn_user_org_ids()));
++
++-- ══════════════════════════════════════════════════════════════════
++-- pol_alerts — sistema unificado de alertas
++--
++-- Consolida 6 tabelas de alertas do WR1 (alerts, digital_alerts,
++-- monitoring_alerts, growth_alerts, momentum_alerts + outros).
++-- Cada alerta tem tipo, severidade, fonte polimórfica e status
++-- com reconhecimento por operador.
++-- ══════════════════════════════════════════════════════════════════
++
++create table if not exists public.pol_alerts (
++  id                      uuid         primary key default gen_random_uuid(),
++  organization_id         uuid         not null references public.organizations(id) on delete cascade,
++  -- Tipo e severidade
++  alert_type              text         not null
++                          check (alert_type in (
++                            'sentiment', 'engagement', 'crisis', 'opponent',
++                            'territory', 'fake_news', 'growth', 'momentum',
++                            'media', 'survey', 'custom'
++                          )),
++  severity                text         not null default 'medium'
++                          check (severity in (
++                            'info', 'low', 'medium', 'high', 'critical'
++                          )),
++  -- Fonte polimórfica
++  source_type             text,
++  source_id               uuid,
++  -- Conteúdo
++  title                   text         not null,
++  description             text,
++  -- Status e reconhecimento
++  status                  text         not null default 'open'
++                          check (status in (
++                            'open', 'acknowledged', 'investigating',
++                            'resolved', 'dismissed'
++                          )),
++  acknowledged_by         uuid         references auth.users(id),
++  acknowledged_at         timestamptz,
++  created_at              timestamptz  not null default now(),
++  updated_at              timestamptz  not null default now()
++);
++
++comment on table public.pol_alerts is
++  'Sistema unificado de alertas — consolida 6 tabelas do WR1. Tipo, severidade, fonte polimórfica e status com reconhecimento.';
++
++-- Índices
++create index if not exists pol_alerts_org_status_idx
++  on public.pol_alerts (organization_id, status);
++
++create index if not exists pol_alerts_org_type_idx
++  on public.pol_alerts (organization_id, alert_type);
++
++create index if not exists pol_alerts_org_severity_idx
++  on public.pol_alerts (organization_id, severity);
++
++create index if not exists pol_alerts_org_open_idx
++  on public.pol_alerts (organization_id, created_at)
++  where status = 'open';
++
++create index if not exists pol_alerts_source_idx
++  on public.pol_alerts (source_type, source_id)
++  where source_id is not null;
++
++create index if not exists pol_alerts_created_idx
++  on public.pol_alerts (created_at);
++
++-- Touch updated_at
++create or replace trigger pol_alerts_touch
++  before update on public.pol_alerts
++  for each row execute function public.fn_touch_updated_at();
++
++-- RLS
++alter table public.pol_alerts enable row level security;
++
++create policy tenant_isolation_pol_alerts_all
++  on public.pol_alerts for all
++  using (organization_id = any(public.fn_user_org_ids()))
++  with check (organization_id = any(public.fn_user_org_ids()));
++
++-- ══════════════════════════════════════════════════════════════════
++-- pol_crisis_predictions — predições de crise por IA
++--
++-- Consolida crisis_predictions do WR1.
++-- Cada predição tem tipo, probabilidade, impacto, descrição,
++-- ações recomendadas e expiração.
++-- ══════════════════════════════════════════════════════════════════
++
++create table if not exists public.pol_crisis_predictions (
++  id                      uuid         primary key default gen_random_uuid(),
++  organization_id         uuid         not null references public.organizations(id) on delete cascade,
++  -- Tipo e métricas
++  prediction_type         text         not null
++                          check (prediction_type in (
++                            'reputation', 'electoral', 'media', 'social',
++                            'legal', 'political', 'security', 'other'
++                          )),
++  probability             numeric(5,2) not null default 0
++                          check (probability >= 0 and probability <= 100),
++  impact                  text         not null default 'medium'
++                          check (impact in (
++                            'negligible', 'low', 'medium', 'high', 'catastrophic'
++                          )),
++  -- Descrição e ações
++  description             text         not null,
++  recommended_actions     jsonb,
++  -- Payload extra
++  metadata                jsonb,
++  -- Vigência
++  expires_at              timestamptz,
++  created_at              timestamptz  not null default now(),
++  updated_at              timestamptz  not null default now()
++);
++
++comment on table public.pol_crisis_predictions is
++  'Predições de crise por IA — tipo, probabilidade, impacto e ações recomendadas com expiração.';
++
++-- Índices
++create index if not exists pol_crisis_predictions_org_type_idx
++  on public.pol_crisis_predictions (organization_id, prediction_type);
++
++create index if not exists pol_crisis_predictions_org_impact_idx
++  on public.pol_crisis_predictions (organization_id, impact);
++
++create index if not exists pol_crisis_predictions_org_active_idx
++  on public.pol_crisis_predictions (organization_id, expires_at)
++  where expires_at is null or expires_at > now();
++
++create index if not exists pol_crisis_predictions_created_idx
++  on public.pol_crisis_predictions (created_at);
++
++-- Touch updated_at
++create or replace trigger pol_crisis_predictions_touch
++  before update on public.pol_crisis_predictions
++  for each row execute function public.fn_touch_updated_at();
++
++-- RLS
++alter table public.pol_crisis_predictions enable row level security;
++
++create policy tenant_isolation_pol_crisis_predictions_all
++  on public.pol_crisis_predictions for all
++  using (organization_id = any(public.fn_user_org_ids()))
++  with check (organization_id = any(public.fn_user_org_ids()));
++
++-- ══════════════════════════════════════════════════════════════════
++-- pol_fake_news — registro de fake news detectadas
++--
++-- Consolida fake_news_cases do WR1.
++-- Cada caso tem título, fonte, plataforma, severidade,
++-- status de resposta e contra-narrativa preparada.
++-- ══════════════════════════════════════════════════════════════════
++
++create table if not exists public.pol_fake_news (
++  id                      uuid         primary key default gen_random_uuid(),
++  organization_id         uuid         not null references public.organizations(id) on delete cascade,
++  -- Identificação
++  title                   text         not null,
++  description             text,
++  -- Fonte e plataforma
++  source_url              text,
++  platform                text
++                          check (platform is null or platform in (
++                            'whatsapp', 'facebook', 'instagram', 'twitter',
++                            'tiktok', 'youtube', 'telegram', 'website',
++                            'radio', 'tv', 'print', 'other'
++                          )),
++  -- Status e severidade
++  status                  text         not null default 'detected'
++                          check (status in (
++                            'detected', 'analyzing', 'confirmed',
++                            'responding', 'contained', 'resolved'
++                          )),
++  severity                text         not null default 'medium'
++                          check (severity in (
++                            'low', 'medium', 'high', 'critical'
++                          )),
++  -- Contra-narrativa
++  counter_narrative       text,
++  created_at              timestamptz  not null default now(),
++  updated_at              timestamptz  not null default now()
++);
++
++comment on table public.pol_fake_news is
++  'Registro de fake news — casos detectados com fonte, plataforma, severidade, status de resposta e contra-narrativa.';
++
++-- Índices
++create index if not exists pol_fake_news_org_status_idx
++  on public.pol_fake_news (organization_id, status);
++
++create index if not exists pol_fake_news_org_severity_idx
++  on public.pol_fake_news (organization_id, severity);
++
++create index if not exists pol_fake_news_org_platform_idx
++  on public.pol_fake_news (organization_id, platform)
++  where platform is not null;
++
++create index if not exists pol_fake_news_created_idx
++  on public.pol_fake_news (created_at);
++
++-- Touch updated_at
++create or replace trigger pol_fake_news_touch
++  before update on public.pol_fake_news
++  for each row execute function public.fn_touch_updated_at();
++
++-- RLS
++alter table public.pol_fake_news enable row level security;
++
++create policy tenant_isolation_pol_fake_news_all
++  on public.pol_fake_news for all
++  using (organization_id = any(public.fn_user_org_ids()))
++  with check (organization_id = any(public.fn_user_org_ids()));
++
++-- ══════════════════════════════════════════════════════════════════
++-- pol_engagement_weights — pesos de tipos de engajamento
++--
++-- Consolida engagement_event_weights do WR1.
++-- Tabela simples: tipo de evento → peso numérico para scoring.
++-- ══════════════════════════════════════════════════════════════════
++
++create table if not exists public.pol_engagement_weights (
++  id                      uuid         primary key default gen_random_uuid(),
++  organization_id         uuid         not null references public.organizations(id) on delete cascade,
++  -- Tipo e peso
++  event_type              text         not null,
++  weight                  numeric(5,2) not null default 1.0,
++  created_at              timestamptz  not null default now(),
++  updated_at              timestamptz  not null default now(),
++  -- Um peso por tipo de evento por organização
++  constraint pol_engagement_weights_type_org_uq unique (organization_id, event_type)
++);
++
++comment on table public.pol_engagement_weights is
++  'Pesos de engajamento — peso numérico por tipo de evento para scoring de contatos.';
++
++-- Índices
++create index if not exists pol_engagement_weights_org_idx
++  on public.pol_engagement_weights (organization_id);
++
++-- Touch updated_at
++create or replace trigger pol_engagement_weights_touch
++  before update on public.pol_engagement_weights
++  for each row execute function public.fn_touch_updated_at();
++
++-- RLS
++alter table public.pol_engagement_weights enable row level security;
++
++create policy tenant_isolation_pol_engagement_weights_all
++  on public.pol_engagement_weights for all
++  using (organization_id = any(public.fn_user_org_ids()))
++  with check (organization_id = any(public.fn_user_org_ids()));
+-- 
+2.43.0
+

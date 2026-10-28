@@ -17,6 +17,12 @@ import { ROLE_RANK, type Role } from "@/lib/auth/types";
 import { createClient } from "@/lib/supabase/server";
 import { clonarVoz, gerarAudio } from "@/lib/voz/elevenlabs";
 import { lerVozConfig, vozArmada } from "@/lib/voz/config";
+import {
+  CHAVE_GABINETE,
+  CHAVE_VOZ_SPEED,
+  clampVozSpeed,
+  lerVozSpeed,
+} from "@/lib/voz/velocidade";
 
 async function adminDaOrg() {
   const user = await requireAuth();
@@ -99,9 +105,12 @@ export async function alternarVozAtiva(ativo: boolean): Promise<{ ok: boolean; e
   return { ok: true };
 }
 
-/** Gera um áudio de teste (base64 data URL) pra ouvir a qualidade do clone. */
+/** Gera um áudio de teste (base64 data URL) pra ouvir a qualidade do clone.
+ * `speed` opcional: se vier, usa pra TESTAR a velocidade na prévia; senão, usa
+ * a velocidade salva da org. */
 export async function gerarPreviaVoz(
   texto: string,
+  speed?: number,
 ): Promise<{ ok: boolean; audioDataUrl?: string; erro?: string }> {
   const ctx = await adminDaOrg();
   if ("erro" in ctx) return { ok: false, erro: ctx.erro };
@@ -110,10 +119,35 @@ export async function gerarPreviaVoz(
   const cfg = await lerVozConfig(db, ctx.org.orgId);
   if (!cfg.voiceId) return { ok: false, erro: "Clone a voz primeiro." };
 
-  const r = await gerarAudio(cfg.voiceId, texto);
+  let velocidade: number;
+  if (typeof speed === "number") {
+    velocidade = clampVozSpeed(speed);
+  } else {
+    const { data: orgRow } = await db.from("organizations").select("settings").eq("id", ctx.org.orgId).maybeSingle();
+    velocidade = lerVozSpeed(orgRow?.settings);
+  }
+
+  const r = await gerarAudio(cfg.voiceId, texto, velocidade);
   if (!r.ok) return { ok: false, erro: r.erro };
   const base64 = Buffer.from(r.audio).toString("base64");
   return { ok: true, audioDataUrl: `data:${r.contentType};base64,${base64}` };
+}
+
+/** Salva a velocidade preferida da voz (vale pra prévia e pros envios).
+ * Mescla em `organizations.settings.gabinete.voz_speed` sem pisar no resto. */
+export async function definirVozSpeed(speed: number): Promise<{ ok: boolean; erro?: string }> {
+  const ctx = await adminDaOrg();
+  if ("erro" in ctx) return { ok: false, erro: ctx.erro };
+  const db = await createClient();
+
+  const { data: orgRow } = await db.from("organizations").select("settings").eq("id", ctx.org.orgId).maybeSingle();
+  const atual = (orgRow?.settings && typeof orgRow.settings === "object" ? orgRow.settings : {}) as Record<string, unknown>;
+  const gab = (atual[CHAVE_GABINETE] && typeof atual[CHAVE_GABINETE] === "object" ? atual[CHAVE_GABINETE] : {}) as Record<string, unknown>;
+  const novo = { ...atual, [CHAVE_GABINETE]: { ...gab, [CHAVE_VOZ_SPEED]: clampVozSpeed(speed) } };
+
+  const { error } = await db.from("organizations").update({ settings: novo }).eq("id", ctx.org.orgId);
+  if (error) return { ok: false, erro: error.message };
+  return { ok: true };
 }
 
 /** Lido pela tela (status atual). */
@@ -122,5 +156,6 @@ export async function lerStatusVoz() {
   if ("erro" in ctx) return { erro: ctx.erro };
   const db = await createClient();
   const cfg = await lerVozConfig(db, ctx.org.orgId);
-  return { cfg, armada: vozArmada(cfg) };
+  const { data: orgRow } = await db.from("organizations").select("settings").eq("id", ctx.org.orgId).maybeSingle();
+  return { cfg, armada: vozArmada(cfg), velocidade: lerVozSpeed(orgRow?.settings) };
 }

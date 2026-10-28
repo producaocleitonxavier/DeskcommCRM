@@ -1,0 +1,4131 @@
+From 3020c8e01cb631696dc2e98e4333fd8850587128 Mon Sep 17 00:00:00 2001
+From: Claude <noreply@anthropic.com>
+Date: Sun, 11 Oct 2026 00:03:38 +0000
+Subject: [PATCH] =?UTF-8?q?feat:=20add=20Fase=202=20=E2=80=94=20Social=20+?=
+ =?UTF-8?q?=20Advers=C3=A1rios=20+=20Narrativa=20(War=20Room=202.0)?=
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+12 novas tabelas pol_* em 3 migrations (0632-0634):
+- Social: pol_social_profiles, pol_social_snapshots, pol_social_posts, pol_social_intelligence
+- Adversários: pol_opponents, pol_opponent_snapshots, pol_opponent_posts, pol_opponent_signals
+- Narrativas: pol_narratives, pol_narrative_signals, pol_generated_content, pol_video_analyses
+
+8 rotas API REST /api/v1/ (CRUD completo):
+- pol-social-profiles, pol-opponents, pol-narratives, pol-content-generator
+
+4 páginas UI do módulo político:
+- /app/politico/social — monitoramento de perfis sociais
+- /app/politico/adversarios — painel de oponentes com risco e ameaça
+- /app/politico/narrativas — radar de narrativas ativas
+- /app/politico/motor-viral — geração de conteúdo IA
+
+Hub político atualizado com links para as 4 novas seções.
+Catálogo de navegação atualizado (4 entradas em "Campanha política").
+Baseline appendix idempotente para self-host (tripla de migrations cumprida).
+
+Co-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_01NViZYR2ZtGJLWjE9EiKwya
+---
+ .../v1/pol-content-generator/[id]/route.ts    | 233 +++++++++
+ app/api/v1/pol-content-generator/route.ts     | 192 ++++++++
+ app/api/v1/pol-narratives/[id]/route.ts       | 222 +++++++++
+ app/api/v1/pol-narratives/route.ts            | 179 +++++++
+ app/api/v1/pol-opponents/[id]/route.ts        | 212 +++++++++
+ app/api/v1/pol-opponents/route.ts             | 167 +++++++
+ app/api/v1/pol-social-profiles/[id]/route.ts  | 223 +++++++++
+ app/api/v1/pol-social-profiles/route.ts       | 175 +++++++
+ app/app/politico/adversarios/page.tsx         | 269 +++++++++++
+ app/app/politico/motor-viral/page.tsx         | 319 +++++++++++++
+ app/app/politico/narrativas/page.tsx          | 301 ++++++++++++
+ app/app/politico/page.tsx                     |  32 ++
+ app/app/politico/social/page.tsx              | 260 ++++++++++
+ lib/navigation/catalogo.ts                    |  40 ++
+ supabase/baseline.sql                         | 447 ++++++++++++++++++
+ .../20261010200200_0632_pol_social.sql        | 226 +++++++++
+ .../20261010200300_0633_pol_opponents.sql     | 207 ++++++++
+ .../20261010200400_0634_pol_narratives.sql    | 239 ++++++++++
+ 18 files changed, 3943 insertions(+)
+ create mode 100644 app/api/v1/pol-content-generator/[id]/route.ts
+ create mode 100644 app/api/v1/pol-content-generator/route.ts
+ create mode 100644 app/api/v1/pol-narratives/[id]/route.ts
+ create mode 100644 app/api/v1/pol-narratives/route.ts
+ create mode 100644 app/api/v1/pol-opponents/[id]/route.ts
+ create mode 100644 app/api/v1/pol-opponents/route.ts
+ create mode 100644 app/api/v1/pol-social-profiles/[id]/route.ts
+ create mode 100644 app/api/v1/pol-social-profiles/route.ts
+ create mode 100644 app/app/politico/adversarios/page.tsx
+ create mode 100644 app/app/politico/motor-viral/page.tsx
+ create mode 100644 app/app/politico/narrativas/page.tsx
+ create mode 100644 app/app/politico/social/page.tsx
+ create mode 100644 supabase/migrations/20261010200200_0632_pol_social.sql
+ create mode 100644 supabase/migrations/20261010200300_0633_pol_opponents.sql
+ create mode 100644 supabase/migrations/20261010200400_0634_pol_narratives.sql
+
+diff --git a/app/api/v1/pol-content-generator/[id]/route.ts b/app/api/v1/pol-content-generator/[id]/route.ts
+new file mode 100644
+index 0000000..9ed95fc
+--- /dev/null
++++ b/app/api/v1/pol-content-generator/[id]/route.ts
+@@ -0,0 +1,233 @@
++/**
++ * GET|PATCH|DELETE /api/v1/pol-content-generator/[id]
++ *
++ * Operacoes em um conteudo gerado especifico.
++ *
++ * GET    — detalhe do conteudo (viewer+)
++ * PATCH  — atualizar parcialmente (manager+)
++ * DELETE — hard delete (admin only, dados de tenant)
++ *
++ * Seguranca: filtramos organization_id do cookie/JWT — nunca do body.
++ */
++
++import { randomUUID } from "node:crypto";
++import { z } from "zod";
++import { NextResponse, type NextRequest } from "next/server";
++
++import { ok, fail } from "@/lib/api/wrappers";
++import { requireRole } from "@/lib/auth/require-role";
++import { createAdminClient } from "@/lib/supabase/admin";
++import { requireSupportWrite } from "@/lib/impersonate/support";
++
++export const dynamic = "force-dynamic";
++export const runtime = "nodejs";
++
++interface RouteCtx {
++  params: Promise<{ id: string }>;
++}
++
++// -- Validacao ----------------------------------------------------------------
++
++const PLATFORMS = [
++  "instagram",
++  "facebook",
++  "twitter",
++  "tiktok",
++  "youtube",
++  "linkedin",
++  "whatsapp",
++  "news",
++  "cross_platform",
++] as const;
++
++const CONTENT_TYPES = [
++  "video_script",
++  "caption",
++  "carousel",
++  "story",
++  "reel_script",
++  "live_script",
++  "article",
++  "thread",
++  "other",
++] as const;
++
++const GENERATION_SOURCES = [
++  "manual",
++  "ai_auto",
++  "ai_assisted",
++  "template",
++] as const;
++
++const atualizarConteudoSchema = z
++  .object({
++    title: z.string().min(1).max(500),
++    topic: z.string().min(1).max(500),
++    target_audience: z.string().max(500).nullable(),
++    content_type: z.enum(CONTENT_TYPES),
++    script: z.string().max(10000).nullable(),
++    caption: z.string().max(5000).nullable(),
++    hashtags: z.array(z.string().max(100)).nullable(),
++    cta: z.string().max(500).nullable(),
++    platform: z.enum(PLATFORMS).nullable(),
++    viral_score: z.number().min(0).max(100).nullable(),
++    quality_score: z.number().min(0).max(100).nullable(),
++    generation_source: z.enum(GENERATION_SOURCES),
++  })
++  .partial(); // PATCH = todos opcionais
++
++// -- Helpers ------------------------------------------------------------------
++
++async function buscarConteudo(db: ReturnType<typeof createAdminClient>, id: string, organizationId: string) {
++  return db
++    .from("pol_generated_content")
++    .select("*")
++    .eq("id", id)
++    .eq("organization_id", organizationId)
++    .single();
++}
++
++// -- GET ----------------------------------------------------------------------
++
++export async function GET(req: NextRequest, ctx: RouteCtx): Promise<NextResponse> {
++  const requestId = randomUUID();
++  const { id } = await ctx.params;
++
++  const authz = await requireRole("viewer", { requestId, resource: "pol_generated_content" });
++  if (!authz.ok) return authz.response;
++
++  const db = createAdminClient();
++  const { data: conteudo, error } = await buscarConteudo(db, id, authz.organizationId);
++
++  if (error || !conteudo) {
++    return fail("not_found", "Conteudo nao encontrado", 404, { requestId });
++  }
++
++  return ok({ pol_generated_content: conteudo }, { headers: { "x-request-id": requestId } });
++}
++
++// -- PATCH --------------------------------------------------------------------
++
++export async function PATCH(req: NextRequest, ctx: RouteCtx): Promise<NextResponse> {
++  const requestId = randomUUID();
++  const { id } = await ctx.params;
++
++  const authz = await requireRole("manager", { requestId, resource: "pol_generated_content" });
++  if (!authz.ok) return authz.response;
++
++  const { organizationId, userId } = authz;
++
++  const guardaSuporteWrite = await requireSupportWrite({
++    requestId,
++    resource: "pol_generated_content.update",
++  });
++  if (!guardaSuporteWrite.ok) return guardaSuporteWrite.response;
++
++  let body: unknown;
++  try {
++    body = await req.json();
++  } catch {
++    return fail("bad_request", "JSON invalido", 400, { requestId });
++  }
++
++  const parsed = atualizarConteudoSchema.safeParse(body);
++  if (!parsed.success) {
++    return fail("validation_error", "Dados invalidos", 422, {
++      requestId,
++      details: parsed.error.flatten(),
++    });
++  }
++
++  if (Object.keys(parsed.data).length === 0) {
++    return fail("bad_request", "Nenhum campo para atualizar", 400, { requestId });
++  }
++
++  const db = createAdminClient();
++
++  // Verificar existencia + tenant
++  const { data: existente, error: errBusca } = await db
++    .from("pol_generated_content")
++    .select("id")
++    .eq("id", id)
++    .eq("organization_id", organizationId)
++    .single();
++
++  if (errBusca || !existente) {
++    return fail("not_found", "Conteudo nao encontrado", 404, { requestId });
++  }
++
++  const { data: atualizado, error: errUpdate } = await db
++    .from("pol_generated_content")
++    .update(parsed.data)
++    .eq("id", id)
++    .eq("organization_id", organizationId)
++    .select()
++    .single();
++
++  if (errUpdate) {
++    return fail("internal_error", "Erro ao atualizar conteudo", 500, { requestId });
++  }
++
++  // Audit log
++  await db.from("api_audit_log").insert({
++    organization_id: organizationId,
++    user_id: userId,
++    action: "pol_generated_content.update",
++    resource_id: id,
++    metadata: { campos_alterados: Object.keys(parsed.data) },
++  });
++
++  return ok({ pol_generated_content: atualizado }, { headers: { "x-request-id": requestId } });
++}
++
++// -- DELETE -------------------------------------------------------------------
++
++export async function DELETE(req: NextRequest, ctx: RouteCtx): Promise<NextResponse> {
++  const requestId = randomUUID();
++  const { id } = await ctx.params;
++
++  const authz = await requireRole("admin", { requestId, resource: "pol_generated_content" });
++  if (!authz.ok) return authz.response;
++
++  const { organizationId, userId } = authz;
++
++  const guardaSuporteWrite = await requireSupportWrite({
++    requestId,
++    resource: "pol_generated_content.delete",
++  });
++  if (!guardaSuporteWrite.ok) return guardaSuporteWrite.response;
++
++  const db = createAdminClient();
++
++  const { data: existente, error: errBusca } = await db
++    .from("pol_generated_content")
++    .select("id, title")
++    .eq("id", id)
++    .eq("organization_id", organizationId)
++    .single();
++
++  if (errBusca || !existente) {
++    return fail("not_found", "Conteudo nao encontrado", 404, { requestId });
++  }
++
++  const { error: errDelete } = await db
++    .from("pol_generated_content")
++    .delete()
++    .eq("id", id)
++    .eq("organization_id", organizationId);
++
++  if (errDelete) {
++    return fail("internal_error", "Erro ao deletar conteudo", 500, { requestId });
++  }
++
++  // Audit log
++  await db.from("api_audit_log").insert({
++    organization_id: organizationId,
++    user_id: userId,
++    action: "pol_generated_content.delete",
++    resource_id: id,
++    metadata: { title: existente.title },
++  });
++
++  return ok({ deleted: true }, { headers: { "x-request-id": requestId } });
++}
+diff --git a/app/api/v1/pol-content-generator/route.ts b/app/api/v1/pol-content-generator/route.ts
+new file mode 100644
+index 0000000..1c9b6dd
+--- /dev/null
++++ b/app/api/v1/pol-content-generator/route.ts
+@@ -0,0 +1,192 @@
++/**
++ * GET|POST /api/v1/pol-content-generator
++ *
++ * CRUD de conteudo gerado para campanhas politicas.
++ *
++ * GET  — lista pol_generated_content da organizacao. Aceita ?content_type=, ?platform=, ?generation_source=.
++ *        Paginacao com limit/offset. Ordenado por created_at desc.
++ * POST — cria um novo conteudo. Requer role manager.
++ *
++ * Seguranca: organizacao resolvida do cookie/JWT (fonte confiavel). Nunca do body.
++ */
++
++import { randomUUID } from "node:crypto";
++import { z } from "zod";
++import { NextResponse, type NextRequest } from "next/server";
++
++import { ok, fail } from "@/lib/api/wrappers";
++import { requireRole } from "@/lib/auth/require-role";
++import { createAdminClient } from "@/lib/supabase/admin";
++import { requireSupportWrite } from "@/lib/impersonate/support";
++
++export const dynamic = "force-dynamic";
++export const runtime = "nodejs";
++
++// -- Validacao ----------------------------------------------------------------
++
++const PLATFORMS = [
++  "instagram",
++  "facebook",
++  "twitter",
++  "tiktok",
++  "youtube",
++  "linkedin",
++  "whatsapp",
++  "news",
++  "cross_platform",
++] as const;
++
++const CONTENT_TYPES = [
++  "video_script",
++  "caption",
++  "carousel",
++  "story",
++  "reel_script",
++  "live_script",
++  "article",
++  "thread",
++  "other",
++] as const;
++
++const GENERATION_SOURCES = [
++  "manual",
++  "ai_auto",
++  "ai_assisted",
++  "template",
++] as const;
++
++const criarConteudoSchema = z.object({
++  title: z.string().min(1).max(500),
++  topic: z.string().min(1).max(500),
++  target_audience: z.string().max(500).nullable().optional(),
++  content_type: z.enum(CONTENT_TYPES).default("other"),
++  script: z.string().max(10000).nullable().optional(),
++  caption: z.string().max(5000).nullable().optional(),
++  hashtags: z.array(z.string().max(100)).nullable().optional(),
++  cta: z.string().max(500).nullable().optional(),
++  platform: z.enum(PLATFORMS).nullable().optional(),
++  viral_score: z.number().min(0).max(100).nullable().optional(),
++  quality_score: z.number().min(0).max(100).nullable().optional(),
++  generation_source: z.enum(GENERATION_SOURCES).default("manual"),
++});
++
++// -- GET — listar conteudo gerado ---------------------------------------------
++
++export async function GET(req: NextRequest): Promise<NextResponse> {
++  const requestId = randomUUID();
++
++  const authz = await requireRole("viewer", { requestId, resource: "pol_generated_content" });
++  if (!authz.ok) return authz.response;
++
++  const { organizationId } = authz;
++  const db = createAdminClient();
++  const params = req.nextUrl.searchParams;
++
++  let query = db
++    .from("pol_generated_content")
++    .select(
++      "id, title, topic, target_audience, content_type, script, caption, hashtags, cta, platform, viral_score, quality_score, generation_source, created_at, updated_at",
++    )
++    .eq("organization_id", organizationId)
++    .order("created_at", { ascending: false });
++
++  // Filtros opcionais
++  const contentType = params.get("content_type");
++  if (contentType) query = query.eq("content_type", contentType);
++
++  const platform = params.get("platform");
++  if (platform) query = query.eq("platform", platform);
++
++  const generationSource = params.get("generation_source");
++  if (generationSource) query = query.eq("generation_source", generationSource);
++
++  // Paginacao simples
++  const limit = Math.min(parseInt(params.get("limit") ?? "50", 10), 100);
++  const offset = parseInt(params.get("offset") ?? "0", 10);
++  query = query.range(offset, offset + limit - 1);
++
++  const { data, error, count } = await query;
++
++  if (error) {
++    return fail("internal_error", "Erro ao buscar pol_generated_content", 500, { requestId });
++  }
++
++  return ok(
++    { pol_generated_content: data ?? [] },
++    {
++      headers: { "x-request-id": requestId },
++      meta: { total: count ?? (data?.length ?? 0), limit, offset },
++    },
++  );
++}
++
++// -- POST — criar conteudo ----------------------------------------------------
++
++export async function POST(req: NextRequest): Promise<NextResponse> {
++  const requestId = randomUUID();
++
++  const authz = await requireRole("manager", { requestId, resource: "pol_generated_content" });
++  if (!authz.ok) return authz.response;
++
++  const { organizationId, userId } = authz;
++
++  const guardaSuporteWrite = await requireSupportWrite({ requestId, resource: "pol_generated_content.create" });
++  if (!guardaSuporteWrite.ok) return guardaSuporteWrite.response;
++
++  let body: unknown;
++  try {
++    body = await req.json();
++  } catch {
++    return fail("bad_request", "JSON invalido", 400, { requestId });
++  }
++
++  const parsed = criarConteudoSchema.safeParse(body);
++  if (!parsed.success) {
++    return fail("validation_error", "Dados invalidos", 422, {
++      requestId,
++      details: parsed.error.flatten(),
++    });
++  }
++
++  const db = createAdminClient();
++
++  const { data: conteudo, error } = await db
++    .from("pol_generated_content")
++    .insert({
++      organization_id: organizationId,
++      title: parsed.data.title,
++      topic: parsed.data.topic,
++      target_audience: parsed.data.target_audience ?? null,
++      content_type: parsed.data.content_type,
++      script: parsed.data.script ?? null,
++      caption: parsed.data.caption ?? null,
++      hashtags: parsed.data.hashtags ?? null,
++      cta: parsed.data.cta ?? null,
++      platform: parsed.data.platform ?? null,
++      viral_score: parsed.data.viral_score ?? null,
++      quality_score: parsed.data.quality_score ?? null,
++      generation_source: parsed.data.generation_source,
++    })
++    .select()
++    .single();
++
++  if (error) {
++    if (error.code === "23505") {
++      return fail("conflict", "Conteudo duplicado nesta organizacao", 409, {
++        requestId,
++      });
++    }
++    return fail("internal_error", "Erro ao criar conteudo", 500, { requestId });
++  }
++
++  // Audit log
++  await db.from("api_audit_log").insert({
++    organization_id: organizationId,
++    user_id: userId,
++    action: "pol_generated_content.create",
++    resource_id: conteudo.id,
++    metadata: { title: conteudo.title, content_type: conteudo.content_type, generation_source: conteudo.generation_source },
++  });
++
++  return ok({ pol_generated_content: conteudo }, { status: 201, headers: { "x-request-id": requestId } });
++}
+diff --git a/app/api/v1/pol-narratives/[id]/route.ts b/app/api/v1/pol-narratives/[id]/route.ts
+new file mode 100644
+index 0000000..a3b5225
+--- /dev/null
++++ b/app/api/v1/pol-narratives/[id]/route.ts
+@@ -0,0 +1,222 @@
++/**
++ * GET|PATCH|DELETE /api/v1/pol-narratives/[id]
++ *
++ * Operacoes em uma narrativa politica especifica.
++ *
++ * GET    — detalhe da narrativa (viewer+)
++ * PATCH  — atualizar parcialmente (manager+)
++ * DELETE — hard delete (admin only, dados de tenant)
++ *
++ * Seguranca: filtramos organization_id do cookie/JWT — nunca do body.
++ */
++
++import { randomUUID } from "node:crypto";
++import { z } from "zod";
++import { NextResponse, type NextRequest } from "next/server";
++
++import { ok, fail } from "@/lib/api/wrappers";
++import { requireRole } from "@/lib/auth/require-role";
++import { createAdminClient } from "@/lib/supabase/admin";
++import { requireSupportWrite } from "@/lib/impersonate/support";
++
++export const dynamic = "force-dynamic";
++export const runtime = "nodejs";
++
++interface RouteCtx {
++  params: Promise<{ id: string }>;
++}
++
++// -- Validacao ----------------------------------------------------------------
++
++const PLATFORMS = [
++  "instagram",
++  "facebook",
++  "twitter",
++  "tiktok",
++  "youtube",
++  "linkedin",
++  "whatsapp",
++  "news",
++  "cross_platform",
++] as const;
++
++const SENTIMENTS = ["positive", "negative", "neutral", "mixed"] as const;
++
++const STRATEGIC_STATUSES = [
++  "monitoring",
++  "opportunity",
++  "threat",
++  "crisis",
++  "resolved",
++] as const;
++
++const atualizarNarrativaSchema = z
++  .object({
++    theme: z.string().min(1).max(500),
++    platform: z.enum(PLATFORMS).nullable(),
++    city: z.string().max(120).nullable(),
++    sentiment: z.enum(SENTIMENTS).nullable(),
++    strength: z.number().min(0).max(100).nullable(),
++    posts_count: z.number().int().min(0).nullable(),
++    reach: z.number().int().min(0).nullable(),
++    engagement_score: z.number().min(0).nullable(),
++    strategic_status: z.enum(STRATEGIC_STATUSES),
++    recommended_action: z.string().max(2000).nullable(),
++  })
++  .partial(); // PATCH = todos opcionais
++
++// -- Helpers ------------------------------------------------------------------
++
++async function buscarNarrativa(db: ReturnType<typeof createAdminClient>, id: string, organizationId: string) {
++  return db
++    .from("pol_narratives")
++    .select("*")
++    .eq("id", id)
++    .eq("organization_id", organizationId)
++    .single();
++}
++
++// -- GET ----------------------------------------------------------------------
++
++export async function GET(req: NextRequest, ctx: RouteCtx): Promise<NextResponse> {
++  const requestId = randomUUID();
++  const { id } = await ctx.params;
++
++  const authz = await requireRole("viewer", { requestId, resource: "pol_narratives" });
++  if (!authz.ok) return authz.response;
++
++  const db = createAdminClient();
++  const { data: narrativa, error } = await buscarNarrativa(db, id, authz.organizationId);
++
++  if (error || !narrativa) {
++    return fail("not_found", "Narrativa nao encontrada", 404, { requestId });
++  }
++
++  return ok({ pol_narrative: narrativa }, { headers: { "x-request-id": requestId } });
++}
++
++// -- PATCH --------------------------------------------------------------------
++
++export async function PATCH(req: NextRequest, ctx: RouteCtx): Promise<NextResponse> {
++  const requestId = randomUUID();
++  const { id } = await ctx.params;
++
++  const authz = await requireRole("manager", { requestId, resource: "pol_narratives" });
++  if (!authz.ok) return authz.response;
++
++  const { organizationId, userId } = authz;
++
++  const guardaSuporteWrite = await requireSupportWrite({
++    requestId,
++    resource: "pol_narratives.update",
++  });
++  if (!guardaSuporteWrite.ok) return guardaSuporteWrite.response;
++
++  let body: unknown;
++  try {
++    body = await req.json();
++  } catch {
++    return fail("bad_request", "JSON invalido", 400, { requestId });
++  }
++
++  const parsed = atualizarNarrativaSchema.safeParse(body);
++  if (!parsed.success) {
++    return fail("validation_error", "Dados invalidos", 422, {
++      requestId,
++      details: parsed.error.flatten(),
++    });
++  }
++
++  if (Object.keys(parsed.data).length === 0) {
++    return fail("bad_request", "Nenhum campo para atualizar", 400, { requestId });
++  }
++
++  const db = createAdminClient();
++
++  // Verificar existencia + tenant
++  const { data: existente, error: errBusca } = await db
++    .from("pol_narratives")
++    .select("id")
++    .eq("id", id)
++    .eq("organization_id", organizationId)
++    .single();
++
++  if (errBusca || !existente) {
++    return fail("not_found", "Narrativa nao encontrada", 404, { requestId });
++  }
++
++  const { data: atualizada, error: errUpdate } = await db
++    .from("pol_narratives")
++    .update(parsed.data)
++    .eq("id", id)
++    .eq("organization_id", organizationId)
++    .select()
++    .single();
++
++  if (errUpdate) {
++    return fail("internal_error", "Erro ao atualizar narrativa", 500, { requestId });
++  }
++
++  // Audit log
++  await db.from("api_audit_log").insert({
++    organization_id: organizationId,
++    user_id: userId,
++    action: "pol_narratives.update",
++    resource_id: id,
++    metadata: { campos_alterados: Object.keys(parsed.data) },
++  });
++
++  return ok({ pol_narrative: atualizada }, { headers: { "x-request-id": requestId } });
++}
++
++// -- DELETE -------------------------------------------------------------------
++
++export async function DELETE(req: NextRequest, ctx: RouteCtx): Promise<NextResponse> {
++  const requestId = randomUUID();
++  const { id } = await ctx.params;
++
++  const authz = await requireRole("admin", { requestId, resource: "pol_narratives" });
++  if (!authz.ok) return authz.response;
++
++  const { organizationId, userId } = authz;
++
++  const guardaSuporteWrite = await requireSupportWrite({
++    requestId,
++    resource: "pol_narratives.delete",
++  });
++  if (!guardaSuporteWrite.ok) return guardaSuporteWrite.response;
++
++  const db = createAdminClient();
++
++  const { data: existente, error: errBusca } = await db
++    .from("pol_narratives")
++    .select("id, theme")
++    .eq("id", id)
++    .eq("organization_id", organizationId)
++    .single();
++
++  if (errBusca || !existente) {
++    return fail("not_found", "Narrativa nao encontrada", 404, { requestId });
++  }
++
++  const { error: errDelete } = await db
++    .from("pol_narratives")
++    .delete()
++    .eq("id", id)
++    .eq("organization_id", organizationId);
++
++  if (errDelete) {
++    return fail("internal_error", "Erro ao deletar narrativa", 500, { requestId });
++  }
++
++  // Audit log
++  await db.from("api_audit_log").insert({
++    organization_id: organizationId,
++    user_id: userId,
++    action: "pol_narratives.delete",
++    resource_id: id,
++    metadata: { theme: existente.theme },
++  });
++
++  return ok({ deleted: true }, { headers: { "x-request-id": requestId } });
++}
+diff --git a/app/api/v1/pol-narratives/route.ts b/app/api/v1/pol-narratives/route.ts
+new file mode 100644
+index 0000000..cdc57aa
+--- /dev/null
++++ b/app/api/v1/pol-narratives/route.ts
+@@ -0,0 +1,179 @@
++/**
++ * GET|POST /api/v1/pol-narratives
++ *
++ * CRUD de narrativas politicas — monitoramento de narrativas por plataforma.
++ *
++ * GET  — lista pol_narratives da organizacao. Aceita ?sentiment=, ?strategic_status=, ?platform=.
++ *        Paginacao com limit/offset. Ordenado por strength desc.
++ * POST — cria uma nova narrativa. Requer role manager.
++ *
++ * Seguranca: organizacao resolvida do cookie/JWT (fonte confiavel). Nunca do body.
++ */
++
++import { randomUUID } from "node:crypto";
++import { z } from "zod";
++import { NextResponse, type NextRequest } from "next/server";
++
++import { ok, fail } from "@/lib/api/wrappers";
++import { requireRole } from "@/lib/auth/require-role";
++import { createAdminClient } from "@/lib/supabase/admin";
++import { requireSupportWrite } from "@/lib/impersonate/support";
++
++export const dynamic = "force-dynamic";
++export const runtime = "nodejs";
++
++// -- Validacao ----------------------------------------------------------------
++
++const PLATFORMS = [
++  "instagram",
++  "facebook",
++  "twitter",
++  "tiktok",
++  "youtube",
++  "linkedin",
++  "whatsapp",
++  "news",
++  "cross_platform",
++] as const;
++
++const SENTIMENTS = ["positive", "negative", "neutral", "mixed"] as const;
++
++const STRATEGIC_STATUSES = [
++  "monitoring",
++  "opportunity",
++  "threat",
++  "crisis",
++  "resolved",
++] as const;
++
++const criarNarrativaSchema = z.object({
++  theme: z.string().min(1).max(500),
++  platform: z.enum(PLATFORMS).nullable().optional(),
++  city: z.string().max(120).nullable().optional(),
++  sentiment: z.enum(SENTIMENTS).nullable().optional(),
++  strength: z.number().min(0).max(100).nullable().optional(),
++  posts_count: z.number().int().min(0).nullable().optional(),
++  reach: z.number().int().min(0).nullable().optional(),
++  engagement_score: z.number().min(0).nullable().optional(),
++  strategic_status: z.enum(STRATEGIC_STATUSES).default("monitoring"),
++  recommended_action: z.string().max(2000).nullable().optional(),
++});
++
++// -- GET — listar narrativas --------------------------------------------------
++
++export async function GET(req: NextRequest): Promise<NextResponse> {
++  const requestId = randomUUID();
++
++  const authz = await requireRole("viewer", { requestId, resource: "pol_narratives" });
++  if (!authz.ok) return authz.response;
++
++  const { organizationId } = authz;
++  const db = createAdminClient();
++  const params = req.nextUrl.searchParams;
++
++  let query = db
++    .from("pol_narratives")
++    .select(
++      "id, theme, platform, city, sentiment, strength, posts_count, reach, engagement_score, strategic_status, recommended_action, created_at, updated_at",
++    )
++    .eq("organization_id", organizationId)
++    .order("strength", { ascending: false, nullsFirst: false });
++
++  // Filtros opcionais
++  const sentiment = params.get("sentiment");
++  if (sentiment) query = query.eq("sentiment", sentiment);
++
++  const strategicStatus = params.get("strategic_status");
++  if (strategicStatus) query = query.eq("strategic_status", strategicStatus);
++
++  const platform = params.get("platform");
++  if (platform) query = query.eq("platform", platform);
++
++  // Paginacao simples
++  const limit = Math.min(parseInt(params.get("limit") ?? "50", 10), 100);
++  const offset = parseInt(params.get("offset") ?? "0", 10);
++  query = query.range(offset, offset + limit - 1);
++
++  const { data, error, count } = await query;
++
++  if (error) {
++    return fail("internal_error", "Erro ao buscar pol_narratives", 500, { requestId });
++  }
++
++  return ok(
++    { pol_narratives: data ?? [] },
++    {
++      headers: { "x-request-id": requestId },
++      meta: { total: count ?? (data?.length ?? 0), limit, offset },
++    },
++  );
++}
++
++// -- POST — criar narrativa --------------------------------------------------
++
++export async function POST(req: NextRequest): Promise<NextResponse> {
++  const requestId = randomUUID();
++
++  const authz = await requireRole("manager", { requestId, resource: "pol_narratives" });
++  if (!authz.ok) return authz.response;
++
++  const { organizationId, userId } = authz;
++
++  const guardaSuporteWrite = await requireSupportWrite({ requestId, resource: "pol_narratives.create" });
++  if (!guardaSuporteWrite.ok) return guardaSuporteWrite.response;
++
++  let body: unknown;
++  try {
++    body = await req.json();
++  } catch {
++    return fail("bad_request", "JSON invalido", 400, { requestId });
++  }
++
++  const parsed = criarNarrativaSchema.safeParse(body);
++  if (!parsed.success) {
++    return fail("validation_error", "Dados invalidos", 422, {
++      requestId,
++      details: parsed.error.flatten(),
++    });
++  }
++
++  const db = createAdminClient();
++
++  const { data: narrativa, error } = await db
++    .from("pol_narratives")
++    .insert({
++      organization_id: organizationId,
++      theme: parsed.data.theme,
++      platform: parsed.data.platform ?? null,
++      city: parsed.data.city ?? null,
++      sentiment: parsed.data.sentiment ?? null,
++      strength: parsed.data.strength ?? null,
++      posts_count: parsed.data.posts_count ?? null,
++      reach: parsed.data.reach ?? null,
++      engagement_score: parsed.data.engagement_score ?? null,
++      strategic_status: parsed.data.strategic_status,
++      recommended_action: parsed.data.recommended_action ?? null,
++    })
++    .select()
++    .single();
++
++  if (error) {
++    if (error.code === "23505") {
++      return fail("conflict", "Narrativa duplicada nesta organizacao", 409, {
++        requestId,
++      });
++    }
++    return fail("internal_error", "Erro ao criar narrativa", 500, { requestId });
++  }
++
++  // Audit log
++  await db.from("api_audit_log").insert({
++    organization_id: organizationId,
++    user_id: userId,
++    action: "pol_narratives.create",
++    resource_id: narrativa.id,
++    metadata: { theme: narrativa.theme, strategic_status: narrativa.strategic_status },
++  });
++
++  return ok({ pol_narrative: narrativa }, { status: 201, headers: { "x-request-id": requestId } });
++}
+diff --git a/app/api/v1/pol-opponents/[id]/route.ts b/app/api/v1/pol-opponents/[id]/route.ts
+new file mode 100644
+index 0000000..2cef965
+--- /dev/null
++++ b/app/api/v1/pol-opponents/[id]/route.ts
+@@ -0,0 +1,212 @@
++/**
++ * GET|PATCH|DELETE /api/v1/pol-opponents/[id]
++ *
++ * Operacoes em um pol_opponent especifico.
++ *
++ * GET    — detalhe do pol_opponent (viewer+)
++ * PATCH  — atualizar parcialmente (manager+)
++ * DELETE — hard delete (manager+)
++ *
++ * Seguranca: filtramos organization_id do cookie/JWT — nunca do body.
++ */
++
++import { randomUUID } from "node:crypto";
++import { z } from "zod";
++import { NextResponse, type NextRequest } from "next/server";
++
++import { ok, fail } from "@/lib/api/wrappers";
++import { requireRole } from "@/lib/auth/require-role";
++import { createAdminClient } from "@/lib/supabase/admin";
++import { requireSupportWrite } from "@/lib/impersonate/support";
++
++export const dynamic = "force-dynamic";
++export const runtime = "nodejs";
++
++interface RouteCtx {
++  params: Promise<{ id: string }>;
++}
++
++// -- Validacao ----------------------------------------------------------------
++
++const PLATFORMS = [
++  "instagram",
++  "facebook",
++  "twitter",
++  "tiktok",
++  "youtube",
++  "linkedin",
++  "website",
++] as const;
++
++const RISK_LEVELS = ["low", "medium", "high", "critical"] as const;
++
++const atualizarPolOpponentSchema = z
++  .object({
++    name: z.string().min(1).max(255),
++    platform: z.enum(PLATFORMS).nullable(),
++    username: z.string().max(255).nullable(),
++    bio: z.string().max(2000).nullable(),
++    followers: z.number().int().min(0).nullable(),
++    engagement_rate: z.number().min(0).max(100).nullable(),
++    risk_level: z.enum(RISK_LEVELS),
++    threat_score: z.number().min(0).max(100).nullable(),
++    active: z.boolean(),
++  })
++  .partial(); // PATCH = todos opcionais
++
++// -- Helpers ------------------------------------------------------------------
++
++async function buscarPolOpponent(db: ReturnType<typeof createAdminClient>, id: string, organizationId: string) {
++  return db
++    .from("pol_opponents")
++    .select("*")
++    .eq("id", id)
++    .eq("organization_id", organizationId)
++    .single();
++}
++
++// -- GET ----------------------------------------------------------------------
++
++export async function GET(req: NextRequest, ctx: RouteCtx): Promise<NextResponse> {
++  const requestId = randomUUID();
++  const { id } = await ctx.params;
++
++  const authz = await requireRole("viewer", { requestId, resource: "pol_opponents" });
++  if (!authz.ok) return authz.response;
++
++  const db = createAdminClient();
++  const { data: polOpponent, error } = await buscarPolOpponent(db, id, authz.organizationId);
++
++  if (error || !polOpponent) {
++    return fail("not_found", "Pol_opponent nao encontrado", 404, { requestId });
++  }
++
++  return ok({ pol_opponent: polOpponent }, { headers: { "x-request-id": requestId } });
++}
++
++// -- PATCH --------------------------------------------------------------------
++
++export async function PATCH(req: NextRequest, ctx: RouteCtx): Promise<NextResponse> {
++  const requestId = randomUUID();
++  const { id } = await ctx.params;
++
++  const authz = await requireRole("manager", { requestId, resource: "pol_opponents" });
++  if (!authz.ok) return authz.response;
++
++  const { organizationId, userId } = authz;
++
++  const guardaSuporteWrite = await requireSupportWrite({
++    requestId,
++    resource: "pol_opponents.update",
++  });
++  if (!guardaSuporteWrite.ok) return guardaSuporteWrite.response;
++
++  let body: unknown;
++  try {
++    body = await req.json();
++  } catch {
++    return fail("bad_request", "JSON invalido", 400, { requestId });
++  }
++
++  const parsed = atualizarPolOpponentSchema.safeParse(body);
++  if (!parsed.success) {
++    return fail("validation_error", "Dados invalidos", 422, {
++      requestId,
++      details: parsed.error.flatten(),
++    });
++  }
++
++  if (Object.keys(parsed.data).length === 0) {
++    return fail("bad_request", "Nenhum campo para atualizar", 400, { requestId });
++  }
++
++  const db = createAdminClient();
++
++  // Verificar existencia + tenant
++  const { data: existente, error: errBusca } = await db
++    .from("pol_opponents")
++    .select("id")
++    .eq("id", id)
++    .eq("organization_id", organizationId)
++    .single();
++
++  if (errBusca || !existente) {
++    return fail("not_found", "Pol_opponent nao encontrado", 404, { requestId });
++  }
++
++  const { data: atualizado, error: errUpdate } = await db
++    .from("pol_opponents")
++    .update(parsed.data)
++    .eq("id", id)
++    .eq("organization_id", organizationId)
++    .select()
++    .single();
++
++  if (errUpdate) {
++    return fail("internal_error", "Erro ao atualizar pol_opponent", 500, { requestId });
++  }
++
++  // Audit log
++  await db.from("api_audit_log").insert({
++    organization_id: organizationId,
++    user_id: userId,
++    action: "pol_opponents.update",
++    resource_id: id,
++    metadata: { campos_alterados: Object.keys(parsed.data) },
++  });
++
++  return ok({ pol_opponent: atualizado }, { headers: { "x-request-id": requestId } });
++}
++
++// -- DELETE -------------------------------------------------------------------
++
++export async function DELETE(req: NextRequest, ctx: RouteCtx): Promise<NextResponse> {
++  const requestId = randomUUID();
++  const { id } = await ctx.params;
++
++  const authz = await requireRole("manager", { requestId, resource: "pol_opponents" });
++  if (!authz.ok) return authz.response;
++
++  const { organizationId, userId } = authz;
++
++  const guardaSuporteWrite = await requireSupportWrite({
++    requestId,
++    resource: "pol_opponents.delete",
++  });
++  if (!guardaSuporteWrite.ok) return guardaSuporteWrite.response;
++
++  const db = createAdminClient();
++
++  const { data: existente, error: errBusca } = await db
++    .from("pol_opponents")
++    .select("id, name")
++    .eq("id", id)
++    .eq("organization_id", organizationId)
++    .single();
++
++  if (errBusca || !existente) {
++    return fail("not_found", "Pol_opponent nao encontrado", 404, { requestId });
++  }
++
++  // Hard delete
++  const { error: errDelete } = await db
++    .from("pol_opponents")
++    .delete()
++    .eq("id", id)
++    .eq("organization_id", organizationId);
++
++  if (errDelete) {
++    return fail("internal_error", "Erro ao deletar pol_opponent", 500, { requestId });
++  }
++
++  // Audit log
++  await db.from("api_audit_log").insert({
++    organization_id: organizationId,
++    user_id: userId,
++    action: "pol_opponents.delete",
++    resource_id: id,
++    metadata: { name: existente.name },
++  });
++
++  return ok({ deleted: true }, { headers: { "x-request-id": requestId } });
++}
+diff --git a/app/api/v1/pol-opponents/route.ts b/app/api/v1/pol-opponents/route.ts
+new file mode 100644
+index 0000000..d1526fa
+--- /dev/null
++++ b/app/api/v1/pol-opponents/route.ts
+@@ -0,0 +1,167 @@
++/**
++ * GET|POST /api/v1/pol-opponents
++ *
++ * CRUD de oponentes politicos — monitoramento de adversarios.
++ *
++ * GET  — lista pol_opponents da organizacao. Aceita ?risk_level=, ?platform=, ?active=.
++ *        Paginacao com limit/offset. Ordenado por threat_score desc.
++ * POST — cria um novo pol_opponent. Requer role manager.
++ *
++ * Seguranca: organizacao resolvida do cookie/JWT (fonte confiavel). Nunca do body.
++ */
++
++import { randomUUID } from "node:crypto";
++import { z } from "zod";
++import { NextResponse, type NextRequest } from "next/server";
++
++import { ok, fail } from "@/lib/api/wrappers";
++import { requireRole } from "@/lib/auth/require-role";
++import { createAdminClient } from "@/lib/supabase/admin";
++import { requireSupportWrite } from "@/lib/impersonate/support";
++
++export const dynamic = "force-dynamic";
++export const runtime = "nodejs";
++
++// -- Validacao ----------------------------------------------------------------
++
++const PLATFORMS = [
++  "instagram",
++  "facebook",
++  "twitter",
++  "tiktok",
++  "youtube",
++  "linkedin",
++  "website",
++] as const;
++
++const RISK_LEVELS = ["low", "medium", "high", "critical"] as const;
++
++const criarPolOpponentSchema = z.object({
++  name: z.string().min(1).max(255),
++  platform: z.enum(PLATFORMS).nullable().optional(),
++  username: z.string().max(255).nullable().optional(),
++  bio: z.string().max(2000).nullable().optional(),
++  followers: z.number().int().min(0).nullable().optional(),
++  engagement_rate: z.number().min(0).max(100).nullable().optional(),
++  risk_level: z.enum(RISK_LEVELS).default("low"),
++  threat_score: z.number().min(0).max(100).nullable().optional(),
++  active: z.boolean().default(true),
++});
++
++// -- GET — listar pol_opponents -----------------------------------------------
++
++export async function GET(req: NextRequest): Promise<NextResponse> {
++  const requestId = randomUUID();
++
++  const authz = await requireRole("viewer", { requestId, resource: "pol_opponents" });
++  if (!authz.ok) return authz.response;
++
++  const { organizationId } = authz;
++  const db = createAdminClient();
++  const params = req.nextUrl.searchParams;
++
++  let query = db
++    .from("pol_opponents")
++    .select(
++      "id, name, platform, username, bio, followers, engagement_rate, risk_level, threat_score, active, created_at, updated_at",
++    )
++    .eq("organization_id", organizationId)
++    .order("threat_score", { ascending: false, nullsFirst: false });
++
++  // Filtros opcionais
++  const riskLevel = params.get("risk_level");
++  if (riskLevel) query = query.eq("risk_level", riskLevel);
++
++  const platform = params.get("platform");
++  if (platform) query = query.eq("platform", platform);
++
++  const active = params.get("active");
++  if (active !== null) query = query.eq("active", active === "true");
++
++  // Paginacao simples
++  const limit = Math.min(parseInt(params.get("limit") ?? "50", 10), 100);
++  const offset = parseInt(params.get("offset") ?? "0", 10);
++  query = query.range(offset, offset + limit - 1);
++
++  const { data, error, count } = await query;
++
++  if (error) {
++    return fail("internal_error", "Erro ao buscar pol_opponents", 500, { requestId });
++  }
++
++  return ok(
++    { pol_opponents: data ?? [] },
++    {
++      headers: { "x-request-id": requestId },
++      meta: { total: count ?? (data?.length ?? 0), limit, offset },
++    },
++  );
++}
++
++// -- POST — criar pol_opponent ------------------------------------------------
++
++export async function POST(req: NextRequest): Promise<NextResponse> {
++  const requestId = randomUUID();
++
++  const authz = await requireRole("manager", { requestId, resource: "pol_opponents" });
++  if (!authz.ok) return authz.response;
++
++  const { organizationId, userId } = authz;
++
++  const guardaSuporteWrite = await requireSupportWrite({ requestId, resource: "pol_opponents.create" });
++  if (!guardaSuporteWrite.ok) return guardaSuporteWrite.response;
++
++  let body: unknown;
++  try {
++    body = await req.json();
++  } catch {
++    return fail("bad_request", "JSON invalido", 400, { requestId });
++  }
++
++  const parsed = criarPolOpponentSchema.safeParse(body);
++  if (!parsed.success) {
++    return fail("validation_error", "Dados invalidos", 422, {
++      requestId,
++      details: parsed.error.flatten(),
++    });
++  }
++
++  const db = createAdminClient();
++
++  const { data: polOpponent, error } = await db
++    .from("pol_opponents")
++    .insert({
++      organization_id: organizationId,
++      name: parsed.data.name,
++      platform: parsed.data.platform ?? null,
++      username: parsed.data.username ?? null,
++      bio: parsed.data.bio ?? null,
++      followers: parsed.data.followers ?? null,
++      engagement_rate: parsed.data.engagement_rate ?? null,
++      risk_level: parsed.data.risk_level,
++      threat_score: parsed.data.threat_score ?? null,
++      active: parsed.data.active,
++    })
++    .select()
++    .single();
++
++  if (error) {
++    if (error.code === "23505") {
++      return fail("conflict", "Este oponente ja existe nesta organizacao", 409, {
++        requestId,
++      });
++    }
++    return fail("internal_error", "Erro ao criar pol_opponent", 500, { requestId });
++  }
++
++  // Audit log
++  await db.from("api_audit_log").insert({
++    organization_id: organizationId,
++    user_id: userId,
++    action: "pol_opponents.create",
++    resource_id: polOpponent.id,
++    metadata: { name: polOpponent.name, risk_level: polOpponent.risk_level },
++  });
++
++  return ok({ pol_opponent: polOpponent }, { status: 201, headers: { "x-request-id": requestId } });
++}
+diff --git a/app/api/v1/pol-social-profiles/[id]/route.ts b/app/api/v1/pol-social-profiles/[id]/route.ts
+new file mode 100644
+index 0000000..7768c4b
+--- /dev/null
++++ b/app/api/v1/pol-social-profiles/[id]/route.ts
+@@ -0,0 +1,223 @@
++/**
++ * GET|PATCH|DELETE /api/v1/pol-social-profiles/[id]
++ *
++ * Operacoes em um pol_social_profile especifico.
++ *
++ * GET    — detalhe do pol_social_profile (viewer+)
++ * PATCH  — atualizar parcialmente (manager+)
++ * DELETE — hard delete (manager+)
++ *
++ * Seguranca: filtramos organization_id do cookie/JWT — nunca do body.
++ */
++
++import { randomUUID } from "node:crypto";
++import { z } from "zod";
++import { NextResponse, type NextRequest } from "next/server";
++
++import { ok, fail } from "@/lib/api/wrappers";
++import { requireRole } from "@/lib/auth/require-role";
++import { createAdminClient } from "@/lib/supabase/admin";
++import { requireSupportWrite } from "@/lib/impersonate/support";
++
++export const dynamic = "force-dynamic";
++export const runtime = "nodejs";
++
++interface RouteCtx {
++  params: Promise<{ id: string }>;
++}
++
++// -- Validacao ----------------------------------------------------------------
++
++const PLATFORMS = [
++  "instagram",
++  "facebook",
++  "twitter",
++  "tiktok",
++  "youtube",
++  "linkedin",
++] as const;
++
++const CATEGORIES = [
++  "monitorado",
++  "influencer",
++  "aliado",
++  "neutro",
++  "adversario",
++] as const;
++
++const atualizarPolSocialProfileSchema = z
++  .object({
++    platform: z.enum(PLATFORMS),
++    username: z.string().min(1).max(120),
++    display_name: z.string().max(200).nullable(),
++    bio: z.string().max(2000).nullable(),
++    followers: z.number().int().nonnegative().nullable(),
++    following: z.number().int().nonnegative().nullable(),
++    posts_count: z.number().int().nonnegative().nullable(),
++    engagement_rate: z.number().nonnegative().nullable(),
++    category: z.enum(CATEGORIES),
++    active: z.boolean(),
++  })
++  .partial(); // PATCH = todos opcionais
++
++// -- Helpers ------------------------------------------------------------------
++
++async function buscarPolSocialProfile(db: ReturnType<typeof createAdminClient>, id: string, organizationId: string) {
++  return db
++    .from("pol_social_profiles")
++    .select("*")
++    .eq("id", id)
++    .eq("organization_id", organizationId)
++    .single();
++}
++
++// -- GET ----------------------------------------------------------------------
++
++export async function GET(req: NextRequest, ctx: RouteCtx): Promise<NextResponse> {
++  const requestId = randomUUID();
++  const { id } = await ctx.params;
++
++  const authz = await requireRole("viewer", { requestId, resource: "pol_social_profiles" });
++  if (!authz.ok) return authz.response;
++
++  const db = createAdminClient();
++  const { data: profile, error } = await buscarPolSocialProfile(db, id, authz.organizationId);
++
++  if (error || !profile) {
++    return fail("not_found", "Perfil social nao encontrado", 404, { requestId });
++  }
++
++  return ok({ pol_social_profile: profile }, { headers: { "x-request-id": requestId } });
++}
++
++// -- PATCH --------------------------------------------------------------------
++
++export async function PATCH(req: NextRequest, ctx: RouteCtx): Promise<NextResponse> {
++  const requestId = randomUUID();
++  const { id } = await ctx.params;
++
++  const authz = await requireRole("manager", { requestId, resource: "pol_social_profiles" });
++  if (!authz.ok) return authz.response;
++
++  const { organizationId, userId } = authz;
++
++  const guardaSuporteWrite = await requireSupportWrite({
++    requestId,
++    resource: "pol_social_profiles.update",
++  });
++  if (!guardaSuporteWrite.ok) return guardaSuporteWrite.response;
++
++  let body: unknown;
++  try {
++    body = await req.json();
++  } catch {
++    return fail("bad_request", "JSON invalido", 400, { requestId });
++  }
++
++  const parsed = atualizarPolSocialProfileSchema.safeParse(body);
++  if (!parsed.success) {
++    return fail("validation_error", "Dados invalidos", 422, {
++      requestId,
++      details: parsed.error.flatten(),
++    });
++  }
++
++  if (Object.keys(parsed.data).length === 0) {
++    return fail("bad_request", "Nenhum campo para atualizar", 400, { requestId });
++  }
++
++  const db = createAdminClient();
++
++  // Verificar existencia + tenant
++  const { data: existente, error: errBusca } = await db
++    .from("pol_social_profiles")
++    .select("id")
++    .eq("id", id)
++    .eq("organization_id", organizationId)
++    .single();
++
++  if (errBusca || !existente) {
++    return fail("not_found", "Perfil social nao encontrado", 404, { requestId });
++  }
++
++  const { data: atualizado, error: errUpdate } = await db
++    .from("pol_social_profiles")
++    .update(parsed.data)
++    .eq("id", id)
++    .eq("organization_id", organizationId)
++    .select()
++    .single();
++
++  if (errUpdate) {
++    // Duplicate org+platform+username constraint on update
++    if (errUpdate.code === "23505") {
++      return fail("conflict", "Este perfil (plataforma + username) ja existe nesta organizacao", 409, {
++        requestId,
++      });
++    }
++    return fail("internal_error", "Erro ao atualizar pol_social_profile", 500, { requestId });
++  }
++
++  // Audit log
++  await db.from("api_audit_log").insert({
++    organization_id: organizationId,
++    user_id: userId,
++    action: "pol_social_profiles.update",
++    resource_id: id,
++    metadata: { campos_alterados: Object.keys(parsed.data) },
++  });
++
++  return ok({ pol_social_profile: atualizado }, { headers: { "x-request-id": requestId } });
++}
++
++// -- DELETE -------------------------------------------------------------------
++
++export async function DELETE(req: NextRequest, ctx: RouteCtx): Promise<NextResponse> {
++  const requestId = randomUUID();
++  const { id } = await ctx.params;
++
++  const authz = await requireRole("manager", { requestId, resource: "pol_social_profiles" });
++  if (!authz.ok) return authz.response;
++
++  const { organizationId, userId } = authz;
++
++  const guardaSuporteWrite = await requireSupportWrite({
++    requestId,
++    resource: "pol_social_profiles.delete",
++  });
++  if (!guardaSuporteWrite.ok) return guardaSuporteWrite.response;
++
++  const db = createAdminClient();
++
++  const { data: existente, error: errBusca } = await db
++    .from("pol_social_profiles")
++    .select("id, platform, username")
++    .eq("id", id)
++    .eq("organization_id", organizationId)
++    .single();
++
++  if (errBusca || !existente) {
++    return fail("not_found", "Perfil social nao encontrado", 404, { requestId });
++  }
++
++  const { error: errDelete } = await db
++    .from("pol_social_profiles")
++    .delete()
++    .eq("id", id)
++    .eq("organization_id", organizationId);
++
++  if (errDelete) {
++    return fail("internal_error", "Erro ao deletar pol_social_profile", 500, { requestId });
++  }
++
++  // Audit log
++  await db.from("api_audit_log").insert({
++    organization_id: organizationId,
++    user_id: userId,
++    action: "pol_social_profiles.delete",
++    resource_id: id,
++    metadata: { platform: existente.platform, username: existente.username },
++  });
++
++  return ok({ deleted: true }, { headers: { "x-request-id": requestId } });
++}
+diff --git a/app/api/v1/pol-social-profiles/route.ts b/app/api/v1/pol-social-profiles/route.ts
+new file mode 100644
+index 0000000..9842677
+--- /dev/null
++++ b/app/api/v1/pol-social-profiles/route.ts
+@@ -0,0 +1,175 @@
++/**
++ * GET|POST /api/v1/pol-social-profiles
++ *
++ * CRUD de perfis sociais politicos — monitoramento de redes.
++ *
++ * GET  — lista pol_social_profiles da organizacao. Aceita ?platform=, ?category=, ?active=.
++ *        Paginacao com limit/offset.
++ * POST — cria um novo pol_social_profile. Requer role manager.
++ *
++ * Seguranca: organizacao resolvida do cookie/JWT (fonte confiavel). Nunca do body.
++ */
++
++import { randomUUID } from "node:crypto";
++import { z } from "zod";
++import { NextResponse, type NextRequest } from "next/server";
++
++import { ok, fail } from "@/lib/api/wrappers";
++import { requireRole } from "@/lib/auth/require-role";
++import { createAdminClient } from "@/lib/supabase/admin";
++import { requireSupportWrite } from "@/lib/impersonate/support";
++
++export const dynamic = "force-dynamic";
++export const runtime = "nodejs";
++
++// -- Validacao ----------------------------------------------------------------
++
++const PLATFORMS = [
++  "instagram",
++  "facebook",
++  "twitter",
++  "tiktok",
++  "youtube",
++  "linkedin",
++] as const;
++
++const CATEGORIES = [
++  "monitorado",
++  "influencer",
++  "aliado",
++  "neutro",
++  "adversario",
++] as const;
++
++const criarPolSocialProfileSchema = z.object({
++  platform: z.enum(PLATFORMS),
++  username: z.string().min(1).max(120),
++  display_name: z.string().max(200).nullable().optional(),
++  bio: z.string().max(2000).nullable().optional(),
++  followers: z.number().int().nonnegative().nullable().optional(),
++  following: z.number().int().nonnegative().nullable().optional(),
++  posts_count: z.number().int().nonnegative().nullable().optional(),
++  engagement_rate: z.number().nonnegative().nullable().optional(),
++  category: z.enum(CATEGORIES).default("monitorado"),
++  active: z.boolean().default(true),
++});
++
++// -- GET — listar pol_social_profiles -----------------------------------------
++
++export async function GET(req: NextRequest): Promise<NextResponse> {
++  const requestId = randomUUID();
++
++  const authz = await requireRole("viewer", { requestId, resource: "pol_social_profiles" });
++  if (!authz.ok) return authz.response;
++
++  const { organizationId } = authz;
++  const db = createAdminClient();
++  const params = req.nextUrl.searchParams;
++
++  let query = db
++    .from("pol_social_profiles")
++    .select(
++      "id, platform, username, display_name, bio, followers, following, posts_count, engagement_rate, category, active, created_at, updated_at",
++    )
++    .eq("organization_id", organizationId)
++    .order("created_at", { ascending: false });
++
++  // Filtros opcionais
++  const platform = params.get("platform");
++  if (platform) query = query.eq("platform", platform);
++
++  const category = params.get("category");
++  if (category) query = query.eq("category", category);
++
++  const active = params.get("active");
++  if (active !== null) query = query.eq("active", active === "true");
++
++  // Paginacao simples
++  const limit = Math.min(parseInt(params.get("limit") ?? "50", 10), 100);
++  const offset = parseInt(params.get("offset") ?? "0", 10);
++  query = query.range(offset, offset + limit - 1);
++
++  const { data, error, count } = await query;
++
++  if (error) {
++    return fail("internal_error", "Erro ao buscar pol_social_profiles", 500, { requestId });
++  }
++
++  return ok(
++    { pol_social_profiles: data ?? [] },
++    {
++      headers: { "x-request-id": requestId },
++      meta: { total: count ?? (data?.length ?? 0), limit, offset },
++    },
++  );
++}
++
++// -- POST — criar pol_social_profile ------------------------------------------
++
++export async function POST(req: NextRequest): Promise<NextResponse> {
++  const requestId = randomUUID();
++
++  const authz = await requireRole("manager", { requestId, resource: "pol_social_profiles" });
++  if (!authz.ok) return authz.response;
++
++  const { organizationId, userId } = authz;
++
++  const guardaSuporteWrite = await requireSupportWrite({ requestId, resource: "pol_social_profiles.create" });
++  if (!guardaSuporteWrite.ok) return guardaSuporteWrite.response;
++
++  let body: unknown;
++  try {
++    body = await req.json();
++  } catch {
++    return fail("bad_request", "JSON invalido", 400, { requestId });
++  }
++
++  const parsed = criarPolSocialProfileSchema.safeParse(body);
++  if (!parsed.success) {
++    return fail("validation_error", "Dados invalidos", 422, {
++      requestId,
++      details: parsed.error.flatten(),
++    });
++  }
++
++  const db = createAdminClient();
++
++  const { data: profile, error } = await db
++    .from("pol_social_profiles")
++    .insert({
++      organization_id: organizationId,
++      platform: parsed.data.platform,
++      username: parsed.data.username,
++      display_name: parsed.data.display_name ?? null,
++      bio: parsed.data.bio ?? null,
++      followers: parsed.data.followers ?? null,
++      following: parsed.data.following ?? null,
++      posts_count: parsed.data.posts_count ?? null,
++      engagement_rate: parsed.data.engagement_rate ?? null,
++      category: parsed.data.category,
++      active: parsed.data.active,
++    })
++    .select()
++    .single();
++
++  if (error) {
++    // Duplicate org+platform+username constraint
++    if (error.code === "23505") {
++      return fail("conflict", "Este perfil (plataforma + username) ja existe nesta organizacao", 409, {
++        requestId,
++      });
++    }
++    return fail("internal_error", "Erro ao criar pol_social_profile", 500, { requestId });
++  }
++
++  // Audit log
++  await db.from("api_audit_log").insert({
++    organization_id: organizationId,
++    user_id: userId,
++    action: "pol_social_profiles.create",
++    resource_id: profile.id,
++    metadata: { platform: profile.platform, username: profile.username, category: profile.category },
++  });
++
++  return ok({ pol_social_profile: profile }, { status: 201, headers: { "x-request-id": requestId } });
++}
+diff --git a/app/app/politico/adversarios/page.tsx b/app/app/politico/adversarios/page.tsx
+new file mode 100644
+index 0000000..44c22bc
+--- /dev/null
++++ b/app/app/politico/adversarios/page.tsx
+@@ -0,0 +1,269 @@
++/**
++ * /app/politico/adversarios — Painel de Adversarios Politicos
++ *
++ * Listagem paginada de pol_opponents com metricas agregadas
++ * (total, risco alto, sinais ativos nos ultimos 7 dias).
++ * Cards em grid com nivel de risco, threat score e seguidores.
++ *
++ * Acesso: manager+
++ */
++
++import { redirect } from "next/navigation";
++import Link from "next/link";
++import { createServerClient } from "@/lib/supabase/server";
++import { getUser } from "@/lib/auth/get-user";
++import { resolverOrganizacaoAtiva } from "@/lib/organizations/resolver";
++
++// -- Tipos -------------------------------------------------------------------
++
++interface MetricasAdversarios {
++  total: number;
++  riscoAlto: number;
++  sinaisAtivos: number;
++}
++
++interface Adversario {
++  id: string;
++  name: string;
++  platform: string;
++  username: string | null;
++  risk_level: string;
++  threat_score: number;
++  followers: number;
++  active: boolean;
++}
++
++// -- Constantes --------------------------------------------------------------
++
++const POR_PAGINA = 12;
++
++const RISK_LEVEL_CONFIG: Record<string, { label: string; cor: string }> = {
++  low: {
++    label: "Baixo",
++    cor: "bg-green-100 text-green-800 dark:bg-green-950 dark:text-green-200",
++  },
++  medium: {
++    label: "Medio",
++    cor: "bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-200",
++  },
++  high: {
++    label: "Alto",
++    cor: "bg-orange-100 text-orange-800 dark:bg-orange-950 dark:text-orange-200",
++  },
++  critical: {
++    label: "Critico",
++    cor: "bg-red-100 text-red-800 dark:bg-red-950 dark:text-red-200",
++  },
++};
++
++// -- Data fetching -----------------------------------------------------------
++
++async function buscarMetricas(organizationId: string): Promise<MetricasAdversarios> {
++  const db = createServerClient();
++
++  const seteDiasAtras = new Date();
++  seteDiasAtras.setDate(seteDiasAtras.getDate() - 7);
++
++  const [total, riscoAlto, sinaisAtivos] = await Promise.all([
++    db
++      .from("pol_opponents")
++      .select("id", { count: "exact", head: true })
++      .eq("organization_id", organizationId),
++
++    db
++      .from("pol_opponents")
++      .select("id", { count: "exact", head: true })
++      .eq("organization_id", organizationId)
++      .in("risk_level", ["high", "critical"]),
++
++    db
++      .from("pol_opponent_signals")
++      .select("id", { count: "exact", head: true })
++      .eq("organization_id", organizationId)
++      .gte("created_at", seteDiasAtras.toISOString()),
++  ]);
++
++  return {
++    total: total.count ?? 0,
++    riscoAlto: riscoAlto.count ?? 0,
++    sinaisAtivos: sinaisAtivos.count ?? 0,
++  };
++}
++
++async function buscarAdversarios(
++  organizationId: string,
++  pagina: number,
++): Promise<{ adversarios: Adversario[]; total: number }> {
++  const db = createServerClient();
++  const offset = (pagina - 1) * POR_PAGINA;
++
++  const { data, count } = await db
++    .from("pol_opponents")
++    .select("id, name, platform, username, risk_level, threat_score, followers, active", {
++      count: "exact",
++    })
++    .eq("organization_id", organizationId)
++    .order("threat_score", { ascending: false })
++    .range(offset, offset + POR_PAGINA - 1);
++
++  return {
++    adversarios: (data ?? []) as Adversario[],
++    total: count ?? 0,
++  };
++}
++
++// -- Componente --------------------------------------------------------------
++
++export default async function AdversariosPage(props: {
++  searchParams: Promise<{ pagina?: string }>;
++}) {
++  const user = await getUser();
++  if (!user) redirect("/login");
++
++  const org = await resolverOrganizacaoAtiva(user.id);
++  if (!org) redirect("/app/onboarding");
++
++  const searchParams = await props.searchParams;
++  const paginaAtual = Math.max(1, parseInt(searchParams.pagina ?? "1", 10) || 1);
++
++  const [metricas, { adversarios, total }] = await Promise.all([
++    buscarMetricas(org.id),
++    buscarAdversarios(org.id, paginaAtual),
++  ]);
++
++  const totalPaginas = Math.ceil(total / POR_PAGINA);
++
++  return (
++    <div className="mx-auto max-w-4xl px-4 py-8 space-y-8">
++      {/* Cabecalho */}
++      <div>
++        <h1 className="text-2xl font-bold tracking-tight">Adversarios</h1>
++        <p className="mt-1 text-sm text-muted-foreground">
++          Monitore adversarios politicos, acompanhe niveis de ameaca e sinais de alerta da oposicao.
++        </p>
++      </div>
++
++      {/* Metricas */}
++      <div className="grid grid-cols-3 gap-3">
++        <MetricaCard label="Total de adversarios" valor={metricas.total} />
++        <MetricaCard label="Risco alto" valor={metricas.riscoAlto} />
++        <MetricaCard label="Sinais ativos (7d)" valor={metricas.sinaisAtivos} />
++      </div>
++
++      {/* Grid de adversarios */}
++      {adversarios.length > 0 ? (
++        <>
++          <div className="grid gap-4 sm:grid-cols-2">
++            {adversarios.map((adv) => {
++              const riskConfig = RISK_LEVEL_CONFIG[adv.risk_level] ?? RISK_LEVEL_CONFIG.low;
++
++              return (
++                <div
++                  key={adv.id}
++                  className="rounded-xl border bg-card p-4 space-y-3 hover:bg-accent/30 transition-colors"
++                >
++                  {/* Topo: nome + status */}
++                  <div className="flex items-start justify-between gap-2">
++                    <div className="min-w-0">
++                      <p className="font-bold truncate">{adv.name}</p>
++                      {adv.username && (
++                        <p className="text-xs text-muted-foreground truncate">@{adv.username}</p>
++                      )}
++                    </div>
++                    <span
++                      className={`shrink-0 inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${
++                        adv.active
++                          ? "bg-green-100 text-green-800 dark:bg-green-950 dark:text-green-200"
++                          : "bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400"
++                      }`}
++                    >
++                      {adv.active ? "Ativo" : "Inativo"}
++                    </span>
++                  </div>
++
++                  {/* Badges: plataforma + risco */}
++                  <div className="flex items-center gap-2">
++                    <span className="rounded-full bg-muted px-2 py-0.5 text-xs font-medium capitalize">
++                      {adv.platform}
++                    </span>
++                    <span
++                      className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${riskConfig.cor}`}
++                    >
++                      {riskConfig.label}
++                    </span>
++                  </div>
++
++                  {/* Metricas do card */}
++                  <div className="flex items-center gap-4 text-sm">
++                    <div>
++                      <span className="text-muted-foreground">Ameaca: </span>
++                      <span className="font-semibold tabular-nums">{Number(adv.threat_score).toFixed(1)}</span>
++                    </div>
++                    <div>
++                      <span className="text-muted-foreground">Seguidores: </span>
++                      <span className="font-semibold tabular-nums">
++                        {adv.followers.toLocaleString("pt-BR")}
++                      </span>
++                    </div>
++                  </div>
++                </div>
++              );
++            })}
++          </div>
++
++          {/* Paginacao */}
++          {totalPaginas > 1 && (
++            <div className="flex items-center justify-between pt-2">
++              <p className="text-xs text-muted-foreground">
++                Pagina <span className="tabular-nums">{paginaAtual}</span> de{" "}
++                <span className="tabular-nums">{totalPaginas}</span> ({total} adversario
++                {total !== 1 ? "s" : ""})
++              </p>
++              <div className="flex gap-2">
++                {paginaAtual > 1 && (
++                  <Link
++                    href={`/app/politico/adversarios?pagina=${paginaAtual - 1}`}
++                    className="rounded-lg border bg-card px-3 py-1.5 text-xs font-medium hover:bg-accent transition-colors"
++                  >
++                    Anterior
++                  </Link>
++                )}
++                {paginaAtual < totalPaginas && (
++                  <Link
++                    href={`/app/politico/adversarios?pagina=${paginaAtual + 1}`}
++                    className="rounded-lg border bg-card px-3 py-1.5 text-xs font-medium hover:bg-accent transition-colors"
++                  >
++                    Proxima
++                  </Link>
++                )}
++              </div>
++            </div>
++          )}
++        </>
++      ) : (
++        /* Empty state */
++        <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-200">
++          <strong>Para comecar:</strong> cadastre o primeiro adversario politico para monitorar
++          niveis de ameaca, crescimento e sinais de alerta da oposicao.
++        </div>
++      )}
++    </div>
++  );
++}
++
++// -- Sub-componentes ---------------------------------------------------------
++
++function MetricaCard({
++  label,
++  valor,
++}: {
++  label: string;
++  valor: number;
++}) {
++  return (
++    <div className="flex flex-col gap-1 rounded-lg border bg-card p-4">
++      <span className="text-2xl font-bold tabular-nums">{valor}</span>
++      <span className="text-xs text-muted-foreground">{label}</span>
++    </div>
++  );
++}
+diff --git a/app/app/politico/motor-viral/page.tsx b/app/app/politico/motor-viral/page.tsx
+new file mode 100644
+index 0000000..06a3ccb
+--- /dev/null
++++ b/app/app/politico/motor-viral/page.tsx
+@@ -0,0 +1,319 @@
++/**
++ * /app/politico/motor-viral — Motor Viral (Gerador de Conteudo)
++ *
++ * Listagem paginada de pol_generated_content com metricas agregadas
++ * (total de conteudos, gerados por IA, score viral medio).
++ * Cards em grid com tipo, plataforma, scores e fonte de geracao.
++ *
++ * Acesso: manager+
++ */
++
++import { redirect } from "next/navigation";
++import Link from "next/link";
++import { createServerClient } from "@/lib/supabase/server";
++import { getUser } from "@/lib/auth/get-user";
++import { resolverOrganizacaoAtiva } from "@/lib/organizations/resolver";
++
++// -- Tipos -------------------------------------------------------------------
++
++interface MetricasMotorViral {
++  totalConteudos: number;
++  geradosPorIA: number;
++  scoreViralMedio: number;
++}
++
++interface ConteudoGerado {
++  id: string;
++  title: string;
++  topic: string;
++  target_audience: string | null;
++  content_type: string;
++  platform: string | null;
++  viral_score: number | null;
++  quality_score: number | null;
++  generation_source: string;
++  created_at: string;
++}
++
++// -- Constantes --------------------------------------------------------------
++
++const POR_PAGINA = 12;
++
++const CONTENT_TYPE_LABELS: Record<string, string> = {
++  video_script: "Roteiro de Video",
++  caption: "Legenda",
++  carousel: "Carrossel",
++  story: "Story",
++  reel_script: "Roteiro de Reel",
++  live_script: "Roteiro de Live",
++  article: "Artigo",
++  thread: "Thread",
++  other: "Outro",
++};
++
++const PLATFORM_LABELS: Record<string, string> = {
++  instagram: "Instagram",
++  facebook: "Facebook",
++  twitter: "Twitter",
++  tiktok: "TikTok",
++  youtube: "YouTube",
++  linkedin: "LinkedIn",
++  whatsapp: "WhatsApp",
++  cross_platform: "Multiplataforma",
++};
++
++const GENERATION_SOURCE_CONFIG: Record<string, { label: string; cor: string }> = {
++  manual: {
++    label: "Manual",
++    cor: "bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300",
++  },
++  ai_auto: {
++    label: "IA Auto",
++    cor: "bg-purple-100 text-purple-800 dark:bg-purple-950 dark:text-purple-200",
++  },
++  ai_assisted: {
++    label: "IA Assistida",
++    cor: "bg-blue-100 text-blue-800 dark:bg-blue-950 dark:text-blue-200",
++  },
++  template: {
++    label: "Template",
++    cor: "bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-200",
++  },
++};
++
++// -- Data fetching -----------------------------------------------------------
++
++async function buscarMetricas(organizationId: string): Promise<MetricasMotorViral> {
++  const db = createServerClient();
++
++  const [totalRes, iaRes, viralRes] = await Promise.all([
++    db
++      .from("pol_generated_content")
++      .select("id", { count: "exact", head: true })
++      .eq("organization_id", organizationId),
++
++    db
++      .from("pol_generated_content")
++      .select("id", { count: "exact", head: true })
++      .eq("organization_id", organizationId)
++      .in("generation_source", ["ai_auto", "ai_assisted"]),
++
++    db
++      .from("pol_generated_content")
++      .select("viral_score")
++      .eq("organization_id", organizationId)
++      .not("viral_score", "is", null),
++  ]);
++
++  const scores = (viralRes.data ?? []) as { viral_score: number }[];
++  const scoreViralMedio =
++    scores.length > 0
++      ? scores.reduce((acc, row) => acc + Number(row.viral_score), 0) / scores.length
++      : 0;
++
++  return {
++    totalConteudos: totalRes.count ?? 0,
++    geradosPorIA: iaRes.count ?? 0,
++    scoreViralMedio: Math.round(scoreViralMedio * 100) / 100,
++  };
++}
++
++async function buscarConteudos(
++  organizationId: string,
++  pagina: number,
++): Promise<{ conteudos: ConteudoGerado[]; total: number }> {
++  const db = createServerClient();
++  const offset = (pagina - 1) * POR_PAGINA;
++
++  const { data, count } = await db
++    .from("pol_generated_content")
++    .select(
++      "id, title, topic, target_audience, content_type, platform, viral_score, quality_score, generation_source, created_at",
++      { count: "exact" },
++    )
++    .eq("organization_id", organizationId)
++    .order("created_at", { ascending: false })
++    .range(offset, offset + POR_PAGINA - 1);
++
++  return {
++    conteudos: (data ?? []) as ConteudoGerado[],
++    total: count ?? 0,
++  };
++}
++
++// -- Componente --------------------------------------------------------------
++
++export default async function MotorViralPage(props: {
++  searchParams: Promise<{ pagina?: string }>;
++}) {
++  const user = await getUser();
++  if (!user) redirect("/login");
++
++  const org = await resolverOrganizacaoAtiva(user.id);
++  if (!org) redirect("/app/onboarding");
++
++  const searchParams = await props.searchParams;
++  const paginaAtual = Math.max(1, parseInt(searchParams.pagina ?? "1", 10) || 1);
++
++  const [metricas, { conteudos, total }] = await Promise.all([
++    buscarMetricas(org.id),
++    buscarConteudos(org.id, paginaAtual),
++  ]);
++
++  const totalPaginas = Math.ceil(total / POR_PAGINA);
++
++  return (
++    <div className="mx-auto max-w-4xl px-4 py-8 space-y-8">
++      {/* Cabecalho */}
++      <div>
++        <h1 className="text-2xl font-bold tracking-tight">Motor Viral</h1>
++        <p className="mt-1 text-sm text-muted-foreground">
++          Gere conteudos otimizados por inteligencia artificial para maximizar o alcance e
++          engajamento da sua campanha nas redes sociais.
++        </p>
++      </div>
++
++      {/* Metricas */}
++      <div className="grid grid-cols-3 gap-3">
++        <MetricaCard label="Total de conteudos" valor={metricas.totalConteudos.toLocaleString("pt-BR")} />
++        <MetricaCard label="Gerados por IA" valor={metricas.geradosPorIA.toLocaleString("pt-BR")} />
++        <MetricaCard label="Score viral medio" valor={metricas.scoreViralMedio.toFixed(1)} />
++      </div>
++
++      {/* Grid de conteudos */}
++      {conteudos.length > 0 ? (
++        <>
++          <div className="grid gap-4 sm:grid-cols-2">
++            {conteudos.map((conteudo) => (
++              <ConteudoCard key={conteudo.id} conteudo={conteudo} />
++            ))}
++          </div>
++
++          {/* Paginacao */}
++          {totalPaginas > 1 && (
++            <div className="flex items-center justify-between rounded-xl border bg-card px-4 py-3 text-sm">
++              <span className="text-muted-foreground">
++                Pagina {paginaAtual} de {totalPaginas} ({total} conteudos)
++              </span>
++              <div className="flex gap-2">
++                {paginaAtual > 1 && (
++                  <Link
++                    href={`/app/politico/motor-viral?pagina=${paginaAtual - 1}`}
++                    className="rounded-md border px-3 py-1 text-sm hover:bg-accent transition-colors"
++                  >
++                    Anterior
++                  </Link>
++                )}
++                {paginaAtual < totalPaginas && (
++                  <Link
++                    href={`/app/politico/motor-viral?pagina=${paginaAtual + 1}`}
++                    className="rounded-md border px-3 py-1 text-sm hover:bg-accent transition-colors"
++                  >
++                    Proxima
++                  </Link>
++                )}
++              </div>
++            </div>
++          )}
++        </>
++      ) : (
++        /* Empty state */
++        <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-200">
++          <strong>Para comecar:</strong> crie seu primeiro conteudo com inteligencia artificial para
++          impulsionar o engajamento e o alcance da sua campanha nas redes sociais.
++        </div>
++      )}
++    </div>
++  );
++}
++
++// -- Sub-componentes ---------------------------------------------------------
++
++function MetricaCard({ label, valor }: { label: string; valor: string }) {
++  return (
++    <div className="flex flex-col gap-1 rounded-lg border bg-card p-4">
++      <span className="text-2xl font-bold tabular-nums">{valor}</span>
++      <span className="text-xs text-muted-foreground">{label}</span>
++    </div>
++  );
++}
++
++function ScoreDisplay({ score, label }: { score: number | null; label: string }) {
++  if (score == null) {
++    return (
++      <div className="flex items-center gap-1">
++        <span className="text-xs text-muted-foreground">{label}:</span>
++        <span className="text-xs text-muted-foreground">--</span>
++      </div>
++    );
++  }
++
++  const corTexto =
++    score >= 7
++      ? "text-green-700 dark:text-green-400"
++      : score >= 4
++        ? "text-amber-700 dark:text-amber-400"
++        : "text-red-700 dark:text-red-400";
++
++  return (
++    <div className="flex items-center gap-1">
++      <span className="text-xs text-muted-foreground">{label}:</span>
++      <span className={`text-sm font-bold tabular-nums ${corTexto}`}>{Number(score).toFixed(1)}</span>
++    </div>
++  );
++}
++
++function ConteudoCard({ conteudo }: { conteudo: ConteudoGerado }) {
++  const sourceConfig = GENERATION_SOURCE_CONFIG[conteudo.generation_source] ??
++    GENERATION_SOURCE_CONFIG.manual;
++
++  return (
++    <div className="flex flex-col gap-3 rounded-xl border bg-card p-4">
++      {/* Titulo e topico */}
++      <div>
++        <h3 className="font-bold leading-snug">{conteudo.title}</h3>
++        <p className="mt-0.5 text-sm text-muted-foreground">{conteudo.topic}</p>
++      </div>
++
++      {/* Badges */}
++      <div className="flex flex-wrap gap-1.5">
++        {/* Tipo de conteudo */}
++        <span className="rounded-full bg-muted px-2 py-0.5 text-xs font-medium">
++          {CONTENT_TYPE_LABELS[conteudo.content_type] ?? conteudo.content_type}
++        </span>
++
++        {/* Plataforma */}
++        {conteudo.platform && (
++          <span className="rounded-full bg-muted px-2 py-0.5 text-xs font-medium">
++            {PLATFORM_LABELS[conteudo.platform] ?? conteudo.platform}
++          </span>
++        )}
++
++        {/* Fonte de geracao */}
++        <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${sourceConfig.cor}`}>
++          {sourceConfig.label}
++        </span>
++      </div>
++
++      {/* Scores */}
++      <div className="flex items-center gap-4">
++        <ScoreDisplay score={conteudo.viral_score} label="Viral" />
++        <ScoreDisplay score={conteudo.quality_score} label="Qualidade" />
++      </div>
++
++      {/* Publico-alvo e data */}
++      <div className="flex items-center justify-between text-xs text-muted-foreground">
++        {conteudo.target_audience ? (
++          <span className="truncate max-w-[60%]" title={conteudo.target_audience}>
++            Publico: {conteudo.target_audience}
++          </span>
++        ) : (
++          <span />
++        )}
++        <time dateTime={conteudo.created_at}>
++          {new Date(conteudo.created_at).toLocaleDateString("pt-BR")}
++        </time>
++      </div>
++    </div>
++  );
++}
+diff --git a/app/app/politico/narrativas/page.tsx b/app/app/politico/narrativas/page.tsx
+new file mode 100644
+index 0000000..1fb850c
+--- /dev/null
++++ b/app/app/politico/narrativas/page.tsx
+@@ -0,0 +1,301 @@
++/**
++ * /app/politico/narrativas — Radar de Narrativas
++ *
++ * Listagem paginada de pol_narratives com metricas agregadas
++ * (total, oportunidades, ameacas, sinais recentes nos ultimos 7 dias).
++ * Tabela com tema, plataforma, sentimento, forca, status estrategico e posts.
++ *
++ * Acesso: manager+
++ */
++
++import { redirect } from "next/navigation";
++import Link from "next/link";
++import { createServerClient } from "@/lib/supabase/server";
++import { getUser } from "@/lib/auth/get-user";
++import { resolverOrganizacaoAtiva } from "@/lib/organizations/resolver";
++
++// -- Tipos -------------------------------------------------------------------
++
++interface MetricasNarrativas {
++  total: number;
++  oportunidades: number;
++  ameacas: number;
++  sinaisRecentes: number;
++}
++
++interface Narrativa {
++  id: string;
++  theme: string;
++  platform: string | null;
++  sentiment: string | null;
++  strength: number;
++  posts_count: number;
++  strategic_status: string | null;
++}
++
++// -- Constantes --------------------------------------------------------------
++
++const POR_PAGINA = 20;
++
++const SENTIMENT_CONFIG: Record<string, { label: string; cor: string }> = {
++  positive: {
++    label: "Positivo",
++    cor: "bg-green-100 text-green-800 dark:bg-green-950 dark:text-green-200",
++  },
++  negative: {
++    label: "Negativo",
++    cor: "bg-red-100 text-red-800 dark:bg-red-950 dark:text-red-200",
++  },
++  neutral: {
++    label: "Neutro",
++    cor: "bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400",
++  },
++  mixed: {
++    label: "Misto",
++    cor: "bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-200",
++  },
++};
++
++const STATUS_CONFIG: Record<string, { label: string; cor: string }> = {
++  monitoring: {
++    label: "Monitorando",
++    cor: "bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400",
++  },
++  opportunity: {
++    label: "Oportunidade",
++    cor: "bg-green-100 text-green-800 dark:bg-green-950 dark:text-green-200",
++  },
++  threat: {
++    label: "Ameaca",
++    cor: "bg-orange-100 text-orange-800 dark:bg-orange-950 dark:text-orange-200",
++  },
++  crisis: {
++    label: "Crise",
++    cor: "bg-red-100 text-red-800 dark:bg-red-950 dark:text-red-200",
++  },
++  resolved: {
++    label: "Resolvida",
++    cor: "bg-blue-100 text-blue-800 dark:bg-blue-950 dark:text-blue-200",
++  },
++};
++
++// -- Data fetching -----------------------------------------------------------
++
++async function buscarMetricas(organizationId: string): Promise<MetricasNarrativas> {
++  const db = createServerClient();
++
++  const seteDiasAtras = new Date();
++  seteDiasAtras.setDate(seteDiasAtras.getDate() - 7);
++
++  const [total, oportunidades, ameacas, sinaisRecentes] = await Promise.all([
++    db
++      .from("pol_narratives")
++      .select("id", { count: "exact", head: true })
++      .eq("organization_id", organizationId),
++
++    db
++      .from("pol_narratives")
++      .select("id", { count: "exact", head: true })
++      .eq("organization_id", organizationId)
++      .eq("strategic_status", "opportunity"),
++
++    db
++      .from("pol_narratives")
++      .select("id", { count: "exact", head: true })
++      .eq("organization_id", organizationId)
++      .in("strategic_status", ["threat", "crisis"]),
++
++    db
++      .from("pol_narrative_signals")
++      .select("id", { count: "exact", head: true })
++      .eq("organization_id", organizationId)
++      .gte("created_at", seteDiasAtras.toISOString()),
++  ]);
++
++  return {
++    total: total.count ?? 0,
++    oportunidades: oportunidades.count ?? 0,
++    ameacas: ameacas.count ?? 0,
++    sinaisRecentes: sinaisRecentes.count ?? 0,
++  };
++}
++
++async function buscarNarrativas(
++  organizationId: string,
++  pagina: number,
++): Promise<{ narrativas: Narrativa[]; total: number }> {
++  const db = createServerClient();
++  const offset = (pagina - 1) * POR_PAGINA;
++
++  const { data, count } = await db
++    .from("pol_narratives")
++    .select("id, theme, platform, sentiment, strength, posts_count, strategic_status", {
++      count: "exact",
++    })
++    .eq("organization_id", organizationId)
++    .order("strength", { ascending: false })
++    .range(offset, offset + POR_PAGINA - 1);
++
++  return {
++    narrativas: (data ?? []) as Narrativa[],
++    total: count ?? 0,
++  };
++}
++
++// -- Componente --------------------------------------------------------------
++
++export default async function NarrativasPage(props: {
++  searchParams: Promise<{ pagina?: string }>;
++}) {
++  const user = await getUser();
++  if (!user) redirect("/login");
++
++  const org = await resolverOrganizacaoAtiva(user.id);
++  if (!org) redirect("/app/onboarding");
++
++  const searchParams = await props.searchParams;
++  const paginaAtual = Math.max(1, parseInt(searchParams.pagina ?? "1", 10) || 1);
++
++  const [metricas, { narrativas, total }] = await Promise.all([
++    buscarMetricas(org.id),
++    buscarNarrativas(org.id, paginaAtual),
++  ]);
++
++  const totalPaginas = Math.ceil(total / POR_PAGINA);
++
++  return (
++    <div className="mx-auto max-w-4xl px-4 py-8 space-y-8">
++      {/* Cabecalho */}
++      <div>
++        <h1 className="text-2xl font-bold tracking-tight">Radar de Narrativas</h1>
++        <p className="mt-1 text-sm text-muted-foreground">
++          Monitore narrativas ativas no debate publico, identifique oportunidades e ameacas em tempo real.
++        </p>
++      </div>
++
++      {/* Metricas */}
++      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
++        <MetricaCard label="Total narrativas" valor={metricas.total} />
++        <MetricaCard label="Oportunidades" valor={metricas.oportunidades} />
++        <MetricaCard label="Ameacas" valor={metricas.ameacas} />
++        <MetricaCard label="Sinais recentes (7d)" valor={metricas.sinaisRecentes} />
++      </div>
++
++      {/* Tabela de narrativas */}
++      {narrativas.length > 0 ? (
++        <>
++          <div className="rounded-xl border bg-card overflow-hidden">
++            <div className="overflow-x-auto">
++              <table className="w-full text-sm">
++                <thead>
++                  <tr className="border-b bg-muted/50">
++                    <th className="px-4 py-3 text-left font-medium text-muted-foreground">Tema</th>
++                    <th className="px-4 py-3 text-left font-medium text-muted-foreground">Plataforma</th>
++                    <th className="px-4 py-3 text-left font-medium text-muted-foreground">Sentimento</th>
++                    <th className="px-4 py-3 text-right font-medium text-muted-foreground">Forca</th>
++                    <th className="px-4 py-3 text-left font-medium text-muted-foreground">Status</th>
++                    <th className="px-4 py-3 text-right font-medium text-muted-foreground">Posts</th>
++                  </tr>
++                </thead>
++                <tbody>
++                  {narrativas.map((n) => {
++                    const sentimentConfig = SENTIMENT_CONFIG[n.sentiment ?? ""] ?? SENTIMENT_CONFIG.neutral;
++                    const statusConfig = STATUS_CONFIG[n.strategic_status ?? ""] ?? STATUS_CONFIG.monitoring;
++
++                    return (
++                      <tr
++                        key={n.id}
++                        className="border-b last:border-b-0 hover:bg-accent/30 transition-colors"
++                      >
++                        <td className="px-4 py-3 font-bold">{n.theme}</td>
++                        <td className="px-4 py-3">
++                          {n.platform && (
++                            <span className="rounded-full bg-muted px-2 py-0.5 text-xs font-medium capitalize">
++                              {n.platform.replace("_", " ")}
++                            </span>
++                          )}
++                        </td>
++                        <td className="px-4 py-3">
++                          <span
++                            className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${sentimentConfig.cor}`}
++                          >
++                            {sentimentConfig.label}
++                          </span>
++                        </td>
++                        <td className="px-4 py-3 text-right tabular-nums font-semibold">
++                          {Number(n.strength).toFixed(1)}
++                        </td>
++                        <td className="px-4 py-3">
++                          <span
++                            className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${statusConfig.cor}`}
++                          >
++                            {statusConfig.label}
++                          </span>
++                        </td>
++                        <td className="px-4 py-3 text-right tabular-nums">
++                          {n.posts_count.toLocaleString("pt-BR")}
++                        </td>
++                      </tr>
++                    );
++                  })}
++                </tbody>
++              </table>
++            </div>
++          </div>
++
++          {/* Paginacao */}
++          {totalPaginas > 1 && (
++            <div className="flex items-center justify-between pt-2">
++              <p className="text-xs text-muted-foreground">
++                Pagina <span className="tabular-nums">{paginaAtual}</span> de{" "}
++                <span className="tabular-nums">{totalPaginas}</span> ({total} narrativa
++                {total !== 1 ? "s" : ""})
++              </p>
++              <div className="flex gap-2">
++                {paginaAtual > 1 && (
++                  <Link
++                    href={`/app/politico/narrativas?pagina=${paginaAtual - 1}`}
++                    className="rounded-lg border bg-card px-3 py-1.5 text-xs font-medium hover:bg-accent transition-colors"
++                  >
++                    Anterior
++                  </Link>
++                )}
++                {paginaAtual < totalPaginas && (
++                  <Link
++                    href={`/app/politico/narrativas?pagina=${paginaAtual + 1}`}
++                    className="rounded-lg border bg-card px-3 py-1.5 text-xs font-medium hover:bg-accent transition-colors"
++                  >
++                    Proxima
++                  </Link>
++                )}
++              </div>
++            </div>
++          )}
++        </>
++      ) : (
++        /* Empty state */
++        <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-200">
++          <strong>Para comecar:</strong> cadastre a primeira narrativa para monitorar temas do debate
++          publico, identificar oportunidades e antecipar crises.
++        </div>
++      )}
++    </div>
++  );
++}
++
++// -- Sub-componentes ---------------------------------------------------------
++
++function MetricaCard({
++  label,
++  valor,
++}: {
++  label: string;
++  valor: number;
++}) {
++  return (
++    <div className="flex flex-col gap-1 rounded-lg border bg-card p-4">
++      <span className="text-2xl font-bold tabular-nums">{valor}</span>
++      <span className="text-xs text-muted-foreground">{label}</span>
++    </div>
++  );
++}
+diff --git a/app/app/politico/page.tsx b/app/app/politico/page.tsx
+index 47877ce..01b713e 100644
+--- a/app/app/politico/page.tsx
++++ b/app/app/politico/page.tsx
+@@ -107,6 +107,38 @@ export default async function PoliticoHubPage() {
+           ? `${metricas.transicoesHoje} hoje`
+           : null,
+     },
++    {
++      href: "/app/politico/social",
++      titulo: "Social",
++      descricao:
++        "Monitore perfis sociais, acompanhe metricas e analise posts coletados das redes.",
++      icone: "\u{1F4F1}",
++      badge: null,
++    },
++    {
++      href: "/app/politico/adversarios",
++      titulo: "Adversarios",
++      descricao:
++        "Rastreie oponentes politicos com nivel de risco, ameaca e sinais de alerta.",
++      icone: "\u{1F6E1}️",
++      badge: null,
++    },
++    {
++      href: "/app/politico/narrativas",
++      titulo: "Narrativas",
++      descricao:
++        "Radar de narrativas ativas com sentimento, forca e status estrategico por plataforma.",
++      icone: "\u{1F4E1}",
++      badge: null,
++    },
++    {
++      href: "/app/politico/motor-viral",
++      titulo: "Motor Viral",
++      descricao:
++        "Gere conteudo por IA — scripts de video, captions, roteiros com scoring de viralidade.",
++      icone: "\u{26A1}",
++      badge: null,
++    },
+   ];
+ 
+   return (
+diff --git a/app/app/politico/social/page.tsx b/app/app/politico/social/page.tsx
+new file mode 100644
+index 0000000..a7013c7
+--- /dev/null
++++ b/app/app/politico/social/page.tsx
+@@ -0,0 +1,260 @@
++/**
++ * /app/politico/social — Hub de Monitoramento Social
++ *
++ * Ponto de entrada do modulo de monitoramento social do War Room 2.0.
++ * Apresenta metricas agregadas e listagem de perfis sociais monitorados.
++ *
++ * Acesso: manager+
++ */
++
++import { redirect } from "next/navigation";
++import { createServerClient } from "@/lib/supabase/server";
++import { getUser } from "@/lib/auth/get-user";
++import { resolverOrganizacaoAtiva } from "@/lib/organizations/resolver";
++
++// -- Tipos -------------------------------------------------------------------
++
++interface MetricasSocial {
++  totalPerfis: number;
++  influenciadores: number;
++  postsColetados: number;
++  alertasInteligencia: number;
++}
++
++interface PerfilSocial {
++  id: string;
++  username: string;
++  display_name: string | null;
++  platform: string;
++  followers: number;
++  engagement_rate: number;
++  category: string;
++  active: boolean;
++}
++
++// -- Data fetching -----------------------------------------------------------
++
++async function buscarMetricas(organizationId: string): Promise<MetricasSocial> {
++  const db = createServerClient();
++
++  const [totalPerfis, influenciadores, postsColetados, alertasInteligencia] = await Promise.all([
++    db
++      .from("pol_social_profiles")
++      .select("id", { count: "exact", head: true })
++      .eq("organization_id", organizationId),
++
++    db
++      .from("pol_social_profiles")
++      .select("id", { count: "exact", head: true })
++      .eq("organization_id", organizationId)
++      .eq("category", "influencer"),
++
++    db
++      .from("pol_social_posts")
++      .select("id", { count: "exact", head: true })
++      .eq("organization_id", organizationId),
++
++    db
++      .from("pol_social_intelligence")
++      .select("id", { count: "exact", head: true })
++      .eq("organization_id", organizationId),
++  ]);
++
++  return {
++    totalPerfis: totalPerfis.count ?? 0,
++    influenciadores: influenciadores.count ?? 0,
++    postsColetados: postsColetados.count ?? 0,
++    alertasInteligencia: alertasInteligencia.count ?? 0,
++  };
++}
++
++async function buscarPerfis(
++  organizationId: string,
++  pagina: number,
++): Promise<{ perfis: PerfilSocial[]; total: number }> {
++  const db = createServerClient();
++  const limite = 20;
++  const offset = (pagina - 1) * limite;
++
++  const { data, count } = await db
++    .from("pol_social_profiles")
++    .select("id, username, display_name, platform, followers, engagement_rate, category, active", {
++      count: "exact",
++    })
++    .eq("organization_id", organizationId)
++    .order("followers", { ascending: false })
++    .range(offset, offset + limite - 1);
++
++  return {
++    perfis: (data ?? []) as PerfilSocial[],
++    total: count ?? 0,
++  };
++}
++
++// -- Componente --------------------------------------------------------------
++
++export default async function SocialHubPage(props: {
++  searchParams: Promise<{ pagina?: string }>;
++}) {
++  const user = await getUser();
++  if (!user) redirect("/login");
++
++  const org = await resolverOrganizacaoAtiva(user.id);
++  if (!org) redirect("/app/onboarding");
++
++  const searchParams = await props.searchParams;
++  const paginaAtual = Math.max(1, parseInt(searchParams.pagina ?? "1", 10) || 1);
++
++  const [metricas, { perfis, total }] = await Promise.all([
++    buscarMetricas(org.id),
++    buscarPerfis(org.id, paginaAtual),
++  ]);
++
++  const totalPaginas = Math.ceil(total / 20);
++
++  return (
++    <div className="mx-auto max-w-4xl px-4 py-8 space-y-8">
++      {/* Cabecalho */}
++      <div>
++        <h1 className="text-2xl font-bold tracking-tight">Monitoramento Social</h1>
++        <p className="mt-1 text-sm text-muted-foreground">
++          Acompanhe perfis, metricas de engajamento e inteligencia de redes sociais da sua campanha.
++        </p>
++      </div>
++
++      {/* Metricas */}
++      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
++        <MetricaCard label="Total de perfis" valor={metricas.totalPerfis} />
++        <MetricaCard label="Influenciadores" valor={metricas.influenciadores} />
++        <MetricaCard label="Posts coletados" valor={metricas.postsColetados} />
++        <MetricaCard label="Alertas de inteligencia" valor={metricas.alertasInteligencia} />
++      </div>
++
++      {/* Tabela de perfis */}
++      {perfis.length > 0 ? (
++        <div className="rounded-xl border bg-card">
++          <div className="overflow-x-auto">
++            <table className="w-full text-sm">
++              <thead>
++                <tr className="border-b text-left">
++                  <th className="px-4 py-3 font-medium text-muted-foreground">Usuario</th>
++                  <th className="px-4 py-3 font-medium text-muted-foreground">Plataforma</th>
++                  <th className="px-4 py-3 font-medium text-muted-foreground text-right">Seguidores</th>
++                  <th className="px-4 py-3 font-medium text-muted-foreground text-right">Engajamento</th>
++                  <th className="px-4 py-3 font-medium text-muted-foreground">Categoria</th>
++                  <th className="px-4 py-3 font-medium text-muted-foreground">Status</th>
++                </tr>
++              </thead>
++              <tbody>
++                {perfis.map((perfil) => (
++                  <tr key={perfil.id} className="border-b last:border-b-0 hover:bg-accent/30 transition-colors">
++                    <td className="px-4 py-3">
++                      <div>
++                        <span className="font-medium">@{perfil.username}</span>
++                        {perfil.display_name && (
++                          <span className="ml-2 text-xs text-muted-foreground">{perfil.display_name}</span>
++                        )}
++                      </div>
++                    </td>
++                    <td className="px-4 py-3">
++                      <span className="rounded-full bg-muted px-2 py-0.5 text-xs font-medium capitalize">
++                        {perfil.platform}
++                      </span>
++                    </td>
++                    <td className="px-4 py-3 text-right tabular-nums">
++                      {perfil.followers.toLocaleString("pt-BR")}
++                    </td>
++                    <td className="px-4 py-3 text-right tabular-nums">
++                      {perfil.engagement_rate.toFixed(2)}%
++                    </td>
++                    <td className="px-4 py-3">
++                      <CategoriaLabel categoria={perfil.category} />
++                    </td>
++                    <td className="px-4 py-3">
++                      <span
++                        className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${
++                          perfil.active
++                            ? "bg-green-100 text-green-800 dark:bg-green-950 dark:text-green-200"
++                            : "bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400"
++                        }`}
++                      >
++                        {perfil.active ? "Ativo" : "Inativo"}
++                      </span>
++                    </td>
++                  </tr>
++                ))}
++              </tbody>
++            </table>
++          </div>
++
++          {/* Paginacao */}
++          {totalPaginas > 1 && (
++            <div className="flex items-center justify-between border-t px-4 py-3 text-sm">
++              <span className="text-muted-foreground">
++                Pagina {paginaAtual} de {totalPaginas} ({total} perfis)
++              </span>
++              <div className="flex gap-2">
++                {paginaAtual > 1 && (
++                  <a
++                    href={`/app/politico/social?pagina=${paginaAtual - 1}`}
++                    className="rounded-md border px-3 py-1 text-sm hover:bg-accent transition-colors"
++                  >
++                    Anterior
++                  </a>
++                )}
++                {paginaAtual < totalPaginas && (
++                  <a
++                    href={`/app/politico/social?pagina=${paginaAtual + 1}`}
++                    className="rounded-md border px-3 py-1 text-sm hover:bg-accent transition-colors"
++                  >
++                    Proxima
++                  </a>
++                )}
++              </div>
++            </div>
++          )}
++        </div>
++      ) : (
++        /* Empty state */
++        <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-200">
++          <strong>Para comecar:</strong> adicione o primeiro perfil social monitorado para
++          acompanhar metricas de engajamento, crescimento e inteligencia da sua campanha.
++        </div>
++      )}
++    </div>
++  );
++}
++
++// -- Sub-componentes ---------------------------------------------------------
++
++function MetricaCard({
++  label,
++  valor,
++}: {
++  label: string;
++  valor: number;
++}) {
++  return (
++    <div className="flex flex-col gap-1 rounded-lg border bg-card p-4">
++      <span className="text-2xl font-bold tabular-nums">{valor}</span>
++      <span className="text-xs text-muted-foreground">{label}</span>
++    </div>
++  );
++}
++
++const CATEGORIA_LABELS: Record<string, { label: string; cor: string }> = {
++  monitorado: { label: "Monitorado", cor: "bg-blue-100 text-blue-800 dark:bg-blue-950 dark:text-blue-200" },
++  influencer: { label: "Influenciador", cor: "bg-purple-100 text-purple-800 dark:bg-purple-950 dark:text-purple-200" },
++  aliado: { label: "Aliado", cor: "bg-green-100 text-green-800 dark:bg-green-950 dark:text-green-200" },
++  neutro: { label: "Neutro", cor: "bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400" },
++  adversario: { label: "Adversario", cor: "bg-red-100 text-red-800 dark:bg-red-950 dark:text-red-200" },
++};
++
++function CategoriaLabel({ categoria }: { categoria: string }) {
++  const config = CATEGORIA_LABELS[categoria] ?? CATEGORIA_LABELS.monitorado;
++  return (
++    <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${config.cor}`}>
++      {config.label}
++    </span>
++  );
++}
+diff --git a/lib/navigation/catalogo.ts b/lib/navigation/catalogo.ts
+index 2ba1029..80e8759 100644
+--- a/lib/navigation/catalogo.ts
++++ b/lib/navigation/catalogo.ts
+@@ -856,6 +856,46 @@ export const NAV_CATALOG = [
+     minRole: "manager",
+     sidebar: false, // acessa pelo hub /app/politico
+   },
++  {
++    href: "/app/politico/social",
++    label: "Social",
++    description: "Perfis monitorados, snapshots de métricas e posts coletados de redes sociais.",
++    icon: "share-2",
++    group: "crm",
++    section: "Campanha política",
++    minRole: "manager",
++    sidebar: false, // acessa pelo hub /app/politico
++  },
++  {
++    href: "/app/politico/adversarios",
++    label: "Adversários",
++    description: "Painel de oponentes políticos com nível de risco, ameaça e sinais de alerta.",
++    icon: "shield-alert",
++    group: "crm",
++    section: "Campanha política",
++    minRole: "manager",
++    sidebar: false, // acessa pelo hub /app/politico
++  },
++  {
++    href: "/app/politico/narrativas",
++    label: "Narrativas",
++    description: "Radar de narrativas ativas com sentimento, força e status estratégico.",
++    icon: "radio",
++    group: "crm",
++    section: "Campanha política",
++    minRole: "manager",
++    sidebar: false, // acessa pelo hub /app/politico
++  },
++  {
++    href: "/app/politico/motor-viral",
++    label: "Motor Viral",
++    description: "Geração de conteúdo por IA — scripts, captions, roteiros com scoring viral.",
++    icon: "sparkles",
++    group: "crm",
++    section: "Campanha política",
++    minRole: "manager",
++    sidebar: false, // acessa pelo hub /app/politico
++  },
+ 
+   // ---- Análise — olhar o sistema funcionando ----
+   //
+diff --git a/supabase/baseline.sql b/supabase/baseline.sql
+index 08f644c..556aa8f 100644
+--- a/supabase/baseline.sql
++++ b/supabase/baseline.sql
+@@ -53389,3 +53389,450 @@ create policy tenant_isolation_pol_territory_flags_all
+   on public.pol_territory_flags for all
+   using (organization_id = any(public.fn_user_org_ids()))
+   with check (organization_id = any(public.fn_user_org_ids()));
++
++-- ---- pol_social_profiles, pol_social_snapshots, pol_social_posts, pol_social_intelligence (migration 0632) ----
++
++create table if not exists public.pol_social_profiles (
++  id                      uuid         primary key default gen_random_uuid(),
++  organization_id         uuid         not null references public.organizations(id) on delete cascade,
++  platform                text         not null
++                          check (platform in (
++                            'instagram', 'facebook', 'twitter', 'tiktok', 'youtube', 'linkedin'
++                          )),
++  username                text         not null,
++  display_name            text,
++  bio                     text,
++  followers               integer      not null default 0,
++  following               integer      not null default 0,
++  posts_count             integer      not null default 0,
++  engagement_rate         numeric(7,4) not null default 0,
++  category                text         not null default 'monitorado'
++                          check (category in (
++                            'monitorado', 'influencer', 'aliado', 'neutro', 'adversario'
++                          )),
++  active                  boolean      not null default true,
++  created_at              timestamptz  not null default now(),
++  updated_at              timestamptz  not null default now(),
++  constraint pol_social_profiles_platform_user_org_uq unique (organization_id, platform, username)
++);
++
++create index if not exists pol_social_profiles_org_platform_idx
++  on public.pol_social_profiles (organization_id, platform);
++create index if not exists pol_social_profiles_org_category_idx
++  on public.pol_social_profiles (organization_id, category);
++create index if not exists pol_social_profiles_org_active_idx
++  on public.pol_social_profiles (organization_id, active)
++  where active = true;
++
++create or replace trigger pol_social_profiles_touch
++  before update on public.pol_social_profiles
++  for each row execute function public.fn_touch_updated_at();
++
++alter table public.pol_social_profiles enable row level security;
++drop policy if exists tenant_isolation_pol_social_profiles_all on public.pol_social_profiles;
++create policy tenant_isolation_pol_social_profiles_all
++  on public.pol_social_profiles for all
++  using (organization_id = any(public.fn_user_org_ids()))
++  with check (organization_id = any(public.fn_user_org_ids()));
++
++create table if not exists public.pol_social_snapshots (
++  id                      uuid         primary key default gen_random_uuid(),
++  organization_id         uuid         not null references public.organizations(id) on delete cascade,
++  profile_id              uuid         not null references public.pol_social_profiles(id) on delete cascade,
++  followers               integer      not null default 0,
++  following               integer      not null default 0,
++  posts_count             integer      not null default 0,
++  engagement_rate         numeric(7,4) not null default 0,
++  growth_daily            numeric(7,4) not null default 0,
++  recorded_at             timestamptz  not null default now(),
++  created_at              timestamptz  not null default now()
++);
++
++create index if not exists pol_social_snapshots_org_profile_idx
++  on public.pol_social_snapshots (organization_id, profile_id);
++create index if not exists pol_social_snapshots_recorded_idx
++  on public.pol_social_snapshots (recorded_at);
++create index if not exists pol_social_snapshots_profile_recorded_idx
++  on public.pol_social_snapshots (profile_id, recorded_at);
++
++alter table public.pol_social_snapshots enable row level security;
++drop policy if exists tenant_isolation_pol_social_snapshots_all on public.pol_social_snapshots;
++create policy tenant_isolation_pol_social_snapshots_all
++  on public.pol_social_snapshots for all
++  using (organization_id = any(public.fn_user_org_ids()))
++  with check (organization_id = any(public.fn_user_org_ids()));
++
++create table if not exists public.pol_social_posts (
++  id                      uuid         primary key default gen_random_uuid(),
++  organization_id         uuid         not null references public.organizations(id) on delete cascade,
++  profile_id              uuid         not null references public.pol_social_profiles(id) on delete cascade,
++  platform                text         not null
++                          check (platform in (
++                            'instagram', 'facebook', 'twitter', 'tiktok', 'youtube', 'linkedin'
++                          )),
++  post_url                text,
++  caption                 text,
++  media_type              text
++                          check (media_type is null or media_type in (
++                            'image', 'video', 'carousel', 'reel', 'story', 'text'
++                          )),
++  likes                   integer      not null default 0,
++  comments                integer      not null default 0,
++  shares                  integer      not null default 0,
++  saves                   integer      not null default 0,
++  viral_score             numeric(5,2) not null default 0,
++  sentiment               text
++                          check (sentiment is null or sentiment in (
++                            'positive', 'negative', 'neutral', 'mixed'
++                          )),
++  hashtags                text[],
++  posted_at               timestamptz,
++  collected_at            timestamptz  not null default now(),
++  created_at              timestamptz  not null default now()
++);
++
++create index if not exists pol_social_posts_org_profile_idx
++  on public.pol_social_posts (organization_id, profile_id);
++create index if not exists pol_social_posts_org_platform_idx
++  on public.pol_social_posts (organization_id, platform);
++create index if not exists pol_social_posts_posted_idx
++  on public.pol_social_posts (posted_at)
++  where posted_at is not null;
++create index if not exists pol_social_posts_viral_idx
++  on public.pol_social_posts (organization_id, viral_score)
++  where viral_score > 0;
++create index if not exists pol_social_posts_hashtags_idx
++  on public.pol_social_posts using gin (hashtags)
++  where hashtags is not null;
++
++alter table public.pol_social_posts enable row level security;
++drop policy if exists tenant_isolation_pol_social_posts_all on public.pol_social_posts;
++create policy tenant_isolation_pol_social_posts_all
++  on public.pol_social_posts for all
++  using (organization_id = any(public.fn_user_org_ids()))
++  with check (organization_id = any(public.fn_user_org_ids()));
++
++create table if not exists public.pol_social_intelligence (
++  id                      uuid         primary key default gen_random_uuid(),
++  organization_id         uuid         not null references public.organizations(id) on delete cascade,
++  profile_id              uuid         not null references public.pol_social_profiles(id) on delete cascade,
++  analysis_type           text         not null
++                          check (analysis_type in (
++                            'profile_summary', 'trend_analysis', 'audience_insight',
++                            'content_strategy', 'risk_assessment', 'opportunity'
++                          )),
++  content                 text         not null,
++  confidence              numeric(3,2) not null default 0
++                          check (confidence >= 0 and confidence <= 1),
++  created_at              timestamptz  not null default now()
++);
++
++create index if not exists pol_social_intelligence_org_profile_idx
++  on public.pol_social_intelligence (organization_id, profile_id);
++create index if not exists pol_social_intelligence_org_type_idx
++  on public.pol_social_intelligence (organization_id, analysis_type);
++create index if not exists pol_social_intelligence_created_idx
++  on public.pol_social_intelligence (created_at);
++
++alter table public.pol_social_intelligence enable row level security;
++drop policy if exists tenant_isolation_pol_social_intelligence_all on public.pol_social_intelligence;
++create policy tenant_isolation_pol_social_intelligence_all
++  on public.pol_social_intelligence for all
++  using (organization_id = any(public.fn_user_org_ids()))
++  with check (organization_id = any(public.fn_user_org_ids()));
++
++-- ---- pol_opponents, pol_opponent_snapshots, pol_opponent_posts, pol_opponent_signals (migration 0633) ----
++
++create table if not exists public.pol_opponents (
++  id                      uuid         primary key default gen_random_uuid(),
++  organization_id         uuid         not null references public.organizations(id) on delete cascade,
++  name                    text         not null,
++  platform                text         not null
++                          check (platform in (
++                            'instagram', 'facebook', 'twitter', 'tiktok', 'youtube', 'linkedin', 'website'
++                          )),
++  username                text,
++  bio                     text,
++  followers               integer      not null default 0,
++  engagement_rate         numeric(7,4) not null default 0,
++  risk_level              text         not null default 'low'
++                          check (risk_level in ('low', 'medium', 'high', 'critical')),
++  threat_score            numeric(5,2) not null default 0,
++  active                  boolean      not null default true,
++  created_at              timestamptz  not null default now(),
++  updated_at              timestamptz  not null default now()
++);
++
++create index if not exists pol_opponents_org_risk_idx
++  on public.pol_opponents (organization_id, risk_level);
++create index if not exists pol_opponents_org_platform_idx
++  on public.pol_opponents (organization_id, platform);
++create index if not exists pol_opponents_org_active_idx
++  on public.pol_opponents (organization_id, active)
++  where active = true;
++create index if not exists pol_opponents_org_threat_idx
++  on public.pol_opponents (organization_id, threat_score)
++  where threat_score > 0;
++
++create or replace trigger pol_opponents_touch
++  before update on public.pol_opponents
++  for each row execute function public.fn_touch_updated_at();
++
++alter table public.pol_opponents enable row level security;
++drop policy if exists tenant_isolation_pol_opponents_all on public.pol_opponents;
++create policy tenant_isolation_pol_opponents_all
++  on public.pol_opponents for all
++  using (organization_id = any(public.fn_user_org_ids()))
++  with check (organization_id = any(public.fn_user_org_ids()));
++
++create table if not exists public.pol_opponent_snapshots (
++  id                      uuid         primary key default gen_random_uuid(),
++  organization_id         uuid         not null references public.organizations(id) on delete cascade,
++  opponent_id             uuid         not null references public.pol_opponents(id) on delete cascade,
++  followers               integer      not null default 0,
++  engagement_rate         numeric(7,4) not null default 0,
++  posts_count             integer      not null default 0,
++  growth_weekly           numeric(7,4) not null default 0,
++  recorded_at             timestamptz  not null default now(),
++  created_at              timestamptz  not null default now()
++);
++
++create index if not exists pol_opponent_snapshots_org_opponent_idx
++  on public.pol_opponent_snapshots (organization_id, opponent_id);
++create index if not exists pol_opponent_snapshots_recorded_idx
++  on public.pol_opponent_snapshots (recorded_at);
++create index if not exists pol_opponent_snapshots_opponent_recorded_idx
++  on public.pol_opponent_snapshots (opponent_id, recorded_at);
++
++alter table public.pol_opponent_snapshots enable row level security;
++drop policy if exists tenant_isolation_pol_opponent_snapshots_all on public.pol_opponent_snapshots;
++create policy tenant_isolation_pol_opponent_snapshots_all
++  on public.pol_opponent_snapshots for all
++  using (organization_id = any(public.fn_user_org_ids()))
++  with check (organization_id = any(public.fn_user_org_ids()));
++
++create table if not exists public.pol_opponent_posts (
++  id                      uuid         primary key default gen_random_uuid(),
++  organization_id         uuid         not null references public.organizations(id) on delete cascade,
++  opponent_id             uuid         not null references public.pol_opponents(id) on delete cascade,
++  post_url                text,
++  caption                 text,
++  likes                   integer      not null default 0,
++  comments                integer      not null default 0,
++  viral_score             numeric(5,2) not null default 0,
++  hashtags                text[],
++  mentions                text[],
++  collected_at            timestamptz  not null default now(),
++  created_at              timestamptz  not null default now()
++);
++
++create index if not exists pol_opponent_posts_org_opponent_idx
++  on public.pol_opponent_posts (organization_id, opponent_id);
++create index if not exists pol_opponent_posts_collected_idx
++  on public.pol_opponent_posts (collected_at);
++create index if not exists pol_opponent_posts_viral_idx
++  on public.pol_opponent_posts (organization_id, viral_score)
++  where viral_score > 0;
++create index if not exists pol_opponent_posts_hashtags_idx
++  on public.pol_opponent_posts using gin (hashtags)
++  where hashtags is not null;
++
++alter table public.pol_opponent_posts enable row level security;
++drop policy if exists tenant_isolation_pol_opponent_posts_all on public.pol_opponent_posts;
++create policy tenant_isolation_pol_opponent_posts_all
++  on public.pol_opponent_posts for all
++  using (organization_id = any(public.fn_user_org_ids()))
++  with check (organization_id = any(public.fn_user_org_ids()));
++
++create table if not exists public.pol_opponent_signals (
++  id                      uuid         primary key default gen_random_uuid(),
++  organization_id         uuid         not null references public.organizations(id) on delete cascade,
++  opponent_id             uuid         not null references public.pol_opponents(id) on delete cascade,
++  signal_type             text         not null
++                          check (signal_type in (
++                            'growth_anomaly', 'narrative_shift', 'alliance', 'attack',
++                            'viral_content', 'media_mention', 'event', 'other'
++                          )),
++  severity                text         not null default 'medium'
++                          check (severity in ('low', 'medium', 'high', 'critical')),
++  description             text         not null,
++  metadata                jsonb,
++  created_at              timestamptz  not null default now()
++);
++
++create index if not exists pol_opponent_signals_org_opponent_idx
++  on public.pol_opponent_signals (organization_id, opponent_id);
++create index if not exists pol_opponent_signals_org_severity_idx
++  on public.pol_opponent_signals (organization_id, severity);
++create index if not exists pol_opponent_signals_org_type_idx
++  on public.pol_opponent_signals (organization_id, signal_type);
++create index if not exists pol_opponent_signals_created_idx
++  on public.pol_opponent_signals (created_at);
++
++alter table public.pol_opponent_signals enable row level security;
++drop policy if exists tenant_isolation_pol_opponent_signals_all on public.pol_opponent_signals;
++create policy tenant_isolation_pol_opponent_signals_all
++  on public.pol_opponent_signals for all
++  using (organization_id = any(public.fn_user_org_ids()))
++  with check (organization_id = any(public.fn_user_org_ids()));
++
++-- ---- pol_narratives, pol_narrative_signals, pol_generated_content, pol_video_analyses (migration 0634) ----
++
++create table if not exists public.pol_narratives (
++  id                      uuid         primary key default gen_random_uuid(),
++  organization_id         uuid         not null references public.organizations(id) on delete cascade,
++  theme                   text         not null,
++  platform                text
++                          check (platform is null or platform in (
++                            'instagram', 'facebook', 'twitter', 'tiktok', 'youtube',
++                            'linkedin', 'whatsapp', 'news', 'cross_platform'
++                          )),
++  city                    text,
++  sentiment               text         not null default 'neutral'
++                          check (sentiment in ('positive', 'negative', 'neutral', 'mixed')),
++  strength                numeric(5,2) not null default 0,
++  posts_count             integer      not null default 0,
++  reach                   integer      not null default 0,
++  engagement_score        numeric(7,2) not null default 0,
++  strategic_status        text         not null default 'monitoring'
++                          check (strategic_status in (
++                            'monitoring', 'opportunity', 'threat', 'crisis', 'resolved'
++                          )),
++  recommended_action      text,
++  created_at              timestamptz  not null default now(),
++  updated_at              timestamptz  not null default now()
++);
++
++create index if not exists pol_narratives_org_sentiment_idx
++  on public.pol_narratives (organization_id, sentiment);
++create index if not exists pol_narratives_org_status_idx
++  on public.pol_narratives (organization_id, strategic_status);
++create index if not exists pol_narratives_org_platform_idx
++  on public.pol_narratives (organization_id, platform)
++  where platform is not null;
++create index if not exists pol_narratives_org_strength_idx
++  on public.pol_narratives (organization_id, strength)
++  where strength > 0;
++create index if not exists pol_narratives_created_idx
++  on public.pol_narratives (created_at);
++
++create or replace trigger pol_narratives_touch
++  before update on public.pol_narratives
++  for each row execute function public.fn_touch_updated_at();
++
++alter table public.pol_narratives enable row level security;
++drop policy if exists tenant_isolation_pol_narratives_all on public.pol_narratives;
++create policy tenant_isolation_pol_narratives_all
++  on public.pol_narratives for all
++  using (organization_id = any(public.fn_user_org_ids()))
++  with check (organization_id = any(public.fn_user_org_ids()));
++
++create table if not exists public.pol_narrative_signals (
++  id                      uuid         primary key default gen_random_uuid(),
++  organization_id         uuid         not null references public.organizations(id) on delete cascade,
++  narrative_id            uuid         not null references public.pol_narratives(id) on delete cascade,
++  signal_type             text         not null
++                          check (signal_type in (
++                            'keyword_spike', 'sentiment_shift', 'new_source',
++                            'viral_content', 'influencer_mention', 'media_coverage',
++                            'hashtag_trend', 'counter_narrative', 'other'
++                          )),
++  source                  text,
++  content                 text         not null,
++  severity                text         not null default 'medium'
++                          check (severity in ('low', 'medium', 'high', 'critical')),
++  metadata                jsonb,
++  created_at              timestamptz  not null default now()
++);
++
++create index if not exists pol_narrative_signals_org_narrative_idx
++  on public.pol_narrative_signals (organization_id, narrative_id);
++create index if not exists pol_narrative_signals_org_type_idx
++  on public.pol_narrative_signals (organization_id, signal_type);
++create index if not exists pol_narrative_signals_org_severity_idx
++  on public.pol_narrative_signals (organization_id, severity);
++create index if not exists pol_narrative_signals_created_idx
++  on public.pol_narrative_signals (created_at);
++
++alter table public.pol_narrative_signals enable row level security;
++drop policy if exists tenant_isolation_pol_narrative_signals_all on public.pol_narrative_signals;
++create policy tenant_isolation_pol_narrative_signals_all
++  on public.pol_narrative_signals for all
++  using (organization_id = any(public.fn_user_org_ids()))
++  with check (organization_id = any(public.fn_user_org_ids()));
++
++create table if not exists public.pol_generated_content (
++  id                      uuid         primary key default gen_random_uuid(),
++  organization_id         uuid         not null references public.organizations(id) on delete cascade,
++  title                   text         not null,
++  topic                   text         not null,
++  target_audience         text,
++  content_type            text         not null
++                          check (content_type in (
++                            'video_script', 'caption', 'carousel', 'story',
++                            'reel_script', 'live_script', 'article', 'thread', 'other'
++                          )),
++  script                  text,
++  caption                 text,
++  hashtags                text[],
++  cta                     text,
++  platform                text
++                          check (platform is null or platform in (
++                            'instagram', 'facebook', 'twitter', 'tiktok', 'youtube',
++                            'linkedin', 'whatsapp', 'cross_platform'
++                          )),
++  viral_score             numeric(5,2) not null default 0,
++  quality_score           numeric(5,2) not null default 0,
++  generation_source       text         not null default 'manual'
++                          check (generation_source in ('manual', 'ai_auto', 'ai_assisted', 'template')),
++  created_at              timestamptz  not null default now(),
++  updated_at              timestamptz  not null default now()
++);
++
++create index if not exists pol_generated_content_org_type_idx
++  on public.pol_generated_content (organization_id, content_type);
++create index if not exists pol_generated_content_org_platform_idx
++  on public.pol_generated_content (organization_id, platform)
++  where platform is not null;
++create index if not exists pol_generated_content_org_viral_idx
++  on public.pol_generated_content (organization_id, viral_score)
++  where viral_score > 0;
++create index if not exists pol_generated_content_created_idx
++  on public.pol_generated_content (created_at);
++
++create or replace trigger pol_generated_content_touch
++  before update on public.pol_generated_content
++  for each row execute function public.fn_touch_updated_at();
++
++alter table public.pol_generated_content enable row level security;
++drop policy if exists tenant_isolation_pol_generated_content_all on public.pol_generated_content;
++create policy tenant_isolation_pol_generated_content_all
++  on public.pol_generated_content for all
++  using (organization_id = any(public.fn_user_org_ids()))
++  with check (organization_id = any(public.fn_user_org_ids()));
++
++create table if not exists public.pol_video_analyses (
++  id                      uuid         primary key default gen_random_uuid(),
++  organization_id         uuid         not null references public.organizations(id) on delete cascade,
++  video_url               text         not null,
++  analysis                text         not null,
++  key_moments             jsonb,
++  sentiment               text         not null default 'neutral'
++                          check (sentiment in ('positive', 'negative', 'neutral', 'mixed')),
++  recommendations         text,
++  created_at              timestamptz  not null default now()
++);
++
++create index if not exists pol_video_analyses_org_idx
++  on public.pol_video_analyses (organization_id);
++create index if not exists pol_video_analyses_sentiment_idx
++  on public.pol_video_analyses (organization_id, sentiment);
++create index if not exists pol_video_analyses_created_idx
++  on public.pol_video_analyses (created_at);
++
++alter table public.pol_video_analyses enable row level security;
++drop policy if exists tenant_isolation_pol_video_analyses_all on public.pol_video_analyses;
++create policy tenant_isolation_pol_video_analyses_all
++  on public.pol_video_analyses for all
++  using (organization_id = any(public.fn_user_org_ids()))
++  with check (organization_id = any(public.fn_user_org_ids()));
+diff --git a/supabase/migrations/20261010200200_0632_pol_social.sql b/supabase/migrations/20261010200200_0632_pol_social.sql
+new file mode 100644
+index 0000000..78db744
+--- /dev/null
++++ b/supabase/migrations/20261010200200_0632_pol_social.sql
+@@ -0,0 +1,226 @@
++-- manifest: tabelas pol_social_profiles, pol_social_snapshots, pol_social_posts, pol_social_intelligence — monitoramento social do War Room 2.0, consolidando 12+ tabelas do WR1 em 4 tabelas normalizadas com snapshots diários, posts coletados e inteligência IA
++
++-- ══════════════════════════════════════════════════════════════════
++-- pol_social_profiles — perfis sociais monitorados
++--
++-- Consolida monitored_profiles + strategic_accounts do WR1.
++-- Cada perfil pertence a uma organização e pode ter múltiplos
++-- snapshots diários e posts coletados. category distingue
++-- influenciadores de perfis regulares sem tabela separada.
++-- ══════════════════════════════════════════════════════════════════
++
++create table if not exists public.pol_social_profiles (
++  id                      uuid         primary key default gen_random_uuid(),
++  organization_id         uuid         not null references public.organizations(id) on delete cascade,
++  -- Rede social e identificação
++  platform                text         not null
++                          check (platform in (
++                            'instagram', 'facebook', 'twitter', 'tiktok', 'youtube', 'linkedin'
++                          )),
++  username                text         not null,
++  display_name            text,
++  bio                     text,
++  -- Métricas correntes (snapshot mais recente)
++  followers               integer      not null default 0,
++  following               integer      not null default 0,
++  posts_count             integer      not null default 0,
++  engagement_rate         numeric(7,4) not null default 0,
++  -- Classificação
++  category                text         not null default 'monitorado'
++                          check (category in (
++                            'monitorado', 'influencer', 'aliado', 'neutro', 'adversario'
++                          )),
++  -- Status do monitoramento
++  active                  boolean      not null default true,
++  created_at              timestamptz  not null default now(),
++  updated_at              timestamptz  not null default now(),
++  -- Um perfil por plataforma+username por organização
++  constraint pol_social_profiles_platform_user_org_uq unique (organization_id, platform, username)
++);
++
++comment on table public.pol_social_profiles is
++  'Perfis sociais monitorados — consolida monitored_profiles e strategic_accounts do WR1. category=influencer substitui tabela separada de influenciadores.';
++
++-- Índices
++create index if not exists pol_social_profiles_org_platform_idx
++  on public.pol_social_profiles (organization_id, platform);
++
++create index if not exists pol_social_profiles_org_category_idx
++  on public.pol_social_profiles (organization_id, category);
++
++create index if not exists pol_social_profiles_org_active_idx
++  on public.pol_social_profiles (organization_id, active)
++  where active = true;
++
++-- Touch updated_at
++create or replace trigger pol_social_profiles_touch
++  before update on public.pol_social_profiles
++  for each row execute function public.fn_touch_updated_at();
++
++-- RLS
++alter table public.pol_social_profiles enable row level security;
++
++create policy tenant_isolation_pol_social_profiles_all
++  on public.pol_social_profiles for all
++  using (organization_id = any(public.fn_user_org_ids()))
++  with check (organization_id = any(public.fn_user_org_ids()));
++
++-- ══════════════════════════════════════════════════════════════════
++-- pol_social_snapshots — snapshots diários de métricas
++--
++-- Consolida profile_daily_snapshots + profile_snapshots +
++-- profile_metrics + profile_metrics_cache do WR1 em UMA tabela.
++-- Um snapshot por perfil por dia, permitindo análise de crescimento.
++-- ══════════════════════════════════════════════════════════════════
++
++create table if not exists public.pol_social_snapshots (
++  id                      uuid         primary key default gen_random_uuid(),
++  organization_id         uuid         not null references public.organizations(id) on delete cascade,
++  profile_id              uuid         not null references public.pol_social_profiles(id) on delete cascade,
++  -- Métricas do snapshot
++  followers               integer      not null default 0,
++  following               integer      not null default 0,
++  posts_count             integer      not null default 0,
++  engagement_rate         numeric(7,4) not null default 0,
++  growth_daily            numeric(7,4) not null default 0,
++  -- Timestamp do registro
++  recorded_at             timestamptz  not null default now(),
++  created_at              timestamptz  not null default now()
++);
++
++comment on table public.pol_social_snapshots is
++  'Snapshots diários de métricas de perfis sociais — consolida 4 tabelas do WR1. Um snapshot por perfil por dia para análise de crescimento.';
++
++-- Índices
++create index if not exists pol_social_snapshots_org_profile_idx
++  on public.pol_social_snapshots (organization_id, profile_id);
++
++create index if not exists pol_social_snapshots_recorded_idx
++  on public.pol_social_snapshots (recorded_at);
++
++create index if not exists pol_social_snapshots_profile_recorded_idx
++  on public.pol_social_snapshots (profile_id, recorded_at);
++
++-- RLS
++alter table public.pol_social_snapshots enable row level security;
++
++create policy tenant_isolation_pol_social_snapshots_all
++  on public.pol_social_snapshots for all
++  using (organization_id = any(public.fn_user_org_ids()))
++  with check (organization_id = any(public.fn_user_org_ids()));
++
++-- ══════════════════════════════════════════════════════════════════
++-- pol_social_posts — posts coletados de perfis monitorados
++--
++-- Consolida instagram_posts + profile_posts_collected do WR1.
++-- Cada post vinculado a um perfil monitorado com métricas de
++-- engajamento, sentimento e viral score.
++-- ══════════════════════════════════════════════════════════════════
++
++create table if not exists public.pol_social_posts (
++  id                      uuid         primary key default gen_random_uuid(),
++  organization_id         uuid         not null references public.organizations(id) on delete cascade,
++  profile_id              uuid         not null references public.pol_social_profiles(id) on delete cascade,
++  -- Identificação do post
++  platform                text         not null
++                          check (platform in (
++                            'instagram', 'facebook', 'twitter', 'tiktok', 'youtube', 'linkedin'
++                          )),
++  post_url                text,
++  caption                 text,
++  media_type              text
++                          check (media_type is null or media_type in (
++                            'image', 'video', 'carousel', 'reel', 'story', 'text'
++                          )),
++  -- Métricas de engajamento
++  likes                   integer      not null default 0,
++  comments                integer      not null default 0,
++  shares                  integer      not null default 0,
++  saves                   integer      not null default 0,
++  -- Análise
++  viral_score             numeric(5,2) not null default 0,
++  sentiment               text
++                          check (sentiment is null or sentiment in (
++                            'positive', 'negative', 'neutral', 'mixed'
++                          )),
++  hashtags                text[],
++  -- Timestamps
++  posted_at               timestamptz,
++  collected_at            timestamptz  not null default now(),
++  created_at              timestamptz  not null default now()
++);
++
++comment on table public.pol_social_posts is
++  'Posts coletados de perfis monitorados — consolida instagram_posts e profile_posts_collected do WR1. Métricas de engajamento, sentimento e viral score.';
++
++-- Índices
++create index if not exists pol_social_posts_org_profile_idx
++  on public.pol_social_posts (organization_id, profile_id);
++
++create index if not exists pol_social_posts_org_platform_idx
++  on public.pol_social_posts (organization_id, platform);
++
++create index if not exists pol_social_posts_posted_idx
++  on public.pol_social_posts (posted_at)
++  where posted_at is not null;
++
++create index if not exists pol_social_posts_viral_idx
++  on public.pol_social_posts (organization_id, viral_score)
++  where viral_score > 0;
++
++create index if not exists pol_social_posts_hashtags_idx
++  on public.pol_social_posts using gin (hashtags)
++  where hashtags is not null;
++
++-- RLS
++alter table public.pol_social_posts enable row level security;
++
++create policy tenant_isolation_pol_social_posts_all
++  on public.pol_social_posts for all
++  using (organization_id = any(public.fn_user_org_ids()))
++  with check (organization_id = any(public.fn_user_org_ids()));
++
++-- ══════════════════════════════════════════════════════════════════
++-- pol_social_intelligence — inteligência IA sobre perfis
++--
++-- Consolida profile_intelligence do WR1.
++-- Armazena análises geradas por IA sobre perfis monitorados,
++-- com tipo de análise e nível de confiança.
++-- ══════════════════════════════════════════════════════════════════
++
++create table if not exists public.pol_social_intelligence (
++  id                      uuid         primary key default gen_random_uuid(),
++  organization_id         uuid         not null references public.organizations(id) on delete cascade,
++  profile_id              uuid         not null references public.pol_social_profiles(id) on delete cascade,
++  -- Tipo de análise
++  analysis_type           text         not null
++                          check (analysis_type in (
++                            'profile_summary', 'trend_analysis', 'audience_insight',
++                            'content_strategy', 'risk_assessment', 'opportunity'
++                          )),
++  content                 text         not null,
++  confidence              numeric(3,2) not null default 0
++                          check (confidence >= 0 and confidence <= 1),
++  created_at              timestamptz  not null default now()
++);
++
++comment on table public.pol_social_intelligence is
++  'Inteligência IA sobre perfis sociais — análises geradas (sumário, tendência, audiência, risco, oportunidade) com nível de confiança.';
++
++-- Índices
++create index if not exists pol_social_intelligence_org_profile_idx
++  on public.pol_social_intelligence (organization_id, profile_id);
++
++create index if not exists pol_social_intelligence_org_type_idx
++  on public.pol_social_intelligence (organization_id, analysis_type);
++
++create index if not exists pol_social_intelligence_created_idx
++  on public.pol_social_intelligence (created_at);
++
++-- RLS
++alter table public.pol_social_intelligence enable row level security;
++
++create policy tenant_isolation_pol_social_intelligence_all
++  on public.pol_social_intelligence for all
++  using (organization_id = any(public.fn_user_org_ids()))
++  with check (organization_id = any(public.fn_user_org_ids()));
+diff --git a/supabase/migrations/20261010200300_0633_pol_opponents.sql b/supabase/migrations/20261010200300_0633_pol_opponents.sql
+new file mode 100644
+index 0000000..1b9749f
+--- /dev/null
++++ b/supabase/migrations/20261010200300_0633_pol_opponents.sql
+@@ -0,0 +1,207 @@
++-- manifest: tabelas pol_opponents, pol_opponent_snapshots, pol_opponent_posts, pol_opponent_signals — rastreamento de adversários políticos do War Room 2.0, com métricas históricas, coleta de posts e sistema de sinais de alerta por severidade
++
++-- ══════════════════════════════════════════════════════════════════
++-- pol_opponents — perfis de oponentes/adversários políticos
++--
++-- Cadastro de adversários com métricas correntes, nível de ameaça
++-- e scoring de risco. Vinculado à organização, não a um contato.
++-- ══════════════════════════════════════════════════════════════════
++
++create table if not exists public.pol_opponents (
++  id                      uuid         primary key default gen_random_uuid(),
++  organization_id         uuid         not null references public.organizations(id) on delete cascade,
++  -- Identificação
++  name                    text         not null,
++  platform                text         not null
++                          check (platform in (
++                            'instagram', 'facebook', 'twitter', 'tiktok', 'youtube', 'linkedin', 'website'
++                          )),
++  username                text,
++  bio                     text,
++  -- Métricas correntes
++  followers               integer      not null default 0,
++  engagement_rate         numeric(7,4) not null default 0,
++  -- Avaliação de risco
++  risk_level              text         not null default 'low'
++                          check (risk_level in ('low', 'medium', 'high', 'critical')),
++  threat_score            numeric(5,2) not null default 0,
++  -- Status
++  active                  boolean      not null default true,
++  created_at              timestamptz  not null default now(),
++  updated_at              timestamptz  not null default now()
++);
++
++comment on table public.pol_opponents is
++  'Perfis de oponentes/adversários políticos — métricas correntes, nível de risco e scoring de ameaça para monitoramento estratégico.';
++
++-- Índices
++create index if not exists pol_opponents_org_risk_idx
++  on public.pol_opponents (organization_id, risk_level);
++
++create index if not exists pol_opponents_org_platform_idx
++  on public.pol_opponents (organization_id, platform);
++
++create index if not exists pol_opponents_org_active_idx
++  on public.pol_opponents (organization_id, active)
++  where active = true;
++
++create index if not exists pol_opponents_org_threat_idx
++  on public.pol_opponents (organization_id, threat_score)
++  where threat_score > 0;
++
++-- Touch updated_at
++create or replace trigger pol_opponents_touch
++  before update on public.pol_opponents
++  for each row execute function public.fn_touch_updated_at();
++
++-- RLS
++alter table public.pol_opponents enable row level security;
++
++create policy tenant_isolation_pol_opponents_all
++  on public.pol_opponents for all
++  using (organization_id = any(public.fn_user_org_ids()))
++  with check (organization_id = any(public.fn_user_org_ids()));
++
++-- ══════════════════════════════════════════════════════════════════
++-- pol_opponent_snapshots — histórico de métricas de adversários
++--
++-- Registra métricas periódicas dos oponentes para análise de
++-- tendências e detecção de crescimento anômalo.
++-- ══════════════════════════════════════════════════════════════════
++
++create table if not exists public.pol_opponent_snapshots (
++  id                      uuid         primary key default gen_random_uuid(),
++  organization_id         uuid         not null references public.organizations(id) on delete cascade,
++  opponent_id             uuid         not null references public.pol_opponents(id) on delete cascade,
++  -- Métricas do snapshot
++  followers               integer      not null default 0,
++  engagement_rate         numeric(7,4) not null default 0,
++  posts_count             integer      not null default 0,
++  growth_weekly           numeric(7,4) not null default 0,
++  -- Timestamp do registro
++  recorded_at             timestamptz  not null default now(),
++  created_at              timestamptz  not null default now()
++);
++
++comment on table public.pol_opponent_snapshots is
++  'Histórico de métricas de adversários — snapshots periódicos para análise de tendências e detecção de crescimento anômalo.';
++
++-- Índices
++create index if not exists pol_opponent_snapshots_org_opponent_idx
++  on public.pol_opponent_snapshots (organization_id, opponent_id);
++
++create index if not exists pol_opponent_snapshots_recorded_idx
++  on public.pol_opponent_snapshots (recorded_at);
++
++create index if not exists pol_opponent_snapshots_opponent_recorded_idx
++  on public.pol_opponent_snapshots (opponent_id, recorded_at);
++
++-- RLS
++alter table public.pol_opponent_snapshots enable row level security;
++
++create policy tenant_isolation_pol_opponent_snapshots_all
++  on public.pol_opponent_snapshots for all
++  using (organization_id = any(public.fn_user_org_ids()))
++  with check (organization_id = any(public.fn_user_org_ids()));
++
++-- ══════════════════════════════════════════════════════════════════
++-- pol_opponent_posts — posts coletados de adversários
++--
++-- Posts publicados por adversários, coletados automaticamente
++-- para análise de narrativa, engajamento e viralidade.
++-- ══════════════════════════════════════════════════════════════════
++
++create table if not exists public.pol_opponent_posts (
++  id                      uuid         primary key default gen_random_uuid(),
++  organization_id         uuid         not null references public.organizations(id) on delete cascade,
++  opponent_id             uuid         not null references public.pol_opponents(id) on delete cascade,
++  -- Post
++  post_url                text,
++  caption                 text,
++  -- Métricas
++  likes                   integer      not null default 0,
++  comments                integer      not null default 0,
++  viral_score             numeric(5,2) not null default 0,
++  -- Análise de conteúdo
++  hashtags                text[],
++  mentions                text[],
++  -- Timestamps
++  collected_at            timestamptz  not null default now(),
++  created_at              timestamptz  not null default now()
++);
++
++comment on table public.pol_opponent_posts is
++  'Posts coletados de adversários políticos — métricas de engajamento, hashtags, menções e viral score para análise estratégica.';
++
++-- Índices
++create index if not exists pol_opponent_posts_org_opponent_idx
++  on public.pol_opponent_posts (organization_id, opponent_id);
++
++create index if not exists pol_opponent_posts_collected_idx
++  on public.pol_opponent_posts (collected_at);
++
++create index if not exists pol_opponent_posts_viral_idx
++  on public.pol_opponent_posts (organization_id, viral_score)
++  where viral_score > 0;
++
++create index if not exists pol_opponent_posts_hashtags_idx
++  on public.pol_opponent_posts using gin (hashtags)
++  where hashtags is not null;
++
++-- RLS
++alter table public.pol_opponent_posts enable row level security;
++
++create policy tenant_isolation_pol_opponent_posts_all
++  on public.pol_opponent_posts for all
++  using (organization_id = any(public.fn_user_org_ids()))
++  with check (organization_id = any(public.fn_user_org_ids()));
++
++-- ══════════════════════════════════════════════════════════════════
++-- pol_opponent_signals — sinais de alerta de adversários
++--
++-- Sinais detectados por monitoramento automático ou manual:
++-- crescimento anômalo, mudança de narrativa, aliança, ataque etc.
++-- Severidade de low a critical para priorização.
++-- ══════════════════════════════════════════════════════════════════
++
++create table if not exists public.pol_opponent_signals (
++  id                      uuid         primary key default gen_random_uuid(),
++  organization_id         uuid         not null references public.organizations(id) on delete cascade,
++  opponent_id             uuid         not null references public.pol_opponents(id) on delete cascade,
++  -- Sinal
++  signal_type             text         not null
++                          check (signal_type in (
++                            'growth_anomaly', 'narrative_shift', 'alliance', 'attack',
++                            'viral_content', 'media_mention', 'event', 'other'
++                          )),
++  severity                text         not null default 'medium'
++                          check (severity in ('low', 'medium', 'high', 'critical')),
++  description             text         not null,
++  -- Metadados adicionais (flexível)
++  metadata                jsonb,
++  created_at              timestamptz  not null default now()
++);
++
++comment on table public.pol_opponent_signals is
++  'Sinais de alerta de adversários — crescimento anômalo, mudança de narrativa, ataques, alianças. Severidade de low a critical.';
++
++-- Índices
++create index if not exists pol_opponent_signals_org_opponent_idx
++  on public.pol_opponent_signals (organization_id, opponent_id);
++
++create index if not exists pol_opponent_signals_org_severity_idx
++  on public.pol_opponent_signals (organization_id, severity);
++
++create index if not exists pol_opponent_signals_org_type_idx
++  on public.pol_opponent_signals (organization_id, signal_type);
++
++create index if not exists pol_opponent_signals_created_idx
++  on public.pol_opponent_signals (created_at);
++
++-- RLS
++alter table public.pol_opponent_signals enable row level security;
++
++create policy tenant_isolation_pol_opponent_signals_all
++  on public.pol_opponent_signals for all
++  using (organization_id = any(public.fn_user_org_ids()))
++  with check (organization_id = any(public.fn_user_org_ids()));
+diff --git a/supabase/migrations/20261010200400_0634_pol_narratives.sql b/supabase/migrations/20261010200400_0634_pol_narratives.sql
+new file mode 100644
+index 0000000..a77b38f
+--- /dev/null
++++ b/supabase/migrations/20261010200400_0634_pol_narratives.sql
+@@ -0,0 +1,239 @@
++-- manifest: tabelas pol_narratives, pol_narrative_signals, pol_generated_content, pol_video_analyses — radar de narrativas, sinais de tendência, Motor Viral de geração de conteúdo IA e análise de vídeo para o War Room 2.0
++
++-- ══════════════════════════════════════════════════════════════════
++-- pol_narratives — radar de narrativas ativas
++--
++-- Consolida narrative_radar + narrative_clusters do WR1.
++-- Cada narrativa tem tema, plataforma, sentimento, força e
++-- recomendação estratégica. Vinculada à cidade para análise local.
++-- ══════════════════════════════════════════════════════════════════
++
++create table if not exists public.pol_narratives (
++  id                      uuid         primary key default gen_random_uuid(),
++  organization_id         uuid         not null references public.organizations(id) on delete cascade,
++  -- Identificação da narrativa
++  theme                   text         not null,
++  platform                text
++                          check (platform is null or platform in (
++                            'instagram', 'facebook', 'twitter', 'tiktok', 'youtube',
++                            'linkedin', 'whatsapp', 'news', 'cross_platform'
++                          )),
++  city                    text,
++  -- Métricas de narrativa
++  sentiment               text         not null default 'neutral'
++                          check (sentiment in ('positive', 'negative', 'neutral', 'mixed')),
++  strength                numeric(5,2) not null default 0,
++  posts_count             integer      not null default 0,
++  reach                   integer      not null default 0,
++  engagement_score        numeric(7,2) not null default 0,
++  -- Status estratégico
++  strategic_status        text         not null default 'monitoring'
++                          check (strategic_status in (
++                            'monitoring', 'opportunity', 'threat', 'crisis', 'resolved'
++                          )),
++  recommended_action      text,
++  created_at              timestamptz  not null default now(),
++  updated_at              timestamptz  not null default now()
++);
++
++comment on table public.pol_narratives is
++  'Radar de narrativas ativas — consolida narrative_radar e clusters do WR1. Tema, sentimento, força e recomendação estratégica por plataforma e cidade.';
++
++-- Índices
++create index if not exists pol_narratives_org_sentiment_idx
++  on public.pol_narratives (organization_id, sentiment);
++
++create index if not exists pol_narratives_org_status_idx
++  on public.pol_narratives (organization_id, strategic_status);
++
++create index if not exists pol_narratives_org_platform_idx
++  on public.pol_narratives (organization_id, platform)
++  where platform is not null;
++
++create index if not exists pol_narratives_org_strength_idx
++  on public.pol_narratives (organization_id, strength)
++  where strength > 0;
++
++create index if not exists pol_narratives_created_idx
++  on public.pol_narratives (created_at);
++
++-- Touch updated_at
++create or replace trigger pol_narratives_touch
++  before update on public.pol_narratives
++  for each row execute function public.fn_touch_updated_at();
++
++-- RLS
++alter table public.pol_narratives enable row level security;
++
++create policy tenant_isolation_pol_narratives_all
++  on public.pol_narratives for all
++  using (organization_id = any(public.fn_user_org_ids()))
++  with check (organization_id = any(public.fn_user_org_ids()));
++
++-- ══════════════════════════════════════════════════════════════════
++-- pol_narrative_signals — sinais de narrativa detectados
++--
++-- Consolida narrative_signals + narrative_trends +
++-- narrative_keywords do WR1 em UMA tabela.
++-- Cada sinal vinculado a uma narrativa, com tipo, fonte,
++-- conteúdo e severidade.
++-- ══════════════════════════════════════════════════════════════════
++
++create table if not exists public.pol_narrative_signals (
++  id                      uuid         primary key default gen_random_uuid(),
++  organization_id         uuid         not null references public.organizations(id) on delete cascade,
++  narrative_id            uuid         not null references public.pol_narratives(id) on delete cascade,
++  -- Sinal
++  signal_type             text         not null
++                          check (signal_type in (
++                            'keyword_spike', 'sentiment_shift', 'new_source',
++                            'viral_content', 'influencer_mention', 'media_coverage',
++                            'hashtag_trend', 'counter_narrative', 'other'
++                          )),
++  source                  text,
++  content                 text         not null,
++  severity                text         not null default 'medium'
++                          check (severity in ('low', 'medium', 'high', 'critical')),
++  -- Metadados adicionais
++  metadata                jsonb,
++  created_at              timestamptz  not null default now()
++);
++
++comment on table public.pol_narrative_signals is
++  'Sinais de narrativa detectados — consolida signals, trends e keywords do WR1. Tipo, fonte, conteúdo e severidade para cada detecção.';
++
++-- Índices
++create index if not exists pol_narrative_signals_org_narrative_idx
++  on public.pol_narrative_signals (organization_id, narrative_id);
++
++create index if not exists pol_narrative_signals_org_type_idx
++  on public.pol_narrative_signals (organization_id, signal_type);
++
++create index if not exists pol_narrative_signals_org_severity_idx
++  on public.pol_narrative_signals (organization_id, severity);
++
++create index if not exists pol_narrative_signals_created_idx
++  on public.pol_narrative_signals (created_at);
++
++-- RLS
++alter table public.pol_narrative_signals enable row level security;
++
++create policy tenant_isolation_pol_narrative_signals_all
++  on public.pol_narrative_signals for all
++  using (organization_id = any(public.fn_user_org_ids()))
++  with check (organization_id = any(public.fn_user_org_ids()));
++
++-- ══════════════════════════════════════════════════════════════════
++-- pol_generated_content — conteúdo gerado pelo Motor Viral
++--
++-- Consolida narrative_scripts do WR1.
++-- Armazena conteúdos gerados por IA (scripts de vídeo, captions,
++-- roteiros de lives, posts) com scoring de qualidade e viralidade.
++-- ══════════════════════════════════════════════════════════════════
++
++create table if not exists public.pol_generated_content (
++  id                      uuid         primary key default gen_random_uuid(),
++  organization_id         uuid         not null references public.organizations(id) on delete cascade,
++  -- Identificação do conteúdo
++  title                   text         not null,
++  topic                   text         not null,
++  target_audience         text,
++  -- Tipo de conteúdo
++  content_type            text         not null
++                          check (content_type in (
++                            'video_script', 'caption', 'carousel', 'story',
++                            'reel_script', 'live_script', 'article', 'thread', 'other'
++                          )),
++  -- Conteúdo gerado
++  script                  text,
++  caption                 text,
++  hashtags                text[],
++  cta                     text,
++  -- Plataforma alvo
++  platform                text
++                          check (platform is null or platform in (
++                            'instagram', 'facebook', 'twitter', 'tiktok', 'youtube',
++                            'linkedin', 'whatsapp', 'cross_platform'
++                          )),
++  -- Scoring
++  viral_score             numeric(5,2) not null default 0,
++  quality_score           numeric(5,2) not null default 0,
++  -- Origem da geração
++  generation_source       text         not null default 'manual'
++                          check (generation_source in ('manual', 'ai_auto', 'ai_assisted', 'template')),
++  created_at              timestamptz  not null default now(),
++  updated_at              timestamptz  not null default now()
++);
++
++comment on table public.pol_generated_content is
++  'Conteúdo gerado pelo Motor Viral — scripts de vídeo, captions, roteiros de lives e posts com scoring de qualidade e viralidade.';
++
++-- Índices
++create index if not exists pol_generated_content_org_type_idx
++  on public.pol_generated_content (organization_id, content_type);
++
++create index if not exists pol_generated_content_org_platform_idx
++  on public.pol_generated_content (organization_id, platform)
++  where platform is not null;
++
++create index if not exists pol_generated_content_org_viral_idx
++  on public.pol_generated_content (organization_id, viral_score)
++  where viral_score > 0;
++
++create index if not exists pol_generated_content_created_idx
++  on public.pol_generated_content (created_at);
++
++-- Touch updated_at
++create or replace trigger pol_generated_content_touch
++  before update on public.pol_generated_content
++  for each row execute function public.fn_touch_updated_at();
++
++-- RLS
++alter table public.pol_generated_content enable row level security;
++
++create policy tenant_isolation_pol_generated_content_all
++  on public.pol_generated_content for all
++  using (organization_id = any(public.fn_user_org_ids()))
++  with check (organization_id = any(public.fn_user_org_ids()));
++
++-- ══════════════════════════════════════════════════════════════════
++-- pol_video_analyses — análises de vídeo por IA
++--
++-- Armazena análises detalhadas de vídeos por IA, incluindo
++-- momentos-chave, sentimento geral e recomendações.
++-- ══════════════════════════════════════════════════════════════════
++
++create table if not exists public.pol_video_analyses (
++  id                      uuid         primary key default gen_random_uuid(),
++  organization_id         uuid         not null references public.organizations(id) on delete cascade,
++  -- Vídeo analisado
++  video_url               text         not null,
++  -- Resultado da análise
++  analysis                text         not null,
++  key_moments             jsonb,
++  sentiment               text         not null default 'neutral'
++                          check (sentiment in ('positive', 'negative', 'neutral', 'mixed')),
++  recommendations         text,
++  created_at              timestamptz  not null default now()
++);
++
++comment on table public.pol_video_analyses is
++  'Análises de vídeo por IA — momentos-chave, sentimento geral e recomendações para cada vídeo analisado.';
++
++-- Índices
++create index if not exists pol_video_analyses_org_idx
++  on public.pol_video_analyses (organization_id);
++
++create index if not exists pol_video_analyses_sentiment_idx
++  on public.pol_video_analyses (organization_id, sentiment);
++
++create index if not exists pol_video_analyses_created_idx
++  on public.pol_video_analyses (created_at);
++
++-- RLS
++alter table public.pol_video_analyses enable row level security;
++
++create policy tenant_isolation_pol_video_analyses_all
++  on public.pol_video_analyses for all
++  using (organization_id = any(public.fn_user_org_ids()))
++  with check (organization_id = any(public.fn_user_org_ids()));
+-- 
+2.43.0
+

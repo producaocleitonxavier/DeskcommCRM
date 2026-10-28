@@ -1,0 +1,2719 @@
+From 1b7c7a6677f629706a2baea32f07f35a344ac859 Mon Sep 17 00:00:00 2001
+From: Claude <noreply@anthropic.com>
+Date: Sat, 10 Oct 2026 23:36:07 +0000
+Subject: [PATCH] =?UTF-8?q?feat:=20add=20Fase=201=20=E2=80=94=20Core=20Pol?=
+ =?UTF-8?q?=C3=ADtico=20+=20Territ=C3=B3rio=20(War=20Room=202.0)?=
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Migrations 0630 (pol_leads, pol_lead_scores_history, pol_funnel_transitions)
+e 0631 (pol_territories, pol_territory_metrics, pol_tse_data, pol_territory_flags).
+API routes para pol-leads (CRUD + funnel transition) e pol-territories (CRUD).
+UI pages: hub político, leads, territórios e funil.
+Navegação registrada no catálogo (grupo crm, seção "Campanha política").
+Baseline appendix idempotente para as 7 tabelas.
+
+Co-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_01NViZYR2ZtGJLWjE9EiKwya
+---
+ app/api/v1/pol-leads/[id]/route.ts            | 211 ++++++++++++
+ app/api/v1/pol-leads/funnel/route.ts          | 148 ++++++++
+ app/api/v1/pol-leads/route.ts                 | 180 ++++++++++
+ app/api/v1/pol-territories/[id]/route.ts      | 250 ++++++++++++++
+ app/api/v1/pol-territories/route.ts           | 173 ++++++++++
+ app/app/politico/funil/page.tsx               | 210 +++++++++++
+ app/app/politico/leads/page.tsx               | 326 ++++++++++++++++++
+ app/app/politico/page.tsx                     | 190 ++++++++++
+ app/app/politico/territorios/page.tsx         | 225 ++++++++++++
+ lib/navigation/catalogo.ts                    |  49 +++
+ supabase/baseline.sql                         | 257 ++++++++++++++
+ .../20261010200000_0630_pol_core.sql          | 161 +++++++++
+ .../20261010200100_0631_pol_territories.sql   | 206 +++++++++++
+ 13 files changed, 2586 insertions(+)
+ create mode 100644 app/api/v1/pol-leads/[id]/route.ts
+ create mode 100644 app/api/v1/pol-leads/funnel/route.ts
+ create mode 100644 app/api/v1/pol-leads/route.ts
+ create mode 100644 app/api/v1/pol-territories/[id]/route.ts
+ create mode 100644 app/api/v1/pol-territories/route.ts
+ create mode 100644 app/app/politico/funil/page.tsx
+ create mode 100644 app/app/politico/leads/page.tsx
+ create mode 100644 app/app/politico/page.tsx
+ create mode 100644 app/app/politico/territorios/page.tsx
+ create mode 100644 supabase/migrations/20261010200000_0630_pol_core.sql
+ create mode 100644 supabase/migrations/20261010200100_0631_pol_territories.sql
+
+diff --git a/app/api/v1/pol-leads/[id]/route.ts b/app/api/v1/pol-leads/[id]/route.ts
+new file mode 100644
+index 0000000..a2d0b63
+--- /dev/null
++++ b/app/api/v1/pol-leads/[id]/route.ts
+@@ -0,0 +1,211 @@
++/**
++ * GET|PATCH|DELETE /api/v1/pol-leads/[id]
++ *
++ * Operacoes em um pol_lead especifico.
++ *
++ * GET    — detalhe do pol_lead com dados do contato (viewer+)
++ * PATCH  — atualizar parcialmente (manager+)
++ * DELETE — hard delete (admin only, dados de tenant)
++ *
++ * Seguranca: filtramos organization_id do cookie/JWT — nunca do body.
++ */
++
++import { randomUUID } from "node:crypto";
++import { z } from "zod";
++import { NextResponse, type NextRequest } from "next/server";
++
++import { ok, fail } from "@/lib/api/wrappers";
++import { requireRole } from "@/lib/auth/require-role";
++import { createAdminClient } from "@/lib/supabase/admin";
++import { requireSupportWrite } from "@/lib/impersonate/support";
++
++export const dynamic = "force-dynamic";
++export const runtime = "nodejs";
++
++interface RouteCtx {
++  params: Promise<{ id: string }>;
++}
++
++// -- Validacao ----------------------------------------------------------------
++
++const SUPPORT_LEVELS = [
++  "novo_cadastro",
++  "simpatizante",
++  "apoiador",
++  "militante",
++  "voto_certo",
++] as const;
++
++const TEMPERATURES = ["frio", "morno", "quente"] as const;
++
++const atualizarPolLeadSchema = z
++  .object({
++    support_level: z.enum(SUPPORT_LEVELS),
++    temperature: z.enum(TEMPERATURES),
++    zona_eleitoral: z.string().max(20).nullable(),
++    secao_eleitoral: z.string().max(20).nullable(),
++    mobilizer_id: z.string().uuid().nullable(),
++    leader_potential: z.boolean(),
++    community_role: z.string().max(120).nullable(),
++    territory_id: z.string().uuid().nullable(),
++    consent_origin: z.string().max(120).nullable(),
++    opt_out: z.boolean(),
++  })
++  .partial(); // PATCH = todos opcionais
++
++// -- Helpers ------------------------------------------------------------------
++
++async function buscarPolLead(db: ReturnType<typeof createAdminClient>, id: string, organizationId: string) {
++  return db
++    .from("pol_leads")
++    .select("*, contacts(id, name, phone, email)")
++    .eq("id", id)
++    .eq("organization_id", organizationId)
++    .single();
++}
++
++// -- GET ----------------------------------------------------------------------
++
++export async function GET(req: NextRequest, ctx: RouteCtx): Promise<NextResponse> {
++  const requestId = randomUUID();
++  const { id } = await ctx.params;
++
++  const authz = await requireRole("viewer", { requestId, resource: "pol_leads" });
++  if (!authz.ok) return authz.response;
++
++  const db = createAdminClient();
++  const { data: polLead, error } = await buscarPolLead(db, id, authz.organizationId);
++
++  if (error || !polLead) {
++    return fail("not_found", "Pol_lead nao encontrado", 404, { requestId });
++  }
++
++  return ok({ pol_lead: polLead }, { headers: { "x-request-id": requestId } });
++}
++
++// -- PATCH --------------------------------------------------------------------
++
++export async function PATCH(req: NextRequest, ctx: RouteCtx): Promise<NextResponse> {
++  const requestId = randomUUID();
++  const { id } = await ctx.params;
++
++  const authz = await requireRole("manager", { requestId, resource: "pol_leads" });
++  if (!authz.ok) return authz.response;
++
++  const { organizationId, userId } = authz;
++
++  const guardaSuporteWrite = await requireSupportWrite({
++    requestId,
++    resource: "pol_leads.update",
++  });
++  if (!guardaSuporteWrite.ok) return guardaSuporteWrite.response;
++
++  let body: unknown;
++  try {
++    body = await req.json();
++  } catch {
++    return fail("bad_request", "JSON invalido", 400, { requestId });
++  }
++
++  const parsed = atualizarPolLeadSchema.safeParse(body);
++  if (!parsed.success) {
++    return fail("validation_error", "Dados invalidos", 422, {
++      requestId,
++      details: parsed.error.flatten(),
++    });
++  }
++
++  if (Object.keys(parsed.data).length === 0) {
++    return fail("bad_request", "Nenhum campo para atualizar", 400, { requestId });
++  }
++
++  const db = createAdminClient();
++
++  // Verificar existencia + tenant
++  const { data: existente, error: errBusca } = await db
++    .from("pol_leads")
++    .select("id")
++    .eq("id", id)
++    .eq("organization_id", organizationId)
++    .single();
++
++  if (errBusca || !existente) {
++    return fail("not_found", "Pol_lead nao encontrado", 404, { requestId });
++  }
++
++  const { data: atualizado, error: errUpdate } = await db
++    .from("pol_leads")
++    .update(parsed.data)
++    .eq("id", id)
++    .eq("organization_id", organizationId)
++    .select()
++    .single();
++
++  if (errUpdate) {
++    return fail("internal_error", "Erro ao atualizar pol_lead", 500, { requestId });
++  }
++
++  // Audit log
++  await db.from("api_audit_log").insert({
++    organization_id: organizationId,
++    user_id: userId,
++    action: "pol_leads.update",
++    resource_id: id,
++    metadata: { campos_alterados: Object.keys(parsed.data) },
++  });
++
++  return ok({ pol_lead: atualizado }, { headers: { "x-request-id": requestId } });
++}
++
++// -- DELETE -------------------------------------------------------------------
++
++export async function DELETE(req: NextRequest, ctx: RouteCtx): Promise<NextResponse> {
++  const requestId = randomUUID();
++  const { id } = await ctx.params;
++
++  const authz = await requireRole("admin", { requestId, resource: "pol_leads" });
++  if (!authz.ok) return authz.response;
++
++  const { organizationId, userId } = authz;
++
++  const guardaSuporteWrite = await requireSupportWrite({
++    requestId,
++    resource: "pol_leads.delete",
++  });
++  if (!guardaSuporteWrite.ok) return guardaSuporteWrite.response;
++
++  const db = createAdminClient();
++
++  const { data: existente, error: errBusca } = await db
++    .from("pol_leads")
++    .select("id, contact_id")
++    .eq("id", id)
++    .eq("organization_id", organizationId)
++    .single();
++
++  if (errBusca || !existente) {
++    return fail("not_found", "Pol_lead nao encontrado", 404, { requestId });
++  }
++
++  // Hard delete — dados de tenant, nao audit
++  const { error: errDelete } = await db
++    .from("pol_leads")
++    .delete()
++    .eq("id", id)
++    .eq("organization_id", organizationId);
++
++  if (errDelete) {
++    return fail("internal_error", "Erro ao deletar pol_lead", 500, { requestId });
++  }
++
++  // Audit log
++  await db.from("api_audit_log").insert({
++    organization_id: organizationId,
++    user_id: userId,
++    action: "pol_leads.delete",
++    resource_id: id,
++    metadata: { contact_id: existente.contact_id },
++  });
++
++  return ok({ deleted: true }, { headers: { "x-request-id": requestId } });
++}
+diff --git a/app/api/v1/pol-leads/funnel/route.ts b/app/api/v1/pol-leads/funnel/route.ts
+new file mode 100644
+index 0000000..954b2fd
+--- /dev/null
++++ b/app/api/v1/pol-leads/funnel/route.ts
+@@ -0,0 +1,148 @@
++/**
++ * POST /api/v1/pol-leads/funnel
++ *
++ * Transicao de support_level de um pol_lead no funil politico.
++ *
++ * Valida que from_stage bate com o nivel atual, cria registro em
++ * pol_funnel_transitions e atualiza pol_leads.support_level.
++ *
++ * Requer role manager.
++ *
++ * Seguranca: organization_id do cookie/JWT (fonte confiavel). Nunca do body.
++ */
++
++import { randomUUID } from "node:crypto";
++import { z } from "zod";
++import { NextResponse, type NextRequest } from "next/server";
++
++import { ok, fail } from "@/lib/api/wrappers";
++import { requireRole } from "@/lib/auth/require-role";
++import { createAdminClient } from "@/lib/supabase/admin";
++import { requireSupportWrite } from "@/lib/impersonate/support";
++
++export const dynamic = "force-dynamic";
++export const runtime = "nodejs";
++
++// -- Validacao ----------------------------------------------------------------
++
++const SUPPORT_LEVELS = [
++  "novo_cadastro",
++  "simpatizante",
++  "apoiador",
++  "militante",
++  "voto_certo",
++] as const;
++
++const transicaoSchema = z.object({
++  contact_id: z.string().uuid(),
++  from_stage: z.enum(SUPPORT_LEVELS),
++  to_stage: z.enum(SUPPORT_LEVELS),
++  reason: z.string().max(500).optional(),
++});
++
++// -- POST — transicao de funil ------------------------------------------------
++
++export async function POST(req: NextRequest): Promise<NextResponse> {
++  const requestId = randomUUID();
++
++  const authz = await requireRole("manager", { requestId, resource: "pol_leads" });
++  if (!authz.ok) return authz.response;
++
++  const { organizationId, userId } = authz;
++
++  const guardaSuporteWrite = await requireSupportWrite({
++    requestId,
++    resource: "pol_leads.funnel_transition",
++  });
++  if (!guardaSuporteWrite.ok) return guardaSuporteWrite.response;
++
++  let body: unknown;
++  try {
++    body = await req.json();
++  } catch {
++    return fail("bad_request", "JSON invalido", 400, { requestId });
++  }
++
++  const parsed = transicaoSchema.safeParse(body);
++  if (!parsed.success) {
++    return fail("validation_error", "Dados invalidos", 422, {
++      requestId,
++      details: parsed.error.flatten(),
++    });
++  }
++
++  const { contact_id, from_stage, to_stage, reason } = parsed.data;
++
++  if (from_stage === to_stage) {
++    return fail("bad_request", "from_stage e to_stage devem ser diferentes", 400, { requestId });
++  }
++
++  const db = createAdminClient();
++
++  // Buscar pol_lead atual pelo contact_id + organizacao
++  const { data: polLead, error: errBusca } = await db
++    .from("pol_leads")
++    .select("id, support_level")
++    .eq("contact_id", contact_id)
++    .eq("organization_id", organizationId)
++    .single();
++
++  if (errBusca || !polLead) {
++    return fail("not_found", "Pol_lead nao encontrado para este contato", 404, { requestId });
++  }
++
++  // Validar que from_stage bate com o nivel atual
++  if (polLead.support_level !== from_stage) {
++    return fail(
++      "conflict",
++      `Nivel atual e '${polLead.support_level}', nao '${from_stage}'`,
++      409,
++      { requestId },
++    );
++  }
++
++  // Criar registro de transicao
++  const { data: transicao, error: errTransicao } = await db
++    .from("pol_funnel_transitions")
++    .insert({
++      organization_id: organizationId,
++      contact_id,
++      from_stage,
++      to_stage,
++      changed_by: userId,
++      reason: reason ?? null,
++    })
++    .select()
++    .single();
++
++  if (errTransicao) {
++    return fail("internal_error", "Erro ao registrar transicao", 500, { requestId });
++  }
++
++  // Atualizar support_level no pol_lead
++  const { data: atualizado, error: errUpdate } = await db
++    .from("pol_leads")
++    .update({ support_level: to_stage })
++    .eq("id", polLead.id)
++    .eq("organization_id", organizationId)
++    .select()
++    .single();
++
++  if (errUpdate) {
++    return fail("internal_error", "Erro ao atualizar support_level", 500, { requestId });
++  }
++
++  // Audit log
++  await db.from("api_audit_log").insert({
++    organization_id: organizationId,
++    user_id: userId,
++    action: "pol_leads.funnel_transition",
++    resource_id: polLead.id,
++    metadata: { contact_id, from_stage, to_stage, reason: reason ?? null, transition_id: transicao.id },
++  });
++
++  return ok(
++    { pol_lead: atualizado, transition: transicao },
++    { status: 201, headers: { "x-request-id": requestId } },
++  );
++}
+diff --git a/app/api/v1/pol-leads/route.ts b/app/api/v1/pol-leads/route.ts
+new file mode 100644
+index 0000000..4d0f3e6
+--- /dev/null
++++ b/app/api/v1/pol-leads/route.ts
+@@ -0,0 +1,180 @@
++/**
++ * GET|POST /api/v1/pol-leads
++ *
++ * CRUD de leads politicos — extensao politica de contacts.
++ *
++ * GET  — lista pol_leads da organizacao. Aceita ?support_level=, ?temperature=, ?territory_id=.
++ *        Junta nome do contato via contacts. Paginacao com limit/offset.
++ * POST — cria um novo pol_lead. Requer role manager.
++ *
++ * Seguranca: organizacao resolvida do cookie/JWT (fonte confiavel). Nunca do body.
++ */
++
++import { randomUUID } from "node:crypto";
++import { z } from "zod";
++import { NextResponse, type NextRequest } from "next/server";
++
++import { ok, fail } from "@/lib/api/wrappers";
++import { requireRole } from "@/lib/auth/require-role";
++import { createAdminClient } from "@/lib/supabase/admin";
++import { requireSupportWrite } from "@/lib/impersonate/support";
++
++export const dynamic = "force-dynamic";
++export const runtime = "nodejs";
++
++// -- Validacao ----------------------------------------------------------------
++
++const SUPPORT_LEVELS = [
++  "novo_cadastro",
++  "simpatizante",
++  "apoiador",
++  "militante",
++  "voto_certo",
++] as const;
++
++const TEMPERATURES = ["frio", "morno", "quente"] as const;
++
++const criarPolLeadSchema = z.object({
++  contact_id: z.string().uuid(),
++  support_level: z.enum(SUPPORT_LEVELS).default("novo_cadastro"),
++  temperature: z.enum(TEMPERATURES).default("frio"),
++  zona_eleitoral: z.string().max(20).nullable().optional(),
++  secao_eleitoral: z.string().max(20).nullable().optional(),
++  mobilizer_id: z.string().uuid().nullable().optional(),
++  leader_potential: z.boolean().default(false),
++  community_role: z.string().max(120).nullable().optional(),
++  territory_id: z.string().uuid().nullable().optional(),
++  consent_origin: z.string().max(120).nullable().optional(),
++});
++
++// -- GET — listar pol_leads ---------------------------------------------------
++
++export async function GET(req: NextRequest): Promise<NextResponse> {
++  const requestId = randomUUID();
++
++  const authz = await requireRole("viewer", { requestId, resource: "pol_leads" });
++  if (!authz.ok) return authz.response;
++
++  const { organizationId } = authz;
++  const db = createAdminClient();
++  const params = req.nextUrl.searchParams;
++
++  let query = db
++    .from("pol_leads")
++    .select(
++      "id, contact_id, support_level, political_score, temperature, zona_eleitoral, secao_eleitoral, mobilizer_id, leader_potential, community_role, territory_id, opt_out, consent_origin, consent_at, created_at, updated_at, contacts(id, name, phone, email)",
++    )
++    .eq("organization_id", organizationId)
++    .order("created_at", { ascending: false });
++
++  // Filtros opcionais
++  const supportLevel = params.get("support_level");
++  if (supportLevel) query = query.eq("support_level", supportLevel);
++
++  const temperature = params.get("temperature");
++  if (temperature) query = query.eq("temperature", temperature);
++
++  const territoryId = params.get("territory_id");
++  if (territoryId) query = query.eq("territory_id", territoryId);
++
++  // Paginacao simples
++  const limit = Math.min(parseInt(params.get("limit") ?? "50", 10), 100);
++  const offset = parseInt(params.get("offset") ?? "0", 10);
++  query = query.range(offset, offset + limit - 1);
++
++  const { data, error, count } = await query;
++
++  if (error) {
++    return fail("internal_error", "Erro ao buscar pol_leads", 500, { requestId });
++  }
++
++  return ok(
++    { pol_leads: data ?? [] },
++    {
++      headers: { "x-request-id": requestId },
++      meta: { total: count ?? (data?.length ?? 0), limit, offset },
++    },
++  );
++}
++
++// -- POST — criar pol_lead ----------------------------------------------------
++
++export async function POST(req: NextRequest): Promise<NextResponse> {
++  const requestId = randomUUID();
++
++  const authz = await requireRole("manager", { requestId, resource: "pol_leads" });
++  if (!authz.ok) return authz.response;
++
++  const { organizationId, userId } = authz;
++
++  const guardaSuporteWrite = await requireSupportWrite({ requestId, resource: "pol_leads.create" });
++  if (!guardaSuporteWrite.ok) return guardaSuporteWrite.response;
++
++  let body: unknown;
++  try {
++    body = await req.json();
++  } catch {
++    return fail("bad_request", "JSON invalido", 400, { requestId });
++  }
++
++  const parsed = criarPolLeadSchema.safeParse(body);
++  if (!parsed.success) {
++    return fail("validation_error", "Dados invalidos", 422, {
++      requestId,
++      details: parsed.error.flatten(),
++    });
++  }
++
++  const db = createAdminClient();
++
++  // Verificar se contact_id existe e pertence a organizacao
++  const { data: contact, error: errContact } = await db
++    .from("contacts")
++    .select("id")
++    .eq("id", parsed.data.contact_id)
++    .eq("organization_id", organizationId)
++    .single();
++
++  if (errContact || !contact) {
++    return fail("not_found", "Contato nao encontrado nesta organizacao", 404, { requestId });
++  }
++
++  const { data: polLead, error } = await db
++    .from("pol_leads")
++    .insert({
++      organization_id: organizationId,
++      contact_id: parsed.data.contact_id,
++      support_level: parsed.data.support_level,
++      temperature: parsed.data.temperature,
++      zona_eleitoral: parsed.data.zona_eleitoral ?? null,
++      secao_eleitoral: parsed.data.secao_eleitoral ?? null,
++      mobilizer_id: parsed.data.mobilizer_id ?? null,
++      leader_potential: parsed.data.leader_potential,
++      community_role: parsed.data.community_role ?? null,
++      territory_id: parsed.data.territory_id ?? null,
++      consent_origin: parsed.data.consent_origin ?? null,
++    })
++    .select()
++    .single();
++
++  if (error) {
++    // Duplicate contact+org constraint
++    if (error.code === "23505") {
++      return fail("conflict", "Este contato ja possui um registro pol_lead nesta organizacao", 409, {
++        requestId,
++      });
++    }
++    return fail("internal_error", "Erro ao criar pol_lead", 500, { requestId });
++  }
++
++  // Audit log
++  await db.from("api_audit_log").insert({
++    organization_id: organizationId,
++    user_id: userId,
++    action: "pol_leads.create",
++    resource_id: polLead.id,
++    metadata: { contact_id: polLead.contact_id, support_level: polLead.support_level },
++  });
++
++  return ok({ pol_lead: polLead }, { status: 201, headers: { "x-request-id": requestId } });
++}
+diff --git a/app/api/v1/pol-territories/[id]/route.ts b/app/api/v1/pol-territories/[id]/route.ts
+new file mode 100644
+index 0000000..e6b861f
+--- /dev/null
++++ b/app/api/v1/pol-territories/[id]/route.ts
+@@ -0,0 +1,250 @@
++/**
++ * GET|PATCH|DELETE /api/v1/pol-territories/[id]
++ *
++ * Operacoes em um territorio politico especifico.
++ *
++ * GET    — detalhe do territorio com contagem de filhos e resumo de metricas (viewer+)
++ * PATCH  — atualizar parcialmente (manager+)
++ * DELETE — hard delete (admin only). Rejeita se existem territorios filhos.
++ *
++ * Seguranca: filtramos `organization_id` do cookie/JWT — nunca do body.
++ */
++
++import { randomUUID } from "node:crypto";
++import { z } from "zod";
++import { NextResponse, type NextRequest } from "next/server";
++
++import { ok, fail } from "@/lib/api/wrappers";
++import { requireRole } from "@/lib/auth/require-role";
++import { createAdminClient } from "@/lib/supabase/admin";
++import { requireSupportWrite } from "@/lib/impersonate/support";
++
++export const dynamic = "force-dynamic";
++export const runtime = "nodejs";
++
++interface RouteCtx {
++  params: Promise<{ id: string }>;
++}
++
++// ── Validacao ──────────────────────────────────────────────────────────────────
++
++const TERRITORY_TYPES = [
++  "estado",
++  "cidade",
++  "bairro",
++  "zona_eleitoral",
++  "secao",
++  "regiao",
++  "distrito",
++] as const;
++
++const atualizarTerritorySchema = z
++  .object({
++    name: z.string().min(1).max(200),
++    type: z.enum(TERRITORY_TYPES),
++    parent_id: z.string().uuid().nullable(),
++    ibge_code: z.string().max(20).nullable(),
++    state_code: z.string().max(2).nullable(),
++    latitude: z.number().min(-90).max(90).nullable(),
++    longitude: z.number().min(-180).max(180).nullable(),
++    population: z.number().int().nonnegative().nullable(),
++    electorate: z.number().int().nonnegative().nullable(),
++  })
++  .partial(); // PATCH = todos opcionais
++
++// ── Helpers ────────────────────────────────────────────────────────────────────
++
++async function buscarTerritory(db: ReturnType<typeof createAdminClient>, id: string, organizationId: string) {
++  return db
++    .from("pol_territories")
++    .select("*")
++    .eq("id", id)
++    .eq("organization_id", organizationId)
++    .single();
++}
++
++// ── GET ────────────────────────────────────────────────────────────────────────
++
++export async function GET(req: NextRequest, ctx: RouteCtx): Promise<NextResponse> {
++  const requestId = randomUUID();
++  const { id } = await ctx.params;
++
++  const authz = await requireRole("viewer", { requestId, resource: "pol_territories" });
++  if (!authz.ok) return authz.response;
++
++  const db = createAdminClient();
++  const { data: territory, error } = await buscarTerritory(db, id, authz.organizationId);
++
++  if (error || !territory) {
++    return fail("not_found", "Territorio nao encontrado", 404, { requestId });
++  }
++
++  // Contagem de filhos
++  const { count: childCount } = await db
++    .from("pol_territories")
++    .select("id", { count: "exact", head: true })
++    .eq("organization_id", authz.organizationId)
++    .eq("parent_id", id);
++
++  // Resumo de metricas: soma de populacao e eleitorado dos filhos diretos
++  const { data: childMetrics } = await db
++    .from("pol_territories")
++    .select("population, electorate")
++    .eq("organization_id", authz.organizationId)
++    .eq("parent_id", id);
++
++  const metricsSummary = {
++    child_count: childCount ?? 0,
++    children_population: (childMetrics ?? []).reduce((sum, c) => sum + (c.population ?? 0), 0),
++    children_electorate: (childMetrics ?? []).reduce((sum, c) => sum + (c.electorate ?? 0), 0),
++  };
++
++  return ok({ territory, metrics: metricsSummary }, { headers: { "x-request-id": requestId } });
++}
++
++// ── PATCH ──────────────────────────────────────────────────────────────────────
++
++export async function PATCH(req: NextRequest, ctx: RouteCtx): Promise<NextResponse> {
++  const requestId = randomUUID();
++  const { id } = await ctx.params;
++
++  const authz = await requireRole("manager", { requestId, resource: "pol_territories" });
++  if (!authz.ok) return authz.response;
++
++  const { organizationId, userId } = authz;
++
++  const guardaSuporteWrite = await requireSupportWrite({
++    requestId,
++    resource: "pol_territories.update",
++  });
++  if (!guardaSuporteWrite.ok) return guardaSuporteWrite.response;
++
++  let body: unknown;
++  try {
++    body = await req.json();
++  } catch {
++    return fail("bad_request", "JSON invalido", 400, { requestId });
++  }
++
++  const parsed = atualizarTerritorySchema.safeParse(body);
++  if (!parsed.success) {
++    return fail("validation_error", "Dados invalidos", 422, {
++      requestId,
++      details: parsed.error.flatten(),
++    });
++  }
++
++  if (Object.keys(parsed.data).length === 0) {
++    return fail("bad_request", "Nenhum campo para atualizar", 400, { requestId });
++  }
++
++  const db = createAdminClient();
++
++  // Verificar existencia + tenant
++  const { data: existente, error: errBusca } = await buscarTerritory(db, id, organizationId);
++  if (errBusca || !existente) {
++    return fail("not_found", "Territorio nao encontrado", 404, { requestId });
++  }
++
++  // Se parent_id informado, verificar que pertence a mesma organizacao e nao e o proprio
++  if (parsed.data.parent_id !== undefined && parsed.data.parent_id !== null) {
++    if (parsed.data.parent_id === id) {
++      return fail("bad_request", "Territorio nao pode ser pai de si mesmo", 400, { requestId });
++    }
++
++    const { data: parent, error: errParent } = await db
++      .from("pol_territories")
++      .select("id")
++      .eq("id", parsed.data.parent_id)
++      .eq("organization_id", organizationId)
++      .single();
++
++    if (errParent || !parent) {
++      return fail("not_found", "Territorio pai nao encontrado", 404, { requestId });
++    }
++  }
++
++  const { data: atualizado, error: errUpdate } = await db
++    .from("pol_territories")
++    .update(parsed.data)
++    .eq("id", id)
++    .eq("organization_id", organizationId)
++    .select()
++    .single();
++
++  if (errUpdate) {
++    return fail("internal_error", "Erro ao atualizar territorio", 500, { requestId });
++  }
++
++  // Audit log
++  await db.from("api_audit_log").insert({
++    organization_id: organizationId,
++    user_id: userId,
++    action: "pol_territories.update",
++    resource_id: id,
++    metadata: { campos_alterados: Object.keys(parsed.data) },
++  });
++
++  return ok({ territory: atualizado }, { headers: { "x-request-id": requestId } });
++}
++
++// ── DELETE ─────────────────────────────────────────────────────────────────────
++
++export async function DELETE(req: NextRequest, ctx: RouteCtx): Promise<NextResponse> {
++  const requestId = randomUUID();
++  const { id } = await ctx.params;
++
++  const authz = await requireRole("admin", { requestId, resource: "pol_territories" });
++  if (!authz.ok) return authz.response;
++
++  const { organizationId, userId } = authz;
++
++  const guardaSuporteWrite = await requireSupportWrite({
++    requestId,
++    resource: "pol_territories.delete",
++  });
++  if (!guardaSuporteWrite.ok) return guardaSuporteWrite.response;
++
++  const db = createAdminClient();
++
++  const { data: existente, error: errBusca } = await buscarTerritory(db, id, organizationId);
++  if (errBusca || !existente) {
++    return fail("not_found", "Territorio nao encontrado", 404, { requestId });
++  }
++
++  // Rejeitar se existem territorios filhos
++  const { count: childCount } = await db
++    .from("pol_territories")
++    .select("id", { count: "exact", head: true })
++    .eq("organization_id", organizationId)
++    .eq("parent_id", id);
++
++  if (childCount && childCount > 0) {
++    return fail("conflict", "Territorio possui filhos e nao pode ser removido. Remova os filhos primeiro.", 409, {
++      requestId,
++      details: { child_count: childCount },
++    });
++  }
++
++  // Hard delete
++  const { error: errDelete } = await db
++    .from("pol_territories")
++    .delete()
++    .eq("id", id)
++    .eq("organization_id", organizationId);
++
++  if (errDelete) {
++    return fail("internal_error", "Erro ao deletar territorio", 500, { requestId });
++  }
++
++  // Audit log
++  await db.from("api_audit_log").insert({
++    organization_id: organizationId,
++    user_id: userId,
++    action: "pol_territories.delete",
++    resource_id: id,
++    metadata: { name: existente.name, type: existente.type },
++  });
++
++  return ok({ deleted: true }, { headers: { "x-request-id": requestId } });
++}
+diff --git a/app/api/v1/pol-territories/route.ts b/app/api/v1/pol-territories/route.ts
+new file mode 100644
+index 0000000..649305c
+--- /dev/null
++++ b/app/api/v1/pol-territories/route.ts
+@@ -0,0 +1,173 @@
++/**
++ * GET|POST /api/v1/pol-territories
++ *
++ * CRUD de territorios politicos — estados, cidades, bairros, zonas eleitorais, secoes, regioes e distritos.
++ *
++ * GET  — lista territorios da organizacao. Aceita ?type=, ?parent_id=, ?state_code=. Paginacao.
++ * POST — cria um novo territorio. Requer role manager.
++ *
++ * Seguranca: organizacao resolvida do cookie/JWT (fonte confiavel). Nunca do body.
++ */
++
++import { randomUUID } from "node:crypto";
++import { z } from "zod";
++import { NextResponse, type NextRequest } from "next/server";
++
++import { ok, fail } from "@/lib/api/wrappers";
++import { requireRole } from "@/lib/auth/require-role";
++import { createAdminClient } from "@/lib/supabase/admin";
++import { requireSupportWrite } from "@/lib/impersonate/support";
++
++export const dynamic = "force-dynamic";
++export const runtime = "nodejs";
++
++// ── Validacao ──────────────────────────────────────────────────────────────────
++
++const TERRITORY_TYPES = [
++  "estado",
++  "cidade",
++  "bairro",
++  "zona_eleitoral",
++  "secao",
++  "regiao",
++  "distrito",
++] as const;
++
++const criarTerritorySchema = z.object({
++  name: z.string().min(1).max(200),
++  type: z.enum(TERRITORY_TYPES),
++  parent_id: z.string().uuid().optional(),
++  ibge_code: z.string().max(20).optional(),
++  state_code: z.string().max(2).optional(),
++  latitude: z.number().min(-90).max(90).optional(),
++  longitude: z.number().min(-180).max(180).optional(),
++  population: z.number().int().nonnegative().optional(),
++  electorate: z.number().int().nonnegative().optional(),
++});
++
++// ── GET — listar territorios ─────────────────────────────────────────────────
++
++export async function GET(req: NextRequest): Promise<NextResponse> {
++  const requestId = randomUUID();
++
++  const authz = await requireRole("viewer", { requestId, resource: "pol_territories" });
++  if (!authz.ok) return authz.response;
++
++  const { organizationId } = authz;
++  const db = createAdminClient();
++  const params = req.nextUrl.searchParams;
++
++  let query = db
++    .from("pol_territories")
++    .select(
++      "id, name, type, parent_id, ibge_code, state_code, latitude, longitude, population, electorate, created_at, updated_at",
++    )
++    .eq("organization_id", organizationId)
++    .order("created_at", { ascending: false });
++
++  // Filtros opcionais
++  const type = params.get("type");
++  if (type) query = query.eq("type", type);
++
++  const parentId = params.get("parent_id");
++  if (parentId) query = query.eq("parent_id", parentId);
++
++  const stateCode = params.get("state_code");
++  if (stateCode) query = query.eq("state_code", stateCode);
++
++  // Paginacao simples
++  const limit = Math.min(parseInt(params.get("limit") ?? "50", 10), 100);
++  const offset = parseInt(params.get("offset") ?? "0", 10);
++  query = query.range(offset, offset + limit - 1);
++
++  const { data, error, count } = await query;
++
++  if (error) {
++    return fail("internal_error", "Erro ao buscar territorios", 500, { requestId });
++  }
++
++  return ok(
++    { territories: data ?? [] },
++    {
++      headers: { "x-request-id": requestId },
++      meta: { total: count ?? (data?.length ?? 0), limit, offset },
++    },
++  );
++}
++
++// ── POST — criar territorio ──────────────────────────────────────────────────
++
++export async function POST(req: NextRequest): Promise<NextResponse> {
++  const requestId = randomUUID();
++
++  const authz = await requireRole("manager", { requestId, resource: "pol_territories" });
++  if (!authz.ok) return authz.response;
++
++  const { organizationId, userId } = authz;
++
++  const guardaSuporteWrite = await requireSupportWrite({ requestId, resource: "pol_territories.create" });
++  if (!guardaSuporteWrite.ok) return guardaSuporteWrite.response;
++
++  let body: unknown;
++  try {
++    body = await req.json();
++  } catch {
++    return fail("bad_request", "JSON invalido", 400, { requestId });
++  }
++
++  const parsed = criarTerritorySchema.safeParse(body);
++  if (!parsed.success) {
++    return fail("validation_error", "Dados invalidos", 422, {
++      requestId,
++      details: parsed.error.flatten(),
++    });
++  }
++
++  const db = createAdminClient();
++
++  // Se parent_id informado, verificar que pertence a mesma organizacao
++  if (parsed.data.parent_id) {
++    const { data: parent, error: errParent } = await db
++      .from("pol_territories")
++      .select("id")
++      .eq("id", parsed.data.parent_id)
++      .eq("organization_id", organizationId)
++      .single();
++
++    if (errParent || !parent) {
++      return fail("not_found", "Territorio pai nao encontrado", 404, { requestId });
++    }
++  }
++
++  const { data: territory, error } = await db
++    .from("pol_territories")
++    .insert({
++      organization_id: organizationId,
++      name: parsed.data.name,
++      type: parsed.data.type,
++      parent_id: parsed.data.parent_id ?? null,
++      ibge_code: parsed.data.ibge_code ?? null,
++      state_code: parsed.data.state_code ?? null,
++      latitude: parsed.data.latitude ?? null,
++      longitude: parsed.data.longitude ?? null,
++      population: parsed.data.population ?? null,
++      electorate: parsed.data.electorate ?? null,
++    })
++    .select()
++    .single();
++
++  if (error) {
++    return fail("internal_error", "Erro ao criar territorio", 500, { requestId });
++  }
++
++  // Audit log
++  await db.from("api_audit_log").insert({
++    organization_id: organizationId,
++    user_id: userId,
++    action: "pol_territories.create",
++    resource_id: territory.id,
++    metadata: { name: territory.name, type: territory.type },
++  });
++
++  return ok({ territory }, { status: 201, headers: { "x-request-id": requestId } });
++}
+diff --git a/app/app/politico/funil/page.tsx b/app/app/politico/funil/page.tsx
+new file mode 100644
+index 0000000..ccb9c3b
+--- /dev/null
++++ b/app/app/politico/funil/page.tsx
+@@ -0,0 +1,210 @@
++/**
++ * /app/politico/funil — Visualizacao do funil politico
++ *
++ * Barras horizontais por estagio (novo_cadastro -> voto_certo) com contagem.
++ * Transicoes recentes (ultimas 10) com nome do contato, from->to, data e autor.
++ *
++ * Acesso: manager+
++ */
++
++import { redirect } from "next/navigation";
++import Link from "next/link";
++import { createServerClient } from "@/lib/supabase/server";
++import { getUser } from "@/lib/auth/get-user";
++import { resolverOrganizacaoAtiva } from "@/lib/organizations/resolver";
++
++// -- Constantes --------------------------------------------------------------
++
++const ESTAGIOS_FUNIL = [
++  { value: "novo_cadastro", label: "Novo cadastro", cor: "bg-zinc-400 dark:bg-zinc-500" },
++  { value: "simpatizante", label: "Simpatizante", cor: "bg-blue-500 dark:bg-blue-600" },
++  { value: "apoiador", label: "Apoiador", cor: "bg-emerald-500 dark:bg-emerald-600" },
++  { value: "militante", label: "Militante", cor: "bg-amber-500 dark:bg-amber-600" },
++  { value: "voto_certo", label: "Voto certo", cor: "bg-green-600 dark:bg-green-500" },
++] as const;
++
++function labelDoEstagio(value: string): string {
++  return ESTAGIOS_FUNIL.find((e) => e.value === value)?.label ?? value;
++}
++
++// -- Tipos -------------------------------------------------------------------
++
++interface TransicaoRow {
++  id: string;
++  from_stage: string;
++  to_stage: string;
++  created_at: string;
++  reason: string | null;
++  contacts: {
++    name: string | null;
++  } | null;
++  changed_by_user: {
++    email: string | null;
++  } | null;
++}
++
++// -- Data fetching -----------------------------------------------------------
++
++async function buscarContagemPorEstagio(
++  organizationId: string,
++): Promise<Record<string, number>> {
++  const db = createServerClient();
++
++  const { data } = await db
++    .from("pol_leads")
++    .select("support_level")
++    .eq("organization_id", organizationId);
++
++  const contagem: Record<string, number> = {};
++  for (const estagio of ESTAGIOS_FUNIL) {
++    contagem[estagio.value] = 0;
++  }
++  for (const row of data ?? []) {
++    contagem[row.support_level] = (contagem[row.support_level] ?? 0) + 1;
++  }
++  return contagem;
++}
++
++async function buscarTransicoesRecentes(organizationId: string) {
++  const db = createServerClient();
++
++  const { data } = await db
++    .from("pol_funnel_transitions")
++    .select("id, from_stage, to_stage, created_at, reason, contacts(name)")
++    .eq("organization_id", organizationId)
++    .order("created_at", { ascending: false })
++    .limit(10);
++
++  return (data as unknown as TransicaoRow[]) ?? [];
++}
++
++// -- Componente --------------------------------------------------------------
++
++export default async function FunilPoliticoPage() {
++  const user = await getUser();
++  if (!user) redirect("/login");
++
++  const org = await resolverOrganizacaoAtiva(user.id);
++  if (!org) redirect("/app/onboarding");
++
++  const [contagem, transicoes] = await Promise.all([
++    buscarContagemPorEstagio(org.id),
++    buscarTransicoesRecentes(org.id),
++  ]);
++
++  const totalLeads = Object.values(contagem).reduce((a, b) => a + b, 0);
++  const maiorEstagio = Math.max(...Object.values(contagem), 1);
++
++  return (
++    <div className="mx-auto max-w-4xl px-4 py-8 space-y-8">
++      {/* Cabecalho */}
++      <div>
++        <div className="flex items-center gap-2">
++          <Link
++            href="/app/politico"
++            className="text-sm text-muted-foreground hover:text-foreground transition-colors"
++          >
++            War Room
++          </Link>
++          <span className="text-sm text-muted-foreground">/</span>
++          <h1 className="text-2xl font-bold tracking-tight">Funil Politico</h1>
++        </div>
++        <p className="mt-1 text-sm text-muted-foreground">
++          Jornada dos contatos: de novo cadastro ate voto certo.{" "}
++          <span className="tabular-nums font-medium text-foreground">{totalLeads}</span>{" "}
++          lead{totalLeads !== 1 ? "s" : ""} no funil.
++        </p>
++      </div>
++
++      {/* Barras do funil */}
++      <div className="rounded-xl border bg-card p-6 space-y-4">
++        <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">
++          Distribuicao por estagio
++        </h2>
++        <div className="space-y-3">
++          {ESTAGIOS_FUNIL.map((estagio) => {
++            const qtd = contagem[estagio.value] ?? 0;
++            const pct = maiorEstagio > 0 ? (qtd / maiorEstagio) * 100 : 0;
++            const pctTotal = totalLeads > 0 ? ((qtd / totalLeads) * 100).toFixed(1) : "0.0";
++
++            return (
++              <div key={estagio.value} className="space-y-1">
++                <div className="flex items-center justify-between text-sm">
++                  <span className="font-medium">{estagio.label}</span>
++                  <span className="tabular-nums text-muted-foreground">
++                    {qtd} <span className="text-xs">({pctTotal}%)</span>
++                  </span>
++                </div>
++                <div className="h-6 w-full rounded-md bg-muted overflow-hidden">
++                  <div
++                    className={`h-full rounded-md transition-all ${estagio.cor}`}
++                    style={{ width: `${Math.max(pct, qtd > 0 ? 2 : 0)}%` }}
++                  />
++                </div>
++              </div>
++            );
++          })}
++        </div>
++      </div>
++
++      {/* Transicoes recentes */}
++      <div className="rounded-xl border bg-card overflow-hidden">
++        <div className="px-6 py-4 border-b">
++          <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">
++            Transicoes recentes
++          </h2>
++        </div>
++
++        {transicoes.length === 0 ? (
++          <div className="p-12 text-center">
++            <p className="text-sm text-muted-foreground">
++              Nenhuma transicao registrada ainda.
++            </p>
++          </div>
++        ) : (
++          <div className="divide-y">
++            {transicoes.map((t) => {
++              const data = new Date(t.created_at);
++              const dataFormatada = data.toLocaleDateString("pt-BR", {
++                day: "2-digit",
++                month: "2-digit",
++                year: "numeric",
++                hour: "2-digit",
++                minute: "2-digit",
++              });
++
++              return (
++                <div key={t.id} className="flex items-center gap-4 px-6 py-3">
++                  <div className="flex-1 min-w-0">
++                    <p className="text-sm font-medium truncate">
++                      {t.contacts?.name ?? "Contato desconhecido"}
++                    </p>
++                    <div className="flex items-center gap-1.5 mt-0.5">
++                      <span className="text-xs text-muted-foreground">
++                        {labelDoEstagio(t.from_stage)}
++                      </span>
++                      <span className="text-xs text-muted-foreground">{"→"}</span>
++                      <span className="text-xs font-medium">
++                        {labelDoEstagio(t.to_stage)}
++                      </span>
++                    </div>
++                  </div>
++                  <div className="text-right shrink-0">
++                    <p className="text-xs text-muted-foreground tabular-nums">
++                      {dataFormatada}
++                    </p>
++                    {t.reason && (
++                      <p className="text-xs text-muted-foreground mt-0.5 max-w-[200px] truncate">
++                        {t.reason}
++                      </p>
++                    )}
++                  </div>
++                </div>
++              );
++            })}
++          </div>
++        )}
++      </div>
++    </div>
++  );
++}
+diff --git a/app/app/politico/leads/page.tsx b/app/app/politico/leads/page.tsx
+new file mode 100644
+index 0000000..b2842be
+--- /dev/null
++++ b/app/app/politico/leads/page.tsx
+@@ -0,0 +1,326 @@
++/**
++ * /app/politico/leads — Lista de leads politicos
++ *
++ * Tabela paginada de pol_leads com join em contacts (nome, telefone).
++ * Filtros por support_level e temperature. Link para detalhe individual.
++ *
++ * Acesso: manager+
++ */
++
++import { redirect } from "next/navigation";
++import Link from "next/link";
++import { createServerClient } from "@/lib/supabase/server";
++import { getUser } from "@/lib/auth/get-user";
++import { resolverOrganizacaoAtiva } from "@/lib/organizations/resolver";
++
++// -- Constantes --------------------------------------------------------------
++
++const POR_PAGINA = 25;
++
++const SUPPORT_LEVELS = [
++  { value: "novo_cadastro", label: "Novo cadastro", cor: "bg-zinc-100 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300" },
++  { value: "simpatizante", label: "Simpatizante", cor: "bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300" },
++  { value: "apoiador", label: "Apoiador", cor: "bg-emerald-100 text-emerald-700 dark:bg-emerald-900 dark:text-emerald-300" },
++  { value: "militante", label: "Militante", cor: "bg-amber-100 text-amber-700 dark:bg-amber-900 dark:text-amber-300" },
++  { value: "voto_certo", label: "Voto certo", cor: "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300" },
++] as const;
++
++const TEMPERATURES = [
++  { value: "frio", label: "Frio", cor: "bg-sky-100 text-sky-700 dark:bg-sky-900 dark:text-sky-300" },
++  { value: "morno", label: "Morno", cor: "bg-orange-100 text-orange-700 dark:bg-orange-900 dark:text-orange-300" },
++  { value: "quente", label: "Quente", cor: "bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300" },
++] as const;
++
++// -- Helpers -----------------------------------------------------------------
++
++function corDoSupportLevel(value: string): string {
++  return SUPPORT_LEVELS.find((s) => s.value === value)?.cor ?? "bg-zinc-100 text-zinc-700";
++}
++
++function labelDoSupportLevel(value: string): string {
++  return SUPPORT_LEVELS.find((s) => s.value === value)?.label ?? value;
++}
++
++function corDaTemperature(value: string): string {
++  return TEMPERATURES.find((t) => t.value === value)?.cor ?? "bg-zinc-100 text-zinc-700";
++}
++
++function labelDaTemperature(value: string): string {
++  return TEMPERATURES.find((t) => t.value === value)?.label ?? value;
++}
++
++// -- Tipos -------------------------------------------------------------------
++
++interface LeadRow {
++  id: string;
++  support_level: string;
++  temperature: string;
++  political_score: number;
++  territory_id: string | null;
++  contacts: {
++    name: string | null;
++    phone: string | null;
++  } | null;
++  pol_territories: {
++    name: string;
++  } | null;
++}
++
++// -- Data fetching -----------------------------------------------------------
++
++async function buscarLeads(
++  organizationId: string,
++  pagina: number,
++  supportLevel?: string,
++  temperature?: string,
++) {
++  const db = createServerClient();
++  const offset = (pagina - 1) * POR_PAGINA;
++
++  let query = db
++    .from("pol_leads")
++    .select(
++      "id, support_level, temperature, political_score, territory_id, contacts(name, phone), pol_territories(name)",
++      { count: "exact" },
++    )
++    .eq("organization_id", organizationId)
++    .order("created_at", { ascending: false })
++    .range(offset, offset + POR_PAGINA - 1);
++
++  if (supportLevel) {
++    query = query.eq("support_level", supportLevel);
++  }
++  if (temperature) {
++    query = query.eq("temperature", temperature);
++  }
++
++  const { data, count } = await query;
++
++  return {
++    leads: (data as unknown as LeadRow[]) ?? [],
++    total: count ?? 0,
++  };
++}
++
++// -- Componente --------------------------------------------------------------
++
++export default async function LeadsPoliticosPage({
++  searchParams,
++}: {
++  searchParams: Promise<Record<string, string | string[] | undefined>>;
++}) {
++  const user = await getUser();
++  if (!user) redirect("/login");
++
++  const org = await resolverOrganizacaoAtiva(user.id);
++  if (!org) redirect("/app/onboarding");
++
++  const params = await searchParams;
++  const pagina = Math.max(1, Number(params.pagina) || 1);
++  const supportLevel = typeof params.nivel === "string" ? params.nivel : undefined;
++  const temperature = typeof params.temperatura === "string" ? params.temperatura : undefined;
++
++  const { leads, total } = await buscarLeads(org.id, pagina, supportLevel, temperature);
++  const totalPaginas = Math.ceil(total / POR_PAGINA);
++
++  // Montar query string base para paginacao e filtros
++  function montarQuery(overrides: Record<string, string | undefined>) {
++    const q = new URLSearchParams();
++    const merged = { nivel: supportLevel, temperatura: temperature, ...overrides };
++    for (const [k, v] of Object.entries(merged)) {
++      if (v) q.set(k, v);
++    }
++    const s = q.toString();
++    return s ? `?${s}` : "";
++  }
++
++  return (
++    <div className="mx-auto max-w-5xl px-4 py-8 space-y-6">
++      {/* Cabecalho */}
++      <div className="flex items-center justify-between gap-4">
++        <div>
++          <div className="flex items-center gap-2">
++            <Link
++              href="/app/politico"
++              className="text-sm text-muted-foreground hover:text-foreground transition-colors"
++            >
++              War Room
++            </Link>
++            <span className="text-sm text-muted-foreground">/</span>
++            <h1 className="text-2xl font-bold tracking-tight">Leads Politicos</h1>
++          </div>
++          <p className="mt-1 text-sm text-muted-foreground">
++            {total} lead{total !== 1 ? "s" : ""} cadastrado{total !== 1 ? "s" : ""}
++          </p>
++        </div>
++        <Link
++          href="/app/politico/leads/novo"
++          className="inline-flex items-center gap-1.5 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors"
++        >
++          + Novo Lead
++        </Link>
++      </div>
++
++      {/* Filtros */}
++      <div className="flex flex-wrap gap-3">
++        {/* Filtro por nivel */}
++        <div className="flex items-center gap-2">
++          <span className="text-xs text-muted-foreground">Nivel:</span>
++          <div className="flex gap-1">
++            <Link
++              href={`/app/politico/leads${montarQuery({ nivel: undefined, pagina: "1" })}`}
++              className={`rounded-full px-2.5 py-0.5 text-xs font-medium transition-colors ${
++                !supportLevel
++                  ? "bg-primary text-primary-foreground"
++                  : "bg-muted text-muted-foreground hover:bg-accent"
++              }`}
++            >
++              Todos
++            </Link>
++            {SUPPORT_LEVELS.map((s) => (
++              <Link
++                key={s.value}
++                href={`/app/politico/leads${montarQuery({ nivel: s.value, pagina: "1" })}`}
++                className={`rounded-full px-2.5 py-0.5 text-xs font-medium transition-colors ${
++                  supportLevel === s.value
++                    ? "bg-primary text-primary-foreground"
++                    : "bg-muted text-muted-foreground hover:bg-accent"
++                }`}
++              >
++                {s.label}
++              </Link>
++            ))}
++          </div>
++        </div>
++
++        {/* Filtro por temperatura */}
++        <div className="flex items-center gap-2">
++          <span className="text-xs text-muted-foreground">Temperatura:</span>
++          <div className="flex gap-1">
++            <Link
++              href={`/app/politico/leads${montarQuery({ temperatura: undefined, pagina: "1" })}`}
++              className={`rounded-full px-2.5 py-0.5 text-xs font-medium transition-colors ${
++                !temperature
++                  ? "bg-primary text-primary-foreground"
++                  : "bg-muted text-muted-foreground hover:bg-accent"
++              }`}
++            >
++              Todas
++            </Link>
++            {TEMPERATURES.map((t) => (
++              <Link
++                key={t.value}
++                href={`/app/politico/leads${montarQuery({ temperatura: t.value, pagina: "1" })}`}
++                className={`rounded-full px-2.5 py-0.5 text-xs font-medium transition-colors ${
++                  temperature === t.value
++                    ? "bg-primary text-primary-foreground"
++                    : "bg-muted text-muted-foreground hover:bg-accent"
++                }`}
++              >
++                {t.label}
++              </Link>
++            ))}
++          </div>
++        </div>
++      </div>
++
++      {/* Tabela */}
++      {leads.length === 0 ? (
++        <div className="rounded-xl border bg-card p-12 text-center">
++          <p className="text-sm text-muted-foreground">
++            Nenhum lead politico encontrado.
++          </p>
++        </div>
++      ) : (
++        <div className="rounded-xl border bg-card overflow-hidden">
++          <div className="overflow-x-auto">
++            <table className="w-full text-sm">
++              <thead>
++                <tr className="border-b bg-muted/50">
++                  <th className="px-4 py-3 text-left font-medium text-muted-foreground">
++                    Contato
++                  </th>
++                  <th className="px-4 py-3 text-left font-medium text-muted-foreground">
++                    Nivel de apoio
++                  </th>
++                  <th className="px-4 py-3 text-left font-medium text-muted-foreground">
++                    Temperatura
++                  </th>
++                  <th className="px-4 py-3 text-left font-medium text-muted-foreground">
++                    Territorio
++                  </th>
++                  <th className="px-4 py-3 text-right font-medium text-muted-foreground">
++                    Score
++                  </th>
++                </tr>
++              </thead>
++              <tbody>
++                {leads.map((lead) => (
++                  <tr key={lead.id} className="border-b last:border-0 hover:bg-muted/30 transition-colors">
++                    <td className="px-4 py-3">
++                      <Link
++                        href={`/app/politico/leads/${lead.id}`}
++                        className="font-medium hover:text-primary transition-colors"
++                      >
++                        {lead.contacts?.name ?? "Sem nome"}
++                      </Link>
++                      {lead.contacts?.phone && (
++                        <p className="text-xs text-muted-foreground mt-0.5">
++                          {lead.contacts.phone}
++                        </p>
++                      )}
++                    </td>
++                    <td className="px-4 py-3">
++                      <span className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${corDoSupportLevel(lead.support_level)}`}>
++                        {labelDoSupportLevel(lead.support_level)}
++                      </span>
++                    </td>
++                    <td className="px-4 py-3">
++                      <span className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${corDaTemperature(lead.temperature)}`}>
++                        {labelDaTemperature(lead.temperature)}
++                      </span>
++                    </td>
++                    <td className="px-4 py-3 text-muted-foreground">
++                      {lead.pol_territories?.name ?? "—"}
++                    </td>
++                    <td className="px-4 py-3 text-right tabular-nums font-medium">
++                      {lead.political_score}
++                    </td>
++                  </tr>
++                ))}
++              </tbody>
++            </table>
++          </div>
++        </div>
++      )}
++
++      {/* Paginacao */}
++      {totalPaginas > 1 && (
++        <div className="flex items-center justify-between pt-2">
++          <p className="text-xs text-muted-foreground">
++            Pagina <span className="tabular-nums">{pagina}</span> de{" "}
++            <span className="tabular-nums">{totalPaginas}</span>
++          </p>
++          <div className="flex gap-2">
++            {pagina > 1 && (
++              <Link
++                href={`/app/politico/leads${montarQuery({ pagina: String(pagina - 1) })}`}
++                className="rounded-lg border bg-card px-3 py-1.5 text-xs font-medium hover:bg-accent transition-colors"
++              >
++                Anterior
++              </Link>
++            )}
++            {pagina < totalPaginas && (
++              <Link
++                href={`/app/politico/leads${montarQuery({ pagina: String(pagina + 1) })}`}
++                className="rounded-lg border bg-card px-3 py-1.5 text-xs font-medium hover:bg-accent transition-colors"
++              >
++                Proxima
++              </Link>
++            )}
++          </div>
++        </div>
++      )}
++    </div>
++  );
++}
+diff --git a/app/app/politico/page.tsx b/app/app/politico/page.tsx
+new file mode 100644
+index 0000000..47877ce
+--- /dev/null
++++ b/app/app/politico/page.tsx
+@@ -0,0 +1,190 @@
++/**
++ * /app/politico — Hub politico (War Room 2.0)
++ *
++ * Ponto de entrada do modulo politico do DeskcommCRM.
++ * Apresenta metricas e atalhos para: Leads Politicos, Territorios e Funil Politico.
++ *
++ * Acesso: manager+
++ */
++
++import { redirect } from "next/navigation";
++import Link from "next/link";
++import { createServerClient } from "@/lib/supabase/server";
++import { getUser } from "@/lib/auth/get-user";
++import { resolverOrganizacaoAtiva } from "@/lib/organizations/resolver";
++
++// -- Tipos -------------------------------------------------------------------
++
++interface MetricasPoliticas {
++  totalLeads: number;
++  votosCertos: number;
++  territorios: number;
++  transicoesHoje: number;
++}
++
++// -- Data fetching -----------------------------------------------------------
++
++async function buscarMetricas(organizationId: string): Promise<MetricasPoliticas> {
++  const db = createServerClient();
++  const hoje = new Date();
++  hoje.setHours(0, 0, 0, 0);
++  const hojeISO = hoje.toISOString();
++
++  const [totalLeads, votosCertos, territorios, transicoesHoje] = await Promise.all([
++    db
++      .from("pol_leads")
++      .select("id", { count: "exact", head: true })
++      .eq("organization_id", organizationId),
++
++    db
++      .from("pol_leads")
++      .select("id", { count: "exact", head: true })
++      .eq("organization_id", organizationId)
++      .eq("support_level", "voto_certo"),
++
++    db
++      .from("pol_territories")
++      .select("id", { count: "exact", head: true })
++      .eq("organization_id", organizationId),
++
++    db
++      .from("pol_funnel_transitions")
++      .select("id", { count: "exact", head: true })
++      .eq("organization_id", organizationId)
++      .gte("created_at", hojeISO),
++  ]);
++
++  return {
++    totalLeads: totalLeads.count ?? 0,
++    votosCertos: votosCertos.count ?? 0,
++    territorios: territorios.count ?? 0,
++    transicoesHoje: transicoesHoje.count ?? 0,
++  };
++}
++
++// -- Componente --------------------------------------------------------------
++
++export default async function PoliticoHubPage() {
++  const user = await getUser();
++  if (!user) redirect("/login");
++
++  const org = await resolverOrganizacaoAtiva(user.id);
++  if (!org) redirect("/app/onboarding");
++
++  const metricas = await buscarMetricas(org.id);
++
++  const secoes = [
++    {
++      href: "/app/politico/leads",
++      titulo: "Leads Politicos",
++      descricao:
++        "Gerencie sua base de apoiadores, simpatizantes e militantes com scoring politico e funil dedicado.",
++      icone: "\u{1F465}",
++      badge:
++        metricas.totalLeads > 0
++          ? `${metricas.totalLeads} lead${metricas.totalLeads !== 1 ? "s" : ""}`
++          : null,
++    },
++    {
++      href: "/app/politico/territorios",
++      titulo: "Territorios",
++      descricao:
++        "Mapeie estados, cidades, bairros e zonas eleitorais com dados do IBGE e TSE integrados.",
++      icone: "\u{1F5FA}️",
++      badge:
++        metricas.territorios > 0
++          ? `${metricas.territorios} territorio${metricas.territorios !== 1 ? "s" : ""}`
++          : null,
++    },
++    {
++      href: "/app/politico/funil",
++      titulo: "Funil Politico",
++      descricao:
++        "Acompanhe a jornada dos contatos pelo funil: de novo cadastro ate voto certo, com historico de transicoes.",
++      icone: "\u{1F4CA}",
++      badge:
++        metricas.transicoesHoje > 0
++          ? `${metricas.transicoesHoje} hoje`
++          : null,
++    },
++  ];
++
++  return (
++    <div className="mx-auto max-w-4xl px-4 py-8 space-y-8">
++      {/* Cabecalho */}
++      <div>
++        <h1 className="text-2xl font-bold tracking-tight">War Room</h1>
++        <p className="mt-1 text-sm text-muted-foreground">
++          Modulo politico — gerencie leads, territorios e o funil de apoio da sua campanha.
++        </p>
++      </div>
++
++      {/* Metricas */}
++      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
++        <MetricaCard label="Total de leads" valor={metricas.totalLeads} icone={"\u{1F465}"} />
++        <MetricaCard label="Votos certos" valor={metricas.votosCertos} icone={"✅"} />
++        <MetricaCard label="Territorios" valor={metricas.territorios} icone={"\u{1F5FA}️"} />
++        <MetricaCard label="Transicoes hoje" valor={metricas.transicoesHoje} icone={"\u{1F504}"} />
++      </div>
++
++      {/* Secoes */}
++      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
++        {secoes.map((secao) => (
++          <Link
++            key={secao.href}
++            href={secao.href}
++            className="group relative flex flex-col gap-3 rounded-xl border bg-card p-5 transition-colors hover:bg-accent/30"
++          >
++            <div className="flex items-center justify-between">
++              <span className="text-2xl">{secao.icone}</span>
++              {secao.badge && (
++                <span className="rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">
++                  {secao.badge}
++                </span>
++              )}
++            </div>
++            <div>
++              <h2 className="font-semibold group-hover:text-primary transition-colors">
++                {secao.titulo}
++              </h2>
++              <p className="mt-1 text-sm text-muted-foreground leading-snug">
++                {secao.descricao}
++              </p>
++            </div>
++          </Link>
++        ))}
++      </div>
++
++      {/* Instrucao quando vazio */}
++      {metricas.totalLeads === 0 && (
++        <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-200">
++          <strong>Para comecar:</strong> cadastre seus primeiros leads politicos em{" "}
++          <Link href="/app/politico/leads" className="font-medium underline underline-offset-4">
++            Leads Politicos
++          </Link>{" "}
++          e mapeie seus territorios de atuacao.
++        </div>
++      )}
++    </div>
++  );
++}
++
++// -- Sub-componentes ---------------------------------------------------------
++
++function MetricaCard({
++  label,
++  valor,
++  icone,
++}: {
++  label: string;
++  valor: number;
++  icone: string;
++}) {
++  return (
++    <div className="flex flex-col gap-1 rounded-lg border bg-card p-4">
++      <span className="text-lg">{icone}</span>
++      <span className="text-2xl font-bold tabular-nums">{valor}</span>
++      <span className="text-xs text-muted-foreground">{label}</span>
++    </div>
++  );
++}
+diff --git a/app/app/politico/territorios/page.tsx b/app/app/politico/territorios/page.tsx
+new file mode 100644
+index 0000000..b9cb140
+--- /dev/null
++++ b/app/app/politico/territorios/page.tsx
+@@ -0,0 +1,225 @@
++/**
++ * /app/politico/territorios — Lista de territorios
++ *
++ * Cards/tabela de pol_territories com filtro por tipo.
++ * Exibe nome, tipo (badge), populacao, eleitorado e contagem de filhos.
++ *
++ * Acesso: manager+
++ */
++
++import { redirect } from "next/navigation";
++import Link from "next/link";
++import { createServerClient } from "@/lib/supabase/server";
++import { getUser } from "@/lib/auth/get-user";
++import { resolverOrganizacaoAtiva } from "@/lib/organizations/resolver";
++
++// -- Constantes --------------------------------------------------------------
++
++const TIPOS_TERRITORIO = [
++  { value: "estado", label: "Estado" },
++  { value: "cidade", label: "Cidade" },
++  { value: "bairro", label: "Bairro" },
++  { value: "zona_eleitoral", label: "Zona eleitoral" },
++  { value: "secao", label: "Secao" },
++  { value: "regiao", label: "Regiao" },
++  { value: "distrito", label: "Distrito" },
++] as const;
++
++function labelDoTipo(value: string): string {
++  return TIPOS_TERRITORIO.find((t) => t.value === value)?.label ?? value;
++}
++
++function corDoTipo(value: string): string {
++  const mapa: Record<string, string> = {
++    estado: "bg-purple-100 text-purple-700 dark:bg-purple-900 dark:text-purple-300",
++    cidade: "bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300",
++    bairro: "bg-emerald-100 text-emerald-700 dark:bg-emerald-900 dark:text-emerald-300",
++    zona_eleitoral: "bg-amber-100 text-amber-700 dark:bg-amber-900 dark:text-amber-300",
++    secao: "bg-zinc-100 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300",
++    regiao: "bg-cyan-100 text-cyan-700 dark:bg-cyan-900 dark:text-cyan-300",
++    distrito: "bg-rose-100 text-rose-700 dark:bg-rose-900 dark:text-rose-300",
++  };
++  return mapa[value] ?? "bg-zinc-100 text-zinc-700";
++}
++
++// -- Tipos -------------------------------------------------------------------
++
++interface TerritorioRow {
++  id: string;
++  name: string;
++  type: string;
++  population: number | null;
++  electorate: number | null;
++  parent_id: string | null;
++}
++
++// -- Data fetching -----------------------------------------------------------
++
++async function buscarTerritorios(organizationId: string, tipo?: string) {
++  const db = createServerClient();
++
++  let query = db
++    .from("pol_territories")
++    .select("id, name, type, population, electorate, parent_id")
++    .eq("organization_id", organizationId)
++    .order("name", { ascending: true });
++
++  if (tipo) {
++    query = query.eq("type", tipo);
++  }
++
++  const { data } = await query;
++  return (data as TerritorioRow[]) ?? [];
++}
++
++async function contarFilhos(organizationId: string): Promise<Record<string, number>> {
++  const db = createServerClient();
++
++  const { data } = await db
++    .from("pol_territories")
++    .select("parent_id")
++    .eq("organization_id", organizationId)
++    .not("parent_id", "is", null);
++
++  const contagem: Record<string, number> = {};
++  for (const row of data ?? []) {
++    if (row.parent_id) {
++      contagem[row.parent_id] = (contagem[row.parent_id] ?? 0) + 1;
++    }
++  }
++  return contagem;
++}
++
++// -- Componente --------------------------------------------------------------
++
++export default async function TerritoriosPage({
++  searchParams,
++}: {
++  searchParams: Promise<Record<string, string | string[] | undefined>>;
++}) {
++  const user = await getUser();
++  if (!user) redirect("/login");
++
++  const org = await resolverOrganizacaoAtiva(user.id);
++  if (!org) redirect("/app/onboarding");
++
++  const params = await searchParams;
++  const tipo = typeof params.tipo === "string" ? params.tipo : undefined;
++
++  const [territorios, filhosMap] = await Promise.all([
++    buscarTerritorios(org.id, tipo),
++    contarFilhos(org.id),
++  ]);
++
++  return (
++    <div className="mx-auto max-w-5xl px-4 py-8 space-y-6">
++      {/* Cabecalho */}
++      <div>
++        <div className="flex items-center gap-2">
++          <Link
++            href="/app/politico"
++            className="text-sm text-muted-foreground hover:text-foreground transition-colors"
++          >
++            War Room
++          </Link>
++          <span className="text-sm text-muted-foreground">/</span>
++          <h1 className="text-2xl font-bold tracking-tight">Territorios</h1>
++        </div>
++        <p className="mt-1 text-sm text-muted-foreground">
++          {territorios.length} territorio{territorios.length !== 1 ? "s" : ""}
++        </p>
++      </div>
++
++      {/* Filtro por tipo */}
++      <div className="flex items-center gap-2 flex-wrap">
++        <span className="text-xs text-muted-foreground">Tipo:</span>
++        <div className="flex gap-1 flex-wrap">
++          <Link
++            href="/app/politico/territorios"
++            className={`rounded-full px-2.5 py-0.5 text-xs font-medium transition-colors ${
++              !tipo
++                ? "bg-primary text-primary-foreground"
++                : "bg-muted text-muted-foreground hover:bg-accent"
++            }`}
++          >
++            Todos
++          </Link>
++          {TIPOS_TERRITORIO.map((t) => (
++            <Link
++              key={t.value}
++              href={`/app/politico/territorios?tipo=${t.value}`}
++              className={`rounded-full px-2.5 py-0.5 text-xs font-medium transition-colors ${
++                tipo === t.value
++                  ? "bg-primary text-primary-foreground"
++                  : "bg-muted text-muted-foreground hover:bg-accent"
++              }`}
++            >
++              {t.label}
++            </Link>
++          ))}
++        </div>
++      </div>
++
++      {/* Cards */}
++      {territorios.length === 0 ? (
++        <div className="rounded-xl border bg-card p-12 text-center">
++          <p className="text-sm text-muted-foreground">
++            Nenhum territorio encontrado.
++          </p>
++        </div>
++      ) : (
++        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
++          {territorios.map((territorio) => (
++            <Link
++              key={territorio.id}
++              href={`/app/politico/territorios/${territorio.id}`}
++              className="group flex flex-col gap-3 rounded-xl border bg-card p-5 transition-colors hover:bg-accent/30"
++            >
++              <div className="flex items-start justify-between gap-2">
++                <h2 className="font-semibold group-hover:text-primary transition-colors leading-snug">
++                  {territorio.name}
++                </h2>
++                <span
++                  className={`shrink-0 rounded-full px-2 py-0.5 text-xs font-medium ${corDoTipo(territorio.type)}`}
++                >
++                  {labelDoTipo(territorio.type)}
++                </span>
++              </div>
++
++              <div className="grid grid-cols-3 gap-2 text-center">
++                <div>
++                  <span className="block text-lg font-bold tabular-nums">
++                    {territorio.population != null
++                      ? territorio.population.toLocaleString("pt-BR")
++                      : "—"}
++                  </span>
++                  <span className="text-[10px] text-muted-foreground uppercase tracking-wider">
++                    Populacao
++                  </span>
++                </div>
++                <div>
++                  <span className="block text-lg font-bold tabular-nums">
++                    {territorio.electorate != null
++                      ? territorio.electorate.toLocaleString("pt-BR")
++                      : "—"}
++                  </span>
++                  <span className="text-[10px] text-muted-foreground uppercase tracking-wider">
++                    Eleitorado
++                  </span>
++                </div>
++                <div>
++                  <span className="block text-lg font-bold tabular-nums">
++                    {filhosMap[territorio.id] ?? 0}
++                  </span>
++                  <span className="text-[10px] text-muted-foreground uppercase tracking-wider">
++                    Sub-regioes
++                  </span>
++                </div>
++              </div>
++            </Link>
++          ))}
++        </div>
++      )}
++    </div>
++  );
++}
+diff --git a/lib/navigation/catalogo.ts b/lib/navigation/catalogo.ts
+index 46f9d3c..2ba1029 100644
+--- a/lib/navigation/catalogo.ts
++++ b/lib/navigation/catalogo.ts
+@@ -808,6 +808,55 @@ export const NAV_CATALOG = [
+     sidebar: true,
+   },
+ 
++  // ---- Político — War Room 2.0: funil político, territórios e mobilização ----
++  //
++  // Hub do módulo político (GIP War Room 2.0). Estende o CRM com funil político
++  // (novo_cadastro → simpatizante → apoiador → militante → voto_certo), scoring
++  // multidimensional, territórios hierárquicos e dados do TSE.
++  //
++  // Grupo "crm" porque pol_leads é extensão de contacts — mesma jornada de quem
++  // vende, mas o verbo é mobilizar em vez de fechar.
++  {
++    href: "/app/politico",
++    label: "Político",
++    description: "Hub do War Room — funil político, leads, territórios e mobilização.",
++    icon: "Flag",
++    group: "crm",
++    section: "Campanha política",
++    minRole: "manager",
++    sidebar: true,
++  },
++  {
++    href: "/app/politico/leads",
++    label: "Leads Políticos",
++    description: "Contatos com dados eleitorais, nível de apoio, temperatura e mobilizador responsável.",
++    icon: "UsersThree",
++    group: "crm",
++    section: "Campanha política",
++    minRole: "manager",
++    sidebar: false, // acessa pelo hub /app/politico
++  },
++  {
++    href: "/app/politico/territorios",
++    label: "Territórios",
++    description: "Mapa hierárquico: estado → cidade → bairro → zona → seção, com dados do IBGE e TSE.",
++    icon: "MapPin",
++    group: "crm",
++    section: "Campanha política",
++    minRole: "manager",
++    sidebar: false, // acessa pelo hub /app/politico
++  },
++  {
++    href: "/app/politico/funil",
++    label: "Funil Político",
++    description: "Visualize a jornada de apoio e as transições entre estágios do funil político.",
++    icon: "Funnel",
++    group: "crm",
++    section: "Campanha política",
++    minRole: "manager",
++    sidebar: false, // acessa pelo hub /app/politico
++  },
++
+   // ---- Análise — olhar o sistema funcionando ----
+   //
+   // ── QUEM FICA NO MENU, E POR QUÊ ─────────────────────────────────────────
+diff --git a/supabase/baseline.sql b/supabase/baseline.sql
+index 41fcce6..08f644c 100644
+--- a/supabase/baseline.sql
++++ b/supabase/baseline.sql
+@@ -53132,3 +53132,260 @@ $$;
+ 
+ revoke execute on function public.fn_ig_webhook_token_por_path(text) from public, anon;
+ grant  execute on function public.fn_ig_webhook_token_por_path(text) to service_role;
++
++-- ---- pol_leads, pol_lead_scores_history, pol_funnel_transitions (migration 0630) ----
++
++-- pol_leads — extensão política de contacts
++create table if not exists public.pol_leads (
++  id                      uuid         primary key default gen_random_uuid(),
++  organization_id         uuid         not null references public.organizations(id) on delete cascade,
++  contact_id              uuid         not null references public.contacts(id) on delete cascade,
++  support_level           text         not null default 'novo_cadastro'
++                          check (support_level in (
++                            'novo_cadastro', 'simpatizante', 'apoiador', 'militante', 'voto_certo'
++                          )),
++  political_score         integer      not null default 0,
++  temperature             text         not null default 'frio'
++                          check (temperature in ('frio', 'morno', 'quente')),
++  zona_eleitoral          text,
++  secao_eleitoral         text,
++  mobilizer_id            uuid         references public.contacts(id) on delete set null,
++  leader_potential        boolean      not null default false,
++  community_role          text,
++  territory_id            uuid,
++  opt_out                 boolean      not null default false,
++  consent_origin          text,
++  consent_at              timestamptz,
++  created_at              timestamptz  not null default now(),
++  updated_at              timestamptz  not null default now(),
++  constraint pol_leads_contact_org_uq unique (contact_id, organization_id)
++);
++
++create index if not exists pol_leads_org_support_idx
++  on public.pol_leads (organization_id, support_level);
++create index if not exists pol_leads_org_temp_idx
++  on public.pol_leads (organization_id, temperature);
++create index if not exists pol_leads_org_territory_idx
++  on public.pol_leads (organization_id, territory_id)
++  where territory_id is not null;
++create index if not exists pol_leads_org_mobilizer_idx
++  on public.pol_leads (organization_id, mobilizer_id)
++  where mobilizer_id is not null;
++create index if not exists pol_leads_contact_idx
++  on public.pol_leads (contact_id);
++
++create or replace trigger pol_leads_touch
++  before update on public.pol_leads
++  for each row execute function public.fn_touch_updated_at();
++
++alter table public.pol_leads enable row level security;
++drop policy if exists tenant_isolation_pol_leads_all on public.pol_leads;
++create policy tenant_isolation_pol_leads_all
++  on public.pol_leads for all
++  using (organization_id = any(public.fn_user_org_ids()))
++  with check (organization_id = any(public.fn_user_org_ids()));
++
++-- pol_lead_scores_history — histórico de scoring multidimensional
++create table if not exists public.pol_lead_scores_history (
++  id                      uuid         primary key default gen_random_uuid(),
++  organization_id         uuid         not null references public.organizations(id) on delete cascade,
++  contact_id              uuid         not null references public.contacts(id) on delete cascade,
++  score_type              text         not null
++                          check (score_type in (
++                            'political', 'trust', 'mobilization', 'influence'
++                          )),
++  old_value               integer,
++  new_value               integer      not null,
++  reason                  text,
++  changed_by              uuid         references auth.users(id) on delete set null,
++  created_at              timestamptz  not null default now()
++);
++
++create index if not exists pol_lead_scores_history_org_contact_idx
++  on public.pol_lead_scores_history (organization_id, contact_id);
++create index if not exists pol_lead_scores_history_org_type_idx
++  on public.pol_lead_scores_history (organization_id, score_type);
++create index if not exists pol_lead_scores_history_created_idx
++  on public.pol_lead_scores_history (created_at);
++
++alter table public.pol_lead_scores_history enable row level security;
++drop policy if exists tenant_isolation_pol_lead_scores_history_all on public.pol_lead_scores_history;
++create policy tenant_isolation_pol_lead_scores_history_all
++  on public.pol_lead_scores_history for all
++  using (organization_id = any(public.fn_user_org_ids()))
++  with check (organization_id = any(public.fn_user_org_ids()));
++
++-- pol_funnel_transitions — transições do funil político
++create table if not exists public.pol_funnel_transitions (
++  id                      uuid         primary key default gen_random_uuid(),
++  organization_id         uuid         not null references public.organizations(id) on delete cascade,
++  contact_id              uuid         not null references public.contacts(id) on delete cascade,
++  from_stage              text         not null,
++  to_stage                text         not null,
++  changed_by              uuid         references auth.users(id) on delete set null,
++  reason                  text,
++  created_at              timestamptz  not null default now()
++);
++
++create index if not exists pol_funnel_transitions_org_contact_idx
++  on public.pol_funnel_transitions (organization_id, contact_id);
++create index if not exists pol_funnel_transitions_org_to_idx
++  on public.pol_funnel_transitions (organization_id, to_stage);
++create index if not exists pol_funnel_transitions_created_idx
++  on public.pol_funnel_transitions (created_at);
++
++alter table public.pol_funnel_transitions enable row level security;
++drop policy if exists tenant_isolation_pol_funnel_transitions_all on public.pol_funnel_transitions;
++create policy tenant_isolation_pol_funnel_transitions_all
++  on public.pol_funnel_transitions for all
++  using (organization_id = any(public.fn_user_org_ids()))
++  with check (organization_id = any(public.fn_user_org_ids()));
++
++-- ---- pol_territories, pol_territory_metrics, pol_tse_data, pol_territory_flags (migration 0631) ----
++
++-- pol_territories — territórios hierárquicos
++create table if not exists public.pol_territories (
++  id                      uuid         primary key default gen_random_uuid(),
++  organization_id         uuid         not null references public.organizations(id) on delete cascade,
++  name                    text         not null check (char_length(name) between 1 and 200),
++  type                    text         not null
++                          check (type in (
++                            'estado', 'cidade', 'bairro', 'zona_eleitoral', 'secao', 'regiao', 'distrito'
++                          )),
++  parent_id               uuid         references public.pol_territories(id) on delete set null,
++  ibge_code               text,
++  state_code              char(2),
++  latitude                numeric,
++  longitude               numeric,
++  population              integer,
++  electorate              integer,
++  created_at              timestamptz  not null default now(),
++  updated_at              timestamptz  not null default now(),
++  constraint pol_territories_org_ibge_uq unique (organization_id, ibge_code)
++);
++
++create index if not exists pol_territories_org_type_idx
++  on public.pol_territories (organization_id, type);
++create index if not exists pol_territories_parent_idx
++  on public.pol_territories (parent_id)
++  where parent_id is not null;
++create index if not exists pol_territories_org_state_idx
++  on public.pol_territories (organization_id, state_code)
++  where state_code is not null;
++
++create or replace trigger pol_territories_touch
++  before update on public.pol_territories
++  for each row execute function public.fn_touch_updated_at();
++
++alter table public.pol_territories enable row level security;
++drop policy if exists tenant_isolation_pol_territories_all on public.pol_territories;
++create policy tenant_isolation_pol_territories_all
++  on public.pol_territories for all
++  using (organization_id = any(public.fn_user_org_ids()))
++  with check (organization_id = any(public.fn_user_org_ids()));
++
++-- FK de pol_leads.territory_id → pol_territories
++do $$
++begin
++  if not exists (
++    select 1 from information_schema.table_constraints
++    where constraint_name = 'pol_leads_territory_fk'
++      and table_schema = 'public'
++  ) then
++    alter table public.pol_leads
++      add constraint pol_leads_territory_fk
++      foreign key (territory_id) references public.pol_territories(id) on delete set null;
++  end if;
++end $$;
++
++-- pol_territory_metrics — métricas periódicas por território
++create table if not exists public.pol_territory_metrics (
++  id                      uuid         primary key default gen_random_uuid(),
++  organization_id         uuid         not null references public.organizations(id) on delete cascade,
++  territory_id            uuid         not null references public.pol_territories(id) on delete cascade,
++  period                  date         not null,
++  supporters              integer      not null default 0,
++  militants               integer      not null default 0,
++  participants            integer      not null default 0,
++  influence_score         numeric      not null default 0,
++  growth_rate             numeric      not null default 0,
++  dominance_score         numeric      not null default 0,
++  strategic_status        text         not null default 'normal'
++                          check (strategic_status in (
++                            'normal', 'prioritario', 'critico', 'consolidado', 'oportunidade'
++                          )),
++  created_at              timestamptz  not null default now(),
++  constraint pol_territory_metrics_territory_period_uq unique (territory_id, period)
++);
++
++create index if not exists pol_territory_metrics_org_idx
++  on public.pol_territory_metrics (organization_id);
++create index if not exists pol_territory_metrics_period_idx
++  on public.pol_territory_metrics (period);
++
++alter table public.pol_territory_metrics enable row level security;
++drop policy if exists tenant_isolation_pol_territory_metrics_all on public.pol_territory_metrics;
++create policy tenant_isolation_pol_territory_metrics_all
++  on public.pol_territory_metrics for all
++  using (organization_id = any(public.fn_user_org_ids()))
++  with check (organization_id = any(public.fn_user_org_ids()));
++
++-- pol_tse_data — dados eleitorais do TSE por território
++create table if not exists public.pol_tse_data (
++  id                      uuid         primary key default gen_random_uuid(),
++  organization_id         uuid         not null references public.organizations(id) on delete cascade,
++  territory_id            uuid         not null references public.pol_territories(id) on delete cascade,
++  election_year           integer      not null,
++  cargo                   text         not null
++                          check (cargo in (
++                            'prefeito', 'vice_prefeito', 'vereador',
++                            'governador', 'vice_governador',
++                            'deputado_estadual', 'deputado_federal',
++                            'senador', 'presidente', 'vice_presidente'
++                          )),
++  total_voters            integer,
++  valid_votes             integer,
++  candidate_votes         integer,
++  turnout_rate            numeric,
++  created_at              timestamptz  not null default now(),
++  constraint pol_tse_data_territory_year_cargo_uq unique (territory_id, election_year, cargo)
++);
++
++create index if not exists pol_tse_data_org_idx
++  on public.pol_tse_data (organization_id);
++create index if not exists pol_tse_data_year_idx
++  on public.pol_tse_data (election_year);
++
++alter table public.pol_tse_data enable row level security;
++drop policy if exists tenant_isolation_pol_tse_data_all on public.pol_tse_data;
++create policy tenant_isolation_pol_tse_data_all
++  on public.pol_tse_data for all
++  using (organization_id = any(public.fn_user_org_ids()))
++  with check (organization_id = any(public.fn_user_org_ids()));
++
++-- pol_territory_flags — alertas e flags por território
++create table if not exists public.pol_territory_flags (
++  id                      uuid         primary key default gen_random_uuid(),
++  organization_id         uuid         not null references public.organizations(id) on delete cascade,
++  territory_id            uuid         not null references public.pol_territories(id) on delete cascade,
++  flag_type               text         not null,
++  severity                text         not null default 'medium'
++                          check (severity in ('low', 'medium', 'high', 'critical')),
++  description             text,
++  resolved_at             timestamptz,
++  resolved_by             uuid         references auth.users(id) on delete set null,
++  created_at              timestamptz  not null default now()
++);
++
++create index if not exists pol_territory_flags_org_territory_idx
++  on public.pol_territory_flags (organization_id, territory_id);
++create index if not exists pol_territory_flags_org_open_idx
++  on public.pol_territory_flags (organization_id, severity)
++  where resolved_at is null;
++
++alter table public.pol_territory_flags enable row level security;
++drop policy if exists tenant_isolation_pol_territory_flags_all on public.pol_territory_flags;
++create policy tenant_isolation_pol_territory_flags_all
++  on public.pol_territory_flags for all
++  using (organization_id = any(public.fn_user_org_ids()))
++  with check (organization_id = any(public.fn_user_org_ids()));
+diff --git a/supabase/migrations/20261010200000_0630_pol_core.sql b/supabase/migrations/20261010200000_0630_pol_core.sql
+new file mode 100644
+index 0000000..b0d8c56
+--- /dev/null
++++ b/supabase/migrations/20261010200000_0630_pol_core.sql
+@@ -0,0 +1,161 @@
++-- manifest: tabelas pol_leads, pol_lead_scores_history, pol_funnel_transitions — núcleo político do War Room 2.0 sobre o DeskcommCRM, com funil político (novo_cadastro → simpatizante → apoiador → militante → voto_certo), scoring multidimensional e rastreamento de transições
++
++-- ══════════════════════════════════════════════════════════════════
++-- pol_leads — extensão política de contacts
++--
++-- NÃO substitui a tabela contacts do CRM; é uma extensão que agrega
++-- dados exclusivamente políticos a um contato existente.
++-- O funil político é separado do funil comercial (crm_leads).
++-- support_level: novo_cadastro → simpatizante → apoiador → militante → voto_certo
++-- temperature: frio → morno → quente
++-- ══════════════════════════════════════════════════════════════════
++
++create table if not exists public.pol_leads (
++  id                      uuid         primary key default gen_random_uuid(),
++  organization_id         uuid         not null references public.organizations(id) on delete cascade,
++  contact_id              uuid         not null references public.contacts(id) on delete cascade,
++  -- Nível de apoio (funil político). Vocabulário controlado por CHECK.
++  support_level           text         not null default 'novo_cadastro'
++                          check (support_level in (
++                            'novo_cadastro', 'simpatizante', 'apoiador', 'militante', 'voto_certo'
++                          )),
++  political_score         integer      not null default 0,
++  -- Temperatura de engajamento
++  temperature             text         not null default 'frio'
++                          check (temperature in ('frio', 'morno', 'quente')),
++  -- Dados eleitorais
++  zona_eleitoral          text,
++  secao_eleitoral         text,
++  -- Mobilizador responsável (referência a outro contato)
++  mobilizer_id            uuid         references public.contacts(id) on delete set null,
++  leader_potential        boolean      not null default false,
++  community_role          text,
++  -- Território (FK adicionada na migration 0631)
++  territory_id            uuid,
++  -- LGPD
++  opt_out                 boolean      not null default false,
++  consent_origin          text,
++  consent_at              timestamptz,
++  created_at              timestamptz  not null default now(),
++  updated_at              timestamptz  not null default now(),
++  -- Um contato por organização
++  constraint pol_leads_contact_org_uq unique (contact_id, organization_id)
++);
++
++comment on table public.pol_leads is
++  'Extensão política de contacts — funil político, scoring, dados eleitorais e mobilização. Um registro por contato por organização.';
++
++-- Índices
++create index if not exists pol_leads_org_support_idx
++  on public.pol_leads (organization_id, support_level);
++
++create index if not exists pol_leads_org_temp_idx
++  on public.pol_leads (organization_id, temperature);
++
++create index if not exists pol_leads_org_territory_idx
++  on public.pol_leads (organization_id, territory_id)
++  where territory_id is not null;
++
++create index if not exists pol_leads_org_mobilizer_idx
++  on public.pol_leads (organization_id, mobilizer_id)
++  where mobilizer_id is not null;
++
++create index if not exists pol_leads_contact_idx
++  on public.pol_leads (contact_id);
++
++-- Touch updated_at
++create or replace trigger pol_leads_touch
++  before update on public.pol_leads
++  for each row execute function public.fn_touch_updated_at();
++
++-- RLS
++alter table public.pol_leads enable row level security;
++
++create policy tenant_isolation_pol_leads_all
++  on public.pol_leads for all
++  using (organization_id = any(public.fn_user_org_ids()))
++  with check (organization_id = any(public.fn_user_org_ids()));
++
++-- ══════════════════════════════════════════════════════════════════
++-- pol_lead_scores_history — histórico de scoring multidimensional
++--
++-- Registra cada mudança de score (político, confiança, mobilização,
++-- influência) para auditoria e análise de tendências.
++-- ══════════════════════════════════════════════════════════════════
++
++create table if not exists public.pol_lead_scores_history (
++  id                      uuid         primary key default gen_random_uuid(),
++  organization_id         uuid         not null references public.organizations(id) on delete cascade,
++  contact_id              uuid         not null references public.contacts(id) on delete cascade,
++  -- Tipo de score. Vocabulário controlado por CHECK.
++  score_type              text         not null
++                          check (score_type in (
++                            'political', 'trust', 'mobilization', 'influence'
++                          )),
++  old_value               integer,
++  new_value               integer      not null,
++  reason                  text,
++  changed_by              uuid         references auth.users(id) on delete set null,
++  created_at              timestamptz  not null default now()
++);
++
++comment on table public.pol_lead_scores_history is
++  'Histórico de mudanças de scoring político — cada entrada registra old→new com tipo, razão e autor.';
++
++-- Índices
++create index if not exists pol_lead_scores_history_org_contact_idx
++  on public.pol_lead_scores_history (organization_id, contact_id);
++
++create index if not exists pol_lead_scores_history_org_type_idx
++  on public.pol_lead_scores_history (organization_id, score_type);
++
++create index if not exists pol_lead_scores_history_created_idx
++  on public.pol_lead_scores_history (created_at);
++
++-- RLS
++alter table public.pol_lead_scores_history enable row level security;
++
++create policy tenant_isolation_pol_lead_scores_history_all
++  on public.pol_lead_scores_history for all
++  using (organization_id = any(public.fn_user_org_ids()))
++  with check (organization_id = any(public.fn_user_org_ids()));
++
++-- ══════════════════════════════════════════════════════════════════
++-- pol_funnel_transitions — transições do funil político
++--
++-- Cada mudança de support_level gera uma linha aqui, rastreando
++-- quem fez, por quê, e o timestamp exato. Permite reconstruir
++-- a jornada política completa de cada contato.
++-- ══════════════════════════════════════════════════════════════════
++
++create table if not exists public.pol_funnel_transitions (
++  id                      uuid         primary key default gen_random_uuid(),
++  organization_id         uuid         not null references public.organizations(id) on delete cascade,
++  contact_id              uuid         not null references public.contacts(id) on delete cascade,
++  from_stage              text         not null,
++  to_stage                text         not null,
++  changed_by              uuid         references auth.users(id) on delete set null,
++  reason                  text,
++  created_at              timestamptz  not null default now()
++);
++
++comment on table public.pol_funnel_transitions is
++  'Histórico de transições do funil político — de qual estágio para qual, com autor e razão. Permite reconstruir jornada completa.';
++
++-- Índices
++create index if not exists pol_funnel_transitions_org_contact_idx
++  on public.pol_funnel_transitions (organization_id, contact_id);
++
++create index if not exists pol_funnel_transitions_org_to_idx
++  on public.pol_funnel_transitions (organization_id, to_stage);
++
++create index if not exists pol_funnel_transitions_created_idx
++  on public.pol_funnel_transitions (created_at);
++
++-- RLS
++alter table public.pol_funnel_transitions enable row level security;
++
++create policy tenant_isolation_pol_funnel_transitions_all
++  on public.pol_funnel_transitions for all
++  using (organization_id = any(public.fn_user_org_ids()))
++  with check (organization_id = any(public.fn_user_org_ids()));
+diff --git a/supabase/migrations/20261010200100_0631_pol_territories.sql b/supabase/migrations/20261010200100_0631_pol_territories.sql
+new file mode 100644
+index 0000000..4b93b88
+--- /dev/null
++++ b/supabase/migrations/20261010200100_0631_pol_territories.sql
+@@ -0,0 +1,206 @@
++-- manifest: tabelas pol_territories, pol_territory_metrics, pol_tse_data, pol_territory_flags — modelagem territorial hierárquica para o War Room 2.0, com dados do TSE, métricas por período e sistema de alertas por território
++
++-- ══════════════════════════════════════════════════════════════════
++-- pol_territories — territórios hierárquicos
++--
++-- Modelo hierárquico via parent_id: estado → cidade → bairro → zona → seção.
++-- Integração com IBGE (ibge_code) e TSE (via pol_tse_data).
++-- ══════════════════════════════════════════════════════════════════
++
++create table if not exists public.pol_territories (
++  id                      uuid         primary key default gen_random_uuid(),
++  organization_id         uuid         not null references public.organizations(id) on delete cascade,
++  name                    text         not null check (char_length(name) between 1 and 200),
++  -- Tipo de território. Vocabulário controlado por CHECK.
++  type                    text         not null
++                          check (type in (
++                            'estado', 'cidade', 'bairro', 'zona_eleitoral', 'secao', 'regiao', 'distrito'
++                          )),
++  -- Hierarquia: estado → cidade → bairro → zona → seção
++  parent_id               uuid         references public.pol_territories(id) on delete set null,
++  -- Integração IBGE
++  ibge_code               text,
++  state_code              char(2),
++  -- Geo
++  latitude                numeric,
++  longitude               numeric,
++  -- Dados demográficos
++  population              integer,
++  electorate              integer,
++  created_at              timestamptz  not null default now(),
++  updated_at              timestamptz  not null default now(),
++  -- IBGE code único por organização quando presente
++  constraint pol_territories_org_ibge_uq unique (organization_id, ibge_code)
++);
++
++-- Índice parcial: o unique constraint acima já cobre ibge_code not null,
++-- mas precisamos de lookup por org + type para listagens
++create index if not exists pol_territories_org_type_idx
++  on public.pol_territories (organization_id, type);
++
++create index if not exists pol_territories_parent_idx
++  on public.pol_territories (parent_id)
++  where parent_id is not null;
++
++create index if not exists pol_territories_org_state_idx
++  on public.pol_territories (organization_id, state_code)
++  where state_code is not null;
++
++comment on table public.pol_territories is
++  'Territórios hierárquicos (estado → cidade → bairro → zona → seção) com integração IBGE/TSE para análise territorial do War Room.';
++
++-- Touch updated_at
++create or replace trigger pol_territories_touch
++  before update on public.pol_territories
++  for each row execute function public.fn_touch_updated_at();
++
++-- RLS
++alter table public.pol_territories enable row level security;
++
++create policy tenant_isolation_pol_territories_all
++  on public.pol_territories for all
++  using (organization_id = any(public.fn_user_org_ids()))
++  with check (organization_id = any(public.fn_user_org_ids()));
++
++-- ══════════════════════════════════════════════════════════════════
++-- Agora que pol_territories existe, adicionar a FK em pol_leads
++-- ══════════════════════════════════════════════════════════════════
++
++alter table public.pol_leads
++  add constraint pol_leads_territory_fk
++  foreign key (territory_id) references public.pol_territories(id) on delete set null;
++
++-- ══════════════════════════════════════════════════════════════════
++-- pol_territory_metrics — métricas periódicas por território
++--
++-- Snapshot mensal/semanal de indicadores por território.
++-- Permite análise de evolução temporal e comparação entre regiões.
++-- ══════════════════════════════════════════════════════════════════
++
++create table if not exists public.pol_territory_metrics (
++  id                      uuid         primary key default gen_random_uuid(),
++  organization_id         uuid         not null references public.organizations(id) on delete cascade,
++  territory_id            uuid         not null references public.pol_territories(id) on delete cascade,
++  -- Primeiro dia do período medido
++  period                  date         not null,
++  -- Contadores
++  supporters              integer      not null default 0,
++  militants               integer      not null default 0,
++  participants            integer      not null default 0,
++  -- Scores calculados
++  influence_score         numeric      not null default 0,
++  growth_rate             numeric      not null default 0,
++  dominance_score         numeric      not null default 0,
++  -- Status estratégico
++  strategic_status        text         not null default 'normal'
++                          check (strategic_status in (
++                            'normal', 'prioritario', 'critico', 'consolidado', 'oportunidade'
++                          )),
++  created_at              timestamptz  not null default now(),
++  -- Um registro por território por período
++  constraint pol_territory_metrics_territory_period_uq unique (territory_id, period)
++);
++
++comment on table public.pol_territory_metrics is
++  'Métricas periódicas por território — supporters, militants, scores de influência e dominância, status estratégico.';
++
++create index if not exists pol_territory_metrics_org_idx
++  on public.pol_territory_metrics (organization_id);
++
++create index if not exists pol_territory_metrics_period_idx
++  on public.pol_territory_metrics (period);
++
++-- RLS
++alter table public.pol_territory_metrics enable row level security;
++
++create policy tenant_isolation_pol_territory_metrics_all
++  on public.pol_territory_metrics for all
++  using (organization_id = any(public.fn_user_org_ids()))
++  with check (organization_id = any(public.fn_user_org_ids()));
++
++-- ══════════════════════════════════════════════════════════════════
++-- pol_tse_data — dados eleitorais do TSE por território
++--
++-- Dados históricos de votação importados do TSE.
++-- Permite projeção eleitoral e análise de desempenho por território.
++-- ══════════════════════════════════════════════════════════════════
++
++create table if not exists public.pol_tse_data (
++  id                      uuid         primary key default gen_random_uuid(),
++  organization_id         uuid         not null references public.organizations(id) on delete cascade,
++  territory_id            uuid         not null references public.pol_territories(id) on delete cascade,
++  election_year           integer      not null,
++  -- Cargo disputado
++  cargo                   text         not null
++                          check (cargo in (
++                            'prefeito', 'vice_prefeito', 'vereador',
++                            'governador', 'vice_governador',
++                            'deputado_estadual', 'deputado_federal',
++                            'senador', 'presidente', 'vice_presidente'
++                          )),
++  -- Números absolutos
++  total_voters            integer,
++  valid_votes             integer,
++  candidate_votes         integer,
++  -- Taxas
++  turnout_rate            numeric,
++  created_at              timestamptz  not null default now(),
++  -- Um registro por território + ano + cargo
++  constraint pol_tse_data_territory_year_cargo_uq unique (territory_id, election_year, cargo)
++);
++
++comment on table public.pol_tse_data is
++  'Dados eleitorais do TSE — votação por território, ano e cargo para projeção eleitoral.';
++
++create index if not exists pol_tse_data_org_idx
++  on public.pol_tse_data (organization_id);
++
++create index if not exists pol_tse_data_year_idx
++  on public.pol_tse_data (election_year);
++
++-- RLS
++alter table public.pol_tse_data enable row level security;
++
++create policy tenant_isolation_pol_tse_data_all
++  on public.pol_tse_data for all
++  using (organization_id = any(public.fn_user_org_ids()))
++  with check (organization_id = any(public.fn_user_org_ids()));
++
++-- ══════════════════════════════════════════════════════════════════
++-- pol_territory_flags — alertas e flags por território
++--
++-- Sistema de sinalizações: queda de engajamento, região sem líder,
++-- oportunidade detectada, conflito identificado etc.
++-- ══════════════════════════════════════════════════════════════════
++
++create table if not exists public.pol_territory_flags (
++  id                      uuid         primary key default gen_random_uuid(),
++  organization_id         uuid         not null references public.organizations(id) on delete cascade,
++  territory_id            uuid         not null references public.pol_territories(id) on delete cascade,
++  -- Tipo de flag (vocabulário aberto — sem CHECK — para extensibilidade)
++  flag_type               text         not null,
++  severity                text         not null default 'medium'
++                          check (severity in ('low', 'medium', 'high', 'critical')),
++  description             text,
++  resolved_at             timestamptz,
++  resolved_by             uuid         references auth.users(id) on delete set null,
++  created_at              timestamptz  not null default now()
++);
++
++comment on table public.pol_territory_flags is
++  'Flags e alertas por território — queda de engajamento, região sem líder, oportunidade, conflito. Resolvidos por um usuário.';
++
++create index if not exists pol_territory_flags_org_territory_idx
++  on public.pol_territory_flags (organization_id, territory_id);
++
++create index if not exists pol_territory_flags_org_open_idx
++  on public.pol_territory_flags (organization_id, severity)
++  where resolved_at is null;
++
++-- RLS
++alter table public.pol_territory_flags enable row level security;
++
++create policy tenant_isolation_pol_territory_flags_all
++  on public.pol_territory_flags for all
++  using (organization_id = any(public.fn_user_org_ids()))
++  with check (organization_id = any(public.fn_user_org_ids()));
+-- 
+2.43.0
+

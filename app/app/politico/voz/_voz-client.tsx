@@ -1,9 +1,10 @@
 "use client";
 
 import { useRef, useState, useTransition } from "react";
-import { Mic, ShieldCheck, Upload, Play, Loader2, Check } from "lucide-react";
+import { Mic, ShieldCheck, Upload, Play, Loader2, Check, Gauge } from "lucide-react";
 import { CommandHero } from "@/components/politico/command-hero";
-import { clonarVozDoMandato, alternarVozAtiva, gerarPreviaVoz } from "@/app/actions/politico/voz";
+import { clonarVozDoMandato, alternarVozAtiva, gerarPreviaVoz, definirVozSpeed } from "@/app/actions/politico/voz";
+import { VOZ_SPEED_PRESETS } from "@/lib/voz/velocidade";
 
 interface Inicial {
   temVoz: boolean;
@@ -11,6 +12,7 @@ interface Inicial {
   consentimentoPor: string | null;
   consentimentoEm: string | null;
   providerConfigurado: boolean;
+  velocidade: number;
 }
 
 const TEXTO_PREVIA_PADRAO =
@@ -24,6 +26,7 @@ export default function VozClient({ inicial }: { inicial: Inicial }) {
   const [textoPrevia, setTextoPrevia] = useState(TEXTO_PREVIA_PADRAO);
   const [audioUrl, setAudioUrl] = useState<string | null>(null);
   const [nomeArquivo, setNomeArquivo] = useState<string | null>(null);
+  const [velocidade, setVelocidade] = useState(inicial.velocidade);
   const formRef = useRef<HTMLFormElement>(null);
 
   function enviar(e: React.FormEvent<HTMLFormElement>) {
@@ -47,9 +50,19 @@ export default function VozClient({ inicial }: { inicial: Inicial }) {
     setMsg(null);
     setAudioUrl(null);
     start(async () => {
-      const r = await gerarPreviaVoz(textoPrevia);
+      const r = await gerarPreviaVoz(textoPrevia, velocidade);
       if (r.ok && r.audioDataUrl) setAudioUrl(r.audioDataUrl);
       else setMsg({ tipo: "erro", texto: r.erro ?? "Falha ao gerar a prévia." });
+    });
+  }
+
+  function escolherVelocidade(v: number) {
+    setVelocidade(v);
+    setAudioUrl(null);
+    setMsg(null);
+    start(async () => {
+      const r = await definirVozSpeed(v);
+      if (!r.ok) setMsg({ tipo: "erro", texto: r.erro ?? "Não consegui salvar a velocidade." });
     });
   }
 
@@ -159,6 +172,38 @@ export default function VozClient({ inicial }: { inicial: Inicial }) {
             <label className={label} style={{ color: "var(--color-text-subtle)" }}>Texto de teste</label>
             <textarea value={textoPrevia} onChange={(e) => setTextoPrevia(e.target.value)} rows={3} className="w-full rounded-[12px] px-3.5 py-2.5 text-sm" style={{ background: "var(--color-surface-elevated)", border: "1px solid var(--color-border)", color: "var(--color-text)" }} />
           </div>
+
+          {/* Velocidade da fala — escolha e vale também pros áudios enviados */}
+          <div>
+            <label className={label + " flex items-center gap-1.5"} style={{ color: "var(--color-text-subtle)" }}>
+              <Gauge className="h-3.5 w-3.5" aria-hidden /> Velocidade da voz
+            </label>
+            <div className="flex flex-wrap gap-2">
+              {VOZ_SPEED_PRESETS.map((p) => {
+                const ativoSel = Math.abs(velocidade - p.valor) < 0.001;
+                return (
+                  <button
+                    key={p.valor}
+                    type="button"
+                    onClick={() => escolherVelocidade(p.valor)}
+                    disabled={pending}
+                    className="rounded-full px-3.5 py-1.5 text-[13px] font-semibold transition-colors disabled:opacity-60"
+                    style={{
+                      border: `1px solid ${ativoSel ? "#D7F36A" : "var(--color-border)"}`,
+                      background: ativoSel ? "rgba(215,243,106,0.16)" : "var(--color-surface-elevated)",
+                      color: ativoSel ? "#D7F36A" : "var(--color-text-muted)",
+                    }}
+                  >
+                    {p.rotulo}
+                  </button>
+                );
+              })}
+            </div>
+            <p className="mt-1.5 text-[12px]" style={{ color: "var(--color-text-subtle)" }}>
+              Escolha e clique em <strong>Ouvir prévia</strong> pra comparar. A velocidade escolhida vale pros áudios que o gabinete enviar.
+            </p>
+          </div>
+
           <button type="button" onClick={ouvir} disabled={pending} className="inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm font-semibold disabled:opacity-60" style={{ border: "1px solid var(--color-border)", background: "var(--color-surface-elevated)", color: "var(--color-text)" }}>
             {pending ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden /> : <Play className="h-4 w-4" aria-hidden />} Ouvir prévia
           </button>

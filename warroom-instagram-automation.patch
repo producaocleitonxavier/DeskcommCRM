@@ -1,0 +1,4215 @@
+From cea0ef3b98a5a432468a07c0fca02fe67d6b4cae Mon Sep 17 00:00:00 2001
+From: Claude <noreply@anthropic.com>
+Date: Sat, 10 Oct 2026 21:44:58 +0000
+Subject: [PATCH] =?UTF-8?q?feat:=20add=20Instagram=20DM=20&=20Comments=20a?=
+ =?UTF-8?q?utomation=20module=20(War=20Room=202.0=20=E2=80=94=20Fase=200)?=
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Proprietary ManyChat-like system for Instagram Direct Messages and Comments,
+including webhook ingestion, automation flows engine, and full CRUD UI.
+
+Migration 0629: ig_automation_flows, ig_comment_events, ig_webhook_tokens
+tables with RLS policies and organization_id multi-tenancy.
+
+- Comment parser and ingest pipeline
+- Automation flow engine with action executor
+- Webhook routes for Instagram comment events
+- API routes for automation flows and webhook tokens CRUD
+- UI: Instagram hub, automações, webhooks, etiquetas pages
+- Event log handler registration
+- Navigation catalog entries (6 new routes)
+- Baseline appendix (idempotent)
+
+Co-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_01NViZYR2ZtGJLWjE9EiKwya
+---
+ app/api/v1/ig-automation-flows/[id]/route.ts  | 224 +++++++++
+ app/api/v1/ig-automation-flows/route.ts       | 175 +++++++
+ app/api/v1/ig-webhook-tokens/[id]/route.ts    |  69 +++
+ app/api/v1/ig-webhook-tokens/route.ts         | 117 +++++
+ .../instagram-comments/[token]/route.ts       | 183 +++++++
+ app/app/instagram/automacoes/[id]/page.tsx    | 445 ++++++++++++++++++
+ app/app/instagram/automacoes/novo/page.tsx    | 389 +++++++++++++++
+ app/app/instagram/automacoes/page.tsx         | 299 ++++++++++++
+ app/app/instagram/etiquetas/page.tsx          | 219 +++++++++
+ app/app/instagram/page.tsx                    | 201 ++++++++
+ app/app/instagram/webhooks/page.tsx           | 284 +++++++++++
+ lib/channels/instagram/comment-ingest.ts      | 112 +++++
+ lib/channels/instagram/comment-parser.ts      | 143 ++++++
+ lib/event-log/register-handlers.ts            |   5 +
+ lib/ig-automacoes/acoes.ts                    | 426 +++++++++++++++++
+ lib/ig-automacoes/motor.handler.ts            | 279 +++++++++++
+ lib/navigation/catalogo.ts                    |  53 +++
+ supabase/baseline.sql                         | 165 +++++++
+ ...20000_0629_ig_automacoes_e_comentarios.sql | 227 +++++++++
+ 19 files changed, 4015 insertions(+)
+ create mode 100644 app/api/v1/ig-automation-flows/[id]/route.ts
+ create mode 100644 app/api/v1/ig-automation-flows/route.ts
+ create mode 100644 app/api/v1/ig-webhook-tokens/[id]/route.ts
+ create mode 100644 app/api/v1/ig-webhook-tokens/route.ts
+ create mode 100644 app/api/v1/webhooks/instagram-comments/[token]/route.ts
+ create mode 100644 app/app/instagram/automacoes/[id]/page.tsx
+ create mode 100644 app/app/instagram/automacoes/novo/page.tsx
+ create mode 100644 app/app/instagram/automacoes/page.tsx
+ create mode 100644 app/app/instagram/etiquetas/page.tsx
+ create mode 100644 app/app/instagram/page.tsx
+ create mode 100644 app/app/instagram/webhooks/page.tsx
+ create mode 100644 lib/channels/instagram/comment-ingest.ts
+ create mode 100644 lib/channels/instagram/comment-parser.ts
+ create mode 100644 lib/ig-automacoes/acoes.ts
+ create mode 100644 lib/ig-automacoes/motor.handler.ts
+ create mode 100644 supabase/migrations/20261010120000_0629_ig_automacoes_e_comentarios.sql
+
+diff --git a/app/api/v1/ig-automation-flows/[id]/route.ts b/app/api/v1/ig-automation-flows/[id]/route.ts
+new file mode 100644
+index 0000000..fcab265
+--- /dev/null
++++ b/app/api/v1/ig-automation-flows/[id]/route.ts
+@@ -0,0 +1,224 @@
++/**
++ * GET|PATCH|DELETE /api/v1/ig-automation-flows/[id]
++ *
++ * Operações em um flow de automação do Instagram específico.
++ *
++ * GET    — detalhe do flow (viewer+)
++ * PATCH  — atualizar parcialmente (manager+)
++ * DELETE — desativar/deletar o flow (manager+)
++ *
++ * Segurança: filtramos `organization_id` do cookie/JWT — nunca do body.
++ */
++
++import { randomUUID } from "node:crypto";
++import { z } from "zod";
++import { NextResponse, type NextRequest } from "next/server";
++
++import { ok, fail } from "@/lib/api/wrappers";
++import { requireRole } from "@/lib/auth/require-role";
++import { createAdminClient } from "@/lib/supabase/admin";
++import { requireSupportWrite } from "@/lib/impersonate/support";
++
++export const dynamic = "force-dynamic";
++export const runtime = "nodejs";
++
++interface RouteCtx {
++  params: Promise<{ id: string }>;
++}
++
++// ── Validação ──────────────────────────────────────────────────────────────────
++
++const TRIGGER_TIPOS = [
++  "comment_keyword",
++  "comment_no_post",
++  "dm_keyword",
++  "novo_seguidor",
++  "story_reply",
++  "novo_comentario",
++] as const;
++
++const ACAO_TIPOS = [
++  "enviar_dm",
++  "responder_comentario",
++  "add_etiqueta",
++  "criar_contato",
++  "notificar_equipe",
++  "add_funil_politico",
++] as const;
++
++const atualizarFlowSchema = z
++  .object({
++    nome: z.string().min(1).max(120),
++    descricao: z.string().max(500).nullable(),
++    ativo: z.boolean(),
++    trigger_tipo: z.enum(TRIGGER_TIPOS),
++    trigger_config: z
++      .object({
++        keywords: z.array(z.string()).optional(),
++        case_sensitive: z.boolean().optional(),
++        post_ids: z.array(z.string()).optional(),
++        story_id: z.string().optional(),
++      })
++      .optional(),
++    acoes: z
++      .array(
++        z.object({
++          tipo: z.enum(ACAO_TIPOS),
++          texto: z.string().optional(),
++          etiqueta: z.string().optional(),
++          pipeline_id: z.string().uuid().optional(),
++          nivel: z.string().optional(),
++          mensagem: z.string().optional(),
++          assignee_user_id: z.string().uuid().optional(),
++        }),
++      )
++      .min(1)
++      .max(10)
++      .optional(),
++  })
++  .partial(); // PATCH = todos opcionais
++
++// ── Helpers ────────────────────────────────────────────────────────────────────
++
++async function buscarFlow(db: ReturnType<typeof createAdminClient>, id: string, organizationId: string) {
++  return db
++    .from("ig_automation_flows")
++    .select("*")
++    .eq("id", id)
++    .eq("organization_id", organizationId)
++    .single();
++}
++
++// ── GET ────────────────────────────────────────────────────────────────────────
++
++export async function GET(req: NextRequest, ctx: RouteCtx): Promise<NextResponse> {
++  const requestId = randomUUID();
++  const { id } = await ctx.params;
++
++  const authz = await requireRole("viewer", { requestId, resource: "ig_automation_flows" });
++  if (!authz.ok) return authz.response;
++
++  const db = createAdminClient();
++  const { data: flow, error } = await buscarFlow(db, id, authz.organizationId);
++
++  if (error || !flow) {
++    return fail("not_found", "Flow não encontrado", 404, { requestId });
++  }
++
++  return ok({ flow }, { headers: { "x-request-id": requestId } });
++}
++
++// ── PATCH ──────────────────────────────────────────────────────────────────────
++
++export async function PATCH(req: NextRequest, ctx: RouteCtx): Promise<NextResponse> {
++  const requestId = randomUUID();
++  const { id } = await ctx.params;
++
++  const authz = await requireRole("manager", { requestId, resource: "ig_automation_flows" });
++  if (!authz.ok) return authz.response;
++
++  const { organizationId, userId } = authz;
++
++  const guardaSuporteWrite = await requireSupportWrite({
++    requestId,
++    resource: "ig_automation_flows.update",
++  });
++  if (!guardaSuporteWrite.ok) return guardaSuporteWrite.response;
++
++  let body: unknown;
++  try {
++    body = await req.json();
++  } catch {
++    return fail("bad_request", "JSON inválido", 400, { requestId });
++  }
++
++  const parsed = atualizarFlowSchema.safeParse(body);
++  if (!parsed.success) {
++    return fail("validation_error", "Dados inválidos", 422, {
++      requestId,
++      details: parsed.error.flatten(),
++    });
++  }
++
++  if (Object.keys(parsed.data).length === 0) {
++    return fail("bad_request", "Nenhum campo para atualizar", 400, { requestId });
++  }
++
++  const db = createAdminClient();
++
++  // Verificar existência + tenant
++  const { data: existente, error: errBusca } = await buscarFlow(db, id, organizationId);
++  if (errBusca || !existente) {
++    return fail("not_found", "Flow não encontrado", 404, { requestId });
++  }
++
++  const { data: atualizado, error: errUpdate } = await db
++    .from("ig_automation_flows")
++    .update(parsed.data)
++    .eq("id", id)
++    .eq("organization_id", organizationId)
++    .select()
++    .single();
++
++  if (errUpdate) {
++    return fail("internal_error", "Erro ao atualizar flow", 500, { requestId });
++  }
++
++  // Audit log
++  await db.from("api_audit_log").insert({
++    organization_id: organizationId,
++    user_id: userId,
++    action: "ig_automation_flows.update",
++    resource_id: id,
++    metadata: { campos_alterados: Object.keys(parsed.data) },
++  });
++
++  return ok({ flow: atualizado }, { headers: { "x-request-id": requestId } });
++}
++
++// ── DELETE ─────────────────────────────────────────────────────────────────────
++
++export async function DELETE(req: NextRequest, ctx: RouteCtx): Promise<NextResponse> {
++  const requestId = randomUUID();
++  const { id } = await ctx.params;
++
++  const authz = await requireRole("manager", { requestId, resource: "ig_automation_flows" });
++  if (!authz.ok) return authz.response;
++
++  const { organizationId, userId } = authz;
++
++  const guardaSuporteWrite = await requireSupportWrite({
++    requestId,
++    resource: "ig_automation_flows.delete",
++  });
++  if (!guardaSuporteWrite.ok) return guardaSuporteWrite.response;
++
++  const db = createAdminClient();
++
++  const { data: existente, error: errBusca } = await buscarFlow(db, id, organizationId);
++  if (errBusca || !existente) {
++    return fail("not_found", "Flow não encontrado", 404, { requestId });
++  }
++
++  // Soft-delete: desativa em vez de remover (preserva histórico de eventos)
++  const { error: errDelete } = await db
++    .from("ig_automation_flows")
++    .update({ ativo: false })
++    .eq("id", id)
++    .eq("organization_id", organizationId);
++
++  if (errDelete) {
++    return fail("internal_error", "Erro ao desativar flow", 500, { requestId });
++  }
++
++  // Audit log
++  await db.from("api_audit_log").insert({
++    organization_id: organizationId,
++    user_id: userId,
++    action: "ig_automation_flows.delete",
++    resource_id: id,
++    metadata: { nome: existente.nome },
++  });
++
++  return ok({ deleted: true }, { headers: { "x-request-id": requestId } });
++}
+diff --git a/app/api/v1/ig-automation-flows/route.ts b/app/api/v1/ig-automation-flows/route.ts
+new file mode 100644
+index 0000000..677ed54
+--- /dev/null
++++ b/app/api/v1/ig-automation-flows/route.ts
+@@ -0,0 +1,175 @@
++/**
++ * GET|POST /api/v1/ig-automation-flows
++ *
++ * CRUD de flows de automação do Instagram — o "ManyChat próprio" do GIP War Room.
++ *
++ * GET  — lista os flows da organização. Aceita ?ativo=true/false e ?trigger_tipo=.
++ * POST — cria um novo flow. Requer role manager.
++ *
++ * Segurança: organização resolvida do cookie/JWT (fonte confiável). Nunca do body.
++ */
++
++import { randomUUID } from "node:crypto";
++import { z } from "zod";
++import { NextResponse, type NextRequest } from "next/server";
++
++import { ok, fail } from "@/lib/api/wrappers";
++import { requireRole } from "@/lib/auth/require-role";
++import { createAdminClient } from "@/lib/supabase/admin";
++import { requireSupportWrite } from "@/lib/impersonate/support";
++
++export const dynamic = "force-dynamic";
++export const runtime = "nodejs";
++
++// ── Validação ──────────────────────────────────────────────────────────────────
++
++const TRIGGER_TIPOS = [
++  "comment_keyword",
++  "comment_no_post",
++  "dm_keyword",
++  "novo_seguidor",
++  "story_reply",
++  "novo_comentario",
++] as const;
++
++const ACAO_TIPOS = [
++  "enviar_dm",
++  "responder_comentario",
++  "add_etiqueta",
++  "criar_contato",
++  "notificar_equipe",
++  "add_funil_politico",
++] as const;
++
++const acaoSchema = z.object({
++  tipo: z.enum(ACAO_TIPOS),
++  texto: z.string().optional(),
++  etiqueta: z.string().optional(),
++  pipeline_id: z.string().uuid().optional(),
++  nivel: z.string().optional(),
++  mensagem: z.string().optional(),
++  assignee_user_id: z.string().uuid().optional(),
++});
++
++const criarFlowSchema = z.object({
++  nome: z.string().min(1).max(120),
++  descricao: z.string().max(500).optional(),
++  ativo: z.boolean().default(true),
++  trigger_tipo: z.enum(TRIGGER_TIPOS),
++  trigger_config: z
++    .object({
++      keywords: z.array(z.string()).optional(),
++      case_sensitive: z.boolean().optional(),
++      post_ids: z.array(z.string()).optional(),
++      story_id: z.string().optional(),
++    })
++    .default({}),
++  acoes: z.array(acaoSchema).min(1).max(10),
++});
++
++// ── GET — listar flows ────────────────────────────────────────────────────────
++
++export async function GET(req: NextRequest): Promise<NextResponse> {
++  const requestId = randomUUID();
++
++  const authz = await requireRole("viewer", { requestId, resource: "ig_automation_flows" });
++  if (!authz.ok) return authz.response;
++
++  const { organizationId } = authz;
++  const db = createAdminClient();
++  const params = req.nextUrl.searchParams;
++
++  let query = db
++    .from("ig_automation_flows")
++    .select(
++      "id, nome, descricao, ativo, trigger_tipo, trigger_config, acoes, stats, ultima_ativacao_at, created_at, updated_at",
++    )
++    .eq("organization_id", organizationId)
++    .order("created_at", { ascending: false });
++
++  // Filtros opcionais
++  const ativoParam = params.get("ativo");
++  if (ativoParam === "true") query = query.eq("ativo", true);
++  if (ativoParam === "false") query = query.eq("ativo", false);
++
++  const triggerTipo = params.get("trigger_tipo");
++  if (triggerTipo) query = query.eq("trigger_tipo", triggerTipo);
++
++  // Paginação simples
++  const limit = Math.min(parseInt(params.get("limit") ?? "50", 10), 100);
++  const offset = parseInt(params.get("offset") ?? "0", 10);
++  query = query.range(offset, offset + limit - 1);
++
++  const { data, error, count } = await query;
++
++  if (error) {
++    return fail("internal_error", "Erro ao buscar flows", 500, { requestId });
++  }
++
++  return ok(
++    { flows: data ?? [] },
++    {
++      headers: { "x-request-id": requestId },
++      meta: { total: count ?? (data?.length ?? 0), limit, offset },
++    },
++  );
++}
++
++// ── POST — criar flow ─────────────────────────────────────────────────────────
++
++export async function POST(req: NextRequest): Promise<NextResponse> {
++  const requestId = randomUUID();
++
++  const authz = await requireRole("manager", { requestId, resource: "ig_automation_flows" });
++  if (!authz.ok) return authz.response;
++
++  const { organizationId, userId } = authz;
++
++  const guardaSuporteWrite = await requireSupportWrite({ requestId, resource: "ig_automation_flows.create" });
++  if (!guardaSuporteWrite.ok) return guardaSuporteWrite.response;
++
++  let body: unknown;
++  try {
++    body = await req.json();
++  } catch {
++    return fail("bad_request", "JSON inválido", 400, { requestId });
++  }
++
++  const parsed = criarFlowSchema.safeParse(body);
++  if (!parsed.success) {
++    return fail("validation_error", "Dados inválidos", 422, {
++      requestId,
++      details: parsed.error.flatten(),
++    });
++  }
++
++  const db = createAdminClient();
++  const { data: flow, error } = await db
++    .from("ig_automation_flows")
++    .insert({
++      organization_id: organizationId,
++      nome: parsed.data.nome,
++      descricao: parsed.data.descricao ?? null,
++      ativo: parsed.data.ativo,
++      trigger_tipo: parsed.data.trigger_tipo,
++      trigger_config: parsed.data.trigger_config,
++      acoes: parsed.data.acoes,
++    })
++    .select()
++    .single();
++
++  if (error) {
++    return fail("internal_error", "Erro ao criar flow", 500, { requestId });
++  }
++
++  // Audit log
++  await db.from("api_audit_log").insert({
++    organization_id: organizationId,
++    user_id: userId,
++    action: "ig_automation_flows.create",
++    resource_id: flow.id,
++    metadata: { nome: flow.nome, trigger_tipo: flow.trigger_tipo },
++  });
++
++  return ok({ flow }, { status: 201, headers: { "x-request-id": requestId } });
++}
+diff --git a/app/api/v1/ig-webhook-tokens/[id]/route.ts b/app/api/v1/ig-webhook-tokens/[id]/route.ts
+new file mode 100644
+index 0000000..b9f43f3
+--- /dev/null
++++ b/app/api/v1/ig-webhook-tokens/[id]/route.ts
+@@ -0,0 +1,69 @@
++/**
++ * DELETE /api/v1/ig-webhook-tokens/[id]
++ *
++ * Revogação de token de webhook Instagram (soft-delete: ativo = false).
++ *
++ * Segurança: organization_id do cookie/JWT, nunca do body.
++ */
++
++import { randomUUID } from "node:crypto";
++import { NextResponse, type NextRequest } from "next/server";
++
++import { ok, fail } from "@/lib/api/wrappers";
++import { requireRole } from "@/lib/auth/require-role";
++import { createAdminClient } from "@/lib/supabase/admin";
++import { requireSupportWrite } from "@/lib/impersonate/support";
++
++export const dynamic = "force-dynamic";
++export const runtime = "nodejs";
++
++interface RouteCtx {
++  params: Promise<{ id: string }>;
++}
++
++export async function DELETE(req: NextRequest, ctx: RouteCtx): Promise<NextResponse> {
++  const requestId = randomUUID();
++  const { id } = await ctx.params;
++
++  const authz = await requireRole("manager", { requestId, resource: "ig_webhook_tokens" });
++  if (!authz.ok) return authz.response;
++
++  const { organizationId, userId } = authz;
++
++  const guarda = await requireSupportWrite({ requestId, resource: "ig_webhook_tokens.delete" });
++  if (!guarda.ok) return guarda.response;
++
++  const db = createAdminClient();
++
++  const { data: existente, error: errBusca } = await db
++    .from("ig_webhook_tokens")
++    .select("id, descricao")
++    .eq("id", id)
++    .eq("organization_id", organizationId)
++    .single();
++
++  if (errBusca || !existente) {
++    return fail("not_found", "Token não encontrado", 404, { requestId });
++  }
++
++  // Soft-delete: desativa em vez de remover
++  const { error } = await db
++    .from("ig_webhook_tokens")
++    .update({ ativo: false })
++    .eq("id", id)
++    .eq("organization_id", organizationId);
++
++  if (error) {
++    return fail("internal_error", "Erro ao revogar token", 500, { requestId });
++  }
++
++  await db.from("api_audit_log").insert({
++    organization_id: organizationId,
++    user_id: userId,
++    action: "ig_webhook_tokens.delete",
++    resource_id: id,
++    metadata: { descricao: existente.descricao },
++  });
++
++  return ok({ revogado: true }, { headers: { "x-request-id": requestId } });
++}
+diff --git a/app/api/v1/ig-webhook-tokens/route.ts b/app/api/v1/ig-webhook-tokens/route.ts
+new file mode 100644
+index 0000000..241aa53
+--- /dev/null
++++ b/app/api/v1/ig-webhook-tokens/route.ts
+@@ -0,0 +1,117 @@
++/**
++ * GET|POST /api/v1/ig-webhook-tokens
++ *
++ * Gestão de tokens de webhook para o canal Instagram Graph API.
++ *
++ * GET  — lista tokens da organização (viewer+)
++ * POST — gera novo token (manager+)
++ *
++ * Segurança: organization_id resolvido do cookie/JWT, nunca do body.
++ * O path_token é gerado aqui com randomUUID — nunca aceito do cliente.
++ */
++
++import { randomUUID } from "node:crypto";
++import { z } from "zod";
++import { NextResponse, type NextRequest } from "next/server";
++
++import { ok, fail } from "@/lib/api/wrappers";
++import { requireRole } from "@/lib/auth/require-role";
++import { createAdminClient } from "@/lib/supabase/admin";
++import { requireSupportWrite } from "@/lib/impersonate/support";
++
++export const dynamic = "force-dynamic";
++export const runtime = "nodejs";
++
++const criarTokenSchema = z.object({
++  descricao: z.string().max(200).nullable().optional(),
++  channel_session_id: z.string().uuid().optional(),
++});
++
++// ── GET ────────────────────────────────────────────────────────────────────────
++
++export async function GET(req: NextRequest): Promise<NextResponse> {
++  const requestId = randomUUID();
++
++  const authz = await requireRole("viewer", { requestId, resource: "ig_webhook_tokens" });
++  if (!authz.ok) return authz.response;
++
++  const db = createAdminClient();
++  const params = req.nextUrl.searchParams;
++
++  let query = db
++    .from("ig_webhook_tokens")
++    .select("id, path_token, descricao, ativo, ultimo_ping_at, created_at, channel_session_id")
++    .eq("organization_id", authz.organizationId)
++    .order("created_at", { ascending: false });
++
++  const ativoParam = params.get("ativo");
++  if (ativoParam === "true") query = query.eq("ativo", true);
++  if (ativoParam === "false") query = query.eq("ativo", false);
++
++  const { data, error } = await query;
++
++  if (error) {
++    return fail("internal_error", "Erro ao buscar tokens", 500, { requestId });
++  }
++
++  return ok({ tokens: data ?? [] }, { headers: { "x-request-id": requestId } });
++}
++
++// ── POST ───────────────────────────────────────────────────────────────────────
++
++export async function POST(req: NextRequest): Promise<NextResponse> {
++  const requestId = randomUUID();
++
++  const authz = await requireRole("manager", { requestId, resource: "ig_webhook_tokens" });
++  if (!authz.ok) return authz.response;
++
++  const { organizationId, userId } = authz;
++
++  const guarda = await requireSupportWrite({ requestId, resource: "ig_webhook_tokens.create" });
++  if (!guarda.ok) return guarda.response;
++
++  let body: unknown;
++  try {
++    body = await req.json();
++  } catch {
++    return fail("bad_request", "JSON inválido", 400, { requestId });
++  }
++
++  const parsed = criarTokenSchema.safeParse(body);
++  if (!parsed.success) {
++    return fail("validation_error", "Dados inválidos", 422, {
++      requestId,
++      details: parsed.error.flatten(),
++    });
++  }
++
++  // path_token gerado aqui — nunca aceito do body
++  const pathToken = randomUUID().replace(/-/g, "");
++
++  const db = createAdminClient();
++  const { data: token, error } = await db
++    .from("ig_webhook_tokens")
++    .insert({
++      organization_id: organizationId,
++      path_token: pathToken,
++      descricao: parsed.data.descricao ?? null,
++      channel_session_id: parsed.data.channel_session_id ?? null,
++      ativo: true,
++    })
++    .select()
++    .single();
++
++  if (error) {
++    return fail("internal_error", "Erro ao criar token", 500, { requestId });
++  }
++
++  await db.from("api_audit_log").insert({
++    organization_id: organizationId,
++    user_id: userId,
++    action: "ig_webhook_tokens.create",
++    resource_id: token.id,
++    metadata: { descricao: token.descricao },
++  });
++
++  return ok({ token }, { status: 201, headers: { "x-request-id": requestId } });
++}
+diff --git a/app/api/v1/webhooks/instagram-comments/[token]/route.ts b/app/api/v1/webhooks/instagram-comments/[token]/route.ts
+new file mode 100644
+index 0000000..abb15a9
+--- /dev/null
++++ b/app/api/v1/webhooks/instagram-comments/[token]/route.ts
+@@ -0,0 +1,183 @@
++/**
++ * GET|POST /api/v1/webhooks/instagram-comments/[token]
++ *
++ * Webhook da Instagram Graph API para comentários em posts e reels.
++ *
++ * ── GET (handshake) ────────────────────────────────────────────────────────
++ * A Meta verifica o endpoint antes de ativar a assinatura. Retorna o
++ * `hub.challenge` em texto puro — NUNCA no wrapper JSON padrão, senão a
++ * verificação falha silenciosamente.
++ *
++ * ── POST (entrega de evento) ───────────────────────────────────────────────
++ * Verifica HMAC-SHA256 com o App Secret da instalação (`platform_meta_app`,
++ * mesma credencial do WhatsApp Cloud API). O `[token]` na URL resolve a
++ * organização via `ig_webhook_tokens.path_token` — sem ele, qualquer um com
++ * o App Secret poderia escrever em qualquer tenant.
++ *
++ * Depois de verificar, grava em `ig_comment_events` (idempotente) e emite
++ * `ig.comment_received` no `event_log`. O worker de automação consome
++ * assincronamente — NUNCA fazemos HTTP na entrega do webhook.
++ *
++ * ── Segurança ──────────────────────────────────────────────────────────────
++ * - organization_id: resolvido do BANCO via path_token (fonte confiável)
++ *   — nunca do body do webhook.
++ * - HMAC: verificado ANTES de qualquer escrita no banco.
++ * - Timing safe: usa `timingSafeEqual` para comparar assinaturas.
++ */
++import { randomUUID } from "node:crypto";
++import { NextResponse, type NextRequest } from "next/server";
++
++import { fail } from "@/lib/api/wrappers";
++import { createAdminClient } from "@/lib/supabase/admin";
++import { appDaMeta } from "@/lib/channels/meta/app";
++import { parseIgWebhookPayload, verifyIgWebhookSignature } from "@/lib/channels/instagram/comment-parser";
++import { ingestIgComment } from "@/lib/channels/instagram/comment-ingest";
++import { logger } from "@/lib/logger";
++
++export const dynamic = "force-dynamic";
++export const runtime = "nodejs";
++
++interface RouteCtx {
++  params: Promise<{ token: string }>;
++}
++
++// ── GET — handshake de verificação da Meta ────────────────────────────────────
++
++export async function GET(req: NextRequest, ctx: RouteCtx): Promise<NextResponse> {
++  const { token } = await ctx.params;
++
++  const db = createAdminClient();
++
++  // Resolve o token no banco
++  const { data: tokenRow, error } = await db.rpc("fn_ig_webhook_token_por_path", {
++    p_path_token: token,
++  });
++
++  if (error || !tokenRow || (Array.isArray(tokenRow) && tokenRow.length === 0)) {
++    return new NextResponse("not found", { status: 404 });
++  }
++
++  const row = Array.isArray(tokenRow) ? tokenRow[0] : tokenRow;
++  if (!row.ativo) return new NextResponse("token inactive", { status: 404 });
++
++  const params = req.nextUrl.searchParams;
++  const mode      = params.get("hub.mode");
++  const challenge = params.get("hub.challenge");
++  const verifyTok = params.get("hub.verify_token");
++
++  if (mode !== "subscribe") {
++    return new NextResponse("invalid mode", { status: 400 });
++  }
++
++  // Compara com o verify_token armazenado no banco para esta org
++  if (verifyTok !== row.verify_token) {
++    return new NextResponse("forbidden", { status: 403 });
++  }
++
++  if (!challenge) return new NextResponse("missing challenge", { status: 400 });
++
++  // Texto puro — o wrapper JSON faz a verificação da Meta falhar
++  return new NextResponse(challenge, {
++    status: 200,
++    headers: { "content-type": "text/plain" },
++  });
++}
++
++// ── POST — entrega de eventos de comentário ───────────────────────────────────
++
++export async function POST(req: NextRequest, ctx: RouteCtx): Promise<NextResponse> {
++  const requestId = randomUUID();
++  const { token } = await ctx.params;
++
++  const db = createAdminClient();
++
++  // 1. Resolver o token → organization_id (antes de qualquer body parse)
++  const { data: tokenRow, error: tokenError } = await db.rpc("fn_ig_webhook_token_por_path", {
++    p_path_token: token,
++  });
++
++  if (tokenError || !tokenRow || (Array.isArray(tokenRow) && tokenRow.length === 0)) {
++    return fail("not_found", "unknown webhook token", 404, { requestId });
++  }
++
++  const row = Array.isArray(tokenRow) ? tokenRow[0] : tokenRow;
++  if (!row.ativo) {
++    return fail("not_found", "token inactive", 404, { requestId });
++  }
++
++  const organizationId: string = row.organization_id;
++
++  // 2. Ler body RAW — necessário para verificar HMAC ANTES de parsear JSON
++  let bodyRaw: string;
++  try {
++    bodyRaw = await req.text();
++  } catch {
++    return fail("bad_request", "could not read body", 400, { requestId });
++  }
++
++  // 3. Verificar HMAC-SHA256 com o App Secret da instalação
++  const signature = req.headers.get("x-hub-signature-256") ?? "";
++
++  const { appSecret } = await appDaMeta();
++
++  if (!appSecret) {
++    logger.error("[ig-comments-webhook] meta app secret not configured", { requestId });
++    return fail("internal_error", "meta app not configured", 500, { requestId });
++  }
++
++  const valid = await verifyIgWebhookSignature(bodyRaw, signature, appSecret);
++  if (!valid) {
++    logger.warn("[ig-comments-webhook] invalid signature", {
++      requestId,
++      organizationId,
++      token: token.slice(0, 8) + "…",
++    });
++    return fail("forbidden", "invalid signature", 403, { requestId });
++  }
++
++  // 4. Parsear payload
++  let payload: unknown;
++  try {
++    payload = JSON.parse(bodyRaw);
++  } catch {
++    return fail("bad_request", "invalid json", 400, { requestId });
++  }
++
++  // 5. Extrair eventos de comentário
++  const events = parseIgWebhookPayload(payload, row.ig_business_account_id ?? undefined);
++
++  if (events.length === 0) {
++    // Payload sem comentários (ex: stories, mentions sem comentário) → 200 silencioso
++    return new NextResponse(null, { status: 200 });
++  }
++
++  // 6. Ingerir cada comentário
++  const results = await Promise.allSettled(
++    events.map((event) =>
++      ingestIgComment(db, {
++        organizationId,
++        channelSessionId: row.channel_session_id ?? null,
++        event,
++        payloadRaw: payload as Record<string, unknown>,
++      }),
++    ),
++  );
++
++  const inserted = results.filter(
++    (r) => r.status === "fulfilled" && r.value.status === "inserted",
++  ).length;
++
++  const duplicates = results.filter(
++    (r) => r.status === "fulfilled" && (r.value as { status: string }).status === "duplicate",
++  ).length;
++
++  logger.info("[ig-comments-webhook] processed", {
++    requestId,
++    organizationId,
++    total: events.length,
++    inserted,
++    duplicates,
++  });
++
++  return new NextResponse(null, { status: 200 });
++}
+diff --git a/app/app/instagram/automacoes/[id]/page.tsx b/app/app/instagram/automacoes/[id]/page.tsx
+new file mode 100644
+index 0000000..a4872ef
+--- /dev/null
++++ b/app/app/instagram/automacoes/[id]/page.tsx
+@@ -0,0 +1,445 @@
++/**
++ * /app/instagram/automacoes/[id] — Edição de flow de automação Instagram
++ *
++ * Formulário de edição de um flow existente. Pré-carrega os dados via GET
++ * e envia PATCH com o delta.
++ *
++ * Acesso: manager+
++ */
++
++"use client";
++
++import { useState, useEffect } from "react";
++import { useRouter, useParams } from "next/navigation";
++import Link from "next/link";
++
++// ── Tipos (mesmo contrato de novo/page.tsx) ───────────────────────────────────
++
++type TriggerTipo =
++  | "comment_keyword"
++  | "comment_no_post"
++  | "dm_keyword"
++  | "novo_seguidor"
++  | "story_reply"
++  | "novo_comentario";
++
++type AcaoTipo =
++  | "enviar_dm"
++  | "responder_comentario"
++  | "add_etiqueta"
++  | "criar_contato"
++  | "notificar_equipe"
++  | "add_funil_politico";
++
++interface AcaoConfig {
++  tipo: AcaoTipo;
++  texto?: string;
++  etiqueta?: string;
++  nivel?: string;
++  mensagem?: string;
++}
++
++interface FlowRow {
++  id: string;
++  nome: string;
++  descricao: string | null;
++  ativo: boolean;
++  trigger_tipo: TriggerTipo;
++  trigger_config: Record<string, unknown>;
++  acoes: AcaoConfig[];
++}
++
++// ── Labels ─────────────────────────────────────────────────────────────────────
++
++const TRIGGER_OPTIONS: { value: TriggerTipo; label: string; descricao: string }[] = [
++  { value: "comment_keyword", label: "Palavra-chave no comentário", descricao: "Dispara quando o comentário contém uma ou mais palavras-chave." },
++  { value: "comment_no_post", label: "Qualquer comentário em post específico", descricao: "Dispara em qualquer comentário num post específico." },
++  { value: "dm_keyword", label: "Palavra-chave em DM", descricao: "Dispara quando a DM contém uma palavra-chave." },
++  { value: "novo_seguidor", label: "Novo seguidor", descricao: "Dispara quando alguém segue o perfil." },
++  { value: "story_reply", label: "Resposta de Story", descricao: "Dispara quando alguém responde um Story." },
++  { value: "novo_comentario", label: "Qualquer comentário (catch-all)", descricao: "Dispara em qualquer comentário — use como fallback no final da lista." },
++];
++
++const ACAO_OPTIONS: { value: AcaoTipo; label: string; descricao: string }[] = [
++  { value: "enviar_dm", label: "Enviar DM", descricao: "Envia mensagem direta. Variáveis: {{username}}, {{comentario}}" },
++  { value: "responder_comentario", label: "Responder comentário", descricao: "Resposta pública. Variáveis: {{username}}, {{comentario}}" },
++  { value: "add_etiqueta", label: "Adicionar etiqueta", descricao: "Adiciona etiqueta ao contato." },
++  { value: "criar_contato", label: "Criar contato", descricao: "Cria ou atualiza o contato no CRM." },
++  { value: "notificar_equipe", label: "Notificar equipe", descricao: "Notificação no canal de atendimento." },
++  { value: "add_funil_politico", label: "Funil político", descricao: "Classifica: Simpatizante, Apoiador ou Embaixador." },
++];
++
++const NIVEIS_FUNIL = ["Simpatizante", "Apoiador", "Embaixador"];
++
++// ── Editor de ação ─────────────────────────────────────────────────────────────
++
++function AcaoEditor({
++  acao,
++  onChange,
++  onRemove,
++}: {
++  acao: AcaoConfig;
++  index: number;
++  onChange: (acao: AcaoConfig) => void;
++  onRemove: () => void;
++}) {
++  const info = ACAO_OPTIONS.find((o) => o.value === acao.tipo);
++
++  return (
++    <div className="rounded-lg border bg-card p-3 space-y-2">
++      <div className="flex items-center justify-between gap-2">
++        <select
++          value={acao.tipo}
++          onChange={(e) => onChange({ tipo: e.target.value as AcaoTipo })}
++          className="flex-1 rounded-md border bg-background px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
++        >
++          {ACAO_OPTIONS.map((opt) => (
++            <option key={opt.value} value={opt.value}>{opt.label}</option>
++          ))}
++        </select>
++        <button
++          onClick={onRemove}
++          className="rounded-md px-2 py-1.5 text-xs text-destructive border border-destructive/20 hover:bg-destructive/10 transition-colors shrink-0"
++        >
++          Remover
++        </button>
++      </div>
++
++      {info && <p className="text-xs text-muted-foreground">{info.descricao}</p>}
++
++      {(acao.tipo === "enviar_dm" || acao.tipo === "responder_comentario") && (
++        <textarea
++          value={acao.texto ?? ""}
++          onChange={(e) => onChange({ ...acao, texto: e.target.value })}
++          placeholder="Texto da mensagem ({{username}}, {{comentario}})"
++          rows={3}
++          className="w-full rounded-md border bg-background px-2 py-1.5 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-primary"
++        />
++      )}
++
++      {acao.tipo === "add_etiqueta" && (
++        <input
++          type="text"
++          value={acao.etiqueta ?? ""}
++          onChange={(e) => onChange({ ...acao, etiqueta: e.target.value })}
++          placeholder="Nome da etiqueta"
++          className="w-full rounded-md border bg-background px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
++        />
++      )}
++
++      {acao.tipo === "notificar_equipe" && (
++        <input
++          type="text"
++          value={acao.mensagem ?? ""}
++          onChange={(e) => onChange({ ...acao, mensagem: e.target.value })}
++          placeholder="Mensagem para a equipe"
++          className="w-full rounded-md border bg-background px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
++        />
++      )}
++
++      {acao.tipo === "add_funil_politico" && (
++        <select
++          value={acao.nivel ?? "Simpatizante"}
++          onChange={(e) => onChange({ ...acao, nivel: e.target.value })}
++          className="w-full rounded-md border bg-background px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
++        >
++          {NIVEIS_FUNIL.map((n) => <option key={n} value={n}>{n}</option>)}
++        </select>
++      )}
++    </div>
++  );
++}
++
++// ── Componente principal ───────────────────────────────────────────────────────
++
++export default function EditarFlowPage() {
++  const router = useRouter();
++  const params = useParams<{ id: string }>();
++  const id = params.id;
++
++  const [carregando, setCarregando] = useState(true);
++  const [naoEncontrado, setNaoEncontrado] = useState(false);
++
++  const [nome, setNome] = useState("");
++  const [descricao, setDescricao] = useState("");
++  const [ativo, setAtivo] = useState(true);
++  const [triggerTipo, setTriggerTipo] = useState<TriggerTipo>("comment_keyword");
++  const [keywords, setKeywords] = useState("");
++  const [caseSensitive, setCaseSensitive] = useState(false);
++  const [postIds, setPostIds] = useState("");
++  const [acoes, setAcoes] = useState<AcaoConfig[]>([]);
++  const [salvando, setSalvando] = useState(false);
++  const [erro, setErro] = useState<string | null>(null);
++
++  // Carregar dados do flow
++  useEffect(() => {
++    (async () => {
++      try {
++        const res = await fetch(`/api/v1/ig-automation-flows/${id}`);
++        if (res.status === 404) { setNaoEncontrado(true); return; }
++        if (!res.ok) throw new Error("Erro ao carregar");
++        const json = await res.json();
++        const flow: FlowRow = json.data?.flow ?? json.data;
++        setNome(flow.nome);
++        setDescricao(flow.descricao ?? "");
++        setAtivo(flow.ativo);
++        setTriggerTipo(flow.trigger_tipo);
++        const cfg = flow.trigger_config;
++        if (Array.isArray(cfg.keywords)) setKeywords((cfg.keywords as string[]).join(", "));
++        if (typeof cfg.case_sensitive === "boolean") setCaseSensitive(cfg.case_sensitive);
++        if (Array.isArray(cfg.post_ids)) setPostIds((cfg.post_ids as string[]).join(", "));
++        setAcoes(flow.acoes ?? []);
++      } catch {
++        setErro("Erro ao carregar o flow.");
++      } finally {
++        setCarregando(false);
++      }
++    })();
++  }, [id]);
++
++  const triggerInfo = TRIGGER_OPTIONS.find((o) => o.value === triggerTipo);
++
++  function buildTriggerConfig() {
++    const cfg: Record<string, unknown> = {};
++    if (triggerTipo === "comment_keyword" || triggerTipo === "dm_keyword") {
++      cfg.keywords = keywords.split(",").map((k) => k.trim()).filter(Boolean);
++      cfg.case_sensitive = caseSensitive;
++    }
++    if (triggerTipo === "comment_no_post") {
++      cfg.post_ids = postIds.split(",").map((p) => p.trim()).filter(Boolean);
++    }
++    return cfg;
++  }
++
++  function addAcao() {
++    setAcoes((prev) => [...prev, { tipo: "criar_contato" }]);
++  }
++
++  function updateAcao(i: number, acao: AcaoConfig) {
++    setAcoes((prev) => prev.map((a, idx) => (idx === i ? acao : a)));
++  }
++
++  function removeAcao(i: number) {
++    setAcoes((prev) => prev.filter((_, idx) => idx !== i));
++  }
++
++  async function salvar(e: React.FormEvent) {
++    e.preventDefault();
++    setErro(null);
++
++    if (!nome.trim()) { setErro("Nome é obrigatório."); return; }
++    if (acoes.length === 0) { setErro("Adicione pelo menos uma ação."); return; }
++
++    const body = {
++      nome: nome.trim(),
++      descricao: descricao.trim() || null,
++      ativo,
++      trigger_tipo: triggerTipo,
++      trigger_config: buildTriggerConfig(),
++      acoes,
++    };
++
++    setSalvando(true);
++    try {
++      const res = await fetch(`/api/v1/ig-automation-flows/${id}`, {
++        method: "PATCH",
++        headers: { "Content-Type": "application/json" },
++        body: JSON.stringify(body),
++      });
++      if (!res.ok) {
++        const json = await res.json().catch(() => ({}));
++        throw new Error(json.error?.message ?? "Erro ao salvar");
++      }
++      router.push("/app/instagram/automacoes");
++    } catch (e) {
++      setErro(e instanceof Error ? e.message : "Erro ao salvar");
++      setSalvando(false);
++    }
++  }
++
++  if (carregando) {
++    return (
++      <div className="flex items-center justify-center min-h-[40vh]">
++        <div className="h-6 w-6 animate-spin rounded-full border-2 border-primary border-t-transparent" />
++      </div>
++    );
++  }
++
++  if (naoEncontrado) {
++    return (
++      <div className="mx-auto max-w-2xl px-4 py-16 text-center space-y-3">
++        <p className="text-4xl">🔍</p>
++        <p className="font-medium">Flow não encontrado</p>
++        <Link href="/app/instagram/automacoes" className="text-sm text-primary underline underline-offset-4">
++          Voltar para automações
++        </Link>
++      </div>
++    );
++  }
++
++  return (
++    <div className="mx-auto max-w-2xl px-4 py-8">
++      {/* Cabeçalho */}
++      <div className="mb-6">
++        <div className="flex items-center gap-2 text-sm text-muted-foreground mb-1">
++          <Link href="/app/instagram" className="hover:text-foreground transition-colors">Instagram</Link>
++          <span>/</span>
++          <Link href="/app/instagram/automacoes" className="hover:text-foreground transition-colors">Automações</Link>
++          <span>/</span>
++          <span>Editar</span>
++        </div>
++        <h1 className="text-2xl font-bold tracking-tight">Editar flow</h1>
++        <p className="mt-1 text-sm text-muted-foreground">
++          Altere o gatilho e as ações. As alterações entram em vigor imediatamente.
++        </p>
++      </div>
++
++      <form onSubmit={salvar} className="space-y-6">
++        {/* Dados básicos */}
++        <div className="space-y-3">
++          <h2 className="font-semibold text-sm uppercase tracking-wide text-muted-foreground">Identificação</h2>
++          <div>
++            <label className="block text-sm font-medium mb-1">Nome do flow *</label>
++            <input
++              type="text"
++              value={nome}
++              onChange={(e) => setNome(e.target.value)}
++              required
++              className="w-full rounded-lg border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
++            />
++          </div>
++          <div>
++            <label className="block text-sm font-medium mb-1">Descrição</label>
++            <input
++              type="text"
++              value={descricao}
++              onChange={(e) => setDescricao(e.target.value)}
++              className="w-full rounded-lg border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
++            />
++          </div>
++          <label className="flex items-center gap-2 cursor-pointer">
++            <input
++              type="checkbox"
++              checked={ativo}
++              onChange={(e) => setAtivo(e.target.checked)}
++              className="rounded"
++            />
++            <span className="text-sm font-medium">Flow ativo</span>
++            <span className="text-xs text-muted-foreground">(fluxos inativos não são avaliados)</span>
++          </label>
++        </div>
++
++        {/* Trigger */}
++        <div className="space-y-3">
++          <h2 className="font-semibold text-sm uppercase tracking-wide text-muted-foreground">Gatilho</h2>
++          <select
++            value={triggerTipo}
++            onChange={(e) => setTriggerTipo(e.target.value as TriggerTipo)}
++            className="w-full rounded-lg border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
++          >
++            {TRIGGER_OPTIONS.map((opt) => (
++              <option key={opt.value} value={opt.value}>{opt.label}</option>
++            ))}
++          </select>
++
++          {triggerInfo && (
++            <p className="text-xs text-muted-foreground">{triggerInfo.descricao}</p>
++          )}
++
++          {(triggerTipo === "comment_keyword" || triggerTipo === "dm_keyword") && (
++            <div className="space-y-2">
++              <div>
++                <label className="block text-sm font-medium mb-1">Palavras-chave (separadas por vírgula)</label>
++                <input
++                  type="text"
++                  value={keywords}
++                  onChange={(e) => setKeywords(e.target.value)}
++                  placeholder="INFO, quero saber, saiba mais"
++                  className="w-full rounded-lg border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
++                />
++              </div>
++              <label className="flex items-center gap-2 cursor-pointer">
++                <input
++                  type="checkbox"
++                  checked={caseSensitive}
++                  onChange={(e) => setCaseSensitive(e.target.checked)}
++                  className="rounded"
++                />
++                <span className="text-sm">Case sensitive</span>
++              </label>
++            </div>
++          )}
++
++          {triggerTipo === "comment_no_post" && (
++            <div>
++              <label className="block text-sm font-medium mb-1">IDs dos posts (separados por vírgula)</label>
++              <input
++                type="text"
++                value={postIds}
++                onChange={(e) => setPostIds(e.target.value)}
++                placeholder="17891234567, 17898765432"
++                className="w-full rounded-lg border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
++              />
++            </div>
++          )}
++        </div>
++
++        {/* Ações */}
++        <div className="space-y-3">
++          <div className="flex items-center justify-between">
++            <h2 className="font-semibold text-sm uppercase tracking-wide text-muted-foreground">Ações</h2>
++            <button
++              type="button"
++              onClick={addAcao}
++              className="text-xs font-medium text-primary hover:underline"
++            >
++              + Adicionar ação
++            </button>
++          </div>
++
++          {acoes.length === 0 && (
++            <div className="rounded-lg border border-dashed py-6 text-center text-sm text-muted-foreground">
++              Nenhuma ação. Adicione pelo menos uma.
++            </div>
++          )}
++
++          <div className="space-y-2">
++            {acoes.map((acao, i) => (
++              <AcaoEditor
++                key={i}
++                acao={acao}
++                index={i}
++                onChange={(a) => updateAcao(i, a)}
++                onRemove={() => removeAcao(i)}
++              />
++            ))}
++          </div>
++        </div>
++
++        {/* Erro */}
++        {erro && (
++          <div className="rounded-lg border border-destructive/20 bg-destructive/10 px-4 py-3 text-sm text-destructive">
++            {erro}
++          </div>
++        )}
++
++        {/* Botões */}
++        <div className="flex items-center gap-3 pt-2">
++          <button
++            type="submit"
++            disabled={salvando}
++            className="rounded-lg bg-primary px-5 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors disabled:opacity-50"
++          >
++            {salvando ? "Salvando…" : "Salvar alterações"}
++          </button>
++          <Link
++            href="/app/instagram/automacoes"
++            className="rounded-lg border px-5 py-2 text-sm font-medium hover:bg-accent transition-colors"
++          >
++            Cancelar
++          </Link>
++        </div>
++      </form>
++    </div>
++  );
++}
+diff --git a/app/app/instagram/automacoes/novo/page.tsx b/app/app/instagram/automacoes/novo/page.tsx
+new file mode 100644
+index 0000000..1c21df9
+--- /dev/null
++++ b/app/app/instagram/automacoes/novo/page.tsx
+@@ -0,0 +1,389 @@
++/**
++ * /app/instagram/automacoes/novo — Criação de novo flow de automação Instagram
++ *
++ * Formulário completo para criar um flow de automação: trigger + lista de ações.
++ * Arquitetura ManyChat: trigger dispara, ações executam em ordem, first-match wins.
++ *
++ * Acesso: manager+
++ */
++
++"use client";
++
++import { useState } from "react";
++import { useRouter } from "next/navigation";
++import Link from "next/link";
++
++// ── Tipos ──────────────────────────────────────────────────────────────────────
++
++type TriggerTipo =
++  | "comment_keyword"
++  | "comment_no_post"
++  | "dm_keyword"
++  | "novo_seguidor"
++  | "story_reply"
++  | "novo_comentario";
++
++type AcaoTipo =
++  | "enviar_dm"
++  | "responder_comentario"
++  | "add_etiqueta"
++  | "criar_contato"
++  | "notificar_equipe"
++  | "add_funil_politico";
++
++interface AcaoConfig {
++  tipo: AcaoTipo;
++  texto?: string;
++  etiqueta?: string;
++  nivel?: string;
++  mensagem?: string;
++}
++
++// ── Labels ─────────────────────────────────────────────────────────────────────
++
++const TRIGGER_OPTIONS: { value: TriggerTipo; label: string; descricao: string }[] = [
++  { value: "comment_keyword", label: "Palavra-chave no comentário", descricao: "Dispara quando o comentário contém uma ou mais palavras-chave." },
++  { value: "comment_no_post", label: "Qualquer comentário em post específico", descricao: "Dispara em qualquer comentário num post específico." },
++  { value: "dm_keyword", label: "Palavra-chave em DM", descricao: "Dispara quando a DM contém uma palavra-chave." },
++  { value: "novo_seguidor", label: "Novo seguidor", descricao: "Dispara quando alguém segue o perfil." },
++  { value: "story_reply", label: "Resposta de Story", descricao: "Dispara quando alguém responde um Story." },
++  { value: "novo_comentario", label: "Qualquer comentário (catch-all)", descricao: "Dispara em qualquer comentário — use como fallback no final da lista." },
++];
++
++const ACAO_OPTIONS: { value: AcaoTipo; label: string; descricao: string }[] = [
++  { value: "enviar_dm", label: "Enviar DM", descricao: "Envia mensagem direta para quem comentou. Variáveis: {{username}}, {{comentario}}" },
++  { value: "responder_comentario", label: "Responder comentário", descricao: "Responde publicamente ao comentário. Variáveis: {{username}}, {{comentario}}" },
++  { value: "add_etiqueta", label: "Adicionar etiqueta", descricao: "Adiciona uma etiqueta ao contato no CRM." },
++  { value: "criar_contato", label: "Criar contato", descricao: "Cria ou atualiza o contato no CRM com dados do Instagram." },
++  { value: "notificar_equipe", label: "Notificar equipe", descricao: "Envia notificação para a equipe no canal de atendimento." },
++  { value: "add_funil_politico", label: "Funil político", descricao: "Classifica o contato no funil: Simpatizante, Apoiador ou Embaixador." },
++];
++
++const NIVEIS_FUNIL = ["Simpatizante", "Apoiador", "Embaixador"];
++
++// ── Componente de ação ─────────────────────────────────────────────────────────
++
++function AcaoEditor({
++  acao,
++  index,
++  onChange,
++  onRemove,
++}: {
++  acao: AcaoConfig;
++  index: number;
++  onChange: (acao: AcaoConfig) => void;
++  onRemove: () => void;
++}) {
++  const info = ACAO_OPTIONS.find((o) => o.value === acao.tipo);
++
++  return (
++    <div className="rounded-lg border bg-card p-3 space-y-2">
++      <div className="flex items-center justify-between gap-2">
++        <select
++          value={acao.tipo}
++          onChange={(e) => onChange({ tipo: e.target.value as AcaoTipo })}
++          className="flex-1 rounded-md border bg-background px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
++        >
++          {ACAO_OPTIONS.map((opt) => (
++            <option key={opt.value} value={opt.value}>
++              {opt.label}
++            </option>
++          ))}
++        </select>
++        <button
++          onClick={onRemove}
++          className="rounded-md px-2 py-1.5 text-xs text-destructive border border-destructive/20 hover:bg-destructive/10 transition-colors shrink-0"
++        >
++          Remover
++        </button>
++      </div>
++
++      {info && (
++        <p className="text-xs text-muted-foreground">{info.descricao}</p>
++      )}
++
++      {(acao.tipo === "enviar_dm" || acao.tipo === "responder_comentario") && (
++        <textarea
++          value={acao.texto ?? ""}
++          onChange={(e) => onChange({ ...acao, texto: e.target.value })}
++          placeholder="Texto da mensagem (use {{username}} e {{comentario}})"
++          rows={3}
++          className="w-full rounded-md border bg-background px-2 py-1.5 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-primary"
++        />
++      )}
++
++      {acao.tipo === "add_etiqueta" && (
++        <input
++          type="text"
++          value={acao.etiqueta ?? ""}
++          onChange={(e) => onChange({ ...acao, etiqueta: e.target.value })}
++          placeholder="Nome da etiqueta (ex: Lead Quente)"
++          className="w-full rounded-md border bg-background px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
++        />
++      )}
++
++      {acao.tipo === "notificar_equipe" && (
++        <input
++          type="text"
++          value={acao.mensagem ?? ""}
++          onChange={(e) => onChange({ ...acao, mensagem: e.target.value })}
++          placeholder="Mensagem para a equipe (use {{username}} e {{comentario}})"
++          className="w-full rounded-md border bg-background px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
++        />
++      )}
++
++      {acao.tipo === "add_funil_politico" && (
++        <select
++          value={acao.nivel ?? "Simpatizante"}
++          onChange={(e) => onChange({ ...acao, nivel: e.target.value })}
++          className="w-full rounded-md border bg-background px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
++        >
++          {NIVEIS_FUNIL.map((n) => (
++            <option key={n} value={n}>{n}</option>
++          ))}
++        </select>
++      )}
++    </div>
++  );
++}
++
++// ── Componente principal ───────────────────────────────────────────────────────
++
++export default function NovoFlowPage() {
++  const router = useRouter();
++
++  const [nome, setNome] = useState("");
++  const [descricao, setDescricao] = useState("");
++  const [triggerTipo, setTriggerTipo] = useState<TriggerTipo>("comment_keyword");
++  const [keywords, setKeywords] = useState("");
++  const [caseSensitive, setCaseSensitive] = useState(false);
++  const [postIds, setPostIds] = useState("");
++  const [acoes, setAcoes] = useState<AcaoConfig[]>([{ tipo: "enviar_dm", texto: "" }]);
++  const [salvando, setSalvando] = useState(false);
++  const [erro, setErro] = useState<string | null>(null);
++
++  const triggerInfo = TRIGGER_OPTIONS.find((o) => o.value === triggerTipo);
++
++  function addAcao() {
++    setAcoes((prev) => [...prev, { tipo: "criar_contato" }]);
++  }
++
++  function updateAcao(i: number, acao: AcaoConfig) {
++    setAcoes((prev) => prev.map((a, idx) => (idx === i ? acao : a)));
++  }
++
++  function removeAcao(i: number) {
++    setAcoes((prev) => prev.filter((_, idx) => idx !== i));
++  }
++
++  function buildTriggerConfig() {
++    const cfg: Record<string, unknown> = {};
++    if (triggerTipo === "comment_keyword" || triggerTipo === "dm_keyword") {
++      cfg.keywords = keywords.split(",").map((k) => k.trim()).filter(Boolean);
++      cfg.case_sensitive = caseSensitive;
++    }
++    if (triggerTipo === "comment_no_post") {
++      cfg.post_ids = postIds.split(",").map((p) => p.trim()).filter(Boolean);
++    }
++    return cfg;
++  }
++
++  async function salvar(e: React.FormEvent) {
++    e.preventDefault();
++    setErro(null);
++
++    if (!nome.trim()) { setErro("Nome é obrigatório."); return; }
++    if (acoes.length === 0) { setErro("Adicione pelo menos uma ação."); return; }
++
++    const body = {
++      nome: nome.trim(),
++      descricao: descricao.trim() || null,
++      trigger_tipo: triggerTipo,
++      trigger_config: buildTriggerConfig(),
++      acoes,
++      ativo: true,
++    };
++
++    setSalvando(true);
++    try {
++      const res = await fetch("/api/v1/ig-automation-flows", {
++        method: "POST",
++        headers: { "Content-Type": "application/json" },
++        body: JSON.stringify(body),
++      });
++      if (!res.ok) {
++        const json = await res.json().catch(() => ({}));
++        throw new Error(json.error?.message ?? "Erro ao salvar");
++      }
++      router.push("/app/instagram/automacoes");
++    } catch (e) {
++      setErro(e instanceof Error ? e.message : "Erro ao salvar");
++      setSalvando(false);
++    }
++  }
++
++  return (
++    <div className="mx-auto max-w-2xl px-4 py-8">
++      {/* Cabeçalho */}
++      <div className="mb-6">
++        <div className="flex items-center gap-2 text-sm text-muted-foreground mb-1">
++          <Link href="/app/instagram" className="hover:text-foreground transition-colors">Instagram</Link>
++          <span>/</span>
++          <Link href="/app/instagram/automacoes" className="hover:text-foreground transition-colors">Automações</Link>
++          <span>/</span>
++          <span>Novo flow</span>
++        </div>
++        <h1 className="text-2xl font-bold tracking-tight">Novo flow</h1>
++        <p className="mt-1 text-sm text-muted-foreground">
++          Defina o gatilho e as ações. O primeiro flow que bater executa — os demais são ignorados.
++        </p>
++      </div>
++
++      <form onSubmit={salvar} className="space-y-6">
++        {/* Dados básicos */}
++        <div className="space-y-3">
++          <h2 className="font-semibold text-sm uppercase tracking-wide text-muted-foreground">Identificação</h2>
++          <div>
++            <label className="block text-sm font-medium mb-1">Nome do flow *</label>
++            <input
++              type="text"
++              value={nome}
++              onChange={(e) => setNome(e.target.value)}
++              placeholder='Ex: "Responde palavra INFO"'
++              required
++              className="w-full rounded-lg border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
++            />
++          </div>
++          <div>
++            <label className="block text-sm font-medium mb-1">Descrição (opcional)</label>
++            <input
++              type="text"
++              value={descricao}
++              onChange={(e) => setDescricao(e.target.value)}
++              placeholder="Explique brevemente o que este flow faz"
++              className="w-full rounded-lg border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
++            />
++          </div>
++        </div>
++
++        {/* Trigger */}
++        <div className="space-y-3">
++          <h2 className="font-semibold text-sm uppercase tracking-wide text-muted-foreground">Gatilho</h2>
++          <select
++            value={triggerTipo}
++            onChange={(e) => setTriggerTipo(e.target.value as TriggerTipo)}
++            className="w-full rounded-lg border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
++          >
++            {TRIGGER_OPTIONS.map((opt) => (
++              <option key={opt.value} value={opt.value}>{opt.label}</option>
++            ))}
++          </select>
++
++          {triggerInfo && (
++            <p className="text-xs text-muted-foreground">{triggerInfo.descricao}</p>
++          )}
++
++          {(triggerTipo === "comment_keyword" || triggerTipo === "dm_keyword") && (
++            <div className="space-y-2">
++              <div>
++                <label className="block text-sm font-medium mb-1">Palavras-chave (separadas por vírgula)</label>
++                <input
++                  type="text"
++                  value={keywords}
++                  onChange={(e) => setKeywords(e.target.value)}
++                  placeholder="INFO, quero saber, saiba mais"
++                  className="w-full rounded-lg border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
++                />
++              </div>
++              <label className="flex items-center gap-2 cursor-pointer">
++                <input
++                  type="checkbox"
++                  checked={caseSensitive}
++                  onChange={(e) => setCaseSensitive(e.target.checked)}
++                  className="rounded"
++                />
++                <span className="text-sm">Case sensitive (diferencia maiúsculas)</span>
++              </label>
++            </div>
++          )}
++
++          {triggerTipo === "comment_no_post" && (
++            <div>
++              <label className="block text-sm font-medium mb-1">IDs dos posts (separados por vírgula)</label>
++              <input
++                type="text"
++                value={postIds}
++                onChange={(e) => setPostIds(e.target.value)}
++                placeholder="17891234567, 17898765432 (deixe vazio para qualquer post)"
++                className="w-full rounded-lg border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
++              />
++              <p className="mt-1 text-xs text-muted-foreground">
++                Deixe em branco para disparar em qualquer comentário em qualquer post.
++              </p>
++            </div>
++          )}
++        </div>
++
++        {/* Ações */}
++        <div className="space-y-3">
++          <div className="flex items-center justify-between">
++            <h2 className="font-semibold text-sm uppercase tracking-wide text-muted-foreground">Ações</h2>
++            <button
++              type="button"
++              onClick={addAcao}
++              className="text-xs font-medium text-primary hover:underline"
++            >
++              + Adicionar ação
++            </button>
++          </div>
++
++          {acoes.length === 0 && (
++            <div className="rounded-lg border border-dashed py-6 text-center text-sm text-muted-foreground">
++              Nenhuma ação. Adicione pelo menos uma.
++            </div>
++          )}
++
++          <div className="space-y-2">
++            {acoes.map((acao, i) => (
++              <AcaoEditor
++                key={i}
++                acao={acao}
++                index={i}
++                onChange={(a) => updateAcao(i, a)}
++                onRemove={() => removeAcao(i)}
++              />
++            ))}
++          </div>
++
++          <p className="text-xs text-muted-foreground">
++            As ações executam em ordem. Todas são executadas (best-effort), mesmo que uma falhe.
++          </p>
++        </div>
++
++        {/* Erro */}
++        {erro && (
++          <div className="rounded-lg border border-destructive/20 bg-destructive/10 px-4 py-3 text-sm text-destructive">
++            {erro}
++          </div>
++        )}
++
++        {/* Botões */}
++        <div className="flex items-center gap-3 pt-2">
++          <button
++            type="submit"
++            disabled={salvando}
++            className="rounded-lg bg-primary px-5 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors disabled:opacity-50"
++          >
++            {salvando ? "Salvando…" : "Criar flow"}
++          </button>
++          <Link
++            href="/app/instagram/automacoes"
++            className="rounded-lg border px-5 py-2 text-sm font-medium hover:bg-accent transition-colors"
++          >
++            Cancelar
++          </Link>
++        </div>
++      </form>
++    </div>
++  );
++}
+diff --git a/app/app/instagram/automacoes/page.tsx b/app/app/instagram/automacoes/page.tsx
+new file mode 100644
+index 0000000..5d73f6e
+--- /dev/null
++++ b/app/app/instagram/automacoes/page.tsx
+@@ -0,0 +1,299 @@
++/**
++ * /app/instagram/automacoes — Lista e gestão dos flows de automação Instagram
++ *
++ * Lista todos os flows de automação (triggers + ações) da organização.
++ * Permite criar, ativar/desativar e editar flows via modal.
++ *
++ * Acesso: manager+
++ */
++
++"use client";
++
++import { useEffect, useState, useCallback } from "react";
++import Link from "next/link";
++
++// ── Tipos ──────────────────────────────────────────────────────────────────────
++
++type TriggerTipo =
++  | "comment_keyword"
++  | "comment_no_post"
++  | "dm_keyword"
++  | "novo_seguidor"
++  | "story_reply"
++  | "novo_comentario";
++
++type AcaoTipo =
++  | "enviar_dm"
++  | "responder_comentario"
++  | "add_etiqueta"
++  | "criar_contato"
++  | "notificar_equipe"
++  | "add_funil_politico";
++
++interface AcaoConfig {
++  tipo: AcaoTipo;
++  texto?: string;
++  etiqueta?: string;
++  nivel?: string;
++  mensagem?: string;
++}
++
++interface FlowRow {
++  id: string;
++  nome: string;
++  descricao: string | null;
++  ativo: boolean;
++  trigger_tipo: TriggerTipo;
++  trigger_config: Record<string, unknown>;
++  acoes: AcaoConfig[];
++  ultima_ativacao_at: string | null;
++  created_at: string;
++}
++
++// ── Labels de display ──────────────────────────────────────────────────────────
++
++const TRIGGER_LABEL: Record<TriggerTipo, string> = {
++  comment_keyword: "Palavra-chave no comentário",
++  comment_no_post: "Qualquer comentário no post",
++  dm_keyword: "Palavra-chave em DM",
++  novo_seguidor: "Novo seguidor",
++  story_reply: "Resposta de Story",
++  novo_comentario: "Qualquer comentário (catch-all)",
++};
++
++const ACAO_LABEL: Record<AcaoTipo, string> = {
++  enviar_dm: "Enviar DM",
++  responder_comentario: "Responder comentário",
++  add_etiqueta: "Adicionar etiqueta",
++  criar_contato: "Criar contato",
++  notificar_equipe: "Notificar equipe",
++  add_funil_politico: "Funil político",
++};
++
++const TRIGGER_ICON: Record<TriggerTipo, string> = {
++  comment_keyword: "🔍",
++  comment_no_post: "📝",
++  dm_keyword: "💌",
++  novo_seguidor: "👤",
++  story_reply: "📸",
++  novo_comentario: "⚡",
++};
++
++// ── Hook de dados ──────────────────────────────────────────────────────────────
++
++function useFlows() {
++  const [flows, setFlows] = useState<FlowRow[]>([]);
++  const [carregando, setCarregando] = useState(true);
++  const [erro, setErro] = useState<string | null>(null);
++
++  const carregar = useCallback(async () => {
++    setCarregando(true);
++    setErro(null);
++    try {
++      const res = await fetch("/api/v1/ig-automation-flows?limit=100");
++      if (!res.ok) throw new Error("Erro ao carregar flows");
++      const json = await res.json();
++      setFlows(json.data?.flows ?? []);
++    } catch (e) {
++      setErro(e instanceof Error ? e.message : "Erro desconhecido");
++    } finally {
++      setCarregando(false);
++    }
++  }, []);
++
++  useEffect(() => {
++    carregar();
++  }, [carregar]);
++
++  return { flows, carregando, erro, recarregar: carregar };
++}
++
++// ── Componente principal ───────────────────────────────────────────────────────
++
++export default function AutomacoesInstagramPage() {
++  const { flows, carregando, erro, recarregar } = useFlows();
++  const [alterandoId, setAlterandoId] = useState<string | null>(null);
++
++  async function toggleAtivo(flow: FlowRow) {
++    setAlterandoId(flow.id);
++    try {
++      await fetch(`/api/v1/ig-automation-flows/${flow.id}`, {
++        method: "PATCH",
++        headers: { "Content-Type": "application/json" },
++        body: JSON.stringify({ ativo: !flow.ativo }),
++      });
++      await recarregar();
++    } finally {
++      setAlterandoId(null);
++    }
++  }
++
++  async function excluir(flow: FlowRow) {
++    if (!confirm(`Desativar flow "${flow.nome}"?`)) return;
++    setAlterandoId(flow.id);
++    try {
++      await fetch(`/api/v1/ig-automation-flows/${flow.id}`, {
++        method: "DELETE",
++      });
++      await recarregar();
++    } finally {
++      setAlterandoId(null);
++    }
++  }
++
++  return (
++    <div className="mx-auto max-w-4xl px-4 py-8 space-y-6">
++      {/* Cabeçalho */}
++      <div className="flex items-center justify-between">
++        <div>
++          <div className="flex items-center gap-2 text-sm text-muted-foreground mb-1">
++            <Link href="/app/instagram" className="hover:text-foreground transition-colors">
++              Instagram
++            </Link>
++            <span>/</span>
++            <span>Automações</span>
++          </div>
++          <h1 className="text-2xl font-bold tracking-tight">Automações</h1>
++          <p className="mt-1 text-sm text-muted-foreground">
++            Flows de trigger + ação para comentários e DMs — primeiro que bater executa.
++          </p>
++        </div>
++        <Link
++          href="/app/instagram/automacoes/novo"
++          className="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors"
++        >
++          <span>＋</span>
++          Novo flow
++        </Link>
++      </div>
++
++      {/* Estado de carregamento */}
++      {carregando && (
++        <div className="flex items-center justify-center py-12">
++          <div className="h-6 w-6 animate-spin rounded-full border-2 border-primary border-t-transparent" />
++        </div>
++      )}
++
++      {/* Erro */}
++      {erro && !carregando && (
++        <div className="rounded-lg border border-destructive/20 bg-destructive/10 px-4 py-3 text-sm text-destructive">
++          {erro} —{" "}
++          <button onClick={recarregar} className="underline underline-offset-4">
++            tentar novamente
++          </button>
++        </div>
++      )}
++
++      {/* Lista vazia */}
++      {!carregando && !erro && flows.length === 0 && (
++        <div className="flex flex-col items-center gap-3 py-16 text-center">
++          <span className="text-4xl">⚡</span>
++          <p className="font-medium">Nenhuma automação criada ainda</p>
++          <p className="text-sm text-muted-foreground max-w-xs">
++            Crie um flow para responder comentários automaticamente ou enviar DMs quando alguém
++            usar uma palavra-chave.
++          </p>
++          <Link
++            href="/app/instagram/automacoes/novo"
++            className="mt-2 rounded-lg border px-4 py-2 text-sm font-medium hover:bg-accent transition-colors"
++          >
++            Criar primeiro flow
++          </Link>
++        </div>
++      )}
++
++      {/* Lista de flows */}
++      {!carregando && flows.length > 0 && (
++        <div className="divide-y divide-border rounded-xl border bg-card">
++          {flows.map((flow) => (
++            <div key={flow.id} className="flex items-start gap-4 p-4">
++              {/* Ícone do trigger */}
++              <span className="mt-0.5 text-xl shrink-0">
++                {TRIGGER_ICON[flow.trigger_tipo] ?? "⚡"}
++              </span>
++
++              {/* Info */}
++              <div className="min-w-0 flex-1">
++                <div className="flex items-center gap-2 flex-wrap">
++                  <span className="font-medium truncate">{flow.nome}</span>
++                  <span
++                    className={`shrink-0 rounded-full px-2 py-0.5 text-xs font-medium ${
++                      flow.ativo
++                        ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
++                        : "bg-muted text-muted-foreground"
++                    }`}
++                  >
++                    {flow.ativo ? "Ativo" : "Inativo"}
++                  </span>
++                </div>
++
++                <p className="mt-0.5 text-xs text-muted-foreground">
++                  {TRIGGER_LABEL[flow.trigger_tipo]}
++                  {(flow.trigger_config as { keywords?: string[] }).keywords?.length
++                    ? ` — "${(flow.trigger_config as { keywords: string[] }).keywords.slice(0, 2).join('", "')}"`
++                    : ""}
++                </p>
++
++                {/* Ações */}
++                <div className="mt-1.5 flex flex-wrap gap-1">
++                  {flow.acoes.map((acao, i) => (
++                    <span
++                      key={i}
++                      className="rounded-md bg-secondary px-1.5 py-0.5 text-xs text-secondary-foreground"
++                    >
++                      {ACAO_LABEL[acao.tipo] ?? acao.tipo}
++                    </span>
++                  ))}
++                </div>
++
++                {flow.ultima_ativacao_at && (
++                  <p className="mt-1 text-xs text-muted-foreground">
++                    Última ativação:{" "}
++                    {new Date(flow.ultima_ativacao_at).toLocaleString("pt-BR", {
++                      dateStyle: "short",
++                      timeStyle: "short",
++                    })}
++                  </p>
++                )}
++              </div>
++
++              {/* Ações */}
++              <div className="flex items-center gap-2 shrink-0">
++                <button
++                  onClick={() => toggleAtivo(flow)}
++                  disabled={alterandoId === flow.id}
++                  className="rounded-md px-3 py-1.5 text-xs font-medium border hover:bg-accent transition-colors disabled:opacity-50"
++                  title={flow.ativo ? "Desativar" : "Ativar"}
++                >
++                  {alterandoId === flow.id ? "…" : flow.ativo ? "Desativar" : "Ativar"}
++                </button>
++                <Link
++                  href={`/app/instagram/automacoes/${flow.id}`}
++                  className="rounded-md px-3 py-1.5 text-xs font-medium border hover:bg-accent transition-colors"
++                >
++                  Editar
++                </Link>
++                <button
++                  onClick={() => excluir(flow)}
++                  disabled={alterandoId === flow.id}
++                  className="rounded-md px-3 py-1.5 text-xs font-medium text-destructive border border-destructive/20 hover:bg-destructive/10 transition-colors disabled:opacity-50"
++                  title="Excluir"
++                >
++                  Excluir
++                </button>
++              </div>
++            </div>
++          ))}
++        </div>
++      )}
++
++      {/* Info de semântica first-match */}
++      {flows.length > 1 && (
++        <p className="text-xs text-muted-foreground text-center">
++          Os flows são avaliados em ordem de criação. O <strong>primeiro que bater</strong> executa
++          — os demais são ignorados para o mesmo comentário.
++        </p>
++      )}
++    </div>
++  );
++}
+diff --git a/app/app/instagram/etiquetas/page.tsx b/app/app/instagram/etiquetas/page.tsx
+new file mode 100644
+index 0000000..4714127
+--- /dev/null
++++ b/app/app/instagram/etiquetas/page.tsx
+@@ -0,0 +1,219 @@
++/**
++ * /app/instagram/etiquetas — Etiquetas usadas pelas automações Instagram
++ *
++ * Lista as etiquetas (tags) que as automações aplicam nos contatos ao
++ * comentar. Permite criar etiquetas pré-definidas e ver quantos contatos
++ * as têm. É a seção "Etiquetas" equivalente ao GD Digital.
++ *
++ * Acesso: manager+
++ */
++
++"use client";
++
++import { useEffect, useState, useCallback } from "react";
++import Link from "next/link";
++
++// ── Tipos ──────────────────────────────────────────────────────────────────────
++
++interface EtiquetaInfo {
++  nome: string;
++  totalContatos: number;
++}
++
++// ── Componente principal ───────────────────────────────────────────────────────
++
++export default function EtiquetasInstagramPage() {
++  const [etiquetas, setEtiquetas] = useState<EtiquetaInfo[]>([]);
++  const [carregando, setCarregando] = useState(true);
++  const [novaEtiqueta, setNovaEtiqueta] = useState("");
++  const [adicionando, setAdicionando] = useState(false);
++
++  const carregar = useCallback(async () => {
++    setCarregando(true);
++    try {
++      // Busca as tags usadas em ig_automation_flows (campo acoes[].etiqueta)
++      const res = await fetch("/api/v1/ig-automation-flows?limit=100");
++      if (!res.ok) throw new Error("Erro");
++      const json = await res.json();
++      const flows: Array<{ acoes: Array<{ tipo: string; etiqueta?: string; nivel?: string }> }> =
++        json.data?.flows ?? [];
++
++      // Extrair etiquetas únicas de todos os flows
++      const nomes = new Set<string>();
++      for (const flow of flows) {
++        for (const acao of flow.acoes ?? []) {
++          if (acao.tipo === "add_etiqueta" && acao.etiqueta) nomes.add(acao.etiqueta);
++          if (acao.tipo === "add_funil_politico" && acao.nivel) nomes.add(acao.nivel);
++        }
++      }
++
++      // Para cada etiqueta, buscar quantos contatos a têm
++      const resultado: EtiquetaInfo[] = [];
++      await Promise.all(
++        Array.from(nomes).map(async (nome) => {
++          const r = await fetch(
++            `/api/v1/contacts?tags=${encodeURIComponent(nome)}&limit=1`,
++          );
++          const j = await r.json();
++          resultado.push({ nome, totalContatos: j.data?.total ?? j.meta?.total ?? 0 });
++        }),
++      );
++
++      resultado.sort((a, b) => b.totalContatos - a.totalContatos);
++      setEtiquetas(resultado);
++    } catch {
++      // silencioso — mostra vazio
++    } finally {
++      setCarregando(false);
++    }
++  }, []);
++
++  useEffect(() => {
++    carregar();
++  }, [carregar]);
++
++  // Funil político padrão
++  const NIVEIS_FUNIL = ["Simpatizante", "Apoiador", "Embaixador"];
++
++  return (
++    <div className="mx-auto max-w-4xl px-4 py-8 space-y-6">
++      {/* Cabeçalho */}
++      <div>
++        <div className="flex items-center gap-2 text-sm text-muted-foreground mb-1">
++          <Link href="/app/instagram" className="hover:text-foreground transition-colors">
++            Instagram
++          </Link>
++          <span>/</span>
++          <span>Etiquetas</span>
++        </div>
++        <h1 className="text-2xl font-bold tracking-tight">Etiquetas</h1>
++        <p className="mt-1 text-sm text-muted-foreground">
++          Etiquetas aplicadas automaticamente nos contatos pelas automações de Instagram.
++        </p>
++      </div>
++
++      {/* Funil político */}
++      <div className="rounded-xl border bg-card p-4 space-y-3">
++        <div>
++          <h2 className="font-semibold">Funil Político</h2>
++          <p className="text-sm text-muted-foreground mt-0.5">
++            Usados pela ação <strong>Funil político</strong> nas automações. Mapeiam o engajamento
++            do cidadão com o mandato.
++          </p>
++        </div>
++        <div className="flex flex-wrap gap-2">
++          {NIVEIS_FUNIL.map((nivel, i) => (
++            <div
++              key={nivel}
++              className="flex items-center gap-2 rounded-lg border px-3 py-2"
++            >
++              <span className="text-lg">{["⭐", "🤝", "🎖️"][i]}</span>
++              <div>
++                <p className="text-sm font-medium">{nivel}</p>
++                <p className="text-xs text-muted-foreground">Nível {i + 1}</p>
++              </div>
++            </div>
++          ))}
++        </div>
++        <p className="text-xs text-muted-foreground">
++          Para usar, adicione a ação <strong>Funil político</strong> em um flow e selecione o
++          nível desejado.
++        </p>
++      </div>
++
++      {/* Etiquetas personalizadas */}
++      <div className="space-y-3">
++        <div className="flex items-center justify-between">
++          <h2 className="font-semibold">Etiquetas personalizadas</h2>
++          <button
++            onClick={carregar}
++            className="text-xs text-muted-foreground hover:text-foreground transition-colors"
++          >
++            Atualizar
++          </button>
++        </div>
++
++        {/* Criar nova */}
++        <div className="flex gap-2">
++          <input
++            type="text"
++            placeholder="Nome da etiqueta (ex: Interessado, Lead Quente)"
++            value={novaEtiqueta}
++            onChange={(e) => setNovaEtiqueta(e.target.value)}
++            onKeyDown={(e) => {
++              if (e.key === "Enter" && novaEtiqueta.trim()) {
++                // A etiqueta é adicionada ao criar/editar um flow
++                setEtiquetas((prev) => [
++                  { nome: novaEtiqueta.trim(), totalContatos: 0 },
++                  ...prev.filter((et) => et.nome !== novaEtiqueta.trim()),
++                ]);
++                setNovaEtiqueta("");
++              }
++            }}
++            className="flex-1 rounded-lg border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
++          />
++          <button
++            onClick={() => {
++              if (!novaEtiqueta.trim()) return;
++              setEtiquetas((prev) => [
++                { nome: novaEtiqueta.trim(), totalContatos: 0 },
++                ...prev.filter((et) => et.nome !== novaEtiqueta.trim()),
++              ]);
++              setNovaEtiqueta("");
++            }}
++            disabled={adicionando || !novaEtiqueta.trim()}
++            className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors disabled:opacity-50"
++          >
++            Adicionar
++          </button>
++        </div>
++        <p className="text-xs text-muted-foreground">
++          As etiquetas aparecem aqui quando usadas em flows. Para aplicar em contatos, adicione a
++          ação <strong>Adicionar etiqueta</strong> em um{" "}
++          <Link
++            href="/app/instagram/automacoes"
++            className="underline underline-offset-4 hover:text-foreground transition-colors"
++          >
++            flow de automação
++          </Link>
++          .
++        </p>
++
++        {/* Estado de carregamento */}
++        {carregando && (
++          <div className="flex items-center justify-center py-8">
++            <div className="h-5 w-5 animate-spin rounded-full border-2 border-primary border-t-transparent" />
++          </div>
++        )}
++
++        {/* Lista de etiquetas */}
++        {!carregando && etiquetas.length === 0 && (
++          <div className="flex flex-col items-center gap-2 py-10 text-center">
++            <span className="text-3xl">🏷️</span>
++            <p className="text-sm font-medium">Nenhuma etiqueta ainda</p>
++            <p className="text-xs text-muted-foreground">
++              As etiquetas aparecem aqui quando usadas em flows de automação.
++            </p>
++          </div>
++        )}
++
++        {!carregando && etiquetas.length > 0 && (
++          <div className="divide-y divide-border rounded-xl border bg-card">
++            {etiquetas.map((et) => (
++              <div key={et.nome} className="flex items-center justify-between px-4 py-3">
++                <div className="flex items-center gap-2">
++                  <span className="rounded-md bg-secondary px-2 py-1 text-xs font-medium text-secondary-foreground">
++                    {et.nome}
++                  </span>
++                </div>
++                <span className="text-sm text-muted-foreground tabular-nums">
++                  {et.totalContatos} contato{et.totalContatos !== 1 ? "s" : ""}
++                </span>
++              </div>
++            ))}
++          </div>
++        )}
++      </div>
++    </div>
++  );
++}
+diff --git a/app/app/instagram/page.tsx b/app/app/instagram/page.tsx
+new file mode 100644
+index 0000000..efc1695
+--- /dev/null
++++ b/app/app/instagram/page.tsx
+@@ -0,0 +1,201 @@
++/**
++ * /app/instagram — Hub do canal Instagram
++ *
++ * Ponto de entrada do motor ManyChat próprio do GIP War Room 2.0.
++ * Apresenta atalhos para: Automações, Tokens de Webhook, Etiquetas e
++ * métricas básicas do canal (comentários recebidos, DMs enviadas, flows ativos).
++ *
++ * Acesso: manager+
++ */
++
++import { redirect } from "next/navigation";
++import Link from "next/link";
++import { createServerClient } from "@/lib/supabase/server";
++import { getUser } from "@/lib/auth/get-user";
++import { resolverOrganizacaoAtiva } from "@/lib/organizations/resolver";
++
++// ── Tipos ──────────────────────────────────────────────────────────────────────
++
++interface MetricasCanal {
++  flowsAtivos: number;
++  comentariosHoje: number;
++  dmsEnviadasHoje: number;
++  tokensAtivos: number;
++}
++
++// ── Data fetching ──────────────────────────────────────────────────────────────
++
++async function buscarMetricas(organizationId: string): Promise<MetricasCanal> {
++  const db = createServerClient();
++  const hoje = new Date();
++  hoje.setHours(0, 0, 0, 0);
++  const hojeISO = hoje.toISOString();
++
++  const [flows, comentarios, dms, tokens] = await Promise.all([
++    db
++      .from("ig_automation_flows")
++      .select("id", { count: "exact", head: true })
++      .eq("organization_id", organizationId)
++      .eq("ativo", true),
++
++    db
++      .from("ig_comment_events")
++      .select("id", { count: "exact", head: true })
++      .eq("organization_id", organizationId)
++      .gte("received_at", hojeISO),
++
++    db
++      .from("ig_comment_events")
++      .select("id", { count: "exact", head: true })
++      .eq("organization_id", organizationId)
++      .eq("dm_enviada", true)
++      .gte("dm_enviada_at", hojeISO),
++
++    db
++      .from("ig_webhook_tokens")
++      .select("id", { count: "exact", head: true })
++      .eq("organization_id", organizationId)
++      .eq("ativo", true),
++  ]);
++
++  return {
++    flowsAtivos: flows.count ?? 0,
++    comentariosHoje: comentarios.count ?? 0,
++    dmsEnviadasHoje: dms.count ?? 0,
++    tokensAtivos: tokens.count ?? 0,
++  };
++}
++
++// ── Componente ─────────────────────────────────────────────────────────────────
++
++export default async function InstagramHubPage() {
++  const user = await getUser();
++  if (!user) redirect("/login");
++
++  const org = await resolverOrganizacaoAtiva(user.id);
++  if (!org) redirect("/app/onboarding");
++
++  const metricas = await buscarMetricas(org.id);
++
++  const secoes = [
++    {
++      href: "/app/instagram/automacoes",
++      titulo: "Automações",
++      descricao:
++        "Crie flows para responder comentários e enviar DMs automaticamente — como o ManyChat, mas seu.",
++      icone: "⚡",
++      badge: metricas.flowsAtivos > 0 ? `${metricas.flowsAtivos} ativo${metricas.flowsAtivos !== 1 ? "s" : ""}` : null,
++    },
++    {
++      href: "/app/instagram/webhooks",
++      titulo: "Tokens de Webhook",
++      descricao:
++        "Gere e gerencie os tokens de URL que conectam seu Instagram Business ao sistema via Graph API.",
++      icone: "🔗",
++      badge: metricas.tokensAtivos > 0 ? `${metricas.tokensAtivos} token${metricas.tokensAtivos !== 1 ? "s" : ""}` : null,
++    },
++    {
++      href: "/app/instagram/etiquetas",
++      titulo: "Etiquetas",
++      descricao:
++        "Gerencie as etiquetas que as automações aplicam automaticamente nos contatos ao comentar.",
++      icone: "🏷️",
++      badge: null,
++    },
++  ];
++
++  return (
++    <div className="mx-auto max-w-4xl px-4 py-8 space-y-8">
++      {/* Cabeçalho */}
++      <div>
++        <h1 className="text-2xl font-bold tracking-tight">Instagram</h1>
++        <p className="mt-1 text-sm text-muted-foreground">
++          Motor ManyChat próprio — responda comentários e envie DMs automaticamente.
++        </p>
++      </div>
++
++      {/* Métricas do dia */}
++      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
++        <MetricaCard
++          label="Flows ativos"
++          valor={metricas.flowsAtivos}
++          icone="⚡"
++        />
++        <MetricaCard
++          label="Comentários hoje"
++          valor={metricas.comentariosHoje}
++          icone="💬"
++        />
++        <MetricaCard
++          label="DMs enviadas hoje"
++          valor={metricas.dmsEnviadasHoje}
++          icone="📨"
++        />
++        <MetricaCard
++          label="Tokens ativos"
++          valor={metricas.tokensAtivos}
++          icone="🔗"
++        />
++      </div>
++
++      {/* Seções */}
++      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
++        {secoes.map((secao) => (
++          <Link
++            key={secao.href}
++            href={secao.href}
++            className="group relative flex flex-col gap-3 rounded-xl border bg-card p-5 transition-colors hover:bg-accent/30"
++          >
++            <div className="flex items-center justify-between">
++              <span className="text-2xl">{secao.icone}</span>
++              {secao.badge && (
++                <span className="rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">
++                  {secao.badge}
++                </span>
++              )}
++            </div>
++            <div>
++              <h2 className="font-semibold group-hover:text-primary transition-colors">
++                {secao.titulo}
++              </h2>
++              <p className="mt-1 text-sm text-muted-foreground leading-snug">
++                {secao.descricao}
++              </p>
++            </div>
++          </Link>
++        ))}
++      </div>
++
++      {/* Instrução de configuração — aparece quando não há tokens */}
++      {metricas.tokensAtivos === 0 && (
++        <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-200">
++          <strong>Para começar:</strong> gere um token de webhook em{" "}
++          <Link href="/app/instagram/webhooks" className="font-medium underline underline-offset-4">
++            Tokens de Webhook
++          </Link>{" "}
++          e configure-o no seu App Meta (Instagram Business).
++        </div>
++      )}
++    </div>
++  );
++}
++
++// ── Sub-componentes ────────────────────────────────────────────────────────────
++
++function MetricaCard({
++  label,
++  valor,
++  icone,
++}: {
++  label: string;
++  valor: number;
++  icone: string;
++}) {
++  return (
++    <div className="flex flex-col gap-1 rounded-lg border bg-card p-4">
++      <span className="text-lg">{icone}</span>
++      <span className="text-2xl font-bold tabular-nums">{valor}</span>
++      <span className="text-xs text-muted-foreground">{label}</span>
++    </div>
++  );
++}
+diff --git a/app/app/instagram/webhooks/page.tsx b/app/app/instagram/webhooks/page.tsx
+new file mode 100644
+index 0000000..e295b7c
+--- /dev/null
++++ b/app/app/instagram/webhooks/page.tsx
+@@ -0,0 +1,284 @@
++/**
++ * /app/instagram/webhooks — Tokens de webhook do Instagram Graph API
++ *
++ * Permite ao manager gerar e gerenciar tokens de URL para configurar o
++ * webhook do Instagram Business no App Meta. Cada token mapeia para uma
++ * organização + channel_session.
++ *
++ * URL de webhook resultante: https://<domínio>/api/v1/webhooks/instagram-comments/<token>
++ *
++ * Acesso: manager+
++ */
++
++"use client";
++
++import { useEffect, useState, useCallback } from "react";
++import Link from "next/link";
++
++// ── Tipos ──────────────────────────────────────────────────────────────────────
++
++interface WebhookToken {
++  id: string;
++  path_token: string;
++  descricao: string | null;
++  ativo: boolean;
++  ultimo_ping_at: string | null;
++  created_at: string;
++}
++
++// ── Hook de dados ──────────────────────────────────────────────────────────────
++
++function useTokens() {
++  const [tokens, setTokens] = useState<WebhookToken[]>([]);
++  const [carregando, setCarregando] = useState(true);
++  const [erro, setErro] = useState<string | null>(null);
++
++  const carregar = useCallback(async () => {
++    setCarregando(true);
++    setErro(null);
++    try {
++      const res = await fetch("/api/v1/ig-webhook-tokens");
++      if (!res.ok) throw new Error("Erro ao carregar tokens");
++      const json = await res.json();
++      setTokens(json.data?.tokens ?? []);
++    } catch (e) {
++      setErro(e instanceof Error ? e.message : "Erro desconhecido");
++    } finally {
++      setCarregando(false);
++    }
++  }, []);
++
++  useEffect(() => {
++    carregar();
++  }, [carregar]);
++
++  return { tokens, carregando, erro, recarregar: carregar };
++}
++
++// ── Componente principal ───────────────────────────────────────────────────────
++
++export default function WebhooksInstagramPage() {
++  const { tokens, carregando, erro, recarregar } = useTokens();
++  const [copiado, setCopiado] = useState<string | null>(null);
++  const [criando, setCriando] = useState(false);
++  const [descricaoNova, setDescricaoNova] = useState("");
++  const [mostrarFormulario, setMostrarFormulario] = useState(false);
++
++  const urlBase =
++    typeof window !== "undefined"
++      ? `${window.location.origin}/api/v1/webhooks/instagram-comments`
++      : "https://seu-dominio.com/api/v1/webhooks/instagram-comments";
++
++  async function copiar(token: string) {
++    const url = `${urlBase}/${token}`;
++    try {
++      await navigator.clipboard.writeText(url);
++      setCopiado(token);
++      setTimeout(() => setCopiado(null), 2000);
++    } catch {
++      // fallback: selecionar o texto
++      const el = document.getElementById(`token-${token}`);
++      if (el) {
++        const range = document.createRange();
++        range.selectNodeContents(el);
++        window.getSelection()?.removeAllRanges();
++        window.getSelection()?.addRange(range);
++      }
++    }
++  }
++
++  async function criarToken() {
++    setCriando(true);
++    try {
++      const res = await fetch("/api/v1/ig-webhook-tokens", {
++        method: "POST",
++        headers: { "Content-Type": "application/json" },
++        body: JSON.stringify({ descricao: descricaoNova || null }),
++      });
++      if (!res.ok) throw new Error("Erro ao criar token");
++      setDescricaoNova("");
++      setMostrarFormulario(false);
++      await recarregar();
++    } finally {
++      setCriando(false);
++    }
++  }
++
++  async function revogar(id: string) {
++    if (!confirm("Revogar este token? O webhook do Meta vai parar de funcionar.")) return;
++    await fetch(`/api/v1/ig-webhook-tokens/${id}`, { method: "DELETE" });
++    await recarregar();
++  }
++
++  return (
++    <div className="mx-auto max-w-4xl px-4 py-8 space-y-6">
++      {/* Cabeçalho */}
++      <div className="flex items-center justify-between">
++        <div>
++          <div className="flex items-center gap-2 text-sm text-muted-foreground mb-1">
++            <Link href="/app/instagram" className="hover:text-foreground transition-colors">
++              Instagram
++            </Link>
++            <span>/</span>
++            <span>Tokens de Webhook</span>
++          </div>
++          <h1 className="text-2xl font-bold tracking-tight">Tokens de Webhook</h1>
++          <p className="mt-1 text-sm text-muted-foreground">
++            Configure o Instagram Business para entregar eventos aqui via Graph API.
++          </p>
++        </div>
++        <button
++          onClick={() => setMostrarFormulario(true)}
++          className="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors"
++        >
++          <span>＋</span>
++          Novo token
++        </button>
++      </div>
++
++      {/* Formulário de criação */}
++      {mostrarFormulario && (
++        <div className="rounded-xl border bg-card p-4 space-y-3">
++          <h2 className="font-medium">Gerar novo token</h2>
++          <input
++            type="text"
++            placeholder="Descrição (ex: Conta @meupolitico)"
++            value={descricaoNova}
++            onChange={(e) => setDescricaoNova(e.target.value)}
++            className="w-full rounded-lg border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
++          />
++          <div className="flex gap-2">
++            <button
++              onClick={criarToken}
++              disabled={criando}
++              className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors disabled:opacity-50"
++            >
++              {criando ? "Gerando…" : "Gerar token"}
++            </button>
++            <button
++              onClick={() => setMostrarFormulario(false)}
++              className="rounded-lg border px-4 py-2 text-sm font-medium hover:bg-accent transition-colors"
++            >
++              Cancelar
++            </button>
++          </div>
++        </div>
++      )}
++
++      {/* Instrução de configuração */}
++      <div className="rounded-lg border bg-muted/30 px-4 py-3 text-sm space-y-1">
++        <p className="font-medium">Como configurar no Meta</p>
++        <ol className="list-decimal list-inside space-y-1 text-muted-foreground">
++          <li>Gere um token abaixo e copie a URL completa</li>
++          <li>
++            No{" "}
++            <a
++              href="https://developers.facebook.com/apps"
++              target="_blank"
++              rel="noopener noreferrer"
++              className="underline underline-offset-4 hover:text-foreground transition-colors"
++            >
++              Meta for Developers
++            </a>
++            , vá em seu App → Instagram → Webhooks
++          </li>
++          <li>Cole a URL como Callback URL e use qualquer string como Verify Token</li>
++          <li>Assine os campos: <code className="rounded bg-muted px-1 py-0.5">comments</code> e <code className="rounded bg-muted px-1 py-0.5">mentions</code></li>
++        </ol>
++      </div>
++
++      {/* Estado de carregamento */}
++      {carregando && (
++        <div className="flex items-center justify-center py-12">
++          <div className="h-6 w-6 animate-spin rounded-full border-2 border-primary border-t-transparent" />
++        </div>
++      )}
++
++      {/* Erro */}
++      {erro && !carregando && (
++        <div className="rounded-lg border border-destructive/20 bg-destructive/10 px-4 py-3 text-sm text-destructive">
++          {erro} —{" "}
++          <button onClick={recarregar} className="underline underline-offset-4">
++            tentar novamente
++          </button>
++        </div>
++      )}
++
++      {/* Lista vazia */}
++      {!carregando && !erro && tokens.length === 0 && (
++        <div className="flex flex-col items-center gap-3 py-12 text-center">
++          <span className="text-4xl">🔗</span>
++          <p className="font-medium">Nenhum token gerado ainda</p>
++          <p className="text-sm text-muted-foreground">
++            Gere um token para começar a receber comentários do Instagram.
++          </p>
++        </div>
++      )}
++
++      {/* Lista de tokens */}
++      {!carregando && tokens.length > 0 && (
++        <div className="divide-y divide-border rounded-xl border bg-card">
++          {tokens.map((token) => {
++            const url = `${urlBase}/${token.path_token}`;
++            return (
++              <div key={token.id} className="p-4 space-y-2">
++                <div className="flex items-center justify-between gap-2">
++                  <div className="flex items-center gap-2">
++                    <span
++                      className={`h-2 w-2 rounded-full shrink-0 ${
++                        token.ativo ? "bg-emerald-500" : "bg-muted-foreground"
++                      }`}
++                    />
++                    <span className="font-medium text-sm">
++                      {token.descricao ?? "Sem descrição"}
++                    </span>
++                  </div>
++                  <div className="flex items-center gap-2 shrink-0">
++                    <button
++                      onClick={() => copiar(token.path_token)}
++                      className="rounded-md px-3 py-1.5 text-xs font-medium border hover:bg-accent transition-colors"
++                    >
++                      {copiado === token.path_token ? "✓ Copiado!" : "Copiar URL"}
++                    </button>
++                    <button
++                      onClick={() => revogar(token.id)}
++                      className="rounded-md px-3 py-1.5 text-xs font-medium text-destructive border border-destructive/20 hover:bg-destructive/10 transition-colors"
++                    >
++                      Revogar
++                    </button>
++                  </div>
++                </div>
++
++                {/* URL */}
++                <div className="flex items-center gap-2 rounded-lg bg-muted px-3 py-2">
++                  <code
++                    id={`token-${token.path_token}`}
++                    className="flex-1 min-w-0 truncate text-xs text-muted-foreground select-all"
++                  >
++                    {url}
++                  </code>
++                </div>
++
++                <div className="flex items-center gap-4 text-xs text-muted-foreground">
++                  <span>
++                    Criado em{" "}
++                    {new Date(token.created_at).toLocaleDateString("pt-BR")}
++                  </span>
++                  {token.ultimo_ping_at && (
++                    <span>
++                      Último ping:{" "}
++                      {new Date(token.ultimo_ping_at).toLocaleString("pt-BR", {
++                        dateStyle: "short",
++                        timeStyle: "short",
++                      })}
++                    </span>
++                  )}
++                </div>
++              </div>
++            );
++          })}
++        </div>
++      )}
++    </div>
++  );
++}
+diff --git a/lib/channels/instagram/comment-ingest.ts b/lib/channels/instagram/comment-ingest.ts
+new file mode 100644
+index 0000000..531e450
+--- /dev/null
++++ b/lib/channels/instagram/comment-ingest.ts
+@@ -0,0 +1,112 @@
++/**
++ * Ingestão de comentários Instagram.
++ *
++ * Recebe eventos parseados pelo `comment-parser.ts`, grava em
++ * `ig_comment_events` (idempotente via unique index) e emite entrada
++ * no `event_log` para o worker de automação processar.
++ *
++ * NUNCA faz HTTP dentro desta função — é chamada dentro de um handler
++ * de webhook, e o worker é quem executa os side effects (enviar DM,
++ * responder comentário). Segue a doutrina CLAUDE.md: trigger ≠ HTTP.
++ */
++import type { SupabaseClient } from "@supabase/supabase-js";
++import { logger } from "@/lib/logger";
++import type { IgCommentEvent } from "./comment-parser";
++
++export interface IngestIgCommentInput {
++  organizationId: string;
++  channelSessionId: string | null;
++  event: IgCommentEvent;
++  payloadRaw: Record<string, unknown>;
++}
++
++export interface IngestIgCommentResult {
++  status: "inserted" | "duplicate" | "error";
++  commentEventId?: string;
++  reason?: string;
++}
++
++/**
++ * Grava o comentário em `ig_comment_events` e emite evento no `event_log`.
++ *
++ * Idempotente: reentrega do webhook retorna `status: "duplicate"` sem
++ * emitir segundo evento.
++ *
++ * `db` deve ser um client com service_role (bypass RLS) — a validação
++ * de tenant já foi feita pelo handler via fn_ig_webhook_token_por_path.
++ */
++export async function ingestIgComment(
++  db: SupabaseClient,
++  input: IngestIgCommentInput,
++): Promise<IngestIgCommentResult> {
++  const { organizationId, channelSessionId, event, payloadRaw } = input;
++
++  // 1. Gravar o comentário (idempotente pelo unique index)
++  const { data: inserted, error: insertError } = await db
++    .from("ig_comment_events")
++    .insert({
++      organization_id: organizationId,
++      channel_session_id: channelSessionId,
++      instagram_comment_id: event.commentId,
++      instagram_post_id: event.mediaId,       // post = media
++      instagram_media_id: event.mediaId,
++      from_instagram_id: event.fromId,
++      from_username: event.fromUsername,
++      texto: event.texto,
++      payload_raw: payloadRaw,
++      processado: false,
++    })
++    .select("id")
++    .single();
++
++  if (insertError) {
++    // Unique violation → duplicate delivery
++    if (insertError.code === "23505") {
++      return { status: "duplicate" };
++    }
++    logger.error("[ig-comment-ingest] insert error", {
++      organizationId,
++      commentId: event.commentId,
++      error: insertError.message,
++    });
++    return { status: "error", reason: insertError.message };
++  }
++
++  const commentEventId = inserted.id as string;
++
++  // 2. Emitir evento no event_log para o worker de automação
++  // O worker consome 'ig.comment_received' e avalia as automations flows.
++  // NUNCA fazemos HTTP aqui — apenas escrevemos no banco.
++  const { error: logError } = await db.from("event_log").insert({
++    organization_id: organizationId,
++    event_type: "ig.comment_received",
++    entity_kind: "ig_comment_events",
++    entity_id: commentEventId,
++    payload: {
++      comment_id: event.commentId,
++      from_id: event.fromId,
++      from_username: event.fromUsername,
++      texto: event.texto,
++      media_id: event.mediaId,
++      channel_session_id: channelSessionId,
++      field: event.field,
++    },
++  });
++
++  if (logError) {
++    logger.error("[ig-comment-ingest] event_log insert error", {
++      organizationId,
++      commentEventId,
++      error: logError.message,
++    });
++    // Não falha o ingest — o comentário já foi salvo.
++    // O comentário pode ser reprocessado via retry manual se necessário.
++    return {
++      status: "inserted",
++      commentEventId,
++      reason: `event_log_error:${logError.message}`,
++    };
++  }
++
++  return { status: "inserted", commentEventId };
++}
+diff --git a/lib/channels/instagram/comment-parser.ts b/lib/channels/instagram/comment-parser.ts
+new file mode 100644
+index 0000000..1b18dfb
+--- /dev/null
++++ b/lib/channels/instagram/comment-parser.ts
+@@ -0,0 +1,143 @@
++/**
++ * Parser de comentários do Instagram Graph API.
++ *
++ * O Instagram Graph API entrega comentários via webhooks com objeto "instagram"
++ * e campo "comments". Este parser transforma o payload bruto em um tipo
++ * estruturado `IgCommentEvent`, validado com Zod.
++ *
++ * Diferente do canal Zernio (DMs), os comentários vêm direto da Meta Graph API
++ * — o mesmo App que entrega eventos do WhatsApp Cloud API — mas com payload
++ * completamente diferente.
++ *
++ * Ref: https://developers.facebook.com/docs/instagram-platform/webhooks/
++ */
++import { z } from "zod";
++
++// ── Schema do payload da Meta Graph API para comentários ──────────────────────
++
++const igCommentValueSchema = z.object({
++  id: z.string().min(1),                          // Instagram comment ID
++  text: z.string().optional(),
++  media: z
++    .object({
++      id: z.string().optional(),                  // Media ID onde foi comentado
++      media_product_type: z.string().optional(),  // 'FEED', 'REELS', 'STORY'
++    })
++    .optional(),
++  from: z
++    .object({
++      id: z.string().min(1),
++      username: z.string().optional(),
++    })
++    .optional(),
++  parent_id: z.string().optional(),               // Se é reply de comentário
++  timestamp: z.number().optional(),
++});
++
++const igChangeSchema = z.object({
++  field: z.enum(["comments", "mentions", "live_comments"]),
++  value: igCommentValueSchema,
++});
++
++const igEntrySchema = z.object({
++  id: z.string(),                                  // IG Business Account ID
++  time: z.number().optional(),
++  changes: z.array(igChangeSchema),
++});
++
++const igWebhookPayloadSchema = z.object({
++  object: z.literal("instagram"),
++  entry: z.array(igEntrySchema),
++});
++
++// ── Tipo de saída ─────────────────────────────────────────────────────────────
++
++export interface IgCommentEvent {
++  /** ID único do comentário no Instagram */
++  commentId: string;
++  /** Instagram Business Account ID que recebeu o evento */
++  businessAccountId: string;
++  /** Media/Post onde o comentário foi feito */
++  mediaId: string | null;
++  /** ID Instagram do autor do comentário */
++  fromId: string;
++  /** @username do autor */
++  fromUsername: string | null;
++  /** Texto do comentário */
++  texto: string | null;
++  /** ID do comentário pai (se é reply) */
++  parentId: string | null;
++  /** Campo do webhook: 'comments' | 'mentions' | 'live_comments' */
++  field: "comments" | "mentions" | "live_comments";
++  /** Timestamp do comentário (epoch segundos) */
++  timestamp: number | null;
++}
++
++// ── Parser principal ──────────────────────────────────────────────────────────
++
++/**
++ * Parse o payload bruto de um webhook Instagram Graph API.
++ *
++ * Retorna array de eventos de comentário (pode ser vazio se o payload não
++ * contiver campos de comentário, ou se falhar a validação).
++ *
++ * NUNCA lança — retorna array vazio em caso de payload malformado.
++ */
++export function parseIgWebhookPayload(
++  payload: unknown,
++  businessAccountId?: string,
++): IgCommentEvent[] {
++  const parsed = igWebhookPayloadSchema.safeParse(payload);
++  if (!parsed.success) return [];
++
++  const events: IgCommentEvent[] = [];
++
++  for (const entry of parsed.data.entry) {
++    const accountId = businessAccountId ?? entry.id;
++
++    for (const change of entry.changes) {
++      const v = change.value;
++      if (!v.from?.id) continue; // comentário sem autor — descartamos
++
++      events.push({
++        commentId: v.id,
++        businessAccountId: accountId,
++        mediaId: v.media?.id ?? null,
++        fromId: v.from.id,
++        fromUsername: v.from.username ?? null,
++        texto: v.text ?? null,
++        parentId: v.parent_id ?? null,
++        field: change.field,
++        timestamp: v.timestamp ?? null,
++      });
++    }
++  }
++
++  return events;
++}
++
++/**
++ * Verificação HMAC-SHA256 da assinatura Meta Graph API.
++ *
++ * O cabeçalho `x-hub-signature-256` tem o formato `sha256=<hex>`.
++ * O corpo bruto (string ou Buffer) é assado com o App Secret.
++ *
++ * Retorna `true` se a assinatura é válida, `false` caso contrário.
++ */
++export async function verifyIgWebhookSignature(
++  body: string,
++  signature: string,
++  appSecret: string,
++): Promise<boolean> {
++  const { createHmac, timingSafeEqual } = await import("node:crypto");
++
++  const expected = "sha256=" + createHmac("sha256", appSecret).update(body).digest("hex");
++
++  if (expected.length !== signature.length) return false;
++
++  try {
++    return timingSafeEqual(Buffer.from(expected), Buffer.from(signature));
++  } catch {
++    return false;
++  }
++}
+diff --git a/lib/event-log/register-handlers.ts b/lib/event-log/register-handlers.ts
+index 8a994c7..b834b90 100644
+--- a/lib/event-log/register-handlers.ts
++++ b/lib/event-log/register-handlers.ts
+@@ -33,6 +33,7 @@ import { comandaDoGanhoHandler } from "@/lib/financeiro/comanda-do-ganho.handler
+ import { avisoDeCasoAoSuporteHandler } from "@/lib/escalacao/aviso-ao-suporte.handler";
+ import { avisoDePropostaNoWhatsAppHandler } from "@/lib/propostas/aviso-no-whatsapp.handler";
+ import { cobrancaSinalHandler } from "@/lib/cobranca/sinal.handler";
++import { igAutomacaoHandler } from "@/lib/ig-automacoes/motor.handler";
+ import { registerHandler } from "@/lib/event-log/dispatcher";
+ 
+ let _registered = false;
+@@ -57,6 +58,10 @@ export function ensureHandlersRegistered(): void {
+   registerHandler(lgpdExportHandler);
+   registerHandler(lgpdRedactHandler);
+   registerHandler(automationRulesHandler);
++  // Motor de automação do Instagram (ManyChat próprio): avalia flows e emite
++  // side-effects para event_log — nunca faz HTTP direto. Fica ao lado do motor
++  // de automação de atendimento, que tem o mesmo perfil (só banco + event_log).
++  registerHandler(igAutomacaoHandler);
+   registerHandler(followupGatilhoEtapaHandler);
+   // Escrita curta no banco (um item na Central), vizinha do gatilho de etapa
+   // que consome o mesmo evento.
+diff --git a/lib/ig-automacoes/acoes.ts b/lib/ig-automacoes/acoes.ts
+new file mode 100644
+index 0000000..87a403e
+--- /dev/null
++++ b/lib/ig-automacoes/acoes.ts
+@@ -0,0 +1,426 @@
++/**
++ * Executores de ações do motor de automação do Instagram.
++ *
++ * Cada ação corresponde a um `tipo` dentro do array `acoes` de uma
++ * `ig_automation_flow`. O executor recebe o contexto do evento e executa o
++ * side-effect correspondente.
++ *
++ * ── Princípios ────────────────────────────────────────────────────────────────
++ * - Cada ação é IDEMPOTENTE sempre que possível (flags `dm_enviada`, etc.)
++ * - Falha de uma ação não impede as seguintes — log + continua
++ * - Nenhuma ação faz HTTP dentro de um webhook handler — essas ações são chamadas
++ *   pelo WORKER (event_log drain), nunca durante a entrega do webhook
++ * - organization_id vem SEMPRE do contexto, nunca de qualquer campo do payload
++ */
++
++import type { SupabaseClient } from "@supabase/supabase-js";
++import { logger } from "@/lib/logger";
++
++export interface AcaoCtx {
++  /** ID interno do comentário em ig_comment_events */
++  commentEventId: string;
++  organizationId: string;
++  /** Sessão do canal Instagram Zernio (para enviar DM via Zernio) */
++  channelSessionId: string | null;
++  /** Instagram ID do autor do comentário */
++  fromInstagramId: string;
++  /** @username do autor (para resposta de comentário) */
++  fromUsername: string | null;
++  /** Texto do comentário original */
++  textoComentario: string | null;
++  /** ID do post/media onde o comentário ocorreu */
++  mediaId: string | null;
++  /** ID do comentário no Instagram (para responder ao comentário) */
++  instagramCommentId: string;
++  /** ID do flow acionado */
++  flowId: string;
++}
++
++export type AcaoConfig = Record<string, unknown>;
++
++export interface ResultadoAcao {
++  tipo: string;
++  status: "ok" | "skipped" | "error";
++  detail?: string;
++}
++
++// ── Executor: enviar_dm ────────────────────────────────────────────────────────
++
++/**
++ * Envia DM para o autor do comentário via Zernio Social (canal Instagram).
++ *
++ * Requer `channel_session_id` — se não houver sessão configurada, pula com log.
++ * Idempotente via flag `dm_enviada` na linha do comentário.
++ */
++async function executarEnviarDm(
++  db: SupabaseClient,
++  ctx: AcaoCtx,
++  config: AcaoConfig,
++): Promise<ResultadoAcao> {
++  const tipo = "enviar_dm";
++
++  // Verificar se DM já foi enviada (idempotência)
++  const { data: evento } = await db
++    .from("ig_comment_events")
++    .select("dm_enviada")
++    .eq("id", ctx.commentEventId)
++    .single();
++
++  if (evento?.dm_enviada) {
++    return { tipo, status: "skipped", detail: "dm_ja_enviada" };
++  }
++
++  if (!ctx.channelSessionId) {
++    logger.warn("[ig-acoes] enviar_dm: sem channel_session_id", {
++      commentEventId: ctx.commentEventId,
++      organizationId: ctx.organizationId,
++    });
++    return { tipo, status: "skipped", detail: "sem_channel_session" };
++  }
++
++  const texto = typeof config.texto === "string" ? config.texto : null;
++  if (!texto) {
++    return { tipo, status: "error", detail: "texto_ausente" };
++  }
++
++  // Substituições de template
++  const textoFinal = texto
++    .replace(/\{\{username\}\}/gi, ctx.fromUsername ?? "")
++    .replace(/\{\{comentario\}\}/gi, ctx.textoComentario ?? "");
++
++  // Emitir evento para o canal Zernio enviar a DM
++  // O worker de canal consome `ig.dm_outbound` e despacha via Zernio API
++  const { error } = await db.from("event_log").insert({
++    organization_id: ctx.organizationId,
++    event_type: "ig.dm_outbound",
++    entity_kind: "ig_comment_events",
++    entity_id: ctx.commentEventId,
++    payload: {
++      channel_session_id: ctx.channelSessionId,
++      to_instagram_id: ctx.fromInstagramId,
++      texto: textoFinal,
++      flow_id: ctx.flowId,
++    },
++  });
++
++  if (error) {
++    logger.error("[ig-acoes] enviar_dm: erro ao emitir evento", {
++      error: error.message,
++      commentEventId: ctx.commentEventId,
++    });
++    return { tipo, status: "error", detail: error.message };
++  }
++
++  // Marcar DM como agendada
++  await db
++    .from("ig_comment_events")
++    .update({ dm_enviada: true, dm_enviada_at: new Date().toISOString() })
++    .eq("id", ctx.commentEventId)
++    .eq("organization_id", ctx.organizationId);
++
++  return { tipo, status: "ok" };
++}
++
++// ── Executor: responder_comentario ────────────────────────────────────────────
++
++/**
++ * Responde ao comentário publicamente via Instagram Graph API.
++ *
++ * Idempotente via flag `respondido_em_comentario`.
++ */
++async function executarResponderComentario(
++  db: SupabaseClient,
++  ctx: AcaoCtx,
++  config: AcaoConfig,
++): Promise<ResultadoAcao> {
++  const tipo = "responder_comentario";
++
++  const { data: evento } = await db
++    .from("ig_comment_events")
++    .select("respondido_em_comentario")
++    .eq("id", ctx.commentEventId)
++    .single();
++
++  if (evento?.respondido_em_comentario) {
++    return { tipo, status: "skipped", detail: "ja_respondido" };
++  }
++
++  const texto = typeof config.texto === "string" ? config.texto : null;
++  if (!texto) return { tipo, status: "error", detail: "texto_ausente" };
++
++  const textoFinal = texto
++    .replace(/\{\{username\}\}/gi, `@${ctx.fromUsername ?? ""}`)
++    .replace(/\{\{comentario\}\}/gi, ctx.textoComentario ?? "");
++
++  // Emitir evento para responder ao comentário via Graph API
++  const { error } = await db.from("event_log").insert({
++    organization_id: ctx.organizationId,
++    event_type: "ig.comment_reply_outbound",
++    entity_kind: "ig_comment_events",
++    entity_id: ctx.commentEventId,
++    payload: {
++      instagram_comment_id: ctx.instagramCommentId,
++      media_id: ctx.mediaId,
++      texto: textoFinal,
++      flow_id: ctx.flowId,
++    },
++  });
++
++  if (error) {
++    return { tipo, status: "error", detail: error.message };
++  }
++
++  await db
++    .from("ig_comment_events")
++    .update({
++      respondido_em_comentario: true,
++      resposta_comentario_at: new Date().toISOString(),
++    })
++    .eq("id", ctx.commentEventId)
++    .eq("organization_id", ctx.organizationId);
++
++  return { tipo, status: "ok" };
++}
++
++// ── Executor: add_etiqueta ────────────────────────────────────────────────────
++
++/**
++ * Adiciona etiqueta ao contato correspondente ao comentador.
++ *
++ * Resolve o contato pelo `from_instagram_id`. Se não existir contato, pula.
++ * Se o contato existe mas ainda não tem a etiqueta, adiciona.
++ */
++async function executarAddEtiqueta(
++  db: SupabaseClient,
++  ctx: AcaoCtx,
++  config: AcaoConfig,
++): Promise<ResultadoAcao> {
++  const tipo = "add_etiqueta";
++  const etiqueta = typeof config.etiqueta === "string" ? config.etiqueta.trim() : null;
++  if (!etiqueta) return { tipo, status: "error", detail: "etiqueta_ausente" };
++
++  // Buscar contato pelo instagram_id (campo de canal social)
++  const { data: contato } = await db
++    .from("contacts")
++    .select("id, tags")
++    .eq("organization_id", ctx.organizationId)
++    .eq("instagram_id", ctx.fromInstagramId)
++    .maybeSingle();
++
++  if (!contato) {
++    return { tipo, status: "skipped", detail: "contato_nao_encontrado" };
++  }
++
++  const tagsAtuais: string[] = Array.isArray(contato.tags) ? contato.tags : [];
++  if (tagsAtuais.includes(etiqueta)) {
++    return { tipo, status: "skipped", detail: "etiqueta_ja_presente" };
++  }
++
++  const { error } = await db
++    .from("contacts")
++    .update({ tags: [...tagsAtuais, etiqueta] })
++    .eq("id", contato.id)
++    .eq("organization_id", ctx.organizationId);
++
++  if (error) return { tipo, status: "error", detail: error.message };
++  return { tipo, status: "ok" };
++}
++
++// ── Executor: criar_contato ────────────────────────────────────────────────────
++
++/**
++ * Cria (ou encontra) o contato para o autor do comentário.
++ *
++ * Upsert pelo `instagram_id`. Se o contato já existe, pula sem erro.
++ * Opcionalmente adiciona ao funil político configurado.
++ */
++async function executarCriarContato(
++  db: SupabaseClient,
++  ctx: AcaoCtx,
++  config: AcaoConfig,
++): Promise<ResultadoAcao> {
++  const tipo = "criar_contato";
++
++  // Verificar se já existe
++  const { data: existente } = await db
++    .from("contacts")
++    .select("id")
++    .eq("organization_id", ctx.organizationId)
++    .eq("instagram_id", ctx.fromInstagramId)
++    .maybeSingle();
++
++  if (existente) {
++    return { tipo, status: "skipped", detail: "contato_ja_existe" };
++  }
++
++  const nome = ctx.fromUsername ? `@${ctx.fromUsername}` : `IG ${ctx.fromInstagramId}`;
++
++  const { data: novoContato, error } = await db
++    .from("contacts")
++    .insert({
++      organization_id: ctx.organizationId,
++      name: nome,
++      instagram_id: ctx.fromInstagramId,
++      origem: "ig_comentario",
++      tags: [],
++    })
++    .select("id")
++    .single();
++
++  if (error) return { tipo, status: "error", detail: error.message };
++
++  // Se há pipeline_id configurado, adicionar ao funil
++  const pipelineId = typeof config.pipeline_id === "string" ? config.pipeline_id : null;
++  if (pipelineId && novoContato?.id) {
++    const { data: primeiraEtapa } = await db
++      .from("crm_stages")
++      .select("id")
++      .eq("organization_id", ctx.organizationId)
++      .eq("pipeline_id", pipelineId)
++      .order("position", { ascending: true })
++      .limit(1)
++      .maybeSingle();
++
++    if (primeiraEtapa) {
++      await db.from("crm_leads").insert({
++        organization_id: ctx.organizationId,
++        pipeline_id: pipelineId,
++        stage_id: primeiraEtapa.id,
++        contact_id: novoContato.id,
++        title: nome,
++      });
++    }
++  }
++
++  return { tipo, status: "ok" };
++}
++
++// ── Executor: notificar_equipe ─────────────────────────────────────────────────
++
++/**
++ * Cria aviso na Central para que um membro da equipe veja o comentário.
++ *
++ * Abre um `agent_inbox_items` do tipo `ig_comentario` para o assignee configurado
++ * (ou para toda a equipe se não houver assignee específico).
++ */
++async function executarNotificarEquipe(
++  db: SupabaseClient,
++  ctx: AcaoCtx,
++  config: AcaoConfig,
++): Promise<ResultadoAcao> {
++  const tipo = "notificar_equipe";
++
++  const mensagem =
++    typeof config.mensagem === "string"
++      ? config.mensagem
++      : `Novo comentário de @${ctx.fromUsername ?? ctx.fromInstagramId}`;
++
++  const { error } = await db.from("agent_inbox_items").insert({
++    organization_id: ctx.organizationId,
++    kind: "ig_comentario",
++    title: mensagem,
++    body: ctx.textoComentario ?? "",
++    metadata: {
++      comment_event_id: ctx.commentEventId,
++      from_instagram_id: ctx.fromInstagramId,
++      from_username: ctx.fromUsername,
++      flow_id: ctx.flowId,
++      media_id: ctx.mediaId,
++    },
++    assignee_user_id: typeof config.assignee_user_id === "string" ? config.assignee_user_id : null,
++  });
++
++  if (error) return { tipo, status: "error", detail: error.message };
++  return { tipo, status: "ok" };
++}
++
++// ── Executor: add_funil_politico ───────────────────────────────────────────────
++
++/**
++ * Adiciona o contato ao funil político (Simpatizante → Apoiador → Embaixador).
++ *
++ * Ação especializada para o GIP War Room 2.0: move o contato pelo funil
++ * político com base no `nivel` configurado.
++ */
++async function executarAddFunilPolitico(
++  db: SupabaseClient,
++  ctx: AcaoCtx,
++  config: AcaoConfig,
++): Promise<ResultadoAcao> {
++  const tipo = "add_funil_politico";
++  const nivel = typeof config.nivel === "string" ? config.nivel : "Simpatizante";
++
++  // Primeiro garante que o contato existe
++  await executarCriarContato(db, ctx, {});
++
++  // Adiciona a etiqueta do nível político
++  const resultEtiqueta = await executarAddEtiqueta(db, ctx, { etiqueta: nivel });
++  if (resultEtiqueta.status === "error") return { tipo, status: "error", detail: resultEtiqueta.detail };
++
++  return { tipo, status: "ok" };
++}
++
++// ── Registry de executores ─────────────────────────────────────────────────────
++
++type Executor = (
++  db: SupabaseClient,
++  ctx: AcaoCtx,
++  config: AcaoConfig,
++) => Promise<ResultadoAcao>;
++
++const EXECUTORES: Record<string, Executor> = {
++  enviar_dm: executarEnviarDm,
++  responder_comentario: executarResponderComentario,
++  add_etiqueta: executarAddEtiqueta,
++  criar_contato: executarCriarContato,
++  notificar_equipe: executarNotificarEquipe,
++  add_funil_politico: executarAddFunilPolitico,
++};
++
++// ── Executor principal ──────────────────────────────────────────────────────────
++
++/**
++ * Executa TODAS as ações de um flow, em ordem, coletando resultados.
++ *
++ * Falha de uma ação nunca impede as seguintes — o princípio é best-effort
++ * com registro completo de cada resultado.
++ */
++export async function executarAcoes(
++  db: SupabaseClient,
++  ctx: AcaoCtx,
++  acoes: AcaoConfig[],
++): Promise<ResultadoAcao[]> {
++  const resultados: ResultadoAcao[] = [];
++
++  for (const acao of acoes) {
++    const tipo = typeof acao.tipo === "string" ? acao.tipo : "desconhecido";
++    const executor = EXECUTORES[tipo];
++
++    if (!executor) {
++      logger.warn("[ig-acoes] tipo de ação desconhecido", { tipo, flowId: ctx.flowId });
++      resultados.push({ tipo, status: "skipped", detail: "tipo_desconhecido" });
++      continue;
++    }
++
++    try {
++      const resultado = await executor(db, ctx, acao);
++      resultados.push(resultado);
++      logger.info("[ig-acoes] ação executada", {
++        tipo,
++        status: resultado.status,
++        commentEventId: ctx.commentEventId,
++        organizationId: ctx.organizationId,
++      });
++    } catch (err) {
++      const msg = err instanceof Error ? err.message : String(err);
++      logger.error("[ig-acoes] ação lançou exceção", {
++        tipo,
++        error: msg,
++        commentEventId: ctx.commentEventId,
++      });
++      resultados.push({ tipo, status: "error", detail: msg });
++    }
++  }
++
++  return resultados;
++}
+diff --git a/lib/ig-automacoes/motor.handler.ts b/lib/ig-automacoes/motor.handler.ts
+new file mode 100644
+index 0000000..cc0255d
+--- /dev/null
++++ b/lib/ig-automacoes/motor.handler.ts
+@@ -0,0 +1,279 @@
++/**
++ * Worker de automação do Instagram — handler do event_log.
++ *
++ * Consome eventos `ig.comment_received` e avalia TODOS os flows de automação
++ * ativos da organização, executando as ações do primeiro que bater.
++ *
++ * ── Por que "primeiro que bater" ─────────────────────────────────────────────
++ * O comportamento padrão do ManyChat é o mesmo: o primeiro flow com gatilho
++ * que casa com o comentário vence. Isso evita que o mesmo comentário acione
++ * múltiplos flows conflitantes (ex.: enviar DM duas vezes).
++ *
++ * Para mudar para "todos que batem", altere `encontrouMatch` para não dar break.
++ *
++ * ── Tipos de gatilho suportados ───────────────────────────────────────────────
++ * - `comment_keyword`   : comentário contém palavra-chave (case-insensitive opcional)
++ * - `comment_no_post`   : comentário em qualquer post (sem filtro de post)
++ * - `novo_comentario`   : qualquer novo comentário (catch-all)
++ * - `story_reply`       : reply em story (field = 'mentions' — indicativo)
++ * - `dm_keyword`        : palavra-chave em DM (consumido por outro handler no futuro)
++ *
++ * ── Event_log / idempotência ──────────────────────────────────────────────────
++ * O consumer_key `ig.automacao` é registrado em `event_log.consumed_by` após
++ * o processamento. Reentrega do mesmo evento é detectada automaticamente pelo
++ * dispatcher via `consumed_by`.
++ */
++
++import { createAdminClient } from "@/lib/supabase/admin";
++import type { EventHandler, EventRow, HandlerResult } from "@/lib/event-log/dispatcher";
++import { logger } from "@/lib/logger";
++import { executarAcoes, type AcaoCtx } from "./acoes";
++
++export const IG_AUTOMACAO_CONSUMER_KEY = "ig.automacao";
++
++/** Config de um flow de automação com keyword */
++interface TriggerConfigKeyword {
++  keywords?: string[];
++  case_sensitive?: boolean;
++  post_ids?: string[];
++}
++
++/** Avalia se o texto do comentário bate com a config de keyword */
++function avaliarKeyword(texto: string | null, config: TriggerConfigKeyword): boolean {
++  if (!texto) return false;
++  const keywords = Array.isArray(config.keywords) ? config.keywords : [];
++  if (keywords.length === 0) return true; // sem keywords = qualquer texto
++
++  const caseSensitive = config.case_sensitive === true;
++  const textoNorm = caseSensitive ? texto : texto.toLowerCase();
++
++  return keywords.some((kw) => {
++    const kwNorm = caseSensitive ? kw : kw.toLowerCase();
++    return textoNorm.includes(kwNorm);
++  });
++}
++
++/** Avalia se o post_id bate com a whitelist (se configurada) */
++function avaliarPostId(
++  mediaId: string | null,
++  config: { post_ids?: string[] },
++): boolean {
++  const postIds = Array.isArray(config.post_ids) ? config.post_ids : [];
++  if (postIds.length === 0) return true; // sem filtro de post = qualquer post
++  return mediaId !== null && postIds.includes(mediaId);
++}
++
++// ── Row de um flow de automação ────────────────────────────────────────────────
++
++interface FlowRow {
++  id: string;
++  trigger_tipo: string;
++  trigger_config: Record<string, unknown>;
++  acoes: Record<string, unknown>[];
++}
++
++/** Avalia se um flow bate com o evento de comentário recebido */
++function flowCasaComEvento(
++  flow: FlowRow,
++  payload: {
++    texto: string | null;
++    mediaId: string | null;
++    field: string | null;
++  },
++): boolean {
++  switch (flow.trigger_tipo) {
++    case "novo_comentario":
++      // Catch-all: qualquer comentário
++      return true;
++
++    case "comment_keyword": {
++      const config = flow.trigger_config as TriggerConfigKeyword;
++      return (
++        avaliarKeyword(payload.texto, config) && avaliarPostId(payload.mediaId, config)
++      );
++    }
++
++    case "comment_no_post": {
++      // Comentário SEM filtro de post específico (mas verifica se post_ids exclui este)
++      return avaliarPostId(payload.mediaId, flow.trigger_config as { post_ids?: string[] });
++    }
++
++    case "story_reply": {
++      // Story reply chega como `field = 'mentions'` do Graph API
++      return payload.field === "mentions";
++    }
++
++    // dm_keyword e novo_seguidor são para DMs — não desse handler
++    case "dm_keyword":
++    case "novo_seguidor":
++      return false;
++
++    default:
++      return false;
++  }
++}
++
++// ── Handler principal ──────────────────────────────────────────────────────────
++
++export const igAutomacaoHandler: EventHandler = {
++  key: IG_AUTOMACAO_CONSUMER_KEY,
++  events: ["ig.comment_received"],
++  naOrgParada: "pula",
++
++  async handle(row: EventRow): Promise<HandlerResult> {
++    const db = createAdminClient();
++    const { organization_id, payload, entity_id } = row;
++
++    const commentEventId = entity_id;
++    if (!commentEventId) {
++      logger.warn("[ig-motor] evento sem entity_id", { eventId: row.id });
++      return {
++        consumer_key: IG_AUTOMACAO_CONSUMER_KEY,
++        status: "skipped",
++        detail: "sem_comment_event_id",
++      };
++    }
++
++    // Ler dados do comentário do banco (payload é resumo, o banco tem o completo)
++    const { data: comentario, error: errComentario } = await db
++      .from("ig_comment_events")
++      .select(
++        "id, organization_id, instagram_comment_id, instagram_media_id, from_instagram_id, from_username, texto, processado, channel_session_id",
++      )
++      .eq("id", commentEventId)
++      .eq("organization_id", organization_id)
++      .single();
++
++    if (errComentario || !comentario) {
++      logger.error("[ig-motor] comentário não encontrado", {
++        commentEventId,
++        error: errComentario?.message,
++      });
++      return {
++        consumer_key: IG_AUTOMACAO_CONSUMER_KEY,
++        status: "error",
++        detail: "comentario_nao_encontrado",
++      };
++    }
++
++    if (comentario.processado) {
++      return {
++        consumer_key: IG_AUTOMACAO_CONSUMER_KEY,
++        status: "skipped",
++        detail: "ja_processado",
++      };
++    }
++
++    // Buscar todos os flows ativos da organização que atendem comentários
++    const { data: flows, error: errFlows } = await db
++      .from("ig_automation_flows")
++      .select("id, trigger_tipo, trigger_config, acoes")
++      .eq("organization_id", organization_id)
++      .eq("ativo", true)
++      .in("trigger_tipo", ["novo_comentario", "comment_keyword", "comment_no_post", "story_reply"]);
++
++    if (errFlows) {
++      logger.error("[ig-motor] erro ao buscar flows", { error: errFlows.message, organization_id });
++      return {
++        consumer_key: IG_AUTOMACAO_CONSUMER_KEY,
++        status: "error",
++        detail: `erro_ao_buscar_flows:${errFlows.message}`,
++      };
++    }
++
++    if (!flows || flows.length === 0) {
++      await db
++        .from("ig_comment_events")
++        .update({ processado: true, processado_at: new Date().toISOString() })
++        .eq("id", commentEventId)
++        .eq("organization_id", organization_id);
++
++      return {
++        consumer_key: IG_AUTOMACAO_CONSUMER_KEY,
++        status: "skipped",
++        detail: "sem_flows_ativos",
++      };
++    }
++
++    const eventPayload = {
++      texto: typeof payload.texto === "string" ? payload.texto : null,
++      mediaId: typeof payload.media_id === "string" ? payload.media_id : null,
++      field: typeof payload.field === "string" ? payload.field : null,
++    };
++
++    // Avaliar flows em ordem — primeiro que bater executa
++    let encontrouMatch = false;
++    let flowAcionadoId: string | null = null;
++
++    for (const flow of flows as FlowRow[]) {
++      if (!flowCasaComEvento(flow, eventPayload)) continue;
++
++      encontrouMatch = true;
++      flowAcionadoId = flow.id;
++
++      const ctx: AcaoCtx = {
++        commentEventId,
++        organizationId: organization_id,
++        channelSessionId: comentario.channel_session_id ?? null,
++        fromInstagramId: comentario.from_instagram_id,
++        fromUsername: comentario.from_username ?? null,
++        textoComentario: comentario.texto ?? null,
++        mediaId: comentario.instagram_media_id ?? null,
++        instagramCommentId: comentario.instagram_comment_id,
++        flowId: flow.id,
++      };
++
++      const resultados = await executarAcoes(db, ctx, flow.acoes ?? []);
++      const temErro = resultados.some((r) => r.status === "error");
++
++      logger.info("[ig-motor] flow acionado", {
++        flowId: flow.id,
++        commentEventId,
++        resultados,
++        organization_id,
++      });
++
++      // Atualizar stats do flow
++      await db
++        .from("ig_automation_flows")
++        .update({
++          ultima_ativacao_at: new Date().toISOString(),
++          // Incrementar total_acionamentos via SQL raw (evita race condition)
++          stats: db.rpc as unknown as Record<string, unknown>, // será atualizado abaixo
++        })
++        .eq("id", flow.id)
++        .eq("organization_id", organization_id);
++
++      // Atualizar stats via rpc ou update com jsonb concat
++      await db.rpc("fn_ig_incrementar_stats_flow", { p_flow_id: flow.id }).catch(() => {
++        // Se a função não existe ainda, fallback silencioso — não é bloqueante
++      });
++
++      if (temErro) {
++        logger.warn("[ig-motor] flow acionado com erros parciais", {
++          flowId: flow.id,
++          erros: resultados.filter((r) => r.status === "error"),
++        });
++      }
++
++      break; // Primeiro flow que bater — comportamento ManyChat
++    }
++
++    // Marcar comentário como processado
++    await db
++      .from("ig_comment_events")
++      .update({
++        processado: true,
++        processado_at: new Date().toISOString(),
++        flow_acionado_id: flowAcionadoId,
++      })
++      .eq("id", commentEventId)
++      .eq("organization_id", organization_id);
++
++    return {
++      consumer_key: IG_AUTOMACAO_CONSUMER_KEY,
++      status: encontrouMatch ? "ok" : "skipped",
++      detail: encontrouMatch ? `flow_acionado:${flowAcionadoId}` : "nenhum_flow_bateu",
++    };
++  },
++};
+diff --git a/lib/navigation/catalogo.ts b/lib/navigation/catalogo.ts
+index d417f23..46f9d3c 100644
+--- a/lib/navigation/catalogo.ts
++++ b/lib/navigation/catalogo.ts
+@@ -745,6 +745,59 @@ export const NAV_CATALOG = [
+     // ⚠️ O grupo "canais" não tem hub, então o ⌘K passa a ser a ÚNICA porta
+     // navegável. Para voltar a mostrá-la, basta devolver `sidebar: true`.
+   },
++  // ── Instagram — ManyChat próprio para DM e comentários ──────────────────────
++  //
++  // Porta de entrada para o hub Instagram do GIP War Room 2.0. O usuário chega
++  // aqui para configurar automações de comentários e DMs (flows tipo ManyChat),
++  // ver os tokens de webhook para configurar no Meta e gerenciar etiquetas.
++  //
++  // Fica antes de Webhooks (canal geral) porque o Instagram tem seu próprio
++  // endpoint de webhook no Graph API, distinto dos webhooks internos.
++  {
++    href: "/app/instagram",
++    label: "Instagram",
++    description: "Automações de DM e comentários — motor ManyChat próprio com flows, etiquetas e webhook do Instagram.",
++    icon: "InstagramLogo",
++    group: "canais",
++    minRole: "manager",
++    sidebar: true,
++  },
++  {
++    href: "/app/instagram/automacoes",
++    label: "Automações Instagram",
++    description: "Crie e edite flows de automação para comentários e DMs do Instagram.",
++    icon: "InstagramLogo",
++    group: "canais",
++    minRole: "manager",
++    sidebar: false, // acessa pelo hub /app/instagram
++  },
++  {
++    href: "/app/instagram/automacoes/novo",
++    label: "Novo Flow Instagram",
++    description: "Formulário de criação de um novo flow de automação de Instagram.",
++    icon: "InstagramLogo",
++    group: "canais",
++    minRole: "manager",
++    sidebar: false, // acessa pela lista de automações
++  },
++  {
++    href: "/app/instagram/webhooks",
++    label: "Tokens de Webhook Instagram",
++    description: "Gerencie tokens de URL para configurar o webhook do Instagram Graph API no Meta.",
++    icon: "InstagramLogo",
++    group: "canais",
++    minRole: "manager",
++    sidebar: false, // acessa pelo hub /app/instagram
++  },
++  {
++    href: "/app/instagram/etiquetas",
++    label: "Etiquetas Instagram",
++    description: "Etiquetas aplicadas pelas automações de Instagram nos contatos e no funil político.",
++    icon: "InstagramLogo",
++    group: "canais",
++    minRole: "manager",
++    sidebar: false, // acessa pelo hub /app/instagram
++  },
+   {
+     href: "/app/webhooks",
+     label: "Webhooks",
+diff --git a/supabase/baseline.sql b/supabase/baseline.sql
+index 19861f2..41fcce6 100644
+--- a/supabase/baseline.sql
++++ b/supabase/baseline.sql
+@@ -52967,3 +52967,168 @@ alter table public.platform_branding
+ 
+ comment on column public.platform_branding.accent_dark_hex is
+   'Segunda semente da marca (#2482), só para o tema ESCURO: o bloco [data-theme=dark] deriva dela pela mesma derivarMarca, com os mesmos pisos de contraste. NULL = os dois temas derivam de accent_hex, como sempre. --color-brand continua sendo accent_hex (e-mail e logo nao tem tema). Lida/escrita so server-side (service_role), como o resto da tabela.';
++
++-- ---- ig_automation_flows + ig_comment_events + ig_webhook_tokens (migration 0629) ----
++--
++-- Motor ManyChat próprio para Instagram: automações de comentários e DMs.
++-- Tabelas criadas idempotentemente; RLS isolada por organização.
++
++-- ig_automation_flows -------------------------------------------------------
++create table if not exists public.ig_automation_flows (
++  id                   uuid primary key default gen_random_uuid(),
++  organization_id      uuid not null references public.organizations(id) on delete cascade,
++  nome                 text not null,
++  descricao            text,
++  ativo                boolean not null default true,
++  trigger_tipo         text not null,
++  trigger_config       jsonb not null default '{}',
++  acoes                jsonb not null default '[]',
++  stats                jsonb not null default '{}',
++  ultima_ativacao_at   timestamptz,
++  created_at           timestamptz not null default now(),
++  updated_at           timestamptz not null default now()
++);
++
++alter table public.ig_automation_flows
++  add column if not exists nome text,
++  add column if not exists descricao text,
++  add column if not exists ativo boolean default true,
++  add column if not exists trigger_tipo text,
++  add column if not exists trigger_config jsonb default '{}',
++  add column if not exists acoes jsonb default '[]',
++  add column if not exists stats jsonb default '{}',
++  add column if not exists ultima_ativacao_at timestamptz;
++
++alter table public.ig_automation_flows
++  drop constraint if exists ig_automation_flows_trigger_tipo_check;
++alter table public.ig_automation_flows
++  add constraint ig_automation_flows_trigger_tipo_check
++    check (trigger_tipo in (
++      'comment_keyword','comment_no_post','dm_keyword',
++      'novo_seguidor','story_reply','novo_comentario'
++    ));
++
++create index if not exists idx_ig_automation_flows_org_ativo
++  on public.ig_automation_flows(organization_id, ativo);
++create index if not exists idx_ig_automation_flows_org_trigger
++  on public.ig_automation_flows(organization_id, trigger_tipo);
++
++-- RLS
++alter table public.ig_automation_flows enable row level security;
++drop policy if exists tenant_isolation_ig_automation_flows_all on public.ig_automation_flows;
++create policy tenant_isolation_ig_automation_flows_all
++  on public.ig_automation_flows
++  for all
++  using (organization_id = any(public.fn_user_org_ids()));
++
++-- ig_comment_events ---------------------------------------------------------
++create table if not exists public.ig_comment_events (
++  id                        uuid primary key default gen_random_uuid(),
++  organization_id           uuid not null references public.organizations(id) on delete cascade,
++  channel_session_id        uuid references public.channel_sessions(id) on delete set null,
++  instagram_comment_id      text not null,
++  instagram_media_id        text,
++  from_instagram_id         text not null,
++  from_username             text,
++  texto                     text,
++  parent_comment_id         text,
++  field                     text,
++  raw_payload               jsonb not null default '{}',
++  processado                boolean not null default false,
++  processado_at             timestamptz,
++  flow_acionado_id          uuid references public.ig_automation_flows(id) on delete set null,
++  dm_enviada                boolean not null default false,
++  dm_enviada_at             timestamptz,
++  respondido_em_comentario  boolean not null default false,
++  resposta_comentario_at    timestamptz,
++  received_at               timestamptz not null default now(),
++  created_at                timestamptz not null default now(),
++  unique (organization_id, instagram_comment_id)
++);
++
++alter table public.ig_comment_events
++  add column if not exists channel_session_id uuid references public.channel_sessions(id) on delete set null,
++  add column if not exists instagram_media_id text,
++  add column if not exists from_username text,
++  add column if not exists texto text,
++  add column if not exists parent_comment_id text,
++  add column if not exists field text,
++  add column if not exists raw_payload jsonb default '{}',
++  add column if not exists processado boolean default false,
++  add column if not exists processado_at timestamptz,
++  add column if not exists flow_acionado_id uuid references public.ig_automation_flows(id) on delete set null,
++  add column if not exists dm_enviada boolean default false,
++  add column if not exists dm_enviada_at timestamptz,
++  add column if not exists respondido_em_comentario boolean default false,
++  add column if not exists resposta_comentario_at timestamptz,
++  add column if not exists received_at timestamptz default now();
++
++create index if not exists idx_ig_comment_events_org_processado
++  on public.ig_comment_events(organization_id, processado);
++create index if not exists idx_ig_comment_events_org_media
++  on public.ig_comment_events(organization_id, instagram_media_id);
++create index if not exists idx_ig_comment_events_org_received
++  on public.ig_comment_events(organization_id, received_at desc);
++
++-- RLS
++alter table public.ig_comment_events enable row level security;
++drop policy if exists tenant_isolation_ig_comment_events_all on public.ig_comment_events;
++create policy tenant_isolation_ig_comment_events_all
++  on public.ig_comment_events
++  for all
++  using (organization_id = any(public.fn_user_org_ids()));
++
++-- ig_webhook_tokens ---------------------------------------------------------
++create table if not exists public.ig_webhook_tokens (
++  id                 uuid primary key default gen_random_uuid(),
++  organization_id    uuid not null references public.organizations(id) on delete cascade,
++  channel_session_id uuid references public.channel_sessions(id) on delete cascade,
++  path_token         text not null unique,
++  descricao          text,
++  ativo              boolean not null default true,
++  ultimo_ping_at     timestamptz,
++  created_at         timestamptz not null default now()
++);
++
++alter table public.ig_webhook_tokens
++  add column if not exists channel_session_id uuid references public.channel_sessions(id) on delete cascade,
++  add column if not exists descricao text,
++  add column if not exists ativo boolean default true,
++  add column if not exists ultimo_ping_at timestamptz;
++
++create index if not exists idx_ig_webhook_tokens_path
++  on public.ig_webhook_tokens(path_token) where ativo = true;
++create index if not exists idx_ig_webhook_tokens_org
++  on public.ig_webhook_tokens(organization_id);
++
++-- RLS
++alter table public.ig_webhook_tokens enable row level security;
++drop policy if exists tenant_isolation_ig_webhook_tokens_all on public.ig_webhook_tokens;
++create policy tenant_isolation_ig_webhook_tokens_all
++  on public.ig_webhook_tokens
++  for all
++  using (organization_id = any(public.fn_user_org_ids()));
++
++-- fn_ig_webhook_token_por_path ----------------------------------------------
++-- Resolve organization_id + channel_session_id a partir de um path_token.
++-- Security definer: o service_role chama isso ANTES de fazer qualquer leitura
++-- de body, garantindo que o tenant é resolvido de fonte confiável (a URL).
++-- Revogada de anon/public; só service_role pode chamar.
++create or replace function public.fn_ig_webhook_token_por_path(p_path_token text)
++returns table (
++  organization_id    uuid,
++  channel_session_id uuid
++)
++language sql
++security definer
++stable
++as $$
++  select organization_id, channel_session_id
++    from public.ig_webhook_tokens
++   where path_token = p_path_token
++     and ativo = true
++   limit 1;
++$$;
++
++revoke execute on function public.fn_ig_webhook_token_por_path(text) from public, anon;
++grant  execute on function public.fn_ig_webhook_token_por_path(text) to service_role;
+diff --git a/supabase/migrations/20261010120000_0629_ig_automacoes_e_comentarios.sql b/supabase/migrations/20261010120000_0629_ig_automacoes_e_comentarios.sql
+new file mode 100644
+index 0000000..395441f
+--- /dev/null
++++ b/supabase/migrations/20261010120000_0629_ig_automacoes_e_comentarios.sql
+@@ -0,0 +1,227 @@
++-- manifest: tabelas ig_automation_flows e ig_comment_events — motor ManyChat próprio para Instagram DM e comentários, com automação baseada em palavras-chave e etiquetas políticas (GIP War Room 2.0)
++
++-- ══════════════════════════════════════════════════════════════════
++-- ig_automation_flows — regras de automação tipo ManyChat
++--
++-- Cada linha é uma automação: trigger (tipo + config) → lista de ações.
++-- Exemplos de trigger_tipo: 'comment_keyword', 'comment_no_post',
++--   'dm_keyword', 'novo_seguidor', 'story_reply'.
++-- Exemplos de ação em acoes[]: responder_comentario, enviar_dm,
++--   add_etiqueta, criar_contato, notificar_equipe.
++-- ══════════════════════════════════════════════════════════════════
++
++create table if not exists public.ig_automation_flows (
++  id                      uuid         primary key default gen_random_uuid(),
++  organization_id         uuid         not null references public.organizations(id) on delete cascade,
++  nome                    text         not null check (char_length(nome) between 1 and 120),
++  descricao               text,
++  ativo                   boolean      not null default true,
++  -- Tipo de gatilho. Vocabulário aberto (sem CHECK — clone pode ter legado).
++  -- Valores canônicos: 'comment_keyword' | 'comment_no_post' | 'dm_keyword'
++  --   | 'novo_seguidor' | 'story_reply' | 'novo_comentario'
++  trigger_tipo            text         not null,
++  -- Config do gatilho como JSONB.
++  -- comment_keyword : { keywords: string[], case_sensitive?: bool, post_ids?: string[] }
++  -- comment_no_post : { post_ids: string[] }
++  -- dm_keyword      : { keywords: string[], case_sensitive?: bool }
++  -- novo_seguidor   : {}
++  -- story_reply     : { story_id?: string }
++  -- novo_comentario : {}
++  trigger_config          jsonb        not null default '{}',
++  -- Array de ações executadas EM ORDEM quando o gatilho dispara.
++  -- Exemplo: [
++  --   { "tipo": "enviar_dm",           "texto": "Oi {{nome}}! ..." },
++  --   { "tipo": "add_etiqueta",        "etiqueta": "Simpatizante" },
++  --   { "tipo": "responder_comentario","texto": "Obrigado! ..." },
++  --   { "tipo": "criar_contato",       "pipeline_id": "uuid" },
++  --   { "tipo": "notificar_equipe",    "mensagem": "Novo lead via IG" }
++  -- ]
++  acoes                   jsonb        not null default '[]',
++  -- Estatísticas de uso (atualizadas pelo worker, JSONB para flexibilidade)
++  stats                   jsonb        not null default '{"total_acionamentos":0}',
++  ultima_ativacao_at      timestamptz,
++  created_at              timestamptz  not null default now(),
++  updated_at              timestamptz  not null default now()
++);
++
++comment on table public.ig_automation_flows is
++  'Motor ManyChat próprio do DeskcommCRM: regras de automação para Instagram DM e comentários. Cada linha é um fluxo com gatilho + lista de ações executadas em ordem.';
++
++comment on column public.ig_automation_flows.trigger_tipo is
++  'Tipo de gatilho: comment_keyword, comment_no_post, dm_keyword, novo_seguidor, story_reply, novo_comentario. Coluna aberta (sem CHECK) para suportar extensões.';
++
++comment on column public.ig_automation_flows.acoes is
++  'Array de ações em ordem. Tipos suportados: enviar_dm, responder_comentario, add_etiqueta, criar_contato, notificar_equipe, add_funil_politico. Extensível sem migration.';
++
++-- Índice para busca por org + ativo (drain do worker)
++create index if not exists ig_automation_flows_org_ativo_idx
++  on public.ig_automation_flows (organization_id, ativo);
++
++create index if not exists ig_automation_flows_org_trigger_idx
++  on public.ig_automation_flows (organization_id, trigger_tipo);
++
++-- Touch automático do updated_at
++create or replace trigger ig_automation_flows_touch
++  before update on public.ig_automation_flows
++  for each row execute function public.fn_touch_updated_at();
++
++-- ══════════════════════════════════════════════════════════════════
++-- ig_comment_events — comentários Instagram recebidos via Graph API
++--
++-- Cada linha é um comentário recebido. O unique index garante
++-- idempotência: reentrega do webhook não duplica.
++-- ══════════════════════════════════════════════════════════════════
++
++create table if not exists public.ig_comment_events (
++  id                        uuid         primary key default gen_random_uuid(),
++  organization_id           uuid         not null references public.organizations(id) on delete cascade,
++  -- Sessão do canal Instagram (channel_sessions com provider=zernio_social, platform=instagram)
++  channel_session_id        uuid         references public.channel_sessions(id) on delete set null,
++  -- Identificadores do Instagram Graph API
++  instagram_comment_id      text         not null,
++  instagram_post_id         text,          -- post onde o comentário foi feito
++  instagram_media_id        text,          -- mídia associada (pode diferir do post)
++  -- Quem comentou
++  from_instagram_id         text         not null,
++  from_username             text,
++  -- Conteúdo do comentário
++  texto                     text,
++  -- Estado de resposta
++  respondido_em_comentario  boolean      not null default false,
++  resposta_comentario_at    timestamptz,
++  dm_enviada                boolean      not null default false,
++  dm_enviada_at             timestamptz,
++  -- Qual flow foi acionado (se houver)
++  flow_acionado_id          uuid         references public.ig_automation_flows(id) on delete set null,
++  -- Payload bruto do webhook para auditoria/debugging
++  payload_raw               jsonb        not null default '{}',
++  -- Processamento pelo worker
++  processado                boolean      not null default false,
++  processado_at             timestamptz,
++  created_at                timestamptz  not null default now()
++);
++
++comment on table public.ig_comment_events is
++  'Comentários recebidos via Instagram Graph API webhooks. Idempotente por (organization_id, instagram_comment_id). Worker de automação lê daqui para disparar os flows.';
++
++-- Idempotência: reentrega do webhook não duplica comentário
++create unique index if not exists ig_comment_events_org_comment_uniq
++  on public.ig_comment_events (organization_id, instagram_comment_id);
++
++-- Worker drain: pendentes por org
++create index if not exists ig_comment_events_org_processado_idx
++  on public.ig_comment_events (organization_id, processado, created_at)
++  where not processado;
++
++-- Busca por post (para analytics e filtro de flows)
++create index if not exists ig_comment_events_org_post_idx
++  on public.ig_comment_events (organization_id, instagram_post_id);
++
++-- Busca por comentador (para funil político)
++create index if not exists ig_comment_events_org_from_idx
++  on public.ig_comment_events (organization_id, from_instagram_id);
++
++-- ══════════════════════════════════════════════════════════════════
++-- ig_webhook_tokens — mapeamento token → org + sessão Instagram
++--
++-- O path_token na URL do webhook identifica a organização sem
++-- expor IDs internos. Análogo ao webhook_sources.path_token, mas
++-- específico para o canal de comentários do Instagram Graph API.
++-- O App Secret para verificação HMAC-SHA256 vem de platform_meta_app
++-- (compartilhado com WhatsApp Cloud API — mesmo app Meta).
++-- ══════════════════════════════════════════════════════════════════
++
++create table if not exists public.ig_webhook_tokens (
++  id                  uuid         primary key default gen_random_uuid(),
++  organization_id     uuid         not null references public.organizations(id) on delete cascade,
++  -- Sessão Instagram (canal Zernio Social com platform=instagram)
++  channel_session_id  uuid         references public.channel_sessions(id) on delete cascade,
++  -- Token público na URL: /api/v1/webhooks/instagram-comments/[token]
++  path_token          text         not null unique default encode(gen_random_bytes(24), 'base64url'),
++  -- Instagram Business Account ID desta sessão
++  ig_business_account_id text,
++  -- Verify token configurado no painel Meta (para handshake GET)
++  verify_token        text         not null default encode(gen_random_bytes(16), 'hex'),
++  ativo               boolean      not null default true,
++  created_at          timestamptz  not null default now(),
++  updated_at          timestamptz  not null default now()
++);
++
++comment on table public.ig_webhook_tokens is
++  'Tokens de webhook para o canal de comentários do Instagram Graph API. O path_token identifica a org na URL pública; verify_token é configurado no painel Meta para o handshake de verificação.';
++
++create unique index if not exists ig_webhook_tokens_org_session_uniq
++  on public.ig_webhook_tokens (organization_id, channel_session_id);
++
++create index if not exists ig_webhook_tokens_org_idx
++  on public.ig_webhook_tokens (organization_id);
++
++create or replace trigger ig_webhook_tokens_touch
++  before update on public.ig_webhook_tokens
++  for each row execute function public.fn_touch_updated_at();
++
++-- ══════════════════════════════════════════════════════════════════
++-- RLS — isolamento por tenant (obrigatório: CLAUDE.md)
++-- ══════════════════════════════════════════════════════════════════
++
++alter table public.ig_automation_flows   enable row level security;
++alter table public.ig_comment_events     enable row level security;
++alter table public.ig_webhook_tokens     enable row level security;
++
++-- ig_automation_flows
++create policy tenant_isolation_ig_automation_flows_all
++  on public.ig_automation_flows
++  for all
++  using (organization_id = any(public.fn_user_org_ids()))
++  with check (organization_id = any(public.fn_user_org_ids()));
++
++-- ig_comment_events
++create policy tenant_isolation_ig_comment_events_all
++  on public.ig_comment_events
++  for all
++  using (organization_id = any(public.fn_user_org_ids()))
++  with check (organization_id = any(public.fn_user_org_ids()));
++
++-- ig_webhook_tokens
++create policy tenant_isolation_ig_webhook_tokens_all
++  on public.ig_webhook_tokens
++  for all
++  using (organization_id = any(public.fn_user_org_ids()))
++  with check (organization_id = any(public.fn_user_org_ids()));
++
++-- ══════════════════════════════════════════════════════════════════
++-- Função: buscar token de webhook por path_token (usada pelo handler)
++-- Security definer para que o handler (service role) resolva o token
++-- sem expor a tabela inteira ao anon.
++-- ══════════════════════════════════════════════════════════════════
++
++create or replace function public.fn_ig_webhook_token_por_path(
++  p_path_token text
++)
++returns table (
++  organization_id      uuid,
++  channel_session_id   uuid,
++  ig_business_account_id text,
++  verify_token         text,
++  ativo                boolean
++)
++language sql
++security definer
++stable
++as $$
++  select
++    organization_id,
++    channel_session_id,
++    ig_business_account_id,
++    verify_token,
++    ativo
++  from public.ig_webhook_tokens
++  where path_token = p_path_token
++  limit 1;
++$$;
++
++revoke execute on function public.fn_ig_webhook_token_por_path(text) from public, anon;
++grant  execute on function public.fn_ig_webhook_token_por_path(text) to service_role;
++
++comment on function public.fn_ig_webhook_token_por_path(text) is
++  'Resolve um webhook token de Instagram por path_token. Usada pelo handler de comentários para identificar a org sem expor a tabela ao anon. Security definer — só service_role pode executar.';
+-- 
+2.43.0
+

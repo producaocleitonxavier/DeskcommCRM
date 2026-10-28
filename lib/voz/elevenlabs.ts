@@ -10,6 +10,8 @@
  * Nada aqui envia WhatsApp nem decide compliance — só fala com a API de voz.
  */
 
+import { VOZ_SPEED_PADRAO } from "@/lib/voz/velocidade";
+
 const API_BASE = "https://api.elevenlabs.io/v1";
 // Multilíngue (inclui pt-BR). Trocável no futuro sem mexer na interface.
 const MODELO_TTS = "eleven_multilingual_v2";
@@ -70,12 +72,26 @@ export type ResultadoAudio =
   | { ok: true; audio: ArrayBuffer; contentType: string }
   | { ok: false; erro: string };
 
+// A velocidade padrão e a faixa moram em `velocidade.ts` (módulo puro, também
+// usado pela tela). Aqui só aplicamos no voice_settings.
+function clampSpeed(s: number): number {
+  if (!Number.isFinite(s)) return VOZ_SPEED_PADRAO;
+  return Math.min(1.2, Math.max(0.7, s));
+}
+
 /**
  * Gera um áudio (mp3) falando `texto` com o clone `voiceId`. NÃO adiciona o
  * rótulo de IA nem checa blackout — quem chama é responsável pelo compliance
  * (TSE 23.755/2026). Mantém a camada de voz burra de propósito.
+ *
+ * `speed` controla a velocidade da fala (0.7 = bem devagar … 1.2 = rápido);
+ * o padrão 0.9 é um pouco mais lento que o normal.
  */
-export async function gerarAudio(voiceId: string, texto: string): Promise<ResultadoAudio> {
+export async function gerarAudio(
+  voiceId: string,
+  texto: string,
+  speed: number = VOZ_SPEED_PADRAO,
+): Promise<ResultadoAudio> {
   const key = chave();
   if (!key) return { ok: false, erro: "sem_chave" };
   if (!voiceId) return { ok: false, erro: "sem_voice_id" };
@@ -93,7 +109,7 @@ export async function gerarAudio(voiceId: string, texto: string): Promise<Result
       body: JSON.stringify({
         text: corpo,
         model_id: MODELO_TTS,
-        voice_settings: { stability: 0.5, similarity_boost: 0.8 },
+        voice_settings: { stability: 0.5, similarity_boost: 0.8, speed: clampSpeed(speed) },
       }),
     });
     if (!res.ok) {
