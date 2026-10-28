@@ -274,6 +274,8 @@ export interface FilaDeAcao {
   rascunhosIA: number;
   /** Disparos em rascunho (criados, ainda não iniciados). */
   disparosRascunho: number;
+  /** Leads QUENTES sem contato há 7+ dias — esfriam se ninguém falar com eles. */
+  leadsQuentesSemContato: number;
 }
 
 /**
@@ -284,7 +286,8 @@ export interface FilaDeAcao {
 async function buscarFilaDeAcao(organizationId: string): Promise<FilaDeAcao> {
   const db = await createClient();
   const agora = new Date().toISOString();
-  const [draftsIA, disparos] = await Promise.all([
+  const corte7d = new Date(Date.now() - 7 * 86_400_000).toISOString();
+  const [draftsIA, disparos, hotLeads] = await Promise.all([
     db
       .from("conversation_drafts")
       .select("id", { count: "exact", head: true })
@@ -296,8 +299,37 @@ async function buscarFilaDeAcao(organizationId: string): Promise<FilaDeAcao> {
       .select("id", { count: "exact", head: true })
       .eq("organization_id", organizationId)
       .eq("status", "draft"),
+    // Leads quentes (temperature=quente). Lista enxuta de contact_ids p/ cruzar
+    // com a última atividade sem depender da FK dupla pol_leads→contacts.
+    db
+      .from("pol_leads")
+      .select("contact_id")
+      .eq("organization_id", organizationId)
+      .eq("temperature", "quente")
+      .limit(300),
   ]);
-  return { rascunhosIA: draftsIA.count ?? 0, disparosRascunho: disparos.count ?? 0 };
+
+  // Quentes sem contato há 7+ dias: entre os quentes, quantos têm last_activity_at
+  // antigo (esfriam se ninguém falar). 2 passos robustos, contagens baratas.
+  let leadsQuentesSemContato = 0;
+  const hotIds = ((hotLeads.data ?? []) as { contact_id: string | null }[])
+    .map((r) => r.contact_id)
+    .filter((x): x is string => !!x);
+  if (hotIds.length) {
+    const { count } = await db
+      .from("contacts")
+      .select("id", { count: "exact", head: true })
+      .eq("organization_id", organizationId)
+      .in("id", hotIds)
+      .lt("last_activity_at", corte7d);
+    leadsQuentesSemContato = count ?? 0;
+  }
+
+  return {
+    rascunhosIA: draftsIA.count ?? 0,
+    disparosRascunho: disparos.count ?? 0,
+    leadsQuentesSemContato,
+  };
 }
 
 // -- Data fetching -----------------------------------------------------------

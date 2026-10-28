@@ -13,6 +13,7 @@ import {
   CheckCircle2,
   Clock,
   Construction,
+  Flame,
   Gift,
   Inbox,
   Send,
@@ -190,8 +191,8 @@ export default function HojeClient({
       </header>
 
       {/* ── Fila de ação: o que espera a sua decisão AGORA ───────── */}
-      {(filaAcao.rascunhosIA > 0 || filaAcao.disparosRascunho > 0) && (
-        <section aria-label="Esperando você" className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+      {(filaAcao.rascunhosIA > 0 || filaAcao.disparosRascunho > 0 || filaAcao.leadsQuentesSemContato > 0) && (
+        <section aria-label="Esperando você" className="grid grid-cols-1 gap-3 sm:grid-cols-3">
           {filaAcao.rascunhosIA > 0 && (
             <Link
               href="/app/inbox"
@@ -224,6 +225,24 @@ export default function HojeClient({
                 </span>
                 <span className="mt-0.5 block text-sm" style={{ color: "var(--color-text-muted)" }}>
                   {filaAcao.disparosRascunho === 1 ? "disparo em rascunho pra revisar" : "disparos em rascunho pra revisar"}
+                </span>
+              </span>
+            </Link>
+          )}
+          {filaAcao.leadsQuentesSemContato > 0 && (
+            <Link
+              href="/app/politico/leads"
+              className="wr-card flex items-center gap-3 p-4 transition-shadow hover:shadow-md"
+            >
+              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl" style={{ background: "rgba(239,68,68,0.14)", color: "#F87171" }} aria-hidden>
+                <Flame className="h-5 w-5" />
+              </span>
+              <span className="min-w-0 flex-1">
+                <span className="block font-heading text-lg font-bold leading-none tabular-nums" style={{ color: "var(--color-text)" }}>
+                  {filaAcao.leadsQuentesSemContato.toLocaleString("pt-BR")}
+                </span>
+                <span className="mt-0.5 block text-sm" style={{ color: "var(--color-text-muted)" }}>
+                  {filaAcao.leadsQuentesSemContato === 1 ? "contato quente esfriando — fale com ele" : "contatos quentes esfriando — fale com eles"}
                 </span>
               </span>
             </Link>
