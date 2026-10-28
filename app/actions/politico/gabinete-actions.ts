@@ -72,7 +72,12 @@ export async function buscarCidadaos(q: string): Promise<CidadaoOpcao[]> {
 }
 
 /** Cria um cidadão (contact) mínimo na org ativa e devolve o id. */
-export async function criarCidadao(nome: string, telefone?: string, endereco?: string): Promise<AcaoResultado> {
+export async function criarCidadao(
+  nome: string,
+  telefone?: string,
+  endereco?: string,
+  nascimento?: string,
+): Promise<AcaoResultado> {
   const org = await orgAtiva();
   if (!org) return { ok: false, erro: "Sessão ou organização inválida." };
   if (!nome.trim()) return { ok: false, erro: "Informe o nome do cidadão." };
@@ -83,6 +88,9 @@ export async function criarCidadao(nome: string, telefone?: string, endereco?: s
   // Endereço vai no mesmo lugar que o resto do político usa (custom_fields.endereco_gip),
   // para alimentar a inteligência territorial.
   if (endereco?.trim()) payload.custom_fields = { endereco_gip: { endereco: endereco.trim() } };
+  // Data de nascimento: coluna `birthdate` (YYYY-MM-DD, vinda do input date).
+  // Só grava se vier no formato certo — nunca manda string vazia (quebra o tipo date).
+  if (nascimento && /^\d{4}-\d{2}-\d{2}$/.test(nascimento.trim())) payload.birthdate = nascimento.trim();
   const { data, error } = await db.from("contacts").insert(payload).select("id").maybeSingle();
   if (error) return { ok: false, erro: traduzErro(error) };
   return { ok: true, id: (data?.id as string | undefined) };

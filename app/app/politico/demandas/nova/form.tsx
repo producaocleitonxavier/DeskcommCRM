@@ -72,6 +72,7 @@ export default function NovaDemandaForm({ assessores }: NovaDemandaFormProps) {
   const [novoNome, setNovoNome] = useState("");
   const [novoFone, setNovoFone] = useState("");
   const [novoEndereco, setNovoEndereco] = useState("");
+  const [novoNascimento, setNovoNascimento] = useState("");
   const [criandoCidadao, setCriandoCidadao] = useState(false);
 
   // Campos
@@ -121,8 +122,9 @@ export default function NovaDemandaForm({ assessores }: NovaDemandaFormProps) {
     setErro(null);
     if (!novoNome.trim()) return setErro("Informe o nome do cidadão.");
     if (!novoFone.trim()) return setErro("Informe o WhatsApp do cidadão — é por onde o gabinete dá retorno.");
+    if (!novoEndereco.trim()) return setErro("Informe o endereço do cidadão (rua, número e bairro).");
     setCriandoCidadao(true);
-    const res = await criarCidadao(novoNome, novoFone || undefined, novoEndereco || undefined);
+    const res = await criarCidadao(novoNome, novoFone || undefined, novoEndereco || undefined, novoNascimento || undefined);
     // Solicitante novo entra na nossa base (funil) como novo_cadastro — pronto pra nutrir.
     if (res.ok && res.id) await garantirLeadNovoCadastro(res.id);
     setCriandoCidadao(false);
@@ -239,9 +241,15 @@ export default function NovaDemandaForm({ assessores }: NovaDemandaFormProps) {
                   <input type="tel" value={novoFone} onChange={(e) => setNovoFone(e.target.value)} placeholder="(31) 99999-9999" className="wr-input w-full" />
                 </div>
               </div>
-              <div>
-                <Label>Endereço</Label>
-                <input type="text" value={novoEndereco} onChange={(e) => setNovoEndereco(e.target.value)} placeholder="Rua, número, bairro — opcional" className="wr-input w-full" />
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                <div>
+                  <Label obrig>Endereço</Label>
+                  <input type="text" value={novoEndereco} onChange={(e) => setNovoEndereco(e.target.value)} placeholder="Rua, número, bairro" className="wr-input w-full" />
+                </div>
+                <div>
+                  <Label>Data de nascimento</Label>
+                  <input type="date" value={novoNascimento} onChange={(e) => setNovoNascimento(e.target.value)} className="wr-input w-full" />
+                </div>
               </div>
               <p className="text-xs" style={{ color: "var(--color-text-subtle)" }}>
                 O cidadão entra na sua base automaticamente — pronto para acompanhamento.

@@ -351,7 +351,7 @@ export default async function GabinetePage({
                           className="group transition-colors hover:bg-[var(--color-surface-elevated)]"
                           style={{
                             borderBottom: "1px solid var(--color-border)",
-                            ...((atrasada || urgente) ? { background: "#FEF6F5" } : {}),
+                            ...((atrasada || urgente) ? { background: "rgba(239,68,68,0.08)" } : {}),
                           }}
                         >
                           <td className="px-4 py-3.5 max-w-[280px]">
