@@ -1083,6 +1083,15 @@ export const NAV_CATALOG = [
     sidebar: true,
   },
   {
+    href: "/app/politico/oficios",
+    label: "Ofícios",
+    description: "Busque qualquer ofício emitido por número, assunto, órgão ou nome do cidadão.",
+    icon: "FileText",
+    group: "gabinete",
+    minRole: "manager",
+    sidebar: true,
+  },
+  {
     href: "/app/politico/liderancas",
     label: "Lideranças",
     description: "Rede de lideranças com aniversários, WhatsApp e histórico de mobilização.",
