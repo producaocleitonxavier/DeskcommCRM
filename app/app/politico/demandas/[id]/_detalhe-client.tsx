@@ -330,17 +330,30 @@ export default function DetalheDemandaClient({ demanda, assessores, eventos, voz
               const res = await avisarCidadao(d.id, { incluirAudio: comVoz });
               setAvisando(false);
               if (res.ok) {
-                const audioTxt =
-                  res.audio === "enviado"
-                    ? " + recado em áudio na voz do Cleiton"
-                    : res.audio === "blackout"
-                      ? " (o áudio ficou de fora: silêncio eleitoral de 72h)"
-                      : res.audio === "voz_desarmada"
-                        ? " (o áudio ficou de fora: a Voz do Mandato não está ligada)"
-                        : res.audio === "falha"
-                          ? " (o texto foi, mas o áudio falhou — tente de novo)"
-                          : "";
-                setAvisoMsg(`Cidadão avisado no WhatsApp (protocolo ${res.protocolo})${res.comOficio ? " com o ofício em anexo" : ""}${audioTxt}.`);
+                const audioNota =
+                  res.audio === "blackout"
+                    ? "O áudio ficou de fora (silêncio eleitoral de 72h)."
+                    : res.audio === "voz_desarmada"
+                      ? "O áudio ficou de fora (a Voz do Mandato não está ligada)."
+                      : res.audio === "falha"
+                        ? "O áudio falhou — tente de novo."
+                        : "";
+                let msg: string;
+                if (res.textoEnviado) {
+                  msg =
+                    `Cidadão avisado no WhatsApp (protocolo ${res.protocolo})` +
+                    (res.comOficio ? " com o ofício em anexo" : "") +
+                    (res.audio === "enviado" ? " + recado em áudio na voz do Cleiton" : "") +
+                    "." +
+                    (audioNota ? ` ${audioNota}` : "");
+                } else if (res.audio === "enviado") {
+                  msg = "Recado em áudio na voz do Cleiton enviado. (O aviso de texto já tinha ido antes.)";
+                } else if (audioNota) {
+                  msg = `O cidadão já tinha sido avisado por texto. ${audioNota}`;
+                } else {
+                  msg = "O cidadão já tinha sido avisado por texto — nada novo a enviar.";
+                }
+                setAvisoMsg(msg);
                 router.refresh();
               } else setErro(res.erro);
             }}

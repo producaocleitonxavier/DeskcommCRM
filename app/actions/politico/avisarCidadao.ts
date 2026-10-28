@@ -34,7 +34,7 @@ import type { SendMessageInput } from "@/lib/schemas";
 export type AudioRecadoStatus = "enviado" | "voz_desarmada" | "blackout" | "falha";
 
 export type AvisoResultado =
-  | { ok: true; protocolo: string; comOficio: boolean; audio?: AudioRecadoStatus }
+  | { ok: true; protocolo: string; comOficio: boolean; audio?: AudioRecadoStatus; textoEnviado: boolean }
   | { ok: false; erro: string };
 
 /** Descrição EXATA do evento de histórico quando o cidadão é avisado da
@@ -115,97 +115,132 @@ export async function avisarCidadao(
     return { ok: false, erro: "Não consegui abrir a conversa do cidadão." };
   }
 
-  // A mensagem muda conforme o estado: resolvida = boa notícia (sem anexar o
-  // ofício de novo); demais = registro + encaminhamento (com o ofício anexo).
   const ehResolucao = d.estado === "resolvida";
+  const primeiroNome = (contato.name ?? "").trim().split(/\s+/)[0] ?? "";
 
-  // Ofício em PDF para anexar: só no aviso de encaminhamento (não na resolução),
-  // e se houver encaminhamento. Gera se preciso e baixa os bytes.
+  // Nome do gabinete pro texto de encaminhamento — vem da Identidade do Gabinete
+  // (pol_gabinete_config), NUNCA cravado: no SaaS cada cliente tem o seu. Sem
+  // nome configurado, cai no genérico "do nosso gabinete".
+  const { data: gabCfg } = await db
+    .from("pol_gabinete_config")
+    .select("nome_parlamentar, cargo")
+    .eq("organization_id", org.orgId)
+    .maybeSingle();
+  const nomeParl = ((gabCfg?.nome_parlamentar as string | null) ?? "").trim();
+  const cargoParl = ((gabCfg?.cargo as string | null) ?? "").trim();
+  const assinaturaGab = nomeParl ? ` do ${cargoParl ? cargoParl + " " : ""}${nomeParl}` : "";
+
+  // Idempotência do TEXTO de resolução: o aviso automático ao resolver já mandou
+  // o texto. Se o cliente depois clica "Avisar cidadão" (ex.: pra incluir o
+  // áudio), NÃO reenviamos o texto — senão chega duplicado (bug relatado). O
+  // áudio, sim, segue normalmente.
+  let textoJaEnviado = false;
+  if (ehResolucao) {
+    const { data: ja } = await db
+      .from("pol_demanda_eventos")
+      .select("id")
+      .eq("organization_id", org.orgId)
+      .eq("demanda_id", demandaId)
+      .eq("tipo", "cidadao_avisado")
+      .eq("descricao", AVISO_RESOLUCAO_DESCRICAO)
+      .limit(1)
+      .maybeSingle();
+    textoJaEnviado = !!ja;
+  }
+
   let numero = d.pol_oficio_numero;
   let ano = d.pol_oficio_ano;
-  let oficioBytes: Buffer | null = null;
-  const oficioPath = `${org.orgId}/${demandaId}/oficio.pdf`;
-  if (!ehResolucao && d.pol_encaminhamento_ia?.trim()) {
-    let dl = await admin.storage.from("gabinete-anexos").download(oficioPath);
-    if (dl.error || !dl.data) {
-      const g = await gerarOficioDemanda(demandaId);
-      if (g.ok) {
-        numero = g.numero;
-        ano = g.ano;
+  let comOficio = false;
+  let textoEnviado = false;
+
+  if (!textoJaEnviado) {
+    // Ofício em PDF para anexar: só no encaminhamento (não na resolução), e se
+    // houver encaminhamento. Gera se preciso e baixa os bytes.
+    let oficioBytes: Buffer | null = null;
+    const oficioPath = `${org.orgId}/${demandaId}/oficio.pdf`;
+    if (!ehResolucao && d.pol_encaminhamento_ia?.trim()) {
+      let dl = await admin.storage.from("gabinete-anexos").download(oficioPath);
+      if (dl.error || !dl.data) {
+        const g = await gerarOficioDemanda(demandaId);
+        if (g.ok) {
+          numero = g.numero;
+          ano = g.ano;
+        }
+        dl = await admin.storage.from("gabinete-anexos").download(oficioPath);
       }
-      dl = await admin.storage.from("gabinete-anexos").download(oficioPath);
+      if (dl.data) oficioBytes = Buffer.from(await dl.data.arrayBuffer());
     }
-    if (dl.data) oficioBytes = Buffer.from(await dl.data.arrayBuffer());
+
+    const protocoloLocal = numero && ano ? `OF ${String(numero).padStart(3, "0")}/${ano}` : protocoloDe(d);
+    const saudacao = primeiroNome ? `Olá, ${primeiroNome}!` : "Olá!";
+
+    // Resolução: boa notícia (texto completo). Encaminhamento: texto CURTO — a
+    // voz do político carrega o calor, o texto é só a capa do ofício.
+    const corpo = ehResolucao
+      ? `${saudacao} Boa notícia: a sua demanda (protocolo ${protocoloLocal}) foi RESOLVIDA.` +
+        ` Agradecemos a confiança e seguimos à disposição para o que precisar.` +
+        ` Conte sempre com o nosso gabinete.`
+      : oficioBytes
+        ? `${saudacao} Aqui é do gabinete${assinaturaGab}. Segue o ofício referente à demanda solicitada.`
+        : `${saudacao} Aqui é do gabinete${assinaturaGab}. Passo pra avisar que a sua demanda já foi encaminhada ao órgão responsável — assim que houver novidade, te retorno por aqui.`;
+
+    // Com ofício: copia o PDF para o bucket da conversa (whatsapp-media sob
+    // {org}/{conversa}/, exigência do handler) e envia como DOCUMENTO com o texto
+    // de legenda — uma única mensagem. Sem ofício: texto puro.
+    let input: SendMessageInput;
+    if (oficioBytes) {
+      const nomeArquivo = `Oficio-${String(numero ?? 0).padStart(3, "0")}-${ano ?? new Date().getFullYear()}.pdf`;
+      const waPath = `${org.orgId}/${conversationId}/${nomeArquivo}`;
+      const up = await admin.storage
+        .from("whatsapp-media")
+        .upload(waPath, oficioBytes, { contentType: "application/pdf", upsert: true });
+      if (up.error) {
+        input = { conversation_id: conversationId, type: "text", body: corpo };
+      } else {
+        input = {
+          conversation_id: conversationId,
+          type: "document",
+          media_storage_path: waPath,
+          media_mime: "application/pdf",
+          media_size_bytes: oficioBytes.length,
+          body: corpo,
+        };
+      }
+    } else {
+      input = { conversation_id: conversationId, type: "text", body: corpo };
+    }
+
+    try {
+      await sendMessageHandler(
+        db,
+        { organization_id: org.orgId, actor: { type: "user", id: user.id }, requestId: randomUUID(), idioma: user.idioma },
+        input,
+      );
+    } catch (e) {
+      const msg = e instanceof ApiError ? e.message : e instanceof Error ? e.message : "Falha no envio.";
+      return { ok: false, erro: `Não foi possível enviar: ${msg}` };
+    }
+
+    comOficio = !!oficioBytes && input.type === "document";
+    textoEnviado = true;
+
+    // Histórico: registra o aviso enviado.
+    await db.from("pol_demanda_eventos").insert({
+      organization_id: org.orgId,
+      demanda_id: demandaId,
+      tipo: "cidadao_avisado",
+      descricao: ehResolucao
+        ? AVISO_RESOLUCAO_DESCRICAO
+        : `Cidadão avisado por WhatsApp${comOficio ? ` (com ofício ${protocoloLocal})` : ""}`,
+      created_by: user.id,
+    });
   }
 
   const protocolo = numero && ano ? `OF ${String(numero).padStart(3, "0")}/${ano}` : protocoloDe(d);
-  const primeiroNome = (contato.name ?? "").trim().split(/\s+/)[0] ?? "";
-  const saudacao = primeiroNome ? `Olá, ${primeiroNome}!` : "Olá!";
-  // Mensagem GENÉRICA de propósito: NÃO embute o assunto (que costuma ser a
-  // descrição longa do cidadão e deixa o texto feio). O detalhe vai no ofício.
-  const corpo = ehResolucao
-    ? `${saudacao} Boa notícia: a sua demanda (protocolo ${protocolo}) foi RESOLVIDA.` +
-      ` Agradecemos a confiança e seguimos à disposição para o que precisar.` +
-      ` Conte sempre com o nosso gabinete.`
-    : `${saudacao} Passo para avisar que a sua demanda (protocolo ${protocolo})` +
-      ` já foi encaminhada ao órgão competente para a resolução.` +
-      ` Assim que houver novidades, te retorno por aqui, ok?` +
-      (oficioBytes ? ` Encaminho o ofício para seu conhecimento.` : "") +
-      ` Sigo à disposição. Conte sempre com o nosso gabinete.`;
 
-  // Com ofício: copia o PDF para o bucket da conversa (whatsapp-media sob
-  // {org}/{conversa}/, exigência do handler) e envia como DOCUMENTO com o texto
-  // de legenda — uma única mensagem. Sem ofício: texto puro.
-  let input: SendMessageInput;
-  if (oficioBytes) {
-    const nomeArquivo = `Oficio-${String(numero ?? 0).padStart(3, "0")}-${ano ?? new Date().getFullYear()}.pdf`;
-    const waPath = `${org.orgId}/${conversationId}/${nomeArquivo}`;
-    const up = await admin.storage
-      .from("whatsapp-media")
-      .upload(waPath, oficioBytes, { contentType: "application/pdf", upsert: true });
-    if (up.error) {
-      // Falhou copiar o anexo: não perde o aviso — manda ao menos o texto.
-      input = { conversation_id: conversationId, type: "text", body: corpo };
-    } else {
-      input = {
-        conversation_id: conversationId,
-        type: "document",
-        media_storage_path: waPath,
-        media_mime: "application/pdf",
-        media_size_bytes: oficioBytes.length,
-        body: corpo,
-      };
-    }
-  } else {
-    input = { conversation_id: conversationId, type: "text", body: corpo };
-  }
-
-  try {
-    await sendMessageHandler(
-      db,
-      { organization_id: org.orgId, actor: { type: "user", id: user.id }, requestId: randomUUID(), idioma: user.idioma },
-      input,
-    );
-  } catch (e) {
-    const msg = e instanceof ApiError ? e.message : e instanceof Error ? e.message : "Falha no envio.";
-    return { ok: false, erro: `Não foi possível enviar: ${msg}` };
-  }
-
-  const comOficio = !!oficioBytes && input.type === "document";
-  // Histórico: registra o aviso enviado.
-  await db.from("pol_demanda_eventos").insert({
-    organization_id: org.orgId,
-    demanda_id: demandaId,
-    tipo: "cidadao_avisado",
-    descricao: ehResolucao
-      ? AVISO_RESOLUCAO_DESCRICAO
-      : `Cidadão avisado por WhatsApp${comOficio ? ` (com ofício ${protocolo})` : ""}`,
-    created_by: user.id,
-  });
-
-  // VOZ DO MANDATO (Fase A, manual): se o cliente pediu "incluir recado em
-  // áudio", manda uma nota de voz na voz do político DEPOIS do texto. Nunca
-  // falha o aviso por causa do áudio (o texto já foi): devolve só o status.
+  // VOZ DO MANDATO: se o cliente pediu "incluir recado em áudio", manda a nota
+  // de voz DEPOIS do texto (ou sozinha, se o texto já tinha ido). Nunca falha o
+  // aviso por causa do áudio.
   let audio: AudioRecadoStatus | undefined;
   if (opts?.incluirAudio) {
     audio = await enviarRecadoDeVoz({
@@ -221,7 +256,7 @@ export async function avisarCidadao(
     });
   }
 
-  return { ok: true, protocolo, comOficio, audio };
+  return { ok: true, protocolo, comOficio, audio, textoEnviado };
 }
 
 /**
