@@ -32,6 +32,13 @@ const styles = StyleSheet.create({
   pageTimbrado: { position: "relative", fontSize: 11, lineHeight: 1.5, color: "#1A1A1A" },
   fundoTimbrado: { position: "absolute", top: 0, left: 0, width: "100%", height: "100%" },
   conteudoTimbrado: { paddingTop: 120, paddingBottom: 150, paddingHorizontal: 70 },
+  // Páginas de ANEXO (fotos da demanda) — uma foto por página, no MESMO papel
+  // timbrado do ofício (o cabeçalho se repete, como na praxe de gabinete). Sem
+  // timbrado, cai num cabeçalho gerado com a marca.
+  pageAnexo: { paddingTop: 48, paddingBottom: 48, paddingHorizontal: 56 },
+  anexoHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", borderBottomWidth: 2, paddingBottom: 12, marginBottom: 20 },
+  anexoMoldura: { flexGrow: 1, alignItems: "center", justifyContent: "center" },
+  anexoImagem: { width: "100%", height: "100%", objectFit: "contain" },
 });
 
 export interface OficioPdfInput {
@@ -64,6 +71,12 @@ export interface OficioPdfInput {
    * tem diagramação própria. Ausentes = padrão (topo 120, base 150, lados 70).
    */
   timbradoMargens?: { topo?: number | null; base?: number | null; lados?: number | null } | null;
+  /**
+   * Fotos anexadas à demanda (JPG/PNG) — cada uma vira uma PÁGINA EXTRA no fim
+   * do ofício, como na praxe de gabinete: o documento segue com o registro
+   * fotográfico em anexo. Vazio/ausente = ofício sem páginas de anexo.
+   */
+  anexosImagens?: { url: string; nome: string }[];
   marca: { appName: string | null; accentHex: string | null; logoUrl: string | null };
 }
 
@@ -103,6 +116,53 @@ function Corpo({ d, nome, cargo }: { d: OficioPdfInput; nome: string; cargo: str
   );
 }
 
+/**
+ * Páginas de ANEXO: uma FOTO por página, NO MESMO papel timbrado do ofício (o
+ * cabeçalho se repete), preservando a diagramação. Sem timbrado, usa um
+ * cabeçalho gerado com a marca. Vazio = nenhuma página extra.
+ */
+function anexoPages(
+  d: OficioPdfInput,
+  marcaNome: string,
+  accent: string,
+  logoUrl: string | null,
+): React.ReactElement[] {
+  const imgs = d.anexosImagens ?? [];
+  if (imgs.length === 0) return [];
+
+  if (d.timbradoUrl) {
+    const m = d.timbradoMargens ?? {};
+    const margens = {
+      paddingTop: m.topo ?? TIMBRADO_MARGENS_PADRAO.topo,
+      paddingBottom: m.base ?? TIMBRADO_MARGENS_PADRAO.base,
+      paddingHorizontal: m.lados ?? TIMBRADO_MARGENS_PADRAO.lados,
+    };
+    const timbrado = d.timbradoUrl;
+    return imgs.map((a, i) => (
+      <Page key={`anexo-${i}`} size="A4" style={styles.pageTimbrado}>
+        <Image src={timbrado} style={styles.fundoTimbrado} fixed />
+        <View style={[margens, { flexGrow: 1 }]}>
+          <View style={styles.anexoMoldura}>
+            <Image src={a.url} style={styles.anexoImagem} />
+          </View>
+        </View>
+      </Page>
+    ));
+  }
+
+  return imgs.map((a, i) => (
+    <Page key={`anexo-${i}`} size="A4" style={styles.pageAnexo}>
+      <View style={[styles.anexoHeader, { borderBottomColor: accent }]}>
+        <Text style={[styles.marcaNome, { color: accent }]}>{marcaNome}</Text>
+        {logoUrl ? <Image src={logoUrl} style={styles.logo} /> : null}
+      </View>
+      <View style={styles.anexoMoldura}>
+        <Image src={a.url} style={styles.anexoImagem} />
+      </View>
+    </Page>
+  ));
+}
+
 function OficioDoc({ d }: { d: OficioPdfInput }): React.ReactElement {
   const accent = d.marca.accentHex ?? "#1A1A1A";
   const nome = (d.nome ?? d.marca.appName ?? "Gabinete").trim();
@@ -110,6 +170,7 @@ function OficioDoc({ d }: { d: OficioPdfInput }): React.ReactElement {
   const cargo = (d.cargo ?? "Gabinete Parlamentar").trim();
   const logoUrl = d.marca.logoUrl;
   const numeroFmt = `OFÍCIO Nº ${String(d.numero).padStart(3, "0")}/${d.ano}`;
+  const anexos = anexoPages(d, nome, accent, logoUrl);
 
   // Com papel timbrado: a imagem é o fundo da página inteira (cabeçalho e rodapé
   // já vêm nela), e o texto entra só na faixa do corpo.
@@ -128,6 +189,7 @@ function OficioDoc({ d }: { d: OficioPdfInput }): React.ReactElement {
             <Corpo d={d} nome={nome} cargo={cargo} />
           </View>
         </Page>
+        {anexos}
       </Document>
     );
   }
@@ -152,6 +214,7 @@ function OficioDoc({ d }: { d: OficioPdfInput }): React.ReactElement {
           render={({ pageNumber, totalPages }) => `${numeroFmt} — página ${pageNumber} de ${totalPages}`}
         />
       </Page>
+      {anexos}
     </Document>
   );
 }

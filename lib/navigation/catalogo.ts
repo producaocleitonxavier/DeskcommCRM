@@ -1160,12 +1160,12 @@ export const NAV_CATALOG = [
   },
   {
     href: "/app/politico/identidade",
-    label: "Identidade",
-    description: "Logo, assinatura e dados do parlamentar no timbre dos ofícios.",
+    label: "Identidade do Mandato",
+    description: "Papel timbrado, assinatura e dados do parlamentar que entram nos ofícios.",
     icon: "IdentificationCard",
     group: "gabinete",
     minRole: "manager",
-    sidebar: false, // aba de Portal da Transparência (config do gabinete)
+    sidebar: true,
   },
 
   // ── Rotas políticas que existiam sem porta no menu (Prompt 6) ────────

@@ -108,6 +108,23 @@ export async function gerarOficioDemanda(demandaId: string): Promise<OficioResul
   const assinaturaUrl = await assinarIdentidade(ident?.assinatura_path ?? null);
   const timbradoUrl = await assinarIdentidade(ident?.timbrado_path ?? null);
 
+  // Fotos anexadas à demanda (JPG/PNG) → uma PÁGINA EXTRA por foto, no timbrado.
+  // Só jpeg/png: são os formatos que o @react-pdf renderiza com segurança (um
+  // webp/heic quebraria o render inteiro). As imagens vêm do MESMO bucket do
+  // ofício (gabinete-anexos), por URL assinada.
+  const anexosImagens: { url: string; nome: string }[] = [];
+  const { data: fotos } = await db
+    .from("pol_demanda_anexos")
+    .select("storage_path, nome_arquivo, media_mime, created_at")
+    .eq("organization_id", org.orgId)
+    .eq("demanda_id", demandaId)
+    .in("media_mime", ["image/jpeg", "image/jpg", "image/png"])
+    .order("created_at", { ascending: true });
+  for (const f of (fotos ?? []) as { storage_path: string; nome_arquivo: string | null }[]) {
+    const { data: s } = await admin.storage.from(BUCKET).createSignedUrl(f.storage_path, 60 * 60);
+    if (s?.signedUrl) anexosImagens.push({ url: s.signedUrl, nome: (f.nome_arquivo ?? "").trim() });
+  }
+
   let buffer: Buffer;
   try {
     buffer = await renderOficioPdf({
@@ -127,6 +144,7 @@ export async function gerarOficioDemanda(demandaId: string): Promise<OficioResul
         base: mmParaPt(ident?.timbrado_margem_base_mm),
         lados: mmParaPt(ident?.timbrado_margem_lados_mm),
       },
+      anexosImagens,
       marca: { appName: marca.appName, accentHex: marca.accentHex, logoUrl: logoProprio ?? marca.logoUrl },
     });
   } catch {
