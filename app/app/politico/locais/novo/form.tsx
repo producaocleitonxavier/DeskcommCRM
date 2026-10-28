@@ -249,7 +249,7 @@ export default function NovoLocalForm({ materiais }: { materiais: MaterialOpcao[
                       <option value="">Escolher depois</option>
                       {materiais.map((m) => <option key={m.id} value={m.id}>{m.titulo}</option>)}
                     </select>
-                    <p className="mt-1.5 text-xs" style={{ color: "var(--color-text-subtle)" }}>O envio automático começa quando o número dedicado estiver conectado (Fase 2C).</p>
+                    <p className="mt-1.5 text-xs" style={{ color: "var(--color-text-subtle)" }}>O envio automático começa quando o número dedicado estiver conectado (em breve).</p>
                   </>
                 )}
               </div>

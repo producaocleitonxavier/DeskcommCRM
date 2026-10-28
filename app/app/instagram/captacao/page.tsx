@@ -242,7 +242,7 @@ export default async function CaptacaoInstagramPage() {
             Captação do Instagram
           </h1>
           <p className="text-[15px] mt-0.5" style={{ color: "var(--color-text-muted)" }}>
-            De quem interage a lead pronto pra 2028 — qualificado por {alvoLabel}, com WhatsApp.
+            De quem interage a apoiador pronto pra 2028 — qualificado por {alvoLabel}, com WhatsApp.
           </p>
           {ehAdmin && (
             <Link
@@ -261,7 +261,7 @@ export default async function CaptacaoInstagramPage() {
         <div className="flex gap-3">
           {[
             { label: "Captados", v: total },
-            { label: "Qualificados MG/BH", v: qualificados },
+            { label: "Qualificados", v: qualificados },
             { label: "Com WhatsApp", v: comWhatsapp, destaque: true },
           ].map((k) => (
             <div key={k.label} className="wr-card-dark px-4 py-2.5 text-center">
@@ -298,7 +298,7 @@ export default async function CaptacaoInstagramPage() {
       {total === 0 ? (
         <section className="wr-card-accent p-7 text-center">
           <h2 className="font-heading text-[20px] font-bold" style={{ color: "#F3F4EC" }}>
-            Nenhum lead captado ainda
+            Nenhum contato captado ainda
           </h2>
           <p className="text-sm mt-2 max-w-xl mx-auto" style={{ color: "#B9BCC6" }}>
             Quando a automação de captação estiver ligada e o Instagram publicado, cada pessoa que
