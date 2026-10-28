@@ -41,7 +41,7 @@ export default async function AnaliseHubPage() {
       modulosLigados={await modulosLigados(createAdminClient())}
       title={traduzir("Análise", idioma)}
       subtitle={traduzir(
-        "Como o negócio foi no período — e o histórico para quando alguém perguntar por quê.",
+        "Como foi o período — e o histórico para quando alguém perguntar por quê.",
         idioma,
       )}
       locale={idioma}

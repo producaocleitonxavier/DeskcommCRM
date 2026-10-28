@@ -190,7 +190,7 @@ export function hubSections(
     destinosDaInterface(settings, isPlatformAdmin, role, modulos, capacidades).map((d) => d.href),
   );
   for (const d of NAV_DESTINATIONS) {
-    if (d.group !== group || !visible.has(d.href)) continue;
+    if (d.group !== group || !visible.has(d.href) || d.hubOculto) continue;
     const secao = d.section ?? "";
     const atual = porSecao.get(secao);
     if (atual) atual.push(d);

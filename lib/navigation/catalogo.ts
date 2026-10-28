@@ -57,6 +57,12 @@ export interface NavMetadata {
   minRole?: Role;
   /** Ausente = só no hub. `true` = uso diário, sobe para o sidebar. */
   sidebar?: boolean;
+  /**
+   * `true` = fica FORA do hub do grupo também (só alcançável por URL/⌘K). Para
+   * telas herdadas do CRM comercial que não cabem no nicho político (ex.:
+   * "Desempenho" lê o funil de VENDAS crm_stages — a visão política é o Painel).
+   */
+  hubOculto?: boolean;
   healthDot?: boolean;
   /**
    * Contador de pendências ao lado do rótulo. `casos`: casos em que a IA espera
@@ -1274,6 +1280,10 @@ export const NAV_CATALOG = [
     icon: "ChartBar",
     group: "analise",
     section: "Os números do período",
+    // Fora do HUB também no fork político (decisão 2026-10-27): lê o funil de
+    // VENDAS (crm_stages — carrinho/pago/enviado), irrelevante a um gabinete. A
+    // visão política é o Painel (/app/politico/dashboard). Rota mantida (URL/⌘K).
+    hubOculto: true,
     // Oculto do menu no fork político: esta tela lê o CRM de VENDAS (crm_leads /
     // crm_stages — "carrinho abandonado", "negócios ganhos"), vazio/irrelevante
     // para um gabinete. A visão estratégica política é o "Painel" (Dashboard,
