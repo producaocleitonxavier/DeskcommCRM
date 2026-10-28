@@ -105,6 +105,10 @@ export async function registrarCliqueVideo(
     });
     // 23505 = mesmo visitante/dia já contado: idempotente, não é erro.
     if (error && error.code !== "23505") throw new Error(error.message);
+    // NÃO recomputa o índice aqui: isso travaria o redirect público. O alcance de
+    // vídeo é COMPUTADO DOS FATOS em `recomputarEngajamento` (Fase 3, +0,5/abertura,
+    // teto +5) e entra no score do compartilhador no próximo recompute dele —
+    // idempotente, mesma doutrina do resto do índice.
     return { contou: !error };
   } catch (err) {
     logger.warn("[video-share] registrar clique falhou", {

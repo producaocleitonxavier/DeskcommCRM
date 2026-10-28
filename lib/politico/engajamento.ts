@@ -12,6 +12,8 @@
  *   cadastrou no QR (confirmou) +6
  *   consentiu continuar          +10
  *   (indicou quem se cadastrou  +10/pessoa — Fase 2)
+ *   (abertura do vídeo pessoal  +0,5/abertura, teto +5 — Fase 3; sinal SOFT:
+ *    alcance não convence sozinho, mas mostra quem multiplica)
  *
  * ═══ Estágio por índice (SÓ AVANÇA, nunca rebaixa) ═══
  *   simpatizante ≥5 · apoiador ≥20 · militante ≥50 · voto_certo = eleição (manual)
@@ -30,9 +32,11 @@ import { inscreverGraduadoNoDrip } from "@/lib/politico/drip-engajamento";
 const ORDEM_ESTAGIO = ["novo_cadastro", "simpatizante", "apoiador", "militante", "voto_certo"] as const;
 const ORDEM_TEMP = ["frio", "morno", "quente"] as const;
 
-const PESO = { material: 1, respostaDisparo: 5, qrCadastro: 6, consentiu: 10, indicado: 10 } as const;
+const PESO = { material: 1, respostaDisparo: 5, qrCadastro: 6, consentiu: 10, indicado: 10, videoAbertura: 0.5 } as const;
 /** Teto de respostas pontuadas — evita que responder 50x infle o índice. */
 const TETO_RESPOSTAS = 5;
+/** Teto de aberturas de vídeo pontuadas (10 × 0,5 = +5 máx). */
+const TETO_VIDEO_ABERTURAS = 10;
 /** Trouxe esta quantidade de gente = Multiplicador/Militante, direto. */
 const INDICADOS_PARA_MILITANTE = 3;
 
@@ -110,12 +114,31 @@ export async function recomputarEngajamento(
     const consentiu = lead.consent_at ? 1 : 0;
     const indicados = indicadosQ.count ?? 0; // pessoas que ELA trouxe
 
-    const score =
+    // Fase 3: aberturas dos links de vídeo PESSOAIS deste contato (o alcance que
+    // ele gerou). Sinal SOFT (+0,5, teto +5). Clique é por visitante/dia (dedup).
+    let aberturasVideo = 0;
+    const { data: sharesDele } = await admin
+      .from("pol_video_shares")
+      .select("id")
+      .eq("organization_id", organizationId)
+      .eq("sharer_contact_id", contactId);
+    const shareIds = ((sharesDele ?? []) as { id: string }[]).map((s) => s.id);
+    if (shareIds.length) {
+      const { count } = await admin
+        .from("pol_video_cliques")
+        .select("id", { count: "exact", head: true })
+        .in("share_id", shareIds);
+      aberturasVideo = Math.min(count ?? 0, TETO_VIDEO_ABERTURAS);
+    }
+
+    const score = Math.round(
       materiais * PESO.material +
-      respostas * PESO.respostaDisparo +
-      cadastrouQr * PESO.qrCadastro +
-      consentiu * PESO.consentiu +
-      indicados * PESO.indicado;
+        respostas * PESO.respostaDisparo +
+        cadastrouQr * PESO.qrCadastro +
+        consentiu * PESO.consentiu +
+        indicados * PESO.indicado +
+        aberturasVideo * PESO.videoAbertura,
+    );
 
     const ultimaAtividade = (contato.data as { last_activity_at: string | null } | null)?.last_activity_at ?? null;
     const dias = ultimaAtividade
