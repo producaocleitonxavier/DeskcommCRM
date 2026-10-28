@@ -28,6 +28,9 @@ const styles = StyleSheet.create({
   assinaturaCargo: { fontSize: 9, color: "#555" },
   // Bloco do destinatário/autoridade no rodapé do corpo (como na praxe real).
   destinatarioRodape: { marginTop: 32, fontSize: 11, lineHeight: 1.4 },
+  // Destinatário no TOPO (estilo Denilson) + linha "Assunto:".
+  destinatarioTopo: { marginBottom: 20, fontSize: 11, lineHeight: 1.4 },
+  assuntoLinha: { marginBottom: 16, fontSize: 11, fontWeight: 700 },
   footer: { position: "absolute", bottom: 28, left: 56, right: 56, fontSize: 8, color: "#888", textAlign: "center", borderTopWidth: 0.5, borderTopColor: "#CCC", paddingTop: 6 },
   // Timbrado: página sem padding (a imagem é o fundo) + faixa de conteúdo que
   // limpa o cabeçalho (~120pt) e o rodapé (~150pt) típicos do papel timbrado.
@@ -64,6 +67,14 @@ export interface OficioPdfInput {
    * genérico do topo.
    */
   destinatario?: string | null;
+  /**
+   * ONDE o bloco do destinatário aparece: "topo" (logo após a data, estilo
+   * Denilson/Contagem) ou "rodape" (após a assinatura, estilo Cleiton/BH).
+   * Padrão "rodape". Config do gabinete (Identidade do Mandato).
+   */
+  destinatarioPosicao?: "topo" | "rodape";
+  /** Linha "Assunto:" (negrito) antes do corpo. Só renderiza se preenchida. */
+  assunto?: string | null;
   /** Texto do encaminhamento — o corpo do ofício. */
   corpo: string;
   /** Órgão de destino (ex.: "Secretaria de Obras"); null vira genérico. */
@@ -126,15 +137,24 @@ function numeroDoOficio(d: OficioPdfInput): string {
 function Corpo({ d, nome, cargo }: { d: OficioPdfInput; nome: string; cargo: string }): React.ReactElement {
   const destino = d.orgao?.trim() ? `Ao(À) ${d.orgao.trim()}` : "Ao órgão competente";
   const destinatarioManual = (d.destinatario ?? "").trim();
+  const assunto = (d.assunto ?? "").trim();
+  const noTopo = d.destinatarioPosicao === "topo";
   return (
     <>
       <View style={styles.linhaTopo}>
         <Text style={styles.numero}>{numeroDoOficio(d)}</Text>
         <Text style={styles.data}>{dataPorExtenso(d.dataISO, d.cidade)}</Text>
       </View>
-      {/* Topo: só o "Ao(À) órgão" genérico quando NÃO há bloco manual (senão ele
-          vai completo no rodapé, como no modelo real). */}
+      {/* Destinatário no TOPO (estilo Denilson) — logo após a data. */}
+      {destinatarioManual && noTopo ? (
+        <View style={styles.destinatarioTopo}>
+          <Text>{destinatarioManual}</Text>
+        </View>
+      ) : null}
+      {/* "Ao(À) órgão" genérico só quando NÃO há bloco manual nenhum. */}
       {destinatarioManual ? null : <Text style={styles.destinatario}>{destino}</Text>}
+      {/* Linha "Assunto:" (quando preenchida). */}
+      {assunto ? <Text style={styles.assuntoLinha}>Assunto: {assunto}</Text> : null}
       <Text style={styles.corpo}>{d.corpo}</Text>
       <View style={styles.assinaturaBloco}>
         {d.assinaturaUrl ? <Image src={d.assinaturaUrl} style={styles.assinaturaImagem} /> : null}
@@ -142,7 +162,8 @@ function Corpo({ d, nome, cargo }: { d: OficioPdfInput; nome: string; cargo: str
         <Text style={styles.assinaturaNome}>{nome}</Text>
         <Text style={styles.assinaturaCargo}>{cargo}</Text>
       </View>
-      {destinatarioManual ? (
+      {/* Destinatário no RODAPÉ (estilo Cleiton) — após a assinatura. */}
+      {destinatarioManual && !noTopo ? (
         <View style={styles.destinatarioRodape}>
           <Text>{destinatarioManual}</Text>
         </View>

@@ -31,7 +31,7 @@ export async function gerarOficioDemanda(demandaId: string): Promise<OficioResul
 
   const { data: dem, error } = await db
     .from("demandas")
-    .select("id, pol_encaminhamento_ia, pol_orgao_destino, pol_oficio_rotulo, pol_oficio_destinatario")
+    .select("id, pol_encaminhamento_ia, pol_orgao_destino, pol_oficio_rotulo, pol_oficio_destinatario, pol_oficio_assunto")
     .eq("organization_id", org.orgId)
     .eq("id", demandaId)
     .maybeSingle();
@@ -42,6 +42,7 @@ export async function gerarOficioDemanda(demandaId: string): Promise<OficioResul
     pol_orgao_destino: string | null;
     pol_oficio_rotulo: string | null;
     pol_oficio_destinatario: string | null;
+    pol_oficio_assunto: string | null;
   };
 
   const corpo = (d.pol_encaminhamento_ia ?? "").trim();
@@ -64,7 +65,7 @@ export async function gerarOficioDemanda(demandaId: string): Promise<OficioResul
   const { data: cfg } = await db
     .from("pol_gabinete_config")
     .select(
-      "nome_parlamentar, cargo, subtitulo, cidade, logo_path, assinatura_path, timbrado_path, timbrado_margem_topo_mm, timbrado_margem_base_mm, timbrado_margem_lados_mm",
+      "nome_parlamentar, cargo, subtitulo, cidade, logo_path, assinatura_path, timbrado_path, timbrado_margem_topo_mm, timbrado_margem_base_mm, timbrado_margem_lados_mm, oficio_destinatario_posicao",
     )
     .eq("organization_id", org.orgId)
     .maybeSingle();
@@ -79,6 +80,7 @@ export async function gerarOficioDemanda(demandaId: string): Promise<OficioResul
     timbrado_margem_topo_mm: number | null;
     timbrado_margem_base_mm: number | null;
     timbrado_margem_lados_mm: number | null;
+    oficio_destinatario_posicao: string | null;
   } | null;
   // mm → pontos (1mm ≈ 2.8346pt). null = usa o padrão do renderizador.
   const mmParaPt = (v: number | null | undefined): number | null =>
@@ -116,6 +118,8 @@ export async function gerarOficioDemanda(demandaId: string): Promise<OficioResul
       ano: agora.getFullYear(),
       numeroLabel: rotulo,
       destinatario,
+      destinatarioPosicao: ident?.oficio_destinatario_posicao === "topo" ? "topo" : "rodape",
+      assunto: (d.pol_oficio_assunto ?? "").trim() || null,
       corpo,
       orgao: d.pol_orgao_destino ?? null,
       cidade: ident?.cidade ?? null,

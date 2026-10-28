@@ -33,6 +33,7 @@ export interface DemandaDetalhe {
   pol_encaminhamento_ia: string | null;
   pol_oficio_rotulo: string | null;
   pol_oficio_destinatario: string | null;
+  pol_oficio_assunto: string | null;
   pol_municipio: string | null;
   pol_territory_id: string | null;
   pol_lideranca_id: string | null;
@@ -62,6 +63,8 @@ export interface Props {
   /** Voz do Mandato pronta (clone + consentimento + ligada)? Liga a opção de
    * mandar o aviso também como recado em áudio na voz do político. */
   vozArmada?: boolean;
+  /** Gabinete usa a linha "Assunto:" no ofício? Liga o campo de assunto. */
+  mostrarAssuntoOficio?: boolean;
 }
 
 const TIPOS: Opcao[] = [
@@ -113,7 +116,7 @@ function paraInputDate(d: string | null): string {
   return new Date(d).toISOString().slice(0, 10);
 }
 
-export default function DetalheDemandaClient({ demanda, assessores, eventos, vozArmada }: Props) {
+export default function DetalheDemandaClient({ demanda, assessores, eventos, vozArmada, mostrarAssuntoOficio }: Props) {
   const router = useRouter();
 
   const [d, setD] = useState<DemandaDetalhe>(demanda);
@@ -141,6 +144,7 @@ export default function DetalheDemandaClient({ demanda, assessores, eventos, voz
   const [encaminhamento, setEncaminhamento] = useState(d.pol_encaminhamento_ia ?? "");
   const [numeroOficio, setNumeroOficio] = useState(d.pol_oficio_rotulo ?? "");
   const [destinatarioOficio, setDestinatarioOficio] = useState(d.pol_oficio_destinatario ?? "");
+  const [assuntoOficio, setAssuntoOficio] = useState(d.pol_oficio_assunto ?? "");
 
   const fechada = d.estado === "resolvida" || d.estado === "encerrada";
 
@@ -176,6 +180,7 @@ export default function DetalheDemandaClient({ demanda, assessores, eventos, voz
       pol_encaminhamento_ia: encaminhamento.trim() || null,
       pol_oficio_rotulo: numeroOficio.trim() || null,
       pol_oficio_destinatario: destinatarioOficio.trim() || null,
+      pol_oficio_assunto: assuntoOficio.trim() || null,
       prazo_em: prazo ? new Date(prazo + "T12:00:00").toISOString() : null,
     };
     const ok = await persistir(campos, campos as Partial<DemandaDetalhe>);
@@ -497,6 +502,7 @@ export default function DetalheDemandaClient({ demanda, assessores, eventos, voz
                 await atualizarRegistro("demandas", d.id, {
                   pol_oficio_rotulo: numeroOficio.trim(),
                   pol_oficio_destinatario: destinatarioOficio.trim() || null,
+                  pol_oficio_assunto: assuntoOficio.trim() || null,
                 });
                 const res = await gerarOficioDemanda(d.id);
                 setGerandoOficio(false);
@@ -553,6 +559,23 @@ export default function DetalheDemandaClient({ demanda, assessores, eventos, voz
               Escreva do jeito que o seu gabinete numera. É esse número que sai no ofício.
             </p>
           </div>
+          {mostrarAssuntoOficio && (
+            <div>
+              <label className="mb-1 block text-sm font-semibold" style={{ color: "var(--color-text)" }}>
+                Assunto do ofício
+              </label>
+              <input
+                value={assuntoOficio}
+                onChange={(e) => setAssuntoOficio(e.target.value)}
+                placeholder="Ex.: Solicitação de poda de árvore na Rua Campinas, nº 715, bairro Esplanada"
+                className="w-full rounded-lg px-3.5 py-2.5 text-sm outline-none"
+                style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)", color: "var(--color-text)" }}
+              />
+              <p className="mt-1 text-xs" style={{ color: "var(--color-text-subtle)" }}>
+                Resumo curto do pedido — aparece em negrito no topo do ofício.
+              </p>
+            </div>
+          )}
           <div>
             <label className="mb-1 block text-sm font-semibold" style={{ color: "var(--color-text)" }}>
               Para quem vai o ofício (autoridade)

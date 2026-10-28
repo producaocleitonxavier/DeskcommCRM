@@ -32,6 +32,9 @@ export interface IdentidadeGabinete {
   timbradoMargemTopoMm: number;
   timbradoMargemBaseMm: number;
   timbradoMargemLadosMm: number;
+  /** Estilo do ofício (config do gabinete). */
+  oficioDestinatarioPosicao: "topo" | "rodape";
+  oficioMostrarAssunto: boolean;
 }
 
 export type IdentidadeResultado = { ok: true } | { ok: false; erro: string };
@@ -55,6 +58,8 @@ export async function obterIdentidade(): Promise<IdentidadeGabinete> {
     timbradoMargemTopoMm: TIMBRADO_MARGENS_MM_PADRAO.topo,
     timbradoMargemBaseMm: TIMBRADO_MARGENS_MM_PADRAO.base,
     timbradoMargemLadosMm: TIMBRADO_MARGENS_MM_PADRAO.lados,
+    oficioDestinatarioPosicao: "rodape",
+    oficioMostrarAssunto: false,
   };
   const org = await orgAtiva();
   if (!org) return vazio;
@@ -62,7 +67,7 @@ export async function obterIdentidade(): Promise<IdentidadeGabinete> {
   const { data } = await db
     .from("pol_gabinete_config")
     .select(
-      "nome_parlamentar, cargo, subtitulo, cidade, logo_path, assinatura_path, timbrado_path, timbrado_margem_topo_mm, timbrado_margem_base_mm, timbrado_margem_lados_mm",
+      "nome_parlamentar, cargo, subtitulo, cidade, logo_path, assinatura_path, timbrado_path, timbrado_margem_topo_mm, timbrado_margem_base_mm, timbrado_margem_lados_mm, oficio_destinatario_posicao, oficio_mostrar_assunto",
     )
     .eq("organization_id", org)
     .maybeSingle();
@@ -78,6 +83,8 @@ export async function obterIdentidade(): Promise<IdentidadeGabinete> {
     timbrado_margem_topo_mm: number | null;
     timbrado_margem_base_mm: number | null;
     timbrado_margem_lados_mm: number | null;
+    oficio_destinatario_posicao: string | null;
+    oficio_mostrar_assunto: boolean | null;
   };
   const admin = createAdminClient();
   const assinar = async (path: string | null): Promise<string | null> => {
@@ -96,6 +103,8 @@ export async function obterIdentidade(): Promise<IdentidadeGabinete> {
     timbradoMargemTopoMm: row.timbrado_margem_topo_mm ?? TIMBRADO_MARGENS_MM_PADRAO.topo,
     timbradoMargemBaseMm: row.timbrado_margem_base_mm ?? TIMBRADO_MARGENS_MM_PADRAO.base,
     timbradoMargemLadosMm: row.timbrado_margem_lados_mm ?? TIMBRADO_MARGENS_MM_PADRAO.lados,
+    oficioDestinatarioPosicao: row.oficio_destinatario_posicao === "topo" ? "topo" : "rodape",
+    oficioMostrarAssunto: row.oficio_mostrar_assunto === true,
   };
 }
 
@@ -111,6 +120,8 @@ export async function salvarIdentidade(campos: {
   timbrado_margem_topo_mm?: number | null;
   timbrado_margem_base_mm?: number | null;
   timbrado_margem_lados_mm?: number | null;
+  oficio_destinatario_posicao?: "topo" | "rodape";
+  oficio_mostrar_assunto?: boolean;
 }): Promise<IdentidadeResultado> {
   const org = await orgAtiva();
   if (!org) return { ok: false, erro: "Sessão ou organização inválida." };
@@ -128,6 +139,8 @@ export async function salvarIdentidade(campos: {
   if ("timbrado_margem_topo_mm" in campos) patch.timbrado_margem_topo_mm = mm(campos.timbrado_margem_topo_mm);
   if ("timbrado_margem_base_mm" in campos) patch.timbrado_margem_base_mm = mm(campos.timbrado_margem_base_mm);
   if ("timbrado_margem_lados_mm" in campos) patch.timbrado_margem_lados_mm = mm(campos.timbrado_margem_lados_mm);
+  if ("oficio_destinatario_posicao" in campos) patch.oficio_destinatario_posicao = campos.oficio_destinatario_posicao === "topo" ? "topo" : "rodape";
+  if ("oficio_mostrar_assunto" in campos) patch.oficio_mostrar_assunto = campos.oficio_mostrar_assunto === true;
 
   const { error } = await db.from("pol_gabinete_config").upsert(patch, { onConflict: "organization_id" });
   if (error) return { ok: false, erro: error.message };

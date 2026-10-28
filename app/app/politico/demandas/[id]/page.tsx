@@ -32,7 +32,7 @@ export default async function DemandaDetalhePage({
     db
       .from("demandas")
       .select(
-        "id, assunto, estado, origem, pol_tipo, pol_prioridade, pol_orgao_destino, pol_encaminhamento_ia, pol_oficio_rotulo, pol_oficio_destinatario, pol_municipio, pol_territory_id, pol_lideranca_id, dono_kind, dono_user_id, pol_assessor_nome, aberta_em, prazo_em, desfecho, fechada_em, created_at, updated_at, contacts(name, phone_number)",
+        "id, assunto, estado, origem, pol_tipo, pol_prioridade, pol_orgao_destino, pol_encaminhamento_ia, pol_oficio_rotulo, pol_oficio_destinatario, pol_oficio_assunto, pol_municipio, pol_territory_id, pol_lideranca_id, dono_kind, dono_user_id, pol_assessor_nome, aberta_em, prazo_em, desfecho, fechada_em, created_at, updated_at, contacts(name, phone_number)",
       )
       .eq("organization_id", org.orgId)
       .eq("id", id)
@@ -51,6 +51,14 @@ export default async function DemandaDetalhePage({
 
   // Voz do Mandato armada? (liga a opção "incluir recado em áudio" no aviso.)
   const vozOk = vozArmada(await lerVozConfig(db, org.orgId));
+
+  // Gabinete usa linha "Assunto:" no ofício? (liga o campo na tela.)
+  const { data: gabRow } = await db
+    .from("pol_gabinete_config")
+    .select("oficio_mostrar_assunto")
+    .eq("organization_id", org.orgId)
+    .maybeSingle();
+  const mostrarAssuntoOficio = (gabRow?.oficio_mostrar_assunto as boolean | null) === true;
 
   const membros = (membrosRes.data ?? []) as { user_id: string; role: string }[];
   const nomes = await nomesDosAtendentes(membros.map((m) => m.user_id));
@@ -71,6 +79,7 @@ export default async function DemandaDetalhePage({
       assessores={assessores}
       eventos={eventos}
       vozArmada={vozOk}
+      mostrarAssuntoOficio={mostrarAssuntoOficio}
     />
   );
 }

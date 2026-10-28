@@ -42,6 +42,10 @@ export default function IdentidadeClient({ inicial }: { inicial: IdentidadeGabin
   const [margemLados, setMargemLados] = useState(String(inicial.timbradoMargemLadosMm));
   const [salvandoMargens, setSalvandoMargens] = useState(false);
   const [margensOk, setMargensOk] = useState(false);
+  const [destPosicao, setDestPosicao] = useState<"topo" | "rodape">(inicial.oficioDestinatarioPosicao);
+  const [mostrarAssunto, setMostrarAssunto] = useState(inicial.oficioMostrarAssunto);
+  const [salvandoEstilo, setSalvandoEstilo] = useState(false);
+  const [estiloOk, setEstiloOk] = useState(false);
 
   const [salvando, setSalvando] = useState(false);
   const [okMsg, setOkMsg] = useState(false);
@@ -79,6 +83,17 @@ export default function IdentidadeClient({ inicial }: { inicial: IdentidadeGabin
     setSalvandoMargens(false);
     if (!res.ok) return setErro(res.erro);
     setMargensOk(true);
+    router.refresh();
+  }
+
+  async function salvarEstilo() {
+    setErro(null);
+    setEstiloOk(false);
+    setSalvandoEstilo(true);
+    const res = await salvarIdentidade({ oficio_destinatario_posicao: destPosicao, oficio_mostrar_assunto: mostrarAssunto });
+    setSalvandoEstilo(false);
+    if (!res.ok) return setErro(res.erro);
+    setEstiloOk(true);
     router.refresh();
   }
 
@@ -219,6 +234,62 @@ export default function IdentidadeClient({ inicial }: { inicial: IdentidadeGabin
             <Check className="h-4 w-4" aria-hidden /> {salvandoMargens ? "Salvando…" : "Salvar margens"}
           </button>
           {margensOk && <span className="text-sm" style={{ color: "#22C55E" }}>Margens salvas.</span>}
+        </div>
+      </section>
+
+      {/* Estilo do ofício — cada gabinete monta de um jeito (define 1x) */}
+      <section className="wr-card space-y-4 p-5 sm:p-6">
+        <div>
+          <h2 className="font-heading text-base font-bold" style={{ color: "var(--color-text)" }}>Estilo do ofício</h2>
+          <p className="mt-0.5 text-xs" style={{ color: "var(--color-text-subtle)" }}>
+            Cada gabinete monta o ofício de um jeito. Ajuste aqui uma vez — vale para todos os ofícios.
+          </p>
+        </div>
+
+        <div>
+          <label className="mb-1.5 block text-sm font-semibold" style={{ color: "var(--color-text)" }}>
+            Onde fica o destinatário (a autoridade)
+          </label>
+          <div className="flex flex-wrap gap-2">
+            {([
+              { v: "rodape", l: "No rodapé (depois da assinatura)" },
+              { v: "topo", l: "No topo (logo após a data)" },
+            ] as const).map((opt) => {
+              const ativo = destPosicao === opt.v;
+              return (
+                <button
+                  key={opt.v}
+                  type="button"
+                  onClick={() => setDestPosicao(opt.v)}
+                  className="rounded-full px-4 py-2 text-sm font-semibold transition-colors"
+                  style={{
+                    border: `1px solid ${ativo ? "#D7F36A" : "var(--color-border)"}`,
+                    background: ativo ? "rgba(215,243,106,0.14)" : "var(--color-surface-elevated)",
+                    color: ativo ? "#D7F36A" : "var(--color-text-muted)",
+                  }}
+                >
+                  {opt.l}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        <label className="flex cursor-pointer items-start gap-2.5">
+          <input type="checkbox" checked={mostrarAssunto} onChange={(e) => setMostrarAssunto(e.target.checked)} className="mt-0.5" />
+          <span className="text-sm" style={{ color: "var(--color-text)" }}>
+            Usar linha <strong>&quot;Assunto:&quot;</strong> no ofício.{" "}
+            <span className="text-xs" style={{ color: "var(--color-text-subtle)" }}>
+              Liga um campo de assunto na demanda, que aparece em negrito antes do texto.
+            </span>
+          </span>
+        </label>
+
+        <div className="flex items-center gap-3">
+          <button type="button" disabled={salvandoEstilo} onClick={salvarEstilo} className="wr-btn-dark inline-flex items-center gap-2 disabled:opacity-60">
+            <Check className="h-4 w-4" aria-hidden /> {salvandoEstilo ? "Salvando…" : "Salvar estilo"}
+          </button>
+          {estiloOk && <span className="text-sm" style={{ color: "#22C55E" }}>Estilo salvo.</span>}
         </div>
       </section>
     </div>
