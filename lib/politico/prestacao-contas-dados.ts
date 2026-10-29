@@ -5,8 +5,27 @@
  * pol_demanda_eventos, pol_obras, pol_emendas, contacts); não refaz nada.
  */
 import { createClient } from "@/lib/supabase/server";
+import { CHAVE_GABINETE } from "@/lib/politico/aviso-de-resolucao";
 
 export type Periodo = "mes" | "trimestre" | "mandato";
+
+/** Chave das metas em settings.gabinete. Metas são do MANDATO (total). */
+export const CHAVE_METAS = "metas";
+
+export interface MetasDoMandato {
+  demandas: number | null;
+  oficios: number | null;
+  obras: number | null;
+  base: number | null;
+}
+
+export function lerMetas(settings: unknown): MetasDoMandato {
+  const s = (settings ?? {}) as Record<string, unknown>;
+  const gab = (s[CHAVE_GABINETE] ?? {}) as Record<string, unknown>;
+  const m = (gab[CHAVE_METAS] ?? {}) as Record<string, unknown>;
+  const n = (v: unknown): number | null => (typeof v === "number" && v > 0 ? v : null);
+  return { demandas: n(m.demandas), oficios: n(m.oficios), obras: n(m.obras), base: n(m.base) };
+}
 
 export interface PrestacaoContas {
   periodo: Periodo;
@@ -22,6 +41,9 @@ export interface PrestacaoContas {
   baseNovos: number;
   evolucao: { mes: string; valor: number }[];
   topBairros: { bairro: string; valor: number }[];
+  // Para as METAS do mandato: totais SEM filtro de período (o mandato inteiro).
+  totaisMandato: { demandas: number; oficios: number; obras: number; base: number };
+  metas: MetasDoMandato;
 }
 
 export const PERIODO_LABEL: Record<Periodo, string> = {
@@ -143,6 +165,17 @@ export async function buscarPrestacaoContas(orgId: string, periodo: Periodo): Pr
     .sort((a, b) => b.valor - a.valor)
     .slice(0, 5);
 
+  // Totais do MANDATO (sem período) — base das metas.
+  const demandasTotM = await contar(db, "demandas", orgId, (q) =>
+    q.eq("pol_gabinete", true).eq("estado", "resolvida").eq("pol_autoatendimento", false),
+  );
+  const oficiosTotM = await contar(db, "pol_demanda_eventos", orgId, (q) => q.eq("tipo", "oficio_emitido"));
+  // obrasEntregues já é sem período; base também.
+  const totaisMandato = { demandas: demandasTotM, oficios: oficiosTotM, obras: obrasEntregues, base: baseTotal };
+
+  const { data: orgRow } = await db.from("organizations").select("settings").eq("id", orgId).maybeSingle();
+  const metas = lerMetas((orgRow as { settings?: unknown } | null)?.settings);
+
   return {
     periodo,
     demandasAtendidas,
@@ -157,5 +190,7 @@ export async function buscarPrestacaoContas(orgId: string, periodo: Periodo): Pr
     baseNovos,
     evolucao,
     topBairros,
+    totaisMandato,
+    metas,
   };
 }
