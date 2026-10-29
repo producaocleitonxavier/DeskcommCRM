@@ -27,6 +27,8 @@ const bodySchema = z.object({
   telefone: z.string().trim().min(8).max(32),
   cidade: z.string().trim().max(120).optional(),
   bairro: z.string().trim().max(120).optional(),
+  endereco: z.string().trim().max(200).optional(),
+  nascimento: z.string().trim().max(20).optional(),
   website: z.string().optional(),
 });
 
@@ -67,8 +69,11 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ emenda: st
   const endereco: Record<string, unknown> = {};
   if (cidade) endereco.cidade = cidade;
   if (bairro) endereco.bairro = bairro;
+  if (parsed.data.endereco) endereco.endereco = parsed.data.endereco;
   const customFields: Record<string, unknown> = { origem_captacao: "link_emenda" };
   if (Object.keys(endereco).length > 0) customFields.endereco_gip = endereco;
+  // Data de nascimento (coluna birthdate) só com formato válido (YYYY-MM-DD).
+  const birthdate = parsed.data.nascimento && /^\d{4}-\d{2}-\d{2}$/.test(parsed.data.nascimento) ? parsed.data.nascimento : null;
 
   let contactId: string;
   const existente = await encontrarContatoPorTelefone(admin as never, orgId, telefone);
@@ -77,7 +82,7 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ emenda: st
   } else {
     const { data: novo, error: cErr } = await admin
       .from("contacts")
-      .insert({ organization_id: orgId, name: parsed.data.nome, phone_number: telefone, source: "form", custom_fields: customFields })
+      .insert({ organization_id: orgId, name: parsed.data.nome, phone_number: telefone, source: "form", custom_fields: customFields, ...(birthdate ? { birthdate } : {}) })
       .select("id")
       .maybeSingle();
     if (cErr || !novo) {

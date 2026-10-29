@@ -23,6 +23,8 @@ export default function CaptacaoEmendaClient({ emendaId, projeto, cidade, bairro
   const [telefone, setTelefone] = useState("");
   const [cidadeV, setCidade] = useState(cidade ?? "");
   const [bairroV, setBairro] = useState(bairro ?? "");
+  const [endereco, setEndereco] = useState("");
+  const [nascimento, setNascimento] = useState("");
   const [website, setWebsite] = useState("");
   const [enviando, setEnviando] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
@@ -38,7 +40,7 @@ export default function CaptacaoEmendaClient({ emendaId, projeto, cidade, bairro
     try {
       const res = await fetch(`/api/public/captacao-emenda/${emendaId}`, {
         method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ nome: nome.trim(), telefone: telefone.trim(), cidade: cidadeV.trim() || undefined, bairro: bairroV.trim() || undefined, website }),
+        body: JSON.stringify({ nome: nome.trim(), telefone: telefone.trim(), cidade: cidadeV.trim() || undefined, bairro: bairroV.trim() || undefined, endereco: endereco.trim() || undefined, nascimento: nascimento || undefined, website }),
       });
       if (!res.ok) {
         let msg = "Não foi possível enviar. Tente novamente.";
@@ -79,10 +81,12 @@ export default function CaptacaoEmendaClient({ emendaId, projeto, cidade, bairro
               {erro && <div role="alert" className="rounded-lg px-3 py-2 text-sm" style={{ background: "rgba(239,68,68,0.15)", color: "#FCA5A5" }}>{erro}</div>}
               <Campo label="Nome completo *"><input type="text" value={nome} onChange={(e) => setNome(e.target.value)} required className="campo" placeholder="Seu nome" /></Campo>
               <Campo label="WhatsApp *"><input type="tel" value={telefone} onChange={(e) => setTelefone(e.target.value)} required className="campo" placeholder="(31) 99999-9999" /></Campo>
+              <Campo label="Endereço"><input type="text" value={endereco} onChange={(e) => setEndereco(e.target.value)} className="campo" placeholder="Rua, número" /></Campo>
               <div className="grid grid-cols-2 gap-3">
                 <Campo label="Cidade"><input type="text" value={cidadeV} onChange={(e) => setCidade(e.target.value)} className="campo" placeholder="Cidade" /></Campo>
                 <Campo label="Bairro"><input type="text" value={bairroV} onChange={(e) => setBairro(e.target.value)} className="campo" placeholder="Bairro" /></Campo>
               </div>
+              <Campo label="Data de nascimento"><input type="date" value={nascimento} onChange={(e) => setNascimento(e.target.value)} className="campo" /></Campo>
               <input type="text" tabIndex={-1} autoComplete="off" value={website} onChange={(e) => setWebsite(e.target.value)} style={{ position: "absolute", left: "-9999px", width: 1, height: 1, opacity: 0 }} aria-hidden />
               <button type="submit" disabled={enviando} className="w-full rounded-full py-3 text-sm font-semibold disabled:opacity-60" style={{ background: "#D7F36A", color: "#14181F" }}>{enviando ? "Enviando…" : "Quero participar"}</button>
               <p className="text-center text-[11px]" style={{ color: "rgba(255,255,255,0.4)" }}>Ao enviar, você concorda em ser contatado(a) pelo gabinete.</p>

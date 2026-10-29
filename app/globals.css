@@ -687,7 +687,9 @@
 @utility wr-input {
   width: 100%;
   min-height: var(--wr-btn-min-h);
-  border-radius: var(--wr-btn-radius);
+  /* Campos de formulário QUADRADOS (retangular, raio pequeno) — não pill. O pill
+     cortava o texto em textareas no celular. Botões seguem pill (--wr-btn-radius). */
+  border-radius: 10px;
   border: 1px solid var(--color-border);
   background: var(--color-surface);
   color: var(--color-text);
