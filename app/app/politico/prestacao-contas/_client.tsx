@@ -9,13 +9,14 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { CheckCircle2, Clock, FileText, Building2, Hammer, Coins, Users, MessageSquare, MapPin, Download, Loader2, Target, Check, X } from "lucide-react";
+import { CheckCircle2, Clock, FileText, Building2, Hammer, Coins, Users, MessageSquare, MapPin, Download, Loader2, Target, Check, X, TrendingUp } from "lucide-react";
 
 import { CommandHero } from "@/components/politico/command-hero";
 import { KpiCard } from "@/components/politico/kpi-card";
 import { gerarRelatorioPrestacaoContas } from "@/app/actions/politico/gerarRelatorioPrestacaoContas";
 import { definirMetasDoMandato } from "@/app/actions/politico/definirMetasDoMandato";
 import type { PrestacaoContas, Periodo } from "@/lib/politico/prestacao-contas-dados";
+import type { OndeInvestir, Leitura } from "@/lib/politico/onde-investir";
 
 const PERIODOS: { id: Periodo; label: string }[] = [
   { id: "mes", label: "Este mês" },
@@ -36,7 +37,13 @@ const METAS_DEF: { chave: "demandas" | "oficios" | "obras" | "base"; label: stri
   { chave: "base", label: "Pessoas na base" },
 ];
 
-export default function PrestacaoContasClient({ dados, ehAdmin }: { dados: PrestacaoContas; ehAdmin: boolean }) {
+const LEITURA_ESTILO: Record<Leitura, { rotulo: string; bg: string; cor: string }> = {
+  oportunidade: { rotulo: "🎯 Oportunidade", bg: "rgba(215,243,106,0.18)", cor: "#5E7A10" },
+  fortaleza: { rotulo: "💪 Fortaleza", bg: "rgba(23,120,79,0.12)", cor: "#17784F" },
+  acompanhar: { rotulo: "Acompanhar", bg: "var(--color-surface-elevated)", cor: "var(--color-text-muted)" },
+};
+
+export default function PrestacaoContasClient({ dados, ondeInvestir, ehAdmin }: { dados: PrestacaoContas; ondeInvestir: OndeInvestir; ehAdmin: boolean }) {
   const router = useRouter();
   const maxEvol = Math.max(1, ...dados.evolucao.map((e) => e.valor));
   const maxBairro = Math.max(1, ...dados.topBairros.map((b) => b.valor));
@@ -219,6 +226,49 @@ export default function PrestacaoContasClient({ dados, ehAdmin }: { dados: Prest
           <p className="mt-4 text-sm" style={{ color: "var(--color-text-subtle)" }}>
             {ehAdmin ? "Defina metas para acompanhar o progresso do mandato." : "O gabinete ainda não definiu metas."}
           </p>
+        )}
+      </section>
+
+      {/* Onde investir (inteligência preditiva: demandas × votos por bairro) */}
+      <section className="wr-card p-6">
+        <div className="flex items-center gap-2">
+          <TrendingUp size={18} style={{ color: "#8AA62E" }} />
+          <h2 className="font-heading text-xl font-bold leading-tight">Onde investir</h2>
+        </div>
+        <p className="mt-1 text-sm" style={{ color: "var(--color-text-muted)" }}>
+          Cruzamos onde o cidadão mais pede ajuda com onde você tem votos. Bairro que pede e quase não vota é a sua maior oportunidade.
+        </p>
+        {!ondeInvestir.temTse ? (
+          <p className="mt-4 text-sm" style={{ color: "var(--color-text-subtle)" }}>
+            Para ver esta leitura, vincule o parlamentar ao candidato no TSE (na Inteligência Eleitoral).
+          </p>
+        ) : ondeInvestir.itens.length === 0 ? (
+          <p className="mt-4 text-sm" style={{ color: "var(--color-text-subtle)" }}>
+            Assim que houver demandas com o bairro informado, a leitura aparece aqui — por bairro.
+          </p>
+        ) : (
+          <div className="mt-5 space-y-2.5">
+            {ondeInvestir.itens.map((b) => {
+              const s = LEITURA_ESTILO[b.leitura];
+              return (
+                <div
+                  key={b.bairro}
+                  className="flex flex-wrap items-center justify-between gap-2 rounded-[12px] p-3"
+                  style={{ border: "1px solid var(--color-border)", background: "var(--color-surface-elevated)" }}
+                >
+                  <div className="min-w-0">
+                    <p className="text-sm font-semibold truncate">{b.bairro}</p>
+                    <p className="text-[13px]" style={{ color: "var(--color-text-muted)" }}>
+                      {b.demandas} {b.demandas === 1 ? "pedido" : "pedidos"} · {b.votos.toLocaleString("pt-BR")} {b.votos === 1 ? "voto" : "votos"} seus aqui
+                    </p>
+                  </div>
+                  <span className="inline-flex shrink-0 items-center rounded-full px-3 py-1 text-xs font-bold" style={{ background: s.bg, color: s.cor }}>
+                    {s.rotulo}
+                  </span>
+                </div>
+              );
+            })}
+          </div>
         )}
       </section>
 

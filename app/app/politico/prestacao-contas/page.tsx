@@ -10,6 +10,7 @@ import { redirect } from "next/navigation";
 import { requireAuth, resolveActiveOrg } from "@/lib/auth/server";
 import { ROLE_RANK } from "@/lib/auth/types";
 import { buscarPrestacaoContas, normalizarPeriodo } from "@/lib/politico/prestacao-contas-dados";
+import { buscarOndeInvestir } from "@/lib/politico/onde-investir";
 import PageTabs from "@/components/politico/page-tabs";
 import PrestacaoContasClient from "./_client";
 
@@ -32,13 +33,16 @@ export default async function PrestacaoContasPage({
 
   const params = await searchParams;
   const periodo = normalizarPeriodo(typeof params.periodo === "string" ? params.periodo : undefined);
-  const dados = await buscarPrestacaoContas(org.orgId, periodo);
+  const [dados, ondeInvestir] = await Promise.all([
+    buscarPrestacaoContas(org.orgId, periodo),
+    buscarOndeInvestir(org.orgId),
+  ]);
   const ehAdmin = ROLE_RANK[org.role] >= ROLE_RANK.admin;
 
   return (
     <>
       <PageTabs abas={COMANDO_TABS} active="prestacao" maxW="1140px" />
-      <PrestacaoContasClient dados={dados} ehAdmin={ehAdmin} />
+      <PrestacaoContasClient dados={dados} ondeInvestir={ondeInvestir} ehAdmin={ehAdmin} />
     </>
   );
 }
