@@ -12,6 +12,8 @@ import Link from "next/link";
 import { ArrowUpRight, GitBranch, MessageCircle, Pencil } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { requireAuth, resolveActiveOrg } from "@/lib/auth/server";
+import { buscarLinhaDoTempo } from "@/lib/politico/linha-do-tempo";
+import { LinhaDoTempo360 } from "@/components/politico/linha-do-tempo-360";
 import BotaoDescadastro from "./_descadastrar";
 import VideoDivulgar, { type VideoItem } from "./_video-divulgar";
 
@@ -125,10 +127,6 @@ function formatarData(data: string): string {
   return new Date(data).toLocaleDateString("pt-BR", { day: "2-digit", month: "short", year: "numeric" });
 }
 
-function formatarDataCurta(data: string): string {
-  return new Date(data).toLocaleDateString("pt-BR", { day: "2-digit", month: "short" });
-}
-
 function sourceLabel(source: string | null): string {
   if (!source) return "Manual";
   const m: Record<string, string> = {
@@ -225,10 +223,15 @@ async function buscarLead(organizationId: string, leadId: string) {
     }
   }
 
+  // Linha do tempo 360°: tudo que o cidadão viveu com o gabinete (origem,
+  // demandas, ofícios, avisos, graduações) num feed único.
+  const eventos360 = await buscarLinhaDoTempo(organizationId, pl.contact_id);
+
   return {
     lead: pl,
     contact: contact as Contact,
     transitions: (transitions ?? []) as FunnelTransition[],
+    eventos360,
     mobilizadorNome,
     origemCaptacao,
   };
@@ -325,7 +328,7 @@ export default async function FichaPage({
 
   if (!dados) notFound();
 
-  const { lead, contact, transitions, mobilizadorNome, origemCaptacao } = dados;
+  const { lead, contact, eventos360, mobilizadorNome, origemCaptacao } = dados;
 
   // Vídeos da biblioteca (posts do IG) para gerar o link pessoal de divulgação.
   const dbVideos = await createClient();
@@ -504,39 +507,8 @@ export default async function FichaPage({
             </InfoCard>
           )}
 
-          <InfoCard titulo="Linha do tempo">
-            {transitions.length === 0 ? (
-              <p className="text-sm" style={{ color: "var(--color-text-subtle)" }}>Nenhuma transição registrada.</p>
-            ) : (
-              <div className="space-y-3">
-                {transitions.map((t) => (
-                  <div key={t.id} className="flex items-start gap-3">
-                    <span
-                      className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full"
-                      style={{ background: etapaCor(t.to_level), color: etapaIdx(t.to_level) >= 3 ? "#FFFFFF" : "#1E2A80" }}
-                      aria-hidden
-                    >
-                      <ArrowUpRight style={{ width: 15, height: 15 }} />
-                    </span>
-                    <div className="min-w-0 flex-1">
-                      <div className="flex items-center gap-2 text-sm">
-                        {t.from_level && (
-                          <>
-                            <span className="font-medium" style={{ color: "var(--color-text-subtle)" }}>{etapaLabel(t.from_level)}</span>
-                            <span style={{ color: "var(--color-text-subtle)" }}>→</span>
-                          </>
-                        )}
-                        <span className="font-semibold" style={{ color: "var(--color-text)" }}>{etapaLabel(t.to_level)}</span>
-                      </div>
-                      <div className="mt-0.5 text-xs" style={{ color: "var(--color-text-subtle)" }}>
-                        {formatarDataCurta(t.changed_at)}
-                        {t.reason && ` · ${t.reason}`}
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
+          <InfoCard titulo="Linha do tempo 360°">
+            <LinhaDoTempo360 eventos={eventos360} />
           </InfoCard>
         </div>
 
