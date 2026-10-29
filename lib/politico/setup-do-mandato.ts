@@ -11,6 +11,8 @@ import { CHAVE_GABINETE } from "@/lib/politico/aviso-de-resolucao";
 export const CHAVE_SETUP_COMPLETO = "setup_completo";
 export const CHAVE_SETUP_ADIADO = "setup_adiado";
 export const CHAVE_MANDATO = "mandato";
+/** O conhecimento + prompt que a inteligência montou a partir do `mandato`. */
+export const CHAVE_MANDATO_GERADO = "mandato_gerado";
 
 export interface ServicoComLink {
   nome: string;

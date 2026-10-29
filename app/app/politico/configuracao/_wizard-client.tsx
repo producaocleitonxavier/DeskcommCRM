@@ -120,10 +120,10 @@ export default function SetupWizard({ inicial }: { inicial: { nome: string; carg
           <p className="mx-auto mt-2 max-w-md text-sm" style={{ color: "var(--color-text-muted)" }}>
             O mandato está configurado. Suas informações foram salvas e já valem para os ofícios, o atendimento e a comunicação.
           </p>
-          <div className="mx-auto mt-6 max-w-md rounded-[14px] p-4 text-left" style={{ border: "1px solid var(--color-border)", background: "var(--color-surface-elevated)" }}>
-            <p className="text-[13px] font-semibold">Próximo (automático, em breve):</p>
+          <div className="mx-auto mt-6 max-w-md rounded-[14px] p-4 text-left" style={{ border: "1px solid rgba(215,243,106,0.3)", background: "rgba(215,243,106,0.06)" }}>
+            <p className="text-[13px] font-semibold">✨ A inteligência montou o conteúdo do seu mandato</p>
             <p className="mt-1 text-[13px]" style={{ color: "var(--color-text-muted)" }}>
-              o sistema vai montar o conhecimento da IA e o atendimento a partir do que você preencheu — portal de serviços, links e órgãos do seu município/estado.
+              O conhecimento que a IA usa para atender foi gerado a partir do que você preencheu — portal, serviços com link e órgãos do seu município/estado. A equipe só ativa quando quiser.
             </p>
           </div>
           <button
@@ -248,7 +248,7 @@ export default function SetupWizard({ inicial }: { inicial: { nome: string; carg
               <Campo label="Portal de serviços do seu município/estado" dica="O site onde o cidadão abre pedidos (zeladoria, serviços)."><div className="flex items-center gap-2"><Globe size={18} className="shrink-0" style={{ color: "#8AA62E" }} /><input className={inputCls} value={portal} onChange={(e) => setPortal(e.target.value)} placeholder="Ex.: servicos.suacidade.gov.br" /></div></Campo>
 
               <div>
-                <label className="mb-1.5 block text-sm font-semibold">Principais serviços com link</label>
+                <label className="mb-1.5 block text-sm font-semibold">1. Serviços que o cidadão resolve sozinho (têm site)</label>
                 <p className="mb-3 text-xs" style={{ color: "var(--color-text-subtle)" }}>
                   O nome do serviço e o link exato. Assim a IA manda o cidadão direto no lugar certo — sem erro.
                 </p>
@@ -290,7 +290,13 @@ export default function SetupWizard({ inicial }: { inicial: { nome: string; carg
                 </button>
               </div>
 
-              <Campo label="Órgãos sem link (o gabinete encaminha)" dica="Um por linha. Ex.: Água/Esgoto (concessionária), Saúde, Creche/Escola, Ouvidoria."><textarea className={`${inputCls} min-h-[88px]`} value={orgaos} onChange={(e) => setOrgaos(e.target.value)} placeholder={"Água e Esgoto (concessionária)\nSaúde\nCreche / Escola\nOuvidoria"} /></Campo>
+              <div>
+                <label className="mb-1.5 block text-sm font-semibold">2. Assuntos que o gabinete resolve (quando NÃO há site)</label>
+                <p className="mb-3 text-xs" style={{ color: "var(--color-text-subtle)" }}>
+                  Alguns pedidos não têm site pra abrir sozinho — aí o gabinete anota e encaminha ao órgão certo. Escreva um por linha: o assunto e, se souber, para quem vai.
+                </p>
+                <textarea className={`${inputCls} min-h-[96px]`} value={orgaos} onChange={(e) => setOrgaos(e.target.value)} placeholder={"Esgoto → companhia de água\nSaúde (posto / UPA)\nVaga em creche ou escola\nDenúncia → Ouvidoria"} />
+              </div>
             </div>
           </div>
         )}

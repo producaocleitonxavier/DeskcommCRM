@@ -27,7 +27,8 @@ import { ROLE_RANK } from "@/lib/auth/types";
 import { supportWriteError } from "@/lib/impersonate/support";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { CHAVE_GABINETE } from "@/lib/politico/aviso-de-resolucao";
-import { CHAVE_SETUP_COMPLETO, CHAVE_SETUP_ADIADO, CHAVE_MANDATO } from "@/lib/politico/setup-do-mandato";
+import { CHAVE_SETUP_COMPLETO, CHAVE_SETUP_ADIADO, CHAVE_MANDATO, CHAVE_MANDATO_GERADO } from "@/lib/politico/setup-do-mandato";
+import { montarConhecimentoDoMandato, montarPromptDoMandato, type DadosDoMandato } from "@/lib/politico/gerar-conhecimento";
 
 const servicoSchema = z.object({
   nome: z.string().trim().max(120),
@@ -106,9 +107,39 @@ export async function salvarSetupDoMandato(entrada: unknown): Promise<ResultadoS
     bio: d.bio || null,
     temas: d.temas || null,
   };
+  // A inteligência MONTA O RESTO (puro, determinístico): compõe o conhecimento
+  // que a IA vai consultar + o prompt do agente, a partir do que foi preenchido.
+  // Fica salvo pronto para aplicar ao agente (passo de provisionamento). NÃO
+  // sobrescreve agente/RAG já existentes aqui — é só a geração do conteúdo.
+  const dados: DadosDoMandato = {
+    nome: d.nome || null,
+    cargo: d.cargo || null,
+    cidade: d.cidade || null,
+    uf: d.uf || null,
+    tipo: d.tipo,
+    horario: d.horario || null,
+    whats: d.whats || null,
+    insta: d.insta || null,
+    portal: d.portal || null,
+    servicos: mandato.servicos,
+    orgaos: d.orgaos || null,
+    bio: d.bio || null,
+    temas: d.temas || null,
+  };
+  const gerado = {
+    conhecimento: montarConhecimentoDoMandato(dados),
+    prompt: montarPromptDoMandato(dados),
+    gerado_em: new Date().toISOString(),
+  };
+
   const novo = {
     ...settings,
-    [CHAVE_GABINETE]: { ...gabinete, [CHAVE_SETUP_COMPLETO]: true, [CHAVE_MANDATO]: mandato },
+    [CHAVE_GABINETE]: {
+      ...gabinete,
+      [CHAVE_SETUP_COMPLETO]: true,
+      [CHAVE_MANDATO]: mandato,
+      [CHAVE_MANDATO_GERADO]: gerado,
+    },
   };
 
   const { error } = await admin.from("organizations").update({ settings: novo }).eq("id", org.orgId);
