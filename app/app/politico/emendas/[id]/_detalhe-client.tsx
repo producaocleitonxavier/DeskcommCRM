@@ -61,6 +61,7 @@ export interface Props {
   beneficiarios?: number;
   vozArmada?: boolean;
   politicoNome?: string | null;
+  responsavelContato?: { contactId: string; nome: string | null } | null;
 }
 
 const TIPOS: Opcao[] = [
@@ -137,7 +138,7 @@ function rotulo(lista: Opcao[], id: string | null): string {
   return lista.find((o) => o.id === id)?.nome ?? id;
 }
 
-export default function DetalheEmendaClient({ emenda, liderancas, peso, mandatoNome, beneficiarios: beneficiariosCaptados = 0, vozArmada = false, politicoNome = null }: Props) {
+export default function DetalheEmendaClient({ emenda, liderancas, peso, mandatoNome, beneficiarios: beneficiariosCaptados = 0, vozArmada = false, politicoNome = null, responsavelContato = null }: Props) {
   const router = useRouter();
 
   const [e, setE] = useState<EmendaDetalhe>(emenda);
@@ -371,6 +372,17 @@ export default function DetalheEmendaClient({ emenda, liderancas, peso, mandatoN
             <PesoBox valor={peso.universo.toLocaleString("pt-BR")} label="Votos do cargo" sub="tamanho eleitoral" />
             <PesoBox valor={peso.leads.toLocaleString("pt-BR")} label="Sua base de contatos" sub="contatos no bairro" accent="#7da9bf" />
           </div>
+        </section>
+      )}
+
+      {responsavelContato && (
+        <section className="wr-card flex flex-wrap items-center justify-between gap-3 p-5">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-wide" style={{ color: "var(--color-text-subtle)" }}>Responsável pela emenda</p>
+            <p className="mt-0.5 text-base font-semibold" style={{ color: "var(--color-text)" }}>{responsavelContato.nome ?? "—"}</p>
+            <p className="text-xs" style={{ color: "var(--color-text-subtle)" }}>Avise na voz do político quando a emenda sair.</p>
+          </div>
+          <BotaoRecadoVoz contactId={responsavelContato.contactId} nome={responsavelContato.nome} vozArmada={vozArmada} politico={politicoNome ? `o vereador ${politicoNome}` : "o vereador"} />
         </section>
       )}
 

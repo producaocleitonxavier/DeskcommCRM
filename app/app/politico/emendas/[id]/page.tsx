@@ -29,7 +29,7 @@ export default async function EmendaDetalhePage({
     db
       .from("pol_emendas")
       .select(
-        "id, numero, ano, tipo, esfera, valor_indicado_cents, valor_empenhado_cents, valor_liquidado_cents, valor_pago_cents, municipio, bairro, entidade_beneficiada, cnpj_entidade, territory_id, responsavel_nome, area_tematica, descricao, objeto, status, data_indicacao, data_empenho, data_liquidacao, data_pagamento, prazo_execucao, beneficiarios_estimados, lideranca_id, observacoes, publica",
+        "id, numero, ano, tipo, esfera, valor_indicado_cents, valor_empenhado_cents, valor_liquidado_cents, valor_pago_cents, municipio, bairro, entidade_beneficiada, cnpj_entidade, territory_id, responsavel_nome, responsavel_contact_id, area_tematica, descricao, objeto, status, data_indicacao, data_empenho, data_liquidacao, data_pagamento, prazo_execucao, beneficiarios_estimados, lideranca_id, observacoes, publica",
       )
       .eq("organization_id", org.orgId)
       .eq("id", id)
@@ -69,5 +69,13 @@ export default async function EmendaDetalhePage({
   const { data: gabNome } = await db.from("pol_gabinete_config").select("nome_parlamentar").eq("organization_id", org.orgId).maybeSingle();
   const politicoNome = ((gabNome?.nome_parlamentar as string | null) ?? mandato?.nome ?? "").trim() || null;
 
-  return <DetalheEmendaClient emenda={emRes.data as unknown as EmendaDetalhe} territorios={territorios} liderancas={liderancas} peso={peso} mandatoNome={mandato?.nome ?? null} beneficiarios={beneficiarios ?? 0} vozArmada={vozOk} politicoNome={politicoNome} />;
+  // Responsável como contato (pra avisar na voz quando a emenda sair).
+  const respContactId = (emRes.data as { responsavel_contact_id?: string | null }).responsavel_contact_id ?? null;
+  let responsavelContato: { contactId: string; nome: string | null } | null = null;
+  if (respContactId) {
+    const { data: rc } = await db.from("contacts").select("name").eq("organization_id", org.orgId).eq("id", respContactId).maybeSingle();
+    responsavelContato = { contactId: respContactId, nome: (rc?.name as string | null) ?? null };
+  }
+
+  return <DetalheEmendaClient emenda={emRes.data as unknown as EmendaDetalhe} territorios={territorios} liderancas={liderancas} peso={peso} mandatoNome={mandato?.nome ?? null} beneficiarios={beneficiarios ?? 0} vozArmada={vozOk} politicoNome={politicoNome} responsavelContato={responsavelContato} />;
 }
