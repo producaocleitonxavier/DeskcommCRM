@@ -10,6 +10,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, Clock, Flag, MessageCircle, Mic, Pencil, Printer, Sparkles, Trash2, X } from "lucide-react";
+import { BotaoRecadoVoz } from "@/components/politico/botao-recado-voz";
 
 import { gerarEncaminhamento } from "@/app/actions/politico/gerarEncaminhamento";
 import { gerarOficioDemanda } from "@/app/actions/politico/gerarOficio";
@@ -46,6 +47,7 @@ export interface DemandaDetalhe {
   fechada_em: string | null;
   created_at: string;
   updated_at: string;
+  contact_id: string | null;
   contacts: { name: string | null; phone_number: string | null } | null;
 }
 
@@ -65,6 +67,8 @@ export interface Props {
   vozArmada?: boolean;
   /** Gabinete usa a linha "Assunto:" no ofício? Liga o campo de assunto. */
   mostrarAssuntoOficio?: boolean;
+  /** Nome do parlamentar (saudação do recado em áudio). */
+  politicoNome?: string | null;
 }
 
 const TIPOS: Opcao[] = [
@@ -118,7 +122,7 @@ function paraInputDate(d: string | null): string {
   return new Date(d).toISOString().slice(0, 10);
 }
 
-export default function DetalheDemandaClient({ demanda, assessores, eventos, vozArmada, mostrarAssuntoOficio }: Props) {
+export default function DetalheDemandaClient({ demanda, assessores, eventos, vozArmada, mostrarAssuntoOficio, politicoNome }: Props) {
   const router = useRouter();
 
   const [d, setD] = useState<DemandaDetalhe>(demanda);
@@ -128,7 +132,6 @@ export default function DetalheDemandaClient({ demanda, assessores, eventos, voz
   const [gerandoOficio, setGerandoOficio] = useState(false);
   const [avisando, setAvisando] = useState(false);
   const [avisoMsg, setAvisoMsg] = useState<string | null>(null);
-  const [incluirVoz, setIncluirVoz] = useState(false);
   const [excluindo, setExcluindo] = useState(false);
   const [anexoToken, setAnexoToken] = useState(0);
   const [erro, setErro] = useState<string | null>(null);
@@ -339,15 +342,11 @@ export default function DetalheDemandaClient({ demanda, assessores, eventos, voz
             disabled={avisando || !d.contacts?.phone_number}
             title={!d.contacts?.phone_number ? "O cidadão não tem telefone cadastrado" : "Enviar aviso ao cidadão por WhatsApp"}
             onClick={async () => {
-              const comVoz = !!vozArmada && incluirVoz;
-              const pergunta = comVoz
-                ? "Enviar o aviso por WhatsApp E um recado em áudio na voz do Cleiton?"
-                : "Enviar aviso ao cidadão por WhatsApp confirmando o registro da demanda?";
-              if (!window.confirm(pergunta)) return;
+              if (!window.confirm("Enviar aviso ao cidadão por WhatsApp confirmando o registro da demanda?")) return;
               setErro(null);
               setAvisoMsg(null);
               setAvisando(true);
-              const res = await avisarCidadao(d.id, { incluirAudio: comVoz });
+              const res = await avisarCidadao(d.id);
               setAvisando(false);
               if (res.ok) {
                 const audioNota =
@@ -382,19 +381,13 @@ export default function DetalheDemandaClient({ demanda, assessores, eventos, voz
           >
             <MessageCircle className="h-4 w-4" aria-hidden /> {avisando ? "Enviando…" : "Avisar cidadão"}
           </button>
-          {vozArmada && (
-            <label
-              className="inline-flex cursor-pointer items-center gap-1.5 rounded-full px-3 py-1.5 text-[13px] font-semibold"
-              style={{
-                border: `1px solid ${incluirVoz ? "#D7F36A" : "var(--color-border)"}`,
-                background: incluirVoz ? "rgba(215,243,106,0.14)" : "transparent",
-                color: incluirVoz ? "#D7F36A" : "var(--color-text-muted)",
-              }}
-              title="Manda também um recado em áudio na voz do Cleiton, depois da mensagem de texto."
-            >
-              <input type="checkbox" checked={incluirVoz} onChange={(e) => setIncluirVoz(e.target.checked)} className="sr-only" />
-              <Mic className="h-3.5 w-3.5" aria-hidden /> Incluir recado na voz do Cleiton
-            </label>
+          {vozArmada && d.contact_id && (
+            <BotaoRecadoVoz
+              contactId={d.contact_id}
+              nome={d.contacts?.name}
+              vozArmada={vozArmada}
+              politico={politicoNome ? `o vereador ${politicoNome}` : "o vereador"}
+            />
           )}
         </div>
       </header>
@@ -422,7 +415,13 @@ export default function DetalheDemandaClient({ demanda, assessores, eventos, voz
               </select>
             </Campo>
             <Campo label="Justificativa">
-              <textarea value={assunto} onChange={(e) => setAssunto(e.target.value)} rows={3} className="wr-input w-full" />
+              <textarea
+                value={assunto}
+                onChange={(e) => setAssunto(e.target.value)}
+                rows={4}
+                className="w-full resize-y rounded-xl px-4 py-3 text-sm leading-relaxed outline-none"
+                style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)", color: "var(--color-text)" }}
+              />
             </Campo>
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <Campo label="Prioridade">
