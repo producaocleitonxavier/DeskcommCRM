@@ -21,7 +21,7 @@ export const TOOLS_GABINETE = declararTools([
     category: "write",
     rotulo: "Registrar a demanda do cidadão",
     explicacao:
-      "Abre uma demanda do gabinete a partir do que o cidadão pediu na conversa — com o assunto, o tipo e o endereço do problema — já pronta na tela para um assessor encaminhar. O agente não promete nada, só registra.",
+      "Abre uma demanda do gabinete a partir do que o cidadão pediu na conversa — com o assunto, o tipo e o endereço do problema — já pronta na tela para um assessor encaminhar. A zeladoria que o cidadão resolve sozinho pelo link da Prefeitura é registrada como 'autoatendimento': fica fora da fila de trabalho, mas alimenta a inteligência territorial (quem pediu o quê, em que bairro). O agente não promete nada, só registra.",
     oQueToca: "Demandas do gabinete",
     // `atencao`: cria um registro interno (reversível — o assessor vê e pode
     // excluir na tela). Não fala com ninguém de fora, não encaminha, não promete.

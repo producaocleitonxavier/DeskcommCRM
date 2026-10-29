@@ -45,6 +45,12 @@ const registrarInput = {
   numero: z.string().max(40).optional().describe("Número do endereço do problema (aceita 's/n')."),
   bairro: z.string().max(120).optional().describe("Bairro do problema."),
   municipio: z.string().max(120).optional().describe("Cidade do problema."),
+  autoatendimento: z
+    .boolean()
+    .optional()
+    .describe(
+      "true quando a demanda é de zeladoria que o cidadão resolve SOZINHO pelo link oficial da Prefeitura (você já mandou o link): registra só para o gabinete ter o histórico territorial, FORA da fila de trabalho. false/vazio quando é caso que o gabinete vai encaminhar (esgoto, saúde, urgência, ou quando a pessoa não consegue sozinha).",
+    ),
   contact_id: z
     .string()
     .uuid()
@@ -55,12 +61,14 @@ const registrarInput = {
 export const crmRegistrarDemanda: McpToolDefinition<typeof registrarInput> = {
   name: "crm_registrar_demanda",
   description:
-    "Registra uma DEMANDA do gabinete quando o cidadão relata um problema ou pedido na conversa (ex.: buraco na rua, " +
-    "falta de iluminação, poda de árvore, pedido de serviço público, denúncia). Antes de registrar, use " +
-    "crm_listar_demandas_cidadao para não duplicar. Capture o 'assunto' (o que ele quer, em uma frase), o 'tipo' e, se " +
-    "o cidadão disser, o endereço do problema (logradouro, número, bairro, município). NÃO prometa resolver, NÃO dê " +
-    "prazo e NÃO diga que já encaminhou — apenas registre; quem encaminha ao órgão competente é o gabinete. Depois de " +
-    "registrar, confirme ao cidadão que o pedido foi ANOTADO e que o gabinete vai acompanhar.",
+    "Registra uma DEMANDA do gabinete SEMPRE que o cidadão relata um problema ou pedido concreto na conversa (ex.: buraco " +
+    "na rua, falta de iluminação, poda de árvore, esgoto, pedido de serviço público, denúncia). Registre TODOS esses " +
+    "casos — inclusive os de zeladoria em que você mandou o link de autoatendimento da Prefeitura (nesses, passe " +
+    "autoatendimento=true, para o registro ficar fora da fila de trabalho mas alimentar a inteligência territorial do " +
+    "gabinete). Antes de registrar, use crm_listar_demandas_cidadao para não duplicar. Capture o 'assunto' (o que ele quer, " +
+    "em uma frase), o 'tipo' e, se o cidadão disser, o endereço do problema (logradouro, número, bairro, município). NÃO " +
+    "prometa resolver, NÃO dê prazo e NÃO diga que já encaminhou — apenas registre; quem encaminha ao órgão competente é o " +
+    "gabinete. Depois de registrar, confirme ao cidadão que o pedido foi ANOTADO e que o gabinete vai acompanhar.",
   inputSchema: registrarInput,
   category: "write",
   requiresRole: "agent",
@@ -86,16 +94,24 @@ export const crmRegistrarDemanda: McpToolDefinition<typeof registrarInput> = {
     if (input.numero?.trim()) payload.pol_numero = input.numero.trim();
     if (input.bairro?.trim()) payload.pol_bairro = input.bairro.trim();
     if (input.municipio?.trim()) payload.pol_municipio = input.municipio.trim();
+    // Zeladoria de autoatendimento: fica FORA da fila de trabalho do gabinete,
+    // mas o registro alimenta a inteligência territorial (quem pediu o quê, onde).
+    if (input.autoatendimento === true) payload.pol_autoatendimento = true;
 
-    const { data, error } = await ctx.supabase
-      .from("demandas")
-      .insert(payload)
-      .select("id")
-      .maybeSingle();
-    if (error || !data) {
+    let demandaId: string | null = null;
+    const ins = await ctx.supabase.from("demandas").insert(payload).select("id").maybeSingle();
+    if (ins.error && input.autoatendimento === true && "pol_autoatendimento" in payload) {
+      // A coluna pode ainda não existir nesta instalação (migration 9072 pendente):
+      // registra mesmo assim, sem o marcador, para não perder o atendimento.
+      delete payload.pol_autoatendimento;
+      const retry = await ctx.supabase.from("demandas").insert(payload).select("id").maybeSingle();
+      if (!retry.error && retry.data) demandaId = (retry.data as { id: string }).id;
+    } else if (!ins.error && ins.data) {
+      demandaId = (ins.data as { id: string }).id;
+    }
+    if (!demandaId) {
       return { erro_de_ensino: "Não consegui registrar a demanda agora. Avise que o gabinete vai anotar manualmente." };
     }
-    const demandaId = (data as { id: string }).id;
 
     // Linha do tempo: a demanda nasceu da conversa com a IA.
     await ctx.supabase.from("pol_demanda_eventos").insert({
