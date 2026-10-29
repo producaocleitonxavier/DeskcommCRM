@@ -28,7 +28,8 @@ export type ToolBundle =
   | "reter"
   | "escalar"
   | "organizar"
-  | "evoluir";
+  | "evoluir"
+  | "gabinete";
 
 export interface PacoteMeta {
   id: ToolBundle;
@@ -81,6 +82,13 @@ export const PACOTES: ReadonlyArray<PacoteMeta> = [
     explicacao:
       "O agente consulta o que a empresa já sabe, aprende com os atendimentos e sugere melhorias para você aprovar.",
     ordem: 6,
+  },
+  {
+    id: "gabinete",
+    rotulo: "Gabinete — atender o cidadão",
+    explicacao:
+      "O agente registra a demanda do cidadão (o que ele pediu, onde e de que tipo) direto da conversa, pronta para o gabinete encaminhar — nada é prometido, só registrado.",
+    ordem: 7,
   },
 ] as const;
 
