@@ -1,0 +1,122 @@
+"use client";
+
+/**
+ * Painel do Mandato — visual da prestação de contas. Apresentacional: recebe os
+ * números já calculados pela página servidor. KPIs (KpiCard) + evolução + top
+ * bairros, com filtro de período. Gráficos em CSS (sem dependência pesada) —
+ * simples, premium e à prova de criança.
+ */
+import Link from "next/link";
+import { CheckCircle2, Clock, FileText, Building2, Hammer, Coins, Users, MessageSquare, MapPin } from "lucide-react";
+
+import { CommandHero } from "@/components/politico/command-hero";
+import { KpiCard } from "@/components/politico/kpi-card";
+import type { PrestacaoContas, Periodo } from "./page";
+
+const PERIODOS: { id: Periodo; label: string }[] = [
+  { id: "mes", label: "Este mês" },
+  { id: "trimestre", label: "Trimestre" },
+  { id: "mandato", label: "Mandato inteiro" },
+];
+
+function reais(v: number): string {
+  if (v >= 1_000_000) return "R$ " + (v / 1_000_000).toLocaleString("pt-BR", { maximumFractionDigits: 1 }) + " mi";
+  if (v >= 1_000) return "R$ " + (v / 1_000).toLocaleString("pt-BR", { maximumFractionDigits: 0 }) + " mil";
+  return "R$ " + v.toLocaleString("pt-BR");
+}
+
+export default function PrestacaoContasClient({ dados }: { dados: PrestacaoContas }) {
+  const maxEvol = Math.max(1, ...dados.evolucao.map((e) => e.valor));
+  const maxBairro = Math.max(1, ...dados.topBairros.map((b) => b.valor));
+
+  return (
+    <div className="mx-auto max-w-[1140px] space-y-[18px] px-4 py-7">
+      <CommandHero
+        eyebrow="Gabinete · Prestação de Contas"
+        titulo="Painel do Mandato"
+        subtitulo="O trabalho do mandato em números — demandas atendidas, ofícios, obras, emendas e a base crescendo. A conta que o cidadão vê."
+      />
+
+      {/* Filtro de período */}
+      <div className="flex flex-wrap items-center gap-2">
+        {PERIODOS.map((p) => {
+          const on = dados.periodo === p.id;
+          return (
+            <Link
+              key={p.id}
+              href={`/app/politico/prestacao-contas?periodo=${p.id}`}
+              className="inline-flex items-center h-9 px-4 rounded-full text-sm font-semibold transition-colors"
+              style={on ? { background: "#16181D", color: "#FFFFFF" } : { background: "var(--color-surface-elevated)", color: "var(--color-text-muted)" }}
+            >
+              {p.label}
+            </Link>
+          );
+        })}
+      </div>
+
+      {/* Números do mandato */}
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        <KpiCard label="Demandas atendidas" valor={dados.demandasAtendidas} icone={CheckCircle2} variant="dark" />
+        <KpiCard label="Tempo médio de resolução" valor={dados.tempoMedioDias ?? "—"} sufixo={dados.tempoMedioDias != null ? " dias" : undefined} icone={Clock} />
+        <KpiCard label="Ofícios emitidos" valor={dados.oficios} icone={FileText} />
+        <KpiCard label="Avisos ao cidadão" valor={dados.avisos} icone={MessageSquare} />
+        <KpiCard label="Obras entregues" valor={dados.obrasEntregues} icone={Building2} />
+        <KpiCard label="Obras em andamento" valor={dados.obrasAndamento} icone={Hammer} />
+        <KpiCard label="Emendas destinadas" valor={dados.emendasQtd > 0 ? reais(dados.emendasValor) : "—"} icone={Coins} />
+        <KpiCard label={dados.baseNovos > 0 ? `Pessoas na base (+${dados.baseNovos} no período)` : "Pessoas na base"} valor={dados.baseTotal} icone={Users} />
+      </div>
+
+      <div className="grid gap-[18px] lg:grid-cols-2">
+        {/* Evolução */}
+        <section className="wr-card p-6">
+          <h2 className="font-heading text-xl font-bold leading-tight">Demandas resolvidas por mês</h2>
+          <p className="mt-1 text-sm" style={{ color: "var(--color-text-muted)" }}>Últimos 6 meses.</p>
+          <div className="mt-5 flex items-end justify-between gap-2" style={{ height: 160 }}>
+            {dados.evolucao.map((e, i) => (
+              <div key={i} className="flex flex-1 flex-col items-center justify-end gap-1.5" style={{ height: "100%" }}>
+                <span className="text-[11px] font-bold" style={{ color: "var(--color-text-muted)" }}>{e.valor}</span>
+                <div
+                  className="w-full rounded-t-[6px]"
+                  style={{ height: `${Math.max(4, (e.valor / maxEvol) * 120)}px`, background: e.valor > 0 ? "#D7F36A" : "var(--color-border)", minHeight: 4 }}
+                />
+                <span className="text-[11px]" style={{ color: "var(--color-text-subtle)" }}>{e.mes}</span>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        {/* Top bairros */}
+        <section className="wr-card p-6">
+          <div className="flex items-center gap-2">
+            <MapPin size={18} style={{ color: "#8AA62E" }} />
+            <h2 className="font-heading text-xl font-bold leading-tight">Onde o trabalho aconteceu</h2>
+          </div>
+          <p className="mt-1 text-sm" style={{ color: "var(--color-text-muted)" }}>Bairros mais atendidos.</p>
+          {dados.topBairros.length === 0 ? (
+            <p className="mt-6 text-sm" style={{ color: "var(--color-text-subtle)" }}>
+              Ainda não há demandas com bairro informado neste período.
+            </p>
+          ) : (
+            <div className="mt-5 space-y-3">
+              {dados.topBairros.map((b) => (
+                <div key={b.bairro}>
+                  <div className="mb-1 flex items-center justify-between text-sm">
+                    <span className="font-medium truncate">{b.bairro}</span>
+                    <span className="font-bold" style={{ color: "var(--color-text-muted)" }}>{b.valor}</span>
+                  </div>
+                  <div className="h-2.5 w-full overflow-hidden rounded-full" style={{ background: "var(--color-surface-elevated)" }}>
+                    <div className="h-full rounded-full" style={{ width: `${(b.valor / maxBairro) * 100}%`, background: "#D7F36A" }} />
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </section>
+      </div>
+
+      <p className="text-center text-[12px]" style={{ color: "var(--color-text-subtle)" }}>
+        Em breve: gerar esta prestação de contas em PDF, num clique — para o cidadão e para o mandato.
+      </p>
+    </div>
+  );
+}

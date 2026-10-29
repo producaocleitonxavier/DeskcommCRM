@@ -18,6 +18,7 @@ import PageTabs from "@/components/politico/page-tabs";
 const COMANDO_TABS = [
   { id: "hoje", label: "Hoje", href: "/app/politico" },
   { id: "painel", label: "Painel", href: "/app/politico/dashboard" },
+  { id: "prestacao", label: "Prestação de Contas", href: "/app/politico/prestacao-contas" },
 ];
 
 export const dynamic = "force-dynamic";
