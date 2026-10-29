@@ -13,6 +13,7 @@ import { randomInt } from "node:crypto";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { logger } from "@/lib/logger";
+import { lerIdentidadeDoMandato, novidadesDeLabel } from "@/lib/politico/identidade-do-mandato";
 import { enviarTextoNoCanal } from "@/lib/politico/enviar-material";
 import { recomputarEngajamento } from "@/lib/politico/engajamento";
 
@@ -164,9 +165,10 @@ export async function processarIndicacao(
 
   // Acolhe o novo contato (só se for crédito novo e houver canal).
   if (r.creditou && canalId) {
+    const idm = await lerIdentidadeDoMandato(admin, organizationId);
     await enviarTextoNoCanal(admin, {
       organizationId, contactId, canalId,
-      texto: "Oi! Que bom ter você com a gente 🙏 Já te coloquei pra receber os materiais e novidades do Cleiton. Qualquer coisa, é só me chamar por aqui!",
+      texto: `Oi! Que bom ter você com a gente 🙏 Já te coloquei pra receber os materiais e ${novidadesDeLabel(idm)}. Qualquer coisa, é só me chamar por aqui!`,
       rotulo: "indicacao-acolhe",
     });
   }
@@ -201,7 +203,8 @@ export async function convidarAIndicar(
     const numero = (ch as { phone_number: string | null } | null)?.phone_number;
     if (!numero) return;
 
-    const textoPreenchido = `Olá! Me indicaram e quero receber os materiais e novidades do Cleiton Xavier. [ind:${codigo}]`;
+    const idm = await lerIdentidadeDoMandato(admin, organizationId);
+    const textoPreenchido = `Olá! Me indicaram e quero receber os materiais e ${novidadesDeLabel(idm)}. [ind:${codigo}]`;
     const link = `https://wa.me/${numero.replace(/\D+/g, "")}?text=${encodeURIComponent(textoPreenchido)}`;
     await enviarTextoNoCanal(admin, {
       organizationId, contactId, canalId,

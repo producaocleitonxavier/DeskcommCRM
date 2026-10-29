@@ -791,9 +791,9 @@ function PhoneMockup({ texto, materialTitulo, nome }: { texto: string; materialT
           {/* Cabeçalho WhatsApp */}
           <div className="relative z-20 mt-2 flex items-center gap-2.5 px-3 py-2.5" style={{ background: "#1F2C33", boxShadow: "0 1px 0 rgba(0,0,0,0.3)" }}>
             <span className="text-lg leading-none" style={{ color: "#8696A0" }}>‹</span>
-            <span className="flex h-9 w-9 items-center justify-center rounded-full font-heading text-sm font-bold" style={{ background: "linear-gradient(135deg,#D7F36A,#8AA62E)", color: "#14181F" }}>C</span>
+            <span className="flex h-9 w-9 items-center justify-center rounded-full font-heading text-sm font-bold" style={{ background: "linear-gradient(135deg,#D7F36A,#8AA62E)", color: "#14181F" }}>📣</span>
             <div className="min-w-0 flex-1">
-              <div className="truncate text-sm font-semibold" style={{ color: "#E9EDEF" }}>Cleiton Xavier</div>
+              <div className="truncate text-sm font-semibold" style={{ color: "#E9EDEF" }}>Seu mandato</div>
               <div className="text-[10px]" style={{ color: "#4ADE80" }}>online</div>
             </div>
           </div>

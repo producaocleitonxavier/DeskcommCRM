@@ -25,6 +25,7 @@ import { lerVozConfig, vozArmada } from "@/lib/voz/config";
 import { gerarAudio } from "@/lib/voz/elevenlabs";
 import { lerVozSpeed } from "@/lib/voz/velocidade";
 import { scriptRecado, type MomentoVoz } from "@/lib/voz/recado";
+import { lerIdentidadeDoMandato } from "@/lib/politico/identidade-do-mandato";
 import { dentroDoBlackout } from "@/lib/voz/blackout";
 import { mp3ParaNotaDeVoz, VOICE_MIME } from "@/lib/messaging/media/voice-transcode";
 import type { SupabaseClient } from "@supabase/supabase-js";
@@ -279,7 +280,8 @@ async function enviarRecadoDeVoz(args: {
     const { data: orgRow } = await db.from("organizations").select("settings").eq("id", orgId).maybeSingle();
     const velocidade = lerVozSpeed(orgRow?.settings);
 
-    const texto = scriptRecado({ momento, primeiroNome: primeiroNome || null });
+    const idMandato = await lerIdentidadeDoMandato(db, orgId);
+    const texto = scriptRecado({ momento, primeiroNome: primeiroNome || null, nomeParlamentar: idMandato.nomeParlamentar });
     const r = await gerarAudio(cfg.voiceId, texto, velocidade);
     if (!r.ok) return "falha";
 

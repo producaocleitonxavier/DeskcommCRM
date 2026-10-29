@@ -31,7 +31,7 @@ interface Inicial {
 }
 
 const TEXTO_PREVIA_PADRAO =
-  "Olá! Aqui é o Cleiton Xavier. Passando pra te desejar um feliz aniversário e te agradecer por caminhar junto comigo. Um grande abraço!";
+  "Olá! Passando pra te desejar um feliz aniversário e te agradecer por caminhar junto comigo. Um grande abraço!";
 
 /**
  * Roteiro que o político LÊ enquanto grava a amostra. Pensado pra clonagem de

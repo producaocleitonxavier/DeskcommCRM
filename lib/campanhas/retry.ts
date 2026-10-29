@@ -13,6 +13,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { logger } from "@/lib/logger";
 import { enviarTextoNoCanal } from "@/lib/politico/enviar-material";
+import { lerIdentidadeDoMandato, novidadesDeLabel } from "@/lib/politico/identidade-do-mandato";
 
 const JANELA_HORAS = 24;
 /** Teto por rodada — cutucada é proativa-fria, então sai no gotejo (anti-ban). */
@@ -32,6 +33,9 @@ export async function processarRetries(admin: SupabaseClient): Promise<{ enviado
     for (const c of camps as { id: string; organization_id: string; channel_session_id: string | null; material_id: string | null }[]) {
       if (enviados >= POR_RODADA) break;
       if (!c.channel_session_id) continue;
+
+      // Identidade do mandato (nome do político) — uma leitura por campanha.
+      const idm = await lerIdentidadeDoMandato(admin, c.organization_id);
 
       const { data: rec } = await admin
         .from("campaign_recipients")
@@ -57,7 +61,7 @@ export async function processarRetries(admin: SupabaseClient): Promise<{ enviado
 
         const texto = c.material_id
           ? "Oi! 🙂 Vi que a gente ainda não se falou. Ainda quer receber o material? É só responder *SIM* por aqui que te envio na hora."
-          : "Oi! 🙂 Passando pra saber se você viu minha mensagem. Se quiser receber as novidades do Cleiton, é só me responder por aqui.";
+          : `Oi! 🙂 Passando pra saber se você viu minha mensagem. Se quiser receber ${novidadesDeLabel(idm)}, é só me responder por aqui.`;
         const res = await enviarTextoNoCanal(admin, {
           organizationId: c.organization_id,
           contactId: r.contact_id,

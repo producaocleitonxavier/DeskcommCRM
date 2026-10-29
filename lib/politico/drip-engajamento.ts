@@ -30,9 +30,9 @@ export const TOQUES_DRIP_ENGAJAMENTO: ToqueDrip[] = [
   {
     rotulo: "Mês 1 · Boas-vindas",
     texto:
-      "Oi! Aqui é do gabinete do vereador Cleiton Xavier 🙏 Que bom ter você por perto. " +
-      "De vez em quando vou te mandar conteúdos úteis — proteção das crianças no digital, " +
-      "segurança e o que está acontecendo no bairro. Qualquer coisa, é só me chamar por aqui!",
+      "Oi! Aqui é do nosso gabinete 🙏 Que bom ter você por perto. " +
+      "De vez em quando vou te mandar novidades úteis — o que está acontecendo no seu bairro " +
+      "e o trabalho do mandato. Qualquer coisa, é só me chamar por aqui!",
   },
   {
     rotulo: "Mês 2 · Conteúdo útil",

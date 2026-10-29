@@ -27,6 +27,9 @@ export function comAvisoIA(texto: string, incluir = true): string {
 export interface OpcoesRecado {
   momento: MomentoVoz;
   primeiroNome: string | null;
+  /** Nome do político que fala (de `pol_gabinete_config`). Sem ele, o recado
+   * não inventa nome — só não se apresenta. NUNCA chumbe um nome aqui. */
+  nomeParlamentar?: string | null;
   /** Nome/assunto curto do pedido, opcional (deixa o recado mais pessoal). */
   assuntoCurto?: string | null;
   incluirAvisoIA?: boolean;
@@ -43,16 +46,20 @@ export function scriptRecado(opts: OpcoesRecado): string {
   const ini = saudacao(opts.primeiroNome);
   const assunto = (opts.assuntoCurto ?? "").trim();
   const sobre = assunto ? ` sobre ${assunto}` : "";
+  // Apresentação parametrizada: "Aqui é <nome>." Sem nome configurado, o áudio
+  // simplesmente não se apresenta (jamais inventa um nome).
+  const nome = (opts.nomeParlamentar ?? "").trim();
+  const intro = nome ? `Aqui é ${nome}. ` : "";
 
   let corpo: string;
   if (opts.momento === "resolucao") {
     corpo =
-      `${ini} Aqui é o Cleiton Xavier. ` +
+      `${ini} ${intro}` +
       `Passando pra te dar uma boa notícia: o seu pedido${sobre} foi resolvido. ` +
       `Agradeço muito a sua confiança, e conte sempre com o nosso gabinete. Um grande abraço!`;
   } else {
     corpo =
-      `${ini} Aqui é o Cleiton Xavier. ` +
+      `${ini} ${intro}` +
       `Passando pra te avisar que o seu pedido${sobre} já foi encaminhado pro órgão responsável. ` +
       `Assim que tiver novidade, eu te retorno. Pode contar comigo e com o nosso gabinete. Um abraço!`;
   }
