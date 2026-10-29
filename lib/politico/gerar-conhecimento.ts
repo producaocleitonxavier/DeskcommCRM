@@ -26,6 +26,9 @@ export interface DadosDoMandato {
   horario: string | null;
   whats: string | null;
   insta: string | null;
+  endereco: string | null;
+  email: string | null;
+  agendaContato: string | null;
   portal: string | null;
   servicos: { nome: string; link: string }[];
   orgaos: string | null;
@@ -83,13 +86,25 @@ export function montarConhecimentoDoMandato(d: DadosDoMandato): string {
   linhas.push("## O gabinete");
   const quem = [cargo, local].filter(Boolean).join(" · ");
   if (quem) linhas.push(`- ${quem}.`);
+  if (limpar(d.endereco)) linhas.push(`- Endereço: ${limpar(d.endereco)}.`);
   if (limpar(d.horario)) linhas.push(`- Horário de atendimento: ${limpar(d.horario)}.`);
   const canais: string[] = [];
   if (limpar(d.whats)) canais.push(`WhatsApp ${limpar(d.whats)}`);
+  if (limpar(d.email)) canais.push(`e-mail ${limpar(d.email)}`);
   if (limpar(d.insta)) canais.push(`Instagram ${limpar(d.insta)}`);
   if (canais.length) linhas.push(`- Contatos: ${canais.join(" · ")}.`);
   linhas.push("- O atendimento do gabinete e os serviços públicos não têm custo para o cidadão.");
   linhas.push("");
+
+  // Agenda e eventos: quem marca é uma pessoa — a IA aponta, nunca confirma data.
+  if (limpar(d.agendaContato)) {
+    linhas.push("## Agenda e eventos");
+    linhas.push(
+      `Para marcar uma visita, reunião, palestra ou convite para evento, oriente a pessoa a falar com ${limpar(d.agendaContato)}. ` +
+        "NUNCA confirme nem prometa data você mesmo — quem fecha a agenda é essa pessoa.",
+    );
+    linhas.push("");
+  }
 
   // Sobre o parlamentar
   linhas.push("## Sobre o parlamentar (responda breve e factual se perguntarem; nunca faça campanha)");
@@ -238,6 +253,14 @@ export function montarPromptDoMandato(d: DadosDoMandato): string {
       "Defesa Civil 199; rede de energia, a companhia de energia da região. Registre a demanda e diga que a equipe " +
       "acompanha — sem prometer e sem dizer que \"já acionei\".",
   );
+
+  if (limpar(d.agendaContato)) {
+    p.push("# Agenda e eventos");
+    p.push(
+      `Para marcar visita, reunião, palestra ou convite, oriente a pessoa a falar com ${limpar(d.agendaContato)}. ` +
+        "NUNCA confirme nem prometa data — quem fecha a agenda é essa pessoa.",
+    );
+  }
 
   p.push("# O que você NUNCA faz");
   p.push("- Prometer resultado, prazo ou benefício. Ligar favor/serviço a voto. Pedir voto, declarar apoio ou opinar em política partidária. Dar orientação jurídica, médica ou financeira. Pedir dado sensível sem necessidade.");

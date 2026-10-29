@@ -25,6 +25,9 @@ export interface MandatoConfig {
   whats: string | null;
   horario: string | null;
   insta: string | null;
+  endereco: string | null;
+  email: string | null;
+  agendaContato: string | null;
   portal: string | null;
   servicos: ServicoComLink[];
   orgaos: string | null;

@@ -15,7 +15,7 @@ import { useRouter } from "next/navigation";
 import {
   Landmark, Building2, Users, Flag, Check, ArrowLeft, ArrowRight,
   MessageCircle, Clock, AtSign, Globe, Sparkles, ShieldCheck,
-  Plus, X, Loader2, PartyPopper,
+  Plus, X, Loader2, PartyPopper, MapPin, Mail, CalendarCheck,
 } from "lucide-react";
 
 import { CommandHero } from "@/components/politico/command-hero";
@@ -56,6 +56,9 @@ export default function SetupWizard({ inicial }: { inicial: { nome: string; carg
   const [whats, setWhats] = useState("");
   const [horario, setHorario] = useState("");
   const [insta, setInsta] = useState("");
+  const [endereco, setEndereco] = useState("");
+  const [email, setEmail] = useState("");
+  const [agendaContato, setAgendaContato] = useState("");
   const [portal, setPortal] = useState("");
   const [servicos, setServicos] = useState<{ nome: string; link: string }[]>([
     { nome: "", link: "" },
@@ -92,7 +95,7 @@ export default function SetupWizard({ inicial }: { inicial: { nome: string; carg
     setErro(null);
     setSalvando(true);
     const res = await salvarSetupDoMandato({
-      tipo, nome, cargo, cidade, uf, subtitulo, whats, horario, insta, portal,
+      tipo, nome, cargo, cidade, uf, subtitulo, whats, horario, insta, endereco, email, agendaContato, portal,
       servicos, orgaos, bio, temas,
     });
     setSalvando(false);
@@ -233,9 +236,12 @@ export default function SetupWizard({ inicial }: { inicial: { nome: string; carg
             <h2 className="font-heading text-[22px] font-bold">Canais do gabinete</h2>
             <p className="mt-1 text-sm" style={{ color: "var(--color-text-muted)" }}>Por onde o cidadão fala com o mandato.</p>
             <div className="mt-5 grid gap-4 sm:grid-cols-2">
-              <Campo label="WhatsApp do gabinete" dica="Número que atende o cidadão"><div className="flex items-center gap-2"><MessageCircle size={18} style={{ color: "#8AA62E" }} /><input className={inputCls} value={whats} onChange={(e) => setWhats(e.target.value)} placeholder="(00) 00000-0000" /></div></Campo>
-              <Campo label="Horário de atendimento" dica="Quando a equipe responde"><div className="flex items-center gap-2"><Clock size={18} style={{ color: "#8AA62E" }} /><input className={inputCls} value={horario} onChange={(e) => setHorario(e.target.value)} placeholder="Ex.: seg a sex, 8h às 18h" /></div></Campo>
-              <div className="sm:col-span-2"><Campo label="Instagram (opcional)" dica="Perfil oficial do mandato"><div className="flex items-center gap-2"><AtSign size={18} style={{ color: "#8AA62E" }} /><input className={inputCls} value={insta} onChange={(e) => setInsta(e.target.value)} placeholder="@seuperfil" /></div></Campo></div>
+              <Campo label="WhatsApp do gabinete" dica="Número que atende o cidadão"><div className="flex items-center gap-2"><MessageCircle size={18} className="shrink-0" style={{ color: "#8AA62E" }} /><input className={inputCls} value={whats} onChange={(e) => setWhats(e.target.value)} placeholder="(00) 00000-0000" /></div></Campo>
+              <Campo label="Horário de atendimento" dica="Quando a equipe responde"><div className="flex items-center gap-2"><Clock size={18} className="shrink-0" style={{ color: "#8AA62E" }} /><input className={inputCls} value={horario} onChange={(e) => setHorario(e.target.value)} placeholder="Ex.: seg a sex, 8h às 18h" /></div></Campo>
+              <div className="sm:col-span-2"><Campo label="Endereço do gabinete" dica="Onde a pessoa pode ir, se quiser. Entra também no ofício."><div className="flex items-center gap-2"><MapPin size={18} className="shrink-0" style={{ color: "#8AA62E" }} /><input className={inputCls} value={endereco} onChange={(e) => setEndereco(e.target.value)} placeholder="Ex.: Rua X, 100, sala 5, Centro" /></div></Campo></div>
+              <Campo label="E-mail (opcional)" dica="E-mail oficial do gabinete"><div className="flex items-center gap-2"><Mail size={18} className="shrink-0" style={{ color: "#8AA62E" }} /><input className={inputCls} value={email} onChange={(e) => setEmail(e.target.value)} placeholder="contato@seudominio.com" /></div></Campo>
+              <Campo label="Instagram (opcional)" dica="Perfil oficial do mandato"><div className="flex items-center gap-2"><AtSign size={18} className="shrink-0" style={{ color: "#8AA62E" }} /><input className={inputCls} value={insta} onChange={(e) => setInsta(e.target.value)} placeholder="@seuperfil" /></div></Campo>
+              <div className="sm:col-span-2"><Campo label="Quem cuida da agenda e dos eventos (opcional)" dica="A IA aponta visitas/convites para essa pessoa — e nunca marca data sozinha."><div className="flex items-center gap-2"><CalendarCheck size={18} className="shrink-0" style={{ color: "#8AA62E" }} /><input className={inputCls} value={agendaContato} onChange={(e) => setAgendaContato(e.target.value)} placeholder="Ex.: Maria, no WhatsApp (00) 00000-0000" /></div></Campo></div>
             </div>
           </div>
         )}
