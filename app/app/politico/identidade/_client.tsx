@@ -155,16 +155,16 @@ export default function IdentidadeClient({ inicial }: { inicial: IdentidadeGabin
       {/* Dados do parlamentar */}
       <section className="wr-card space-y-4 p-5 sm:p-6">
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <Campo label="Nome do parlamentar" dica="Ex.: Dep. Mauro Tramonte">
+          <Campo label="Nome do parlamentar" dica="Nome completo, como assina os ofícios">
             <input type="text" value={nome} onChange={(e) => setNome(e.target.value)} className="wr-input w-full" placeholder="Nome que aparece no timbre" />
           </Campo>
-          <Campo label="Cargo" dica="Ex.: Deputado Estadual">
+          <Campo label="Cargo" dica="Vereador, Prefeito, Deputado Estadual ou Federal…">
             <input type="text" value={cargo} onChange={(e) => setCargo(e.target.value)} className="wr-input w-full" placeholder="Cargo na assinatura" />
           </Campo>
-          <Campo label="Subtítulo" dica="Ex.: Trabalhando por Minas Gerais">
+          <Campo label="Subtítulo" dica="Lema ou área de atuação (opcional)">
             <input type="text" value={subtitulo} onChange={(e) => setSubtitulo(e.target.value)} className="wr-input w-full" placeholder="Linha de apoio no cabeçalho" />
           </Campo>
-          <Campo label="Cidade de emissão" dica="Entra na data do ofício. Ex.: Belo Horizonte">
+          <Campo label="Cidade de emissão" dica="Entra na data do ofício. Ex.: sua cidade">
             <input type="text" value={cidade} onChange={(e) => setCidade(e.target.value)} className="wr-input w-full" placeholder="Cidade" />
           </Campo>
         </div>
