@@ -10,7 +10,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, Check } from "lucide-react";
 
-import { criarRegistro } from "@/app/actions/politico/gabinete-actions";
+import { criarRegistro, criarCidadao } from "@/app/actions/politico/gabinete-actions";
 
 interface Opcao {
   id: string;
@@ -92,6 +92,10 @@ export default function NovaEmendaForm({ liderancas }: NovaEmendaFormProps) {
   const [entidade, setEntidade] = useState("");
   const [cnpj, setCnpj] = useState("");
   const [responsavel, setResponsavel] = useState("");
+  const [respFone, setRespFone] = useState("");
+  const [respEndereco, setRespEndereco] = useState("");
+  const [respBairro, setRespBairro] = useState("");
+  const [respNascimento, setRespNascimento] = useState("");
   const [liderancaId, setLiderancaId] = useState("");
   const [dataIndicacao, setDataIndicacao] = useState("");
   const [prazo, setPrazo] = useState("");
@@ -125,6 +129,12 @@ export default function NovaEmendaForm({ liderancas }: NovaEmendaFormProps) {
     if (entidade.trim()) payload.entidade_beneficiada = entidade.trim();
     if (cnpj.trim()) payload.cnpj_entidade = cnpj.trim();
     if (responsavel.trim()) payload.responsavel_nome = responsavel.trim();
+    // Responsável com WhatsApp → vira CONTATO vinculado (pra avisar quando a
+    // emenda sair). Se falhar, não bloqueia a emenda (grava só o nome).
+    if (responsavel.trim() && respFone.trim()) {
+      const c = await criarCidadao(responsavel.trim(), respFone.trim(), respEndereco.trim() || undefined, respNascimento || undefined, respBairro.trim() || undefined, municipio.trim() || undefined);
+      if (c.ok && c.id) payload.responsavel_contact_id = c.id;
+    }
     if (liderancaId) payload.lideranca_id = liderancaId;
     if (dataIndicacao) payload.data_indicacao = dataIndicacao;
     if (prazo) payload.prazo_execucao = prazo;
@@ -220,9 +230,31 @@ export default function NovaEmendaForm({ liderancas }: NovaEmendaFormProps) {
               <Label>Beneficiários estimados</Label>
               <input type="number" value={beneficiarios} onChange={(e) => setBeneficiarios(e.target.value)} className="wr-input w-full" />
             </div>
-            <div>
-              <Label>Responsável pela emenda</Label>
-              <input type="text" value={responsavel} onChange={(e) => setResponsavel(e.target.value)} className="wr-input w-full" placeholder="Quem indicou/intermediou (nome livre)" />
+            <div className="sm:col-span-2 rounded-xl p-4" style={{ background: "var(--color-surface-elevated)", border: "1px solid var(--color-border)" }}>
+              <p className="mb-2 text-sm font-semibold" style={{ color: "var(--color-text)" }}>Responsável pela emenda</p>
+              <p className="mb-3 text-xs" style={{ color: "var(--color-text-subtle)" }}>Quem indicou/intermediou. Com o WhatsApp, ele entra na base e dá pra avisar quando a emenda sair.</p>
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                <div>
+                  <Label>Nome completo</Label>
+                  <input type="text" value={responsavel} onChange={(e) => setResponsavel(e.target.value)} className="wr-input w-full" placeholder="Nome do responsável" />
+                </div>
+                <div>
+                  <Label>WhatsApp</Label>
+                  <input type="tel" value={respFone} onChange={(e) => setRespFone(e.target.value)} className="wr-input w-full" placeholder="(31) 99999-9999" />
+                </div>
+                <div>
+                  <Label>Endereço</Label>
+                  <input type="text" value={respEndereco} onChange={(e) => setRespEndereco(e.target.value)} className="wr-input w-full" placeholder="Rua, número" />
+                </div>
+                <div>
+                  <Label>Bairro</Label>
+                  <input type="text" value={respBairro} onChange={(e) => setRespBairro(e.target.value)} className="wr-input w-full" placeholder="Bairro" />
+                </div>
+                <div>
+                  <Label>Data de nascimento</Label>
+                  <input type="date" value={respNascimento} onChange={(e) => setRespNascimento(e.target.value)} className="wr-input w-full" />
+                </div>
+              </div>
             </div>
             {liderancas.length > 0 && (
               <div>

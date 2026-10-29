@@ -77,6 +77,8 @@ export async function criarCidadao(
   telefone?: string,
   endereco?: string,
   nascimento?: string,
+  bairro?: string,
+  cidade?: string,
 ): Promise<AcaoResultado> {
   const org = await orgAtiva();
   if (!org) return { ok: false, erro: "Sessão ou organização inválida." };
@@ -87,7 +89,11 @@ export async function criarCidadao(
   if (fone) payload.phone_number = fone;
   // Endereço vai no mesmo lugar que o resto do político usa (custom_fields.endereco_gip),
   // para alimentar a inteligência territorial.
-  if (endereco?.trim()) payload.custom_fields = { endereco_gip: { endereco: endereco.trim() } };
+  const geo: Record<string, string> = {};
+  if (endereco?.trim()) geo.endereco = endereco.trim();
+  if (bairro?.trim()) geo.bairro = bairro.trim();
+  if (cidade?.trim()) geo.cidade = cidade.trim();
+  if (Object.keys(geo).length > 0) payload.custom_fields = { endereco_gip: geo };
   // Data de nascimento: coluna `birthdate` (YYYY-MM-DD, vinda do input date).
   // Só grava se vier no formato certo — nunca manda string vazia (quebra o tipo date).
   if (nascimento && /^\d{4}-\d{2}-\d{2}$/.test(nascimento.trim())) payload.birthdate = nascimento.trim();
