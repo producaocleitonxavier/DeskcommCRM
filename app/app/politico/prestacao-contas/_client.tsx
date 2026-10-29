@@ -6,12 +6,14 @@
  * bairros, com filtro de período. Gráficos em CSS (sem dependência pesada) —
  * simples, premium e à prova de criança.
  */
+import { useState } from "react";
 import Link from "next/link";
-import { CheckCircle2, Clock, FileText, Building2, Hammer, Coins, Users, MessageSquare, MapPin } from "lucide-react";
+import { CheckCircle2, Clock, FileText, Building2, Hammer, Coins, Users, MessageSquare, MapPin, Download, Loader2 } from "lucide-react";
 
 import { CommandHero } from "@/components/politico/command-hero";
 import { KpiCard } from "@/components/politico/kpi-card";
-import type { PrestacaoContas, Periodo } from "./page";
+import { gerarRelatorioPrestacaoContas } from "@/app/actions/politico/gerarRelatorioPrestacaoContas";
+import type { PrestacaoContas, Periodo } from "@/lib/politico/prestacao-contas-dados";
 
 const PERIODOS: { id: Periodo; label: string }[] = [
   { id: "mes", label: "Este mês" },
@@ -29,6 +31,20 @@ export default function PrestacaoContasClient({ dados }: { dados: PrestacaoConta
   const maxEvol = Math.max(1, ...dados.evolucao.map((e) => e.valor));
   const maxBairro = Math.max(1, ...dados.topBairros.map((b) => b.valor));
 
+  const [gerando, setGerando] = useState(false);
+  const [erroPdf, setErroPdf] = useState<string | null>(null);
+  async function gerarPdf() {
+    setErroPdf(null);
+    setGerando(true);
+    const r = await gerarRelatorioPrestacaoContas(dados.periodo);
+    setGerando(false);
+    if (!r.ok) {
+      setErroPdf(r.erro);
+      return;
+    }
+    window.open(r.url, "_blank", "noopener");
+  }
+
   return (
     <div className="mx-auto max-w-[1140px] space-y-[18px] px-4 py-7">
       <CommandHero
@@ -37,22 +53,35 @@ export default function PrestacaoContasClient({ dados }: { dados: PrestacaoConta
         subtitulo="O trabalho do mandato em números — demandas atendidas, ofícios, obras, emendas e a base crescendo. A conta que o cidadão vê."
       />
 
-      {/* Filtro de período */}
-      <div className="flex flex-wrap items-center gap-2">
-        {PERIODOS.map((p) => {
-          const on = dados.periodo === p.id;
-          return (
-            <Link
-              key={p.id}
-              href={`/app/politico/prestacao-contas?periodo=${p.id}`}
-              className="inline-flex items-center h-9 px-4 rounded-full text-sm font-semibold transition-colors"
-              style={on ? { background: "#16181D", color: "#FFFFFF" } : { background: "var(--color-surface-elevated)", color: "var(--color-text-muted)" }}
-            >
-              {p.label}
-            </Link>
-          );
-        })}
+      {/* Filtro de período + gerar PDF */}
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          {PERIODOS.map((p) => {
+            const on = dados.periodo === p.id;
+            return (
+              <Link
+                key={p.id}
+                href={`/app/politico/prestacao-contas?periodo=${p.id}`}
+                className="inline-flex items-center h-9 px-4 rounded-full text-sm font-semibold transition-colors"
+                style={on ? { background: "#16181D", color: "#FFFFFF" } : { background: "var(--color-surface-elevated)", color: "var(--color-text-muted)" }}
+              >
+                {p.label}
+              </Link>
+            );
+          })}
+        </div>
+        <button
+          type="button"
+          onClick={gerarPdf}
+          disabled={gerando}
+          className="inline-flex items-center gap-2 rounded-full px-5 py-2.5 text-sm font-bold transition-opacity hover:opacity-90 disabled:opacity-60"
+          style={{ background: "#D7F36A", color: "#16181D" }}
+        >
+          {gerando ? <Loader2 size={16} className="animate-spin" /> : <Download size={16} />}
+          {gerando ? "Gerando…" : "Gerar relatório (PDF)"}
+        </button>
       </div>
+      {erroPdf && <p className="text-sm font-medium" style={{ color: "#F87171" }}>{erroPdf}</p>}
 
       {/* Números do mandato */}
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
@@ -114,9 +143,6 @@ export default function PrestacaoContasClient({ dados }: { dados: PrestacaoConta
         </section>
       </div>
 
-      <p className="text-center text-[12px]" style={{ color: "var(--color-text-subtle)" }}>
-        Em breve: gerar esta prestação de contas em PDF, num clique — para o cidadão e para o mandato.
-      </p>
     </div>
   );
 }
