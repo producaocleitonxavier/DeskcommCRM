@@ -43,6 +43,7 @@ interface Demanda {
   aberta_em: string;
   prazo_em: string | null;
   desfecho: string | null;
+  pol_autoatendimento?: boolean | null;
 }
 
 // -- Helpers -----------------------------------------------------------------
@@ -105,20 +106,47 @@ function formatarData(data: string): string {
 
 // -- Data fetching -----------------------------------------------------------
 
-async function buscarDemandas(organizationId: string, pagina: number, filtroEstado?: string) {
+/**
+ * A coluna `pol_autoatendimento` (migration 9072) existe nesta instalação? Se
+ * ainda não, a tela se comporta exatamente como antes — sem a camada "A IA
+ * orientou" e sem quebrar nenhuma consulta. Detecção barata (1 linha).
+ */
+async function colunaAutoExiste(organizationId: string): Promise<boolean> {
+  const db = await createClient();
+  const { error } = await db
+    .from("demandas")
+    .select("pol_autoatendimento")
+    .eq("organization_id", organizationId)
+    .limit(1);
+  return !error;
+}
+
+async function buscarDemandas(
+  organizationId: string,
+  pagina: number,
+  filtroEstado: string | undefined,
+  opts: { temAuto: boolean; verAuto: boolean },
+) {
   const db = await createClient();
   const offset = (pagina - 1) * POR_PAGINA;
 
+  const colunas =
+    "id, assunto, estado, origem, pol_tipo, pol_prioridade, pol_orgao_destino, pol_encaminhamento_ia, dono_kind, aberta_em, prazo_em, desfecho" +
+    (opts.temAuto ? ", pol_autoatendimento" : "");
+
   let query = db
     .from("demandas")
-    .select(
-      "id, assunto, estado, origem, pol_tipo, pol_prioridade, pol_orgao_destino, pol_encaminhamento_ia, dono_kind, aberta_em, prazo_em, desfecho",
-      { count: "exact" },
-    )
+    .select(colunas, { count: "exact" })
     .eq("organization_id", organizationId)
     .eq("pol_gabinete", true)
     .order("aberta_em", { ascending: false })
     .range(offset, offset + POR_PAGINA - 1);
+
+  // A fila de trabalho mostra só o que exige a mão do gabinete; a aba "A IA
+  // orientou" mostra só os registros de autoatendimento (inteligência territorial).
+  if (opts.temAuto) {
+    query = query.eq("pol_autoatendimento", opts.verAuto);
+  }
 
   if (filtroEstado) {
     query = query.eq("estado", filtroEstado);
@@ -127,43 +155,65 @@ async function buscarDemandas(organizationId: string, pagina: number, filtroEsta
   const { data, count } = await query;
 
   return {
-    demandas: (data ?? []) as Demanda[],
+    // `select` com colunas dinâmicas (string concatenada) faz o postgrest-js
+    // perder a inferência e tipar como GenericStringError[]; o cast via unknown
+    // é o padrão nesses casos (mesmo motivo do `as unknown as` em obras-actions).
+    demandas: (data ?? []) as unknown as Demanda[],
     total: count ?? 0,
   };
 }
 
-async function contarEstados(organizationId: string) {
+async function contarEstados(organizationId: string, temAuto: boolean) {
   const db = await createClient();
   const counts: Record<string, number> = {};
 
-  const { count: totalCount } = await db
+  // Quando a camada de autoatendimento existe, os KPIs são do TRABALHO do
+  // gabinete — os registros de autoatendimento têm o próprio contador (_auto).
+  let qTotal = db
     .from("demandas")
     .select("id", { count: "exact", head: true })
     .eq("organization_id", organizationId)
     .eq("pol_gabinete", true);
+  if (temAuto) qTotal = qTotal.eq("pol_autoatendimento", false);
+  const { count: totalCount } = await qTotal;
   counts._total = totalCount ?? 0;
 
   // Abertas (não resolvida/encerrada)
-  const { count: abertasCount } = await db
+  let qAbertas = db
     .from("demandas")
     .select("id", { count: "exact", head: true })
     .eq("organization_id", organizationId)
     .eq("pol_gabinete", true)
     .not("estado", "in", "(resolvida,encerrada)");
+  if (temAuto) qAbertas = qAbertas.eq("pol_autoatendimento", false);
+  const { count: abertasCount } = await qAbertas;
   counts._abertas = abertasCount ?? 0;
 
   // Resolvidas este mês
   const inicioMes = new Date();
   inicioMes.setDate(1);
   inicioMes.setHours(0, 0, 0, 0);
-  const { count: resolvidasMes } = await db
+  let qResolv = db
     .from("demandas")
     .select("id", { count: "exact", head: true })
     .eq("organization_id", organizationId)
     .eq("pol_gabinete", true)
     .eq("estado", "resolvida")
     .gte("aberta_em", inicioMes.toISOString());
+  if (temAuto) qResolv = qResolv.eq("pol_autoatendimento", false);
+  const { count: resolvidasMes } = await qResolv;
   counts._resolvidas_mes = resolvidasMes ?? 0;
+
+  // Registros de autoatendimento (a IA orientou — camada de inteligência).
+  if (temAuto) {
+    const { count: autoCount } = await db
+      .from("demandas")
+      .select("id", { count: "exact", head: true })
+      .eq("organization_id", organizationId)
+      .eq("pol_gabinete", true)
+      .eq("pol_autoatendimento", true);
+    counts._auto = autoCount ?? 0;
+  }
 
   return counts;
 }
@@ -207,23 +257,34 @@ export default async function GabinetePage({
   const pagina = Math.max(1, Number(params.pagina) || 1);
   const filtroEstado = typeof params.estado === "string" ? params.estado : undefined;
 
+  // Camada "A IA orientou" (autoatendimento): existe só se a migration 9072 rodou.
+  const temAuto = await colunaAutoExiste(org.orgId);
+  const verAuto = temAuto && params.view === "autoatendimento";
+
   const [{ demandas, total }, contagens] = await Promise.all([
-    buscarDemandas(org.orgId, pagina, filtroEstado),
-    contarEstados(org.orgId),
+    buscarDemandas(org.orgId, pagina, filtroEstado, { temAuto, verAuto }),
+    contarEstados(org.orgId, temAuto),
   ]);
 
   const totalPaginas = Math.ceil(total / POR_PAGINA);
 
   // Distribuição por status + tempo médio de resolução (para os gráficos).
+  // Os gráficos refletem o TRABALHO do gabinete — excluem os de autoatendimento.
   const dbCharts = await createClient();
   const ESTADOS_PIE = ["aberta", "em_atendimento", "encaminhada", "resolvida", "encerrada"];
   const [distRes, resolvidasRes] = await Promise.all([
     Promise.all(
-      ESTADOS_PIE.map((e) =>
-        dbCharts.from("demandas").select("id", { count: "exact", head: true }).eq("organization_id", org.orgId).eq("pol_gabinete", true).eq("estado", e),
-      ),
+      ESTADOS_PIE.map((e) => {
+        let q = dbCharts.from("demandas").select("id", { count: "exact", head: true }).eq("organization_id", org.orgId).eq("pol_gabinete", true).eq("estado", e);
+        if (temAuto) q = q.eq("pol_autoatendimento", false);
+        return q;
+      }),
     ),
-    dbCharts.from("demandas").select("aberta_em, fechada_em").eq("organization_id", org.orgId).eq("pol_gabinete", true).not("fechada_em", "is", null).limit(500),
+    (() => {
+      let q = dbCharts.from("demandas").select("aberta_em, fechada_em").eq("organization_id", org.orgId).eq("pol_gabinete", true).not("fechada_em", "is", null).limit(500);
+      if (temAuto) q = q.eq("pol_autoatendimento", false);
+      return q;
+    })(),
   ]);
   const statusPie = ESTADOS_PIE.map((e, i) => ({
     name: estadoLabel(e),
@@ -240,9 +301,10 @@ export default async function GabinetePage({
         ) / 10
       : null;
 
+  const viewAtual = verAuto ? "autoatendimento" : undefined;
   function montarQuery(overrides: Record<string, string | undefined>) {
     const q = new URLSearchParams();
-    const merged = { estado: filtroEstado, ...overrides };
+    const merged = { estado: filtroEstado, view: viewAtual, ...overrides };
     for (const [k, v] of Object.entries(merged)) {
       if (v) q.set(k, v);
     }
@@ -288,6 +350,41 @@ export default async function GabinetePage({
 
           {/* Demandas table */}
           <section aria-label="Lista de demandas" className="wr-card pt-2 pb-0 px-0">
+            {/* Alternador de visão: fila de trabalho vs. o que a IA orientou */}
+            {temAuto && (
+              <div className="flex flex-wrap items-center gap-2 px-4 pt-3.5">
+                <Link
+                  href={`/app/politico/demandas${montarQuery({ view: undefined, estado: undefined, pagina: "1" })}`}
+                  className="inline-flex items-center h-9 px-4 rounded-full text-sm font-semibold transition-colors"
+                  style={
+                    !verAuto
+                      ? { background: "#16181D", color: "#FFFFFF" }
+                      : { background: "var(--color-surface-elevated)", color: "var(--color-text-muted)" }
+                  }
+                >
+                  Trabalho do gabinete
+                </Link>
+                <Link
+                  href={`/app/politico/demandas${montarQuery({ view: "autoatendimento", estado: undefined, pagina: "1" })}`}
+                  className="inline-flex items-center h-9 px-4 rounded-full text-sm font-semibold transition-colors"
+                  style={
+                    verAuto
+                      ? { background: "#16181D", color: "#FFFFFF" }
+                      : { background: "var(--color-surface-elevated)", color: "var(--color-text-muted)" }
+                  }
+                  title="Zeladoria que o cidadão resolve sozinho pelo link da Prefeitura. A IA registrou só para o gabinete acompanhar o bairro — não é trabalho a fazer."
+                >
+                  ✨ A IA orientou{typeof contagens._auto === "number" ? ` (${contagens._auto})` : ""}
+                </Link>
+              </div>
+            )}
+
+            {verAuto && (
+              <p className="px-4 pt-3 text-[13px]" style={{ color: "var(--color-text-subtle)" }}>
+                Estes registros são de inteligência territorial: o cidadão foi orientado a resolver pelo link da Prefeitura. Não exigem ação do gabinete.
+              </p>
+            )}
+
             {/* Filters */}
             <div className="flex flex-wrap gap-2.5 px-4 py-3.5">
               <Link
@@ -372,6 +469,15 @@ export default async function GabinetePage({
                                   style={{ background: "#D7F36A", color: "#2E3410" }}
                                 >
                                   IA
+                                </span>
+                              )}
+                              {d.pol_autoatendimento && (
+                                <span
+                                  className="inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold whitespace-nowrap"
+                                  style={{ background: "#E7EEF8", color: "#3B5B8C" }}
+                                  title="O cidadão foi orientado a resolver pelo link da Prefeitura. Registro de inteligência — não é trabalho do gabinete."
+                                >
+                                  ✨ autoatendimento
                                 </span>
                               )}
                             </div>
