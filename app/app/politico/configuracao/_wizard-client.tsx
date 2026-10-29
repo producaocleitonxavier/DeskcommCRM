@@ -11,12 +11,15 @@
  */
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import {
   Landmark, Building2, Users, Flag, Check, ArrowLeft, ArrowRight,
   MessageCircle, Clock, AtSign, Globe, Sparkles, ShieldCheck,
+  Plus, X, Loader2, PartyPopper,
 } from "lucide-react";
 
 import { CommandHero } from "@/components/politico/command-hero";
+import { salvarSetupDoMandato, adiarSetupDoMandato } from "@/app/actions/politico/salvarSetupDoMandato";
 
 type TipoMandato = "vereador" | "prefeito" | "dep_estadual" | "dep_federal";
 
@@ -42,6 +45,7 @@ function Campo({ label, children, dica }: { label: string; children: React.React
 const inputCls = "wr-input w-full";
 
 export default function SetupWizard({ inicial }: { inicial: { nome: string; cargo: string; cidade: string; subtitulo: string } }) {
+  const router = useRouter();
   const [passo, setPasso] = useState(0);
   const [tipo, setTipo] = useState<TipoMandato | null>(null);
   const [nome, setNome] = useState(inicial.nome);
@@ -53,9 +57,17 @@ export default function SetupWizard({ inicial }: { inicial: { nome: string; carg
   const [horario, setHorario] = useState("");
   const [insta, setInsta] = useState("");
   const [portal, setPortal] = useState("");
+  const [servicos, setServicos] = useState<{ nome: string; link: string }[]>([
+    { nome: "", link: "" },
+    { nome: "", link: "" },
+  ]);
   const [orgaos, setOrgaos] = useState("");
   const [bio, setBio] = useState("");
   const [temas, setTemas] = useState("");
+
+  const [salvando, setSalvando] = useState(false);
+  const [concluido, setConcluido] = useState(false);
+  const [erro, setErro] = useState<string | null>(null);
 
   const ultimo = PASSOS.length - 1;
   const podeAvancar = passo !== 0 || tipo !== null;
@@ -66,13 +78,73 @@ export default function SetupWizard({ inicial }: { inicial: { nome: string; carg
     if (meta && !cargo) setCargo(meta.cargo);
   }
 
+  function editarServico(i: number, campo: "nome" | "link", v: string) {
+    setServicos((xs) => xs.map((s, idx) => (idx === i ? { ...s, [campo]: v } : s)));
+  }
+  function addServico() {
+    setServicos((xs) => (xs.length >= 40 ? xs : [...xs, { nome: "", link: "" }]));
+  }
+  function removerServico(i: number) {
+    setServicos((xs) => (xs.length <= 1 ? xs : xs.filter((_, idx) => idx !== i)));
+  }
+
+  async function concluir() {
+    setErro(null);
+    setSalvando(true);
+    const res = await salvarSetupDoMandato({
+      tipo, nome, cargo, cidade, uf, subtitulo, whats, horario, insta, portal,
+      servicos, orgaos, bio, temas,
+    });
+    setSalvando(false);
+    if (!res.ok) {
+      setErro("Não consegui salvar agora. Confira os dados e tente de novo.");
+      return;
+    }
+    setConcluido(true);
+  }
+
+  async function adiar() {
+    setSalvando(true);
+    await adiarSetupDoMandato();
+    router.push("/app/politico");
+  }
+
+  if (concluido) {
+    return (
+      <div className="mx-auto max-w-[760px] px-4 py-7">
+        <div className="wr-card p-8 text-center sm:p-10">
+          <span className="mx-auto flex h-16 w-16 items-center justify-center rounded-full" style={{ background: "rgba(215,243,106,0.14)", color: "#8AA62E" }}>
+            <PartyPopper size={30} />
+          </span>
+          <h1 className="font-heading mt-5 text-3xl font-bold">Tudo pronto! 🎉</h1>
+          <p className="mx-auto mt-2 max-w-md text-sm" style={{ color: "var(--color-text-muted)" }}>
+            O mandato está configurado. Suas informações foram salvas e já valem para os ofícios, o atendimento e a comunicação.
+          </p>
+          <div className="mx-auto mt-6 max-w-md rounded-[14px] p-4 text-left" style={{ border: "1px solid var(--color-border)", background: "var(--color-surface-elevated)" }}>
+            <p className="text-[13px] font-semibold">Próximo (automático, em breve):</p>
+            <p className="mt-1 text-[13px]" style={{ color: "var(--color-text-muted)" }}>
+              o sistema vai montar o conhecimento da IA e o atendimento a partir do que você preencheu — portal de serviços, links e órgãos do seu município/estado.
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={() => router.push("/app/politico")}
+            className="mt-7 inline-flex items-center gap-2 rounded-full px-6 py-2.5 text-sm font-bold transition-opacity hover:opacity-90"
+            style={{ background: "#D7F36A", color: "#16181D" }}
+          >
+            Ir para o gabinete <ArrowRight size={16} />
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="mx-auto max-w-[900px] space-y-[18px] px-4 py-7">
       <CommandHero
         eyebrow="Gabinete · Configuração"
         titulo="Configuração do Mandato"
         subtitulo="Em poucos passos simples, deixamos o sistema pronto para o seu mandato. A sua equipe só preenche; a inteligência monta o resto."
-        acoes={[{ href: "/app/politico", label: "← Gabinete" }]}
       />
 
       {/* Stepper */}
@@ -172,9 +244,53 @@ export default function SetupWizard({ inicial }: { inicial: { nome: string; carg
           <div>
             <h2 className="font-heading text-[22px] font-bold">Onde o cidadão resolve</h2>
             <p className="mt-1 text-sm" style={{ color: "var(--color-text-muted)" }}>A IA usa isto para orientar o cidadão ao caminho certo — e registrar o que é do gabinete.</p>
-            <div className="mt-5 grid gap-4">
-              <Campo label="Portal de serviços do seu município/estado" dica="O site onde o cidadão abre pedidos (zeladoria, serviços). A IA manda o link certo."><div className="flex items-center gap-2"><Globe size={18} style={{ color: "#8AA62E" }} /><input className={inputCls} value={portal} onChange={(e) => setPortal(e.target.value)} placeholder="Ex.: servicos.suacidade.gov.br" /></div></Campo>
-              <Campo label="Principais órgãos para onde o gabinete encaminha" dica="Um por linha. Ex.: Secretaria de Obras, Saúde, Água/Esgoto, Ouvidoria."><textarea className={`${inputCls} min-h-[96px]`} value={orgaos} onChange={(e) => setOrgaos(e.target.value)} placeholder={"Secretaria de Obras\nSaúde\nÁgua e Esgoto\nOuvidoria"} /></Campo>
+            <div className="mt-5 grid gap-5">
+              <Campo label="Portal de serviços do seu município/estado" dica="O site onde o cidadão abre pedidos (zeladoria, serviços)."><div className="flex items-center gap-2"><Globe size={18} className="shrink-0" style={{ color: "#8AA62E" }} /><input className={inputCls} value={portal} onChange={(e) => setPortal(e.target.value)} placeholder="Ex.: servicos.suacidade.gov.br" /></div></Campo>
+
+              <div>
+                <label className="mb-1.5 block text-sm font-semibold">Principais serviços com link</label>
+                <p className="mb-3 text-xs" style={{ color: "var(--color-text-subtle)" }}>
+                  O nome do serviço e o link exato. Assim a IA manda o cidadão direto no lugar certo — sem erro.
+                </p>
+                <div className="grid gap-2.5">
+                  {servicos.map((s, i) => (
+                    <div key={i} className="flex items-center gap-2">
+                      <input
+                        className={`${inputCls} sm:max-w-[220px]`}
+                        value={s.nome}
+                        onChange={(e) => editarServico(i, "nome", e.target.value)}
+                        placeholder="Serviço (ex.: Tapa-buraco)"
+                      />
+                      <input
+                        className={inputCls}
+                        value={s.link}
+                        onChange={(e) => editarServico(i, "link", e.target.value)}
+                        placeholder="Link (ex.: servicos.suacidade.gov.br/tapaburaco)"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => removerServico(i)}
+                        disabled={servicos.length <= 1}
+                        className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full transition-opacity hover:opacity-80 disabled:opacity-30"
+                        style={{ background: "var(--color-surface-elevated)", color: "var(--color-text-muted)" }}
+                        title="Remover"
+                      >
+                        <X size={16} />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+                <button
+                  type="button"
+                  onClick={addServico}
+                  className="mt-2.5 inline-flex items-center gap-1.5 rounded-full px-3.5 py-2 text-[13px] font-semibold transition-opacity hover:opacity-80"
+                  style={{ background: "rgba(215,243,106,0.12)", color: "#8AA62E" }}
+                >
+                  <Plus size={15} /> Adicionar serviço
+                </button>
+              </div>
+
+              <Campo label="Órgãos sem link (o gabinete encaminha)" dica="Um por linha. Ex.: Água/Esgoto (concessionária), Saúde, Creche/Escola, Ouvidoria."><textarea className={`${inputCls} min-h-[88px]`} value={orgaos} onChange={(e) => setOrgaos(e.target.value)} placeholder={"Água e Esgoto (concessionária)\nSaúde\nCreche / Escola\nOuvidoria"} /></Campo>
             </div>
           </div>
         )}
@@ -229,17 +345,31 @@ export default function SetupWizard({ inicial }: { inicial: { nome: string; carg
         ) : (
           <button
             type="button"
-            className="inline-flex items-center gap-2 rounded-full px-6 py-2.5 text-sm font-bold transition-opacity hover:opacity-90"
+            onClick={concluir}
+            disabled={salvando}
+            className="inline-flex items-center gap-2 rounded-full px-6 py-2.5 text-sm font-bold transition-opacity hover:opacity-90 disabled:opacity-60"
             style={{ background: "#D7F36A", color: "#16181D" }}
-            title="Esqueleto — a geração entra depois da sua validação"
           >
-            <Check size={16} /> Concluir configuração
+            {salvando ? <Loader2 size={16} className="animate-spin" /> : <Check size={16} />}
+            {salvando ? "Salvando…" : "Concluir configuração"}
           </button>
         )}
       </div>
 
-      <p className="text-center text-[11px]" style={{ color: "var(--color-text-subtle)" }}>
-        Pré-visualização do assistente · a gravação e a geração automática entram após a sua validação do visual.
+      {erro && (
+        <p className="text-center text-sm font-medium" style={{ color: "#F87171" }}>{erro}</p>
+      )}
+
+      <p className="text-center">
+        <button
+          type="button"
+          onClick={adiar}
+          disabled={salvando}
+          className="text-[12px] underline transition-opacity hover:opacity-80 disabled:opacity-50"
+          style={{ color: "var(--color-text-subtle)" }}
+        >
+          Fazer isso depois
+        </button>
       </p>
     </div>
   );

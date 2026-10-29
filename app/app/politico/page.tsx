@@ -12,6 +12,8 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { requireAuth, resolveActiveOrg } from "@/lib/auth/server";
+import { ROLE_RANK } from "@/lib/auth/types";
+import { deveAbrirSetup } from "@/lib/politico/setup-do-mandato";
 import HojeClient from "./_hoje-client";
 import PageTabs from "@/components/politico/page-tabs";
 
@@ -500,6 +502,15 @@ export default async function HojePage() {
 
   const org = await resolveActiveOrg(user);
   if (!org) redirect("/app/onboarding");
+
+  // Primeira entrada: se o admin ainda não configurou o mandato, o sistema abre
+  // no assistente de configuração — "liga e está pronto". Depois de concluído,
+  // nunca mais força (setup_completo em settings.gabinete). Só o admin configura.
+  if (ROLE_RANK[org.role] >= ROLE_RANK.admin) {
+    const dbCfg = await createClient();
+    const { data: orgRow } = await dbCfg.from("organizations").select("settings").eq("id", org.orgId).maybeSingle();
+    if (deveAbrirSetup(orgRow?.settings)) redirect("/app/politico/configuracao");
+  }
 
   const [metrics, gabineteHoje, filaAcao] = await Promise.all([
     buscarMetricas(org.orgId),
