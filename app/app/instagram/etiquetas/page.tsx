@@ -9,7 +9,7 @@
 
 "use client";
 
-import { ArrowDown, Sparkles, Heart, Megaphone, type LucideIcon } from "lucide-react";
+import { Sparkles, Heart, Megaphone, type LucideIcon } from "lucide-react";
 import { CommandHero } from "@/components/politico/command-hero";
 
 interface Nivel {
@@ -53,33 +53,26 @@ export default function FunilPoliticoPage() {
         subtitulo="A jornada de cada apoiador, em 3 níveis. Quanto mais a pessoa se envolve, mais alto ela sobe."
       />
 
-      {/* Jornada — 3 níveis em cartões conectados */}
-      <div className="space-y-3">
+      {/* Jornada — 3 níveis em cartões leves conectados por uma trilha fina */}
+      <div className="space-y-0">
         {NIVEIS.map((nivel, i) => {
           const Icone = nivel.icone;
+          const cor = `var(--wr-funnel-${nivel.n})`;
           return (
             <div key={nivel.n}>
-              <section
-                className="wr-card overflow-hidden p-0"
-                style={{ borderColor: `var(--wr-funnel-${nivel.n})` }}
-              >
-                {/* faixa colorida do nível */}
-                <div
-                  className="flex items-center gap-3 px-5 py-3.5"
-                  style={{ background: `var(--wr-funnel-${nivel.n})` }}
-                >
+              <section className="wr-card p-5" style={{ borderLeft: `3px solid ${cor}` }}>
+                <div className="flex items-center gap-3">
                   <span
-                    className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-sm font-bold"
-                    style={{ background: "#FFFFFF", color: "#26318F" }}
+                    className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-sm font-bold"
+                    style={{ background: cor, color: "#FFFFFF" }}
                   >
                     {nivel.n}
                   </span>
-                  <h2 className="flex items-center gap-2 font-heading text-[18px] font-bold" style={{ color: "#1B2566" }}>
-                    <Icone className="h-5 w-5" aria-hidden /> {nivel.nome}
+                  <h2 className="flex items-center gap-2 font-heading text-[17px] font-bold" style={{ color: "var(--color-text)" }}>
+                    <Icone className="h-[18px] w-[18px]" style={{ color: cor }} aria-hidden /> {nivel.nome}
                   </h2>
                 </div>
-                {/* corpo */}
-                <div className="space-y-3 p-5">
+                <div className="mt-3.5 grid gap-x-6 gap-y-3 sm:grid-cols-2">
                   <div>
                     <p className="mb-0.5 text-[11px] font-semibold uppercase tracking-wide" style={{ color: "var(--color-text-subtle)" }}>
                       O que é
@@ -94,10 +87,10 @@ export default function FunilPoliticoPage() {
                   </div>
                 </div>
               </section>
-              {/* seta entre os níveis */}
+              {/* trilha fina entre os níveis */}
               {i < NIVEIS.length - 1 && (
-                <div className="flex justify-center py-1.5">
-                  <ArrowDown className="h-5 w-5" style={{ color: "var(--color-text-subtle)" }} aria-hidden />
+                <div className="flex justify-center">
+                  <span aria-hidden style={{ width: 2, height: 18, background: "var(--color-border)" }} />
                 </div>
               )}
             </div>
