@@ -1771,6 +1771,12 @@ export const DICIONARIO: Traducoes = {
   "Configure o comportamento dos agentes que respondem no WhatsApp.": {
     es: "Configura el comportamiento de los agentes que responden en WhatsApp.",
   },
+  "Perguntas que a IA conduz durante a conversa, com as respostas guardadas na ficha do contato.": {
+    es: "Preguntas que la IA realiza durante la conversación, con las respuestas guardadas en la ficha del contacto.",
+  },
+  "Os materiais que o agente consulta antes de responder sobre o seu trabalho.": {
+    es: "Los materiales que el agente consulta antes de responder sobre tu trabajo.",
+  },
   "Nenhum agent configurado": { es: "Ningún agente configurado" },
   "Crie um agent para responder a conversas no WhatsApp com IA. Você configura prompt, tools, gatilhos e janela de contexto.": {
     es: "Crea un agente para responder conversaciones de WhatsApp con IA. Configuras el prompt, las herramientas, los disparadores y la ventana de contexto.",

@@ -102,6 +102,8 @@ describe("sidebarGroups", () => {
     const operacao = sidebarGroups(true, null).find((g) => g.group.id === "operacao");
     expect(operacao?.items.map((i) => i.href)).toEqual([
       "/app/kanban",
+      "/app/campaigns",
+      "/app/captacao-qr",
       "/app/contacts",
       "/app/tasks",
     ]);
@@ -151,6 +153,7 @@ describe("hubSections", () => {
       "/app/prospecting",
       "/app/kanban",
       "/app/campaigns",
+      "/app/captacao-qr",
       "/app/contacts",
       "/app/companies",
       "/app/people",
@@ -162,11 +165,6 @@ describe("hubSections", () => {
       "/app/imports",
       "/app/settings/tenant/pipelines",
       "/app/proposals",
-      "/app/politico/leads",
-      "/app/politico/funil",
-      "/app/politico/ligacoes",
-      "/app/politico/eventos",
-      "/app/politico/pesquisas",
     ]);
   });
 
