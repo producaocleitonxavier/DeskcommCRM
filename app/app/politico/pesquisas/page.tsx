@@ -180,9 +180,12 @@ export default async function PesquisasPage({
                     {TYPE_LABELS[p.type] ?? p.type}
                   </span>
                 )}
-                <span className="rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">
+                <Link
+                  href={`/app/politico/pesquisas/${p.id}/resultados`}
+                  className="rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary hover:bg-primary/20 transition-colors"
+                >
                   {p.response_count} {p.response_count === 1 ? "resposta" : "respostas"}
-                </span>
+                </Link>
               </div>
 
               <div className="flex flex-wrap gap-4 text-sm text-muted-foreground">
@@ -215,6 +218,13 @@ export default async function PesquisasPage({
                   style={{ background: "var(--color-surface-elevated)", color: "var(--color-text)" }}
                 >
                   Editar perguntas
+                </Link>
+                <Link
+                  href={`/app/politico/pesquisas/${p.id}/resultados`}
+                  className="inline-flex items-center gap-1 rounded-full px-3 py-1.5 text-xs font-semibold"
+                  style={{ background: "var(--color-surface-elevated)", color: "var(--color-text)" }}
+                >
+                  Ver respostas
                 </Link>
                 <Link
                   href={`/app/politico/pesquisas/${p.id}/disparar`}

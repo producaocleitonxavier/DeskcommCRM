@@ -22,7 +22,7 @@ export default async function EditarPesquisaPage({ params }: { params: Promise<{
   const db = await createClient();
   const { data: survey } = await db
     .from("pol_surveys")
-    .select("id, title, description")
+    .select("id, title, description, theme")
     .eq("id", id)
     .eq("organization_id", org.orgId)
     .maybeSingle();
@@ -32,13 +32,14 @@ export default async function EditarPesquisaPage({ params }: { params: Promise<{
     lerPerguntas(id),
     lerIdentidadeDoMandato(db, org.orgId),
   ]);
-  const s = survey as { id: string; title: string; description: string | null };
+  const s = survey as { id: string; title: string; description: string | null; theme: string | null };
 
   return (
     <EditorClient
       surveyId={s.id}
       titulo={s.title}
       descricao={s.description ?? ""}
+      temaPesquisa={s.theme ?? "geral"}
       perguntasIniciais={perguntas}
       nomeMandato={identidade.nomeParlamentar}
     />

@@ -1,10 +1,11 @@
 "use client";
 
 /**
- * Construtor de perguntas da Pesquisa Relâmpago (Fase 1). Porta a UX rica do WR1
- * com melhorias: temas GENÉRICOS (servem qualquer político), nome do mandato
- * DINÂMICO no preview e na sugestão de intenção de voto, guardrail TSE visível,
- * e salvamento por server action. Visual no padrão War Room (tokens do sistema).
+ * Construtor de perguntas da Pesquisa Relâmpago. Visual premium no padrão War Room:
+ * ícones lucide sóbrios por tema (nada de emoji), card de pergunta com respiro,
+ * placeholder de exemplo conforme o tema, e sugestões que ABREM no tema da
+ * pesquisa. Temas GENÉRICOS (servem qualquer político), nome do mandato DINÂMICO,
+ * guardrail TSE visível, salvamento por server action.
  */
 import { useState } from "react";
 import { useRouter } from "next/navigation";
@@ -15,6 +16,7 @@ import {
 
 import { CommandHero } from "@/components/politico/command-hero";
 import { salvarPerguntas, type PerguntaInput } from "@/app/actions/politico/pesquisa-actions";
+import { TEMAS_PESQUISA, temaPesquisaDe } from "../../_temas";
 
 type Tipo = PerguntaInput["response_type"];
 interface PerguntaLocal {
@@ -25,21 +27,6 @@ interface PerguntaLocal {
   options: string[];
   required: boolean;
 }
-
-const TEMAS: { v: string; l: string; e: string; tse?: boolean }[] = [
-  { v: "saude", l: "Saúde", e: "🏥" },
-  { v: "educacao", l: "Educação", e: "🎓" },
-  { v: "seguranca", l: "Segurança", e: "🚔" },
-  { v: "infraestrutura", l: "Infraestrutura", e: "🏗️" },
-  { v: "assistencia", l: "Assistência Social", e: "🤝" },
-  { v: "emprego", l: "Emprego e Renda", e: "💼" },
-  { v: "transporte", l: "Transporte", e: "🚌" },
-  { v: "meio_ambiente", l: "Meio Ambiente", e: "🌳" },
-  { v: "cultura_esporte", l: "Cultura e Esporte", e: "🎭" },
-  { v: "intencao_voto", l: "Intenção de Voto", e: "🗳️", tse: true },
-  { v: "geral", l: "Geral", e: "💬" },
-];
-const temaDe = (v: string) => TEMAS.find((t) => t.v === v) ?? TEMAS[TEMAS.length - 1]!;
 
 const TIPOS: { v: Tipo; l: string; d: string }[] = [
   { v: "scale", l: "Escala 1–5", d: "Nada importante → Essencial" },
@@ -66,18 +53,35 @@ function sugestoes(nomeMandato: string | null): Record<string, { q: string; t: T
     ],
     infraestrutura: [
       { q: "Qual o principal problema de infraestrutura no seu bairro?", t: "multi_choice" },
+      { q: "Como você avalia a iluminação e a pavimentação da sua rua?", t: "scale" },
     ],
-    transporte: [
-      { q: "Como você avalia o transporte público na sua região?", t: "scale" },
+    assistencia: [
+      { q: "Os programas sociais atendem bem a sua comunidade?", t: "scale" },
+      { q: "Você conhece alguém que precisa de apoio social e não recebe?", t: "boolean" },
     ],
     emprego: [
       { q: "A geração de empregos é uma prioridade para você?", t: "boolean" },
+      { q: "Como você avalia as oportunidades de trabalho na sua região?", t: "scale" },
+    ],
+    transporte: [
+      { q: "Como você avalia o transporte público na sua região?", t: "scale" },
+      { q: "Você depende do transporte público no dia a dia?", t: "boolean" },
+    ],
+    meio_ambiente: [
+      { q: "Como você avalia a limpeza e as áreas verdes do seu bairro?", t: "scale" },
+      { q: "A coleta de lixo na sua rua funciona bem?", t: "boolean" },
+    ],
+    cultura_esporte: [
+      { q: "Falta espaço de cultura e esporte no seu bairro?", t: "boolean" },
+      { q: "Como você avalia as opções de lazer na sua região?", t: "scale" },
     ],
     intencao_voto: [
       { q: `Se a eleição fosse hoje, você votaria em ${nome}?`, t: "boolean" },
+      { q: "Qual o assunto mais importante para decidir o seu voto?", t: "text" },
     ],
     geral: [
       { q: "Qual o assunto mais importante para você hoje?", t: "text" },
+      { q: "De forma geral, como você avalia a sua cidade?", t: "scale" },
     ],
   };
 }
@@ -85,11 +89,12 @@ function sugestoes(nomeMandato: string | null): Record<string, { q: string; t: T
 function uid() { return Math.random().toString(36).slice(2, 10); }
 
 export default function EditorClient({
-  surveyId, titulo, descricao, perguntasIniciais, nomeMandato,
+  surveyId, titulo, descricao, temaPesquisa, perguntasIniciais, nomeMandato,
 }: {
   surveyId: string;
   titulo: string;
   descricao: string;
+  temaPesquisa: string;
   perguntasIniciais: PerguntaInput[];
   nomeMandato: string | null;
 }) {
@@ -97,7 +102,7 @@ export default function EditorClient({
   const [perguntas, setPerguntas] = useState<PerguntaLocal[]>(
     perguntasIniciais.map((p) => ({
       id: uid(),
-      theme: p.theme ?? "geral",
+      theme: p.theme ?? temaPesquisa,
       question: p.question,
       response_type: p.response_type,
       options: p.options ?? [],
@@ -106,14 +111,16 @@ export default function EditorClient({
   );
   const [expandido, setExpandido] = useState<string | null>(null);
   const [preview, setPreview] = useState(false);
-  const [sugAberta, setSugAberta] = useState<string | null>(null);
+  const [sugAberta, setSugAberta] = useState(false);
+  const [sugTema, setSugTema] = useState(temaPesquisa);
   const [salvando, setSalvando] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
 
   const SUG = sugestoes(nomeMandato);
+  const temaCabecalho = temaPesquisaDe(temaPesquisa);
 
   function addBranco() {
-    const nova: PerguntaLocal = { id: uid(), theme: "geral", question: "", response_type: "boolean", options: [], required: true };
+    const nova: PerguntaLocal = { id: uid(), theme: temaPesquisa, question: "", response_type: "scale", options: [], required: true };
     setPerguntas((p) => [...p, nova]);
     setExpandido(nova.id);
   }
@@ -121,7 +128,7 @@ export default function EditorClient({
     const nova: PerguntaLocal = { id: uid(), theme, question: s.q, response_type: s.t, options: [], required: true };
     setPerguntas((p) => [...p, nova]);
     setExpandido(nova.id);
-    setSugAberta(null);
+    setSugAberta(false);
   }
   function up<K extends keyof PerguntaLocal>(id: string, campo: K, valor: PerguntaLocal[K]) {
     setPerguntas((p) => p.map((q) => (q.id === id ? { ...q, [campo]: valor } : q)));
@@ -172,20 +179,32 @@ export default function EditorClient({
         }
       />
 
+      {/* Tema da pesquisa (guarda-chuva) */}
+      <div className="flex items-center gap-2.5">
+        <span className="flex h-7 w-7 items-center justify-center" style={{ borderRadius: 7, background: `${temaCabecalho.cor}26`, color: temaCabecalho.cor }}>
+          <temaCabecalho.Icon size={15} strokeWidth={2.2} />
+        </span>
+        <span className="text-sm" style={{ color: "var(--color-text-muted)" }}>
+          Tema da pesquisa: <strong style={{ color: "var(--color-text)" }}>{temaCabecalho.l}</strong>
+        </span>
+      </div>
+
       {/* Lista de perguntas */}
       <div className="space-y-2.5">
         {perguntas.map((pg, idx) => {
-          const tema = temaDe(pg.theme);
+          const tema = temaPesquisaDe(pg.theme);
           const aberto = expandido === pg.id;
           return (
             <div key={pg.id} className="wr-card overflow-hidden p-0">
-              <div className="flex items-center gap-3 px-4 py-3 cursor-pointer" onClick={() => setExpandido(aberto ? null : pg.id)}>
+              <div className="flex items-center gap-3 px-3.5 py-3 cursor-pointer" onClick={() => setExpandido(aberto ? null : pg.id)}>
                 <div className="flex flex-col items-center">
                   <button type="button" onClick={(e) => { e.stopPropagation(); mover(idx, -1); }} className="opacity-50 hover:opacity-100"><ChevronUp className="h-3.5 w-3.5" /></button>
                   <span className="text-[11px] font-bold tabular-nums" style={{ color: "var(--color-text-subtle)" }}>{idx + 1}</span>
                   <button type="button" onClick={(e) => { e.stopPropagation(); mover(idx, 1); }} className="opacity-50 hover:opacity-100"><ChevronDown className="h-3.5 w-3.5" /></button>
                 </div>
-                <span style={{ fontSize: 18 }}>{tema.e}</span>
+                <span className="flex h-9 w-9 shrink-0 items-center justify-center" style={{ borderRadius: 9, background: `${tema.cor}22`, color: tema.cor }}>
+                  <tema.Icon size={18} strokeWidth={2} />
+                </span>
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-sm font-medium" style={{ color: pg.question ? "var(--color-text)" : "var(--color-text-subtle)" }}>
                     {pg.question || "Clique para escrever a pergunta…"}
@@ -197,20 +216,20 @@ export default function EditorClient({
               </div>
 
               {aberto && (
-                <div className="space-y-3 border-t px-4 pb-4 pt-3" style={{ borderColor: "var(--color-border)" }}>
+                <div className="space-y-4 border-t px-4 pb-4 pt-4" style={{ borderColor: "var(--color-border)" }}>
                   <div>
-                    <label className="mb-1 block text-xs font-medium" style={{ color: "var(--color-text-subtle)" }}>Texto da pergunta</label>
-                    <textarea className="wr-input w-full" rows={2} value={pg.question} onChange={(e) => up(pg.id, "question", e.target.value)} placeholder="Escreva a pergunta…" />
+                    <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide" style={{ color: "var(--color-text-subtle)" }}>Pergunta</label>
+                    <textarea className="wr-input w-full" rows={2} value={pg.question} onChange={(e) => up(pg.id, "question", e.target.value)} placeholder={tema.exemplo} />
                   </div>
                   <div className="grid gap-3 sm:grid-cols-2">
                     <div>
-                      <label className="mb-1 block text-xs font-medium" style={{ color: "var(--color-text-subtle)" }}>Tema</label>
+                      <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide" style={{ color: "var(--color-text-subtle)" }}>Tema</label>
                       <select className="wr-input w-full" value={pg.theme} onChange={(e) => up(pg.id, "theme", e.target.value)}>
-                        {TEMAS.map((t) => <option key={t.v} value={t.v}>{t.e} {t.l}</option>)}
+                        {TEMAS_PESQUISA.map((t) => <option key={t.v} value={t.v}>{t.l}</option>)}
                       </select>
                     </div>
                     <div>
-                      <label className="mb-1 block text-xs font-medium" style={{ color: "var(--color-text-subtle)" }}>Tipo de resposta</label>
+                      <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide" style={{ color: "var(--color-text-subtle)" }}>Tipo de resposta</label>
                       <select className="wr-input w-full" value={pg.response_type} onChange={(e) => up(pg.id, "response_type", e.target.value as Tipo)}>
                         {TIPOS.map((t) => <option key={t.v} value={t.v}>{t.l} — {t.d}</option>)}
                       </select>
@@ -219,7 +238,7 @@ export default function EditorClient({
 
                   {pg.response_type === "multi_choice" && (
                     <div>
-                      <label className="mb-1.5 block text-xs font-medium" style={{ color: "var(--color-text-subtle)" }}>Opções</label>
+                      <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide" style={{ color: "var(--color-text-subtle)" }}>Opções</label>
                       <div className="space-y-2">
                         {(pg.options.length === 0 ? [""] : pg.options).map((op, oi) => (
                           <div key={oi} className="flex items-center gap-2">
@@ -257,25 +276,34 @@ export default function EditorClient({
           <Plus className="h-4 w-4" /> Pergunta em branco
         </button>
         <div className="wr-card overflow-hidden p-0">
-          <button type="button" onClick={() => setSugAberta(sugAberta ? null : "saude")} className="flex w-full items-center justify-between px-4 py-3.5 text-sm font-medium">
+          <button type="button" onClick={() => setSugAberta((v) => !v)} className="flex w-full items-center justify-between px-4 py-3.5 text-sm font-semibold">
             <span className="inline-flex items-center gap-2"><Lightbulb className="h-4 w-4" style={{ color: "#D7B23A" }} /> Usar sugestão</span>
             <ChevronDown className="h-4 w-4 transition-transform" style={{ transform: sugAberta ? "rotate(180deg)" : "none" }} />
           </button>
           {sugAberta && (
-            <div className="space-y-2.5 border-t px-4 pb-4 pt-3" style={{ borderColor: "var(--color-border)" }}>
+            <div className="space-y-3 border-t px-4 pb-4 pt-3.5" style={{ borderColor: "var(--color-border)" }}>
+              <p className="text-[11px]" style={{ color: "var(--color-text-subtle)" }}>Perguntas prontas por tema. O tema da sua pesquisa já vem selecionado.</p>
               <div className="flex flex-wrap gap-1.5">
-                {TEMAS.filter((t) => SUG[t.v]).map((t) => (
-                  <button key={t.v} type="button" onClick={() => setSugAberta(t.v)} className="rounded-full px-2.5 py-1 text-[11px] font-medium" style={{ background: sugAberta === t.v ? "var(--color-surface-elevated)" : "transparent", border: "1px solid var(--color-border)", color: "var(--color-text-muted)" }}>
-                    {t.e} {t.l}
+                {TEMAS_PESQUISA.filter((t) => SUG[t.v]).map((t) => {
+                  const on = sugTema === t.v;
+                  return (
+                    <button key={t.v} type="button" onClick={() => setSugTema(t.v)} className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-semibold transition-colors" style={{ background: on ? `${t.cor}1F` : "transparent", border: `1px solid ${on ? t.cor : "var(--color-border)"}`, color: on ? t.cor : "var(--color-text-muted)" }}>
+                      <t.Icon size={12} strokeWidth={2.2} /> {t.l}
+                    </button>
+                  );
+                })}
+              </div>
+              <div className="space-y-2">
+                {(SUG[sugTema] ?? []).map((s, i) => (
+                  <button key={i} type="button" onClick={() => addSugestao(sugTema, s)} className="flex w-full items-center gap-2 rounded-xl p-3 text-left transition-colors hover:brightness-110" style={{ background: "var(--color-surface-elevated)", border: "1px solid var(--color-border)" }}>
+                    <Plus className="h-3.5 w-3.5 shrink-0" style={{ color: "var(--color-text-subtle)" }} />
+                    <span className="min-w-0 flex-1">
+                      <span className="block text-[13px] font-medium" style={{ color: "var(--color-text)" }}>{s.q}</span>
+                      <span className="mt-0.5 block text-[10px] font-semibold uppercase tracking-wide" style={{ color: "var(--color-text-subtle)" }}>{labelTipo(s.t)}</span>
+                    </span>
                   </button>
                 ))}
               </div>
-              {(SUG[sugAberta] ?? []).map((s, i) => (
-                <button key={i} type="button" onClick={() => addSugestao(sugAberta, s)} className="block w-full rounded-xl p-2.5 text-left" style={{ background: "var(--color-surface-elevated)", border: "1px solid var(--color-border)" }}>
-                  <p className="text-[12px] font-medium" style={{ color: "var(--color-text)" }}>{s.q}</p>
-                  <p className="mt-0.5 text-[10px] font-semibold uppercase tracking-wide" style={{ color: "var(--color-text-subtle)" }}>{labelTipo(s.t)}</p>
-                </button>
-              ))}
             </div>
           )}
         </div>
@@ -304,7 +332,7 @@ function PreviewMobile({ perguntas, titulo, descricao, nomeMandato, onClose }: {
 }) {
   const [step, setStep] = useState<"intro" | number>("intro");
   const pg = typeof step === "number" ? perguntas[step] : null;
-  const tema = pg ? temaDe(pg.theme) : null;
+  const tema = pg ? temaPesquisaDe(pg.theme) : null;
   const total = perguntas.length;
 
   return (
@@ -345,7 +373,7 @@ function PreviewMobile({ perguntas, titulo, descricao, nomeMandato, onClose }: {
                   </div>
                 </div>
                 <div style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 18, padding: 16 }}>
-                  <p style={{ fontSize: 10, fontWeight: 800, textTransform: "uppercase", letterSpacing: "0.12em", color: "#8FA0C8", marginBottom: 10 }}>{tema.e} {tema.l}</p>
+                  <p style={{ fontSize: 10, fontWeight: 800, textTransform: "uppercase", letterSpacing: "0.12em", color: "#8FA0C8", marginBottom: 10 }}>{tema.l}</p>
                   <p style={{ fontSize: 15, fontWeight: 800, lineHeight: 1.4, marginBottom: 14 }}>{pg.question || "Texto da pergunta"}</p>
                   <WidgetResposta pg={pg} />
                 </div>

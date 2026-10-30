@@ -42,6 +42,7 @@ export async function criarPesquisa(entrada: {
   title: string;
   description?: string;
   type?: string;
+  theme?: string;
 }): Promise<ResultadoPesquisa> {
   const orgId = await orgGerente();
   if (!orgId) return { ok: false, erro: "Sem permissão (requer Gerente ou Administrador)." };
@@ -56,6 +57,7 @@ export async function criarPesquisa(entrada: {
       title,
       description: (entrada.description ?? "").trim() || null,
       type: entrada.type ?? "field",
+      theme: (entrada.theme ?? "").trim() || null,
       status: "draft",
     })
     .select("id")

@@ -3,10 +3,11 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { ArrowRight, Loader2 } from "lucide-react";
+import { ArrowRight, Loader2, Check } from "lucide-react";
 
 import { CommandHero } from "@/components/politico/command-hero";
 import { criarPesquisa } from "@/app/actions/politico/pesquisa-actions";
+import { TEMAS_PESQUISA } from "../_temas";
 
 const TIPOS = [
   { value: "field", label: "Campo (WhatsApp / presencial)" },
@@ -20,14 +21,16 @@ export default function NovaPesquisaClient() {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [type, setType] = useState("field");
+  const [theme, setTheme] = useState("");
   const [salvando, setSalvando] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
 
   async function salvar() {
     if (!title.trim()) { setErro("Informe um título."); return; }
+    if (!theme) { setErro("Escolha o tema principal da pesquisa."); return; }
     setErro(null);
     setSalvando(true);
-    const r = await criarPesquisa({ title, description, type });
+    const r = await criarPesquisa({ title, description, type, theme });
     setSalvando(false);
     if (!r.ok) { setErro(r.erro); return; }
     router.push(`/app/politico/pesquisas/${r.id}/editar`);
@@ -38,11 +41,11 @@ export default function NovaPesquisaClient() {
       <CommandHero
         eyebrow="Inteligência · Pesquisa"
         titulo="Nova pesquisa"
-        subtitulo="Dê um título e a descrição. As perguntas você monta na próxima etapa."
+        subtitulo="Dê um título, escolha o tema e a descrição. As perguntas você monta na próxima etapa."
         acoes={[{ href: "/app/politico/pesquisas", label: "← Pesquisas" }]}
       />
 
-      <div className="wr-card space-y-4 p-5 sm:p-6">
+      <div className="wr-card space-y-5 p-5 sm:p-6">
         <div>
           <label className="mb-1.5 block text-sm font-medium">Título da pesquisa</label>
           <input
@@ -53,6 +56,45 @@ export default function NovaPesquisaClient() {
             autoFocus
           />
         </div>
+
+        {/* Tema principal — seletor premium em grade */}
+        <div>
+          <label className="mb-1 block text-sm font-medium">Tema principal</label>
+          <p className="mb-2.5 text-xs" style={{ color: "var(--color-text-subtle)" }}>
+            É o assunto central da pesquisa. Ele guia as sugestões de perguntas e a leitura do resultado.
+          </p>
+          <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+            {TEMAS_PESQUISA.map((t) => {
+              const ativo = theme === t.v;
+              return (
+                <button
+                  key={t.v}
+                  type="button"
+                  onClick={() => setTheme(t.v)}
+                  className="relative flex items-center gap-2.5 px-3 py-2.5 text-left transition-colors"
+                  style={{
+                    borderRadius: 10,
+                    border: `1px solid ${ativo ? t.cor : "var(--color-border)"}`,
+                    background: ativo ? `${t.cor}1A` : "var(--color-surface-elevated)",
+                  }}
+                >
+                  <span
+                    className="flex h-8 w-8 shrink-0 items-center justify-center"
+                    style={{ borderRadius: 8, background: `${t.cor}26`, color: t.cor }}
+                  >
+                    <t.Icon size={17} strokeWidth={2} />
+                  </span>
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate text-[13px] font-semibold" style={{ color: "var(--color-text)" }}>{t.l}</span>
+                    {t.tse && <span className="block text-[10px] font-semibold uppercase tracking-wide" style={{ color: t.cor }}>registro TSE</span>}
+                  </span>
+                  {ativo && <Check size={15} strokeWidth={3} style={{ color: t.cor }} />}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
         <div>
           <label className="mb-1.5 block text-sm font-medium">
             Descrição <span className="text-xs" style={{ color: "var(--color-text-subtle)" }}>(aparece para quem vai responder)</span>
@@ -80,7 +122,7 @@ export default function NovaPesquisaClient() {
           <button
             type="button"
             onClick={salvar}
-            disabled={salvando || !title.trim()}
+            disabled={salvando || !title.trim() || !theme}
             className="wr-btn-dark inline-flex items-center gap-2 disabled:opacity-60"
           >
             {salvando ? <Loader2 className="h-4 w-4 animate-spin" /> : <ArrowRight className="h-4 w-4" />}
