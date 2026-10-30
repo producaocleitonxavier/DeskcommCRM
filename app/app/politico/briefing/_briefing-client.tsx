@@ -123,7 +123,16 @@ export default function BriefingClient({ eleicoes, municipios }: { eleicoes: Ele
       ? `<div class="batalha"><h3>&#9876;&#65039; A batalha &mdash; quem disputa seus redutos</h3>` +
         `<p class="sub">Candidatos mais fortes nos seus bairros${redutos ? ` (${escHtml(redutos)})` : ""} &mdash; votos deles no seu reduto / no munic&iacute;pio.</p>` +
         `<div class="advrow me"><span>&#9733; <b>${escHtml(cand.nomeUrna)}</b> &middot; voc&ecirc;</span><span class="r me"><b>${meuMunicipio.toLocaleString("pt-BR")}</b> <small>no munic&iacute;pio</small> &middot; <b>${meuReduto.toLocaleString("pt-BR")}</b> <small>nos redutos</small></span></div>` +
-        adv.map((a, i) => `<div class="advrow"><span>${i + 1}. <b>${escHtml(a.nome)}</b>${a.partido ? ` &middot; ${escHtml(a.partido)}` : ""}</span><span class="r">${a.votosReduto.toLocaleString("pt-BR")} <small>/ ${a.votosMunicipio.toLocaleString("pt-BR")} mun.</small></span></div>`).join("") +
+        adv.map((a, i) => {
+          const badge = a.statusCat === "eleito"
+            ? ` <span style="background:#FDEBE9;color:#A3302A;font-size:8px;font-weight:700;text-transform:uppercase;padding:1px 4px;border-radius:3px;">eleito</span>`
+            : a.statusCat === "suplente"
+              ? ` <span style="background:#FEF3C7;color:#92600A;font-size:8px;font-weight:700;text-transform:uppercase;padding:1px 4px;border-radius:3px;">suplente</span>`
+              : a.statusCat === "nao_eleito"
+                ? ` <span style="background:#eee;color:#666;font-size:8px;font-weight:700;text-transform:uppercase;padding:1px 4px;border-radius:3px;">n&atilde;o eleito</span>`
+                : "";
+          return `<div class="advrow"><span>${i + 1}. <b>${escHtml(a.nome)}</b>${a.partido ? ` &middot; ${escHtml(a.partido)}` : ""}${badge}</span><span class="r">${a.votosReduto.toLocaleString("pt-BR")} <small>/ ${a.votosMunicipio.toLocaleString("pt-BR")} mun.</small></span></div>`;
+        }).join("") +
         `</div>`
       : "";
     const html =
@@ -246,8 +255,23 @@ export default function BriefingClient({ eleicoes, municipios }: { eleicoes: Ele
                 {adv.map((a, i) => (
                   <div key={i} className="flex items-center gap-3 text-sm">
                     <span className="w-4 shrink-0 text-right text-xs tabular-nums" style={{ color: "var(--color-text-subtle)" }}>{i + 1}</span>
-                    <span className="min-w-0 flex-1 truncate font-semibold" style={{ color: "var(--color-text)" }}>
-                      {a.nome}{a.partido ? <span className="font-normal" style={{ color: "var(--color-text-muted)" }}> · {a.partido}</span> : null}
+                    <span className="flex min-w-0 flex-1 items-center gap-2 truncate font-semibold" style={{ color: "var(--color-text)" }}>
+                      <span className="truncate">{a.nome}{a.partido ? <span className="font-normal" style={{ color: "var(--color-text-muted)" }}> · {a.partido}</span> : null}</span>
+                      {a.statusCat !== "desconhecido" ? (
+                        <span
+                          className="shrink-0 rounded px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide"
+                          title={a.statusCat === "eleito" ? "Foi eleito — não disputa mais a mesma vaga. Risco: transferir votos a quem apoiar." : a.statusCat === "suplente" ? "Suplente — concorrente direto, pode voltar a disputar." : "Não foi eleito nesta disputa."}
+                          style={
+                            a.statusCat === "eleito"
+                              ? { background: "#FDEBE9", color: "#A3302A" }
+                              : a.statusCat === "suplente"
+                                ? { background: "#FEF3C7", color: "#92600A" }
+                                : { background: "var(--color-surface-2)", color: "var(--color-text-muted)" }
+                          }
+                        >
+                          {a.statusLabel}
+                        </span>
+                      ) : null}
                     </span>
                     <span className="shrink-0 tabular-nums font-bold" style={{ color: a.votosReduto > meuReduto ? "#A3302A" : "var(--color-text)" }}>{a.votosReduto.toLocaleString("pt-BR")}</span>
                     <span className="w-24 shrink-0 text-right text-xs tabular-nums" style={{ color: "var(--color-text-subtle)" }}>{a.votosMunicipio.toLocaleString("pt-BR")} no mun.</span>

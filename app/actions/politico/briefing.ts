@@ -17,11 +17,26 @@ import { requireAuth, resolveActiveOrg } from "@/lib/auth/server";
 import { resumoCandidato, drillCandidato } from "@/app/actions/politico/raioX";
 import { projecaoZonal } from "@/app/actions/politico/projecao";
 
+export type StatusEleitoral = "eleito" | "suplente" | "nao_eleito" | "desconhecido";
+
 export interface AdversarioReduto {
   nome: string;
   partido: string | null;
   votosReduto: number; // votos do adversário nos redutos do candidato
   votosMunicipio: number; // votos totais do adversário no município
+  situacao: string | null; // situação crua do TSE (ex.: "ELEITO POR QP")
+  statusLabel: string; // rótulo curto: "eleito" | "suplente" | "não eleito" | ""
+  statusCat: StatusEleitoral;
+}
+
+// Normaliza a situação do TSE (ex.: "ELEITO POR QP", "SUPLENTE", "NÃO ELEITO")
+// em um rótulo curto + categoria estratégica. É o que diz quem GANHOU a vaga.
+function classificarStatus(situacao: string | null | undefined): { label: string; cat: StatusEleitoral } {
+  const s = (situacao ?? "").normalize("NFD").replace(/[̀-ͯ]/g, "").toUpperCase().trim();
+  if (s.startsWith("ELEITO")) return { label: "eleito", cat: "eleito" };
+  if (s === "SUPLENTE") return { label: "suplente", cat: "suplente" };
+  if (s === "NAO ELEITO") return { label: "não eleito", cat: "nao_eleito" };
+  return { label: "", cat: "desconhecido" };
 }
 
 export type ResultadoBriefing =
@@ -65,16 +80,37 @@ export async function briefingEstrategico(
   const forcaRegional = [...votosRegional.entries()].sort((a, b) => b[1] - a[1]).slice(0, 4)
     .map(([reg, v]) => `${reg}: ${v.toLocaleString("pt-BR")} votos`);
 
-  const advRows = (advRpc.data ?? []) as { nome_urna: string; partido_sigla: string | null; votos_reduto: number; votos_municipio: number; bairros: string | null }[];
-  const adversarios: AdversarioReduto[] = advRows.map((a) => ({
-    nome: a.nome_urna,
-    partido: a.partido_sigla,
-    votosReduto: Number(a.votos_reduto),
-    votosMunicipio: Number(a.votos_municipio),
-  }));
+  const advRows = (advRpc.data ?? []) as { sq_candidato: number | string; nome_urna: string; partido_sigla: string | null; votos_reduto: number; votos_municipio: number; bairros: string | null }[];
+  // Status eleitoral (eleito/suplente/não eleito) de cada adversário NESTA eleição —
+  // o TSE sabe quem GANHOU a vaga. Um adversário ELEITO já não disputa a mesma
+  // cadeira; o risco dele vira a TRANSFERÊNCIA de voto a quem ele apoiar depois.
+  const advSqs = advRows.map((a) => Number(a.sq_candidato)).filter((n) => Number.isFinite(n));
+  const situacaoPorSq = new Map<number, string | null>();
+  if (advSqs.length) {
+    const { data: situRows } = await db
+      .from("intel_candidatos")
+      .select("sq_candidato, situacao")
+      .eq("election_id", electionId)
+      .in("sq_candidato", advSqs);
+    for (const r of (situRows ?? []) as { sq_candidato: number; situacao: string | null }[]) situacaoPorSq.set(Number(r.sq_candidato), r.situacao);
+  }
+  const adversarios: AdversarioReduto[] = advRows.map((a) => {
+    const situ = situacaoPorSq.get(Number(a.sq_candidato)) ?? null;
+    const st = classificarStatus(situ);
+    return {
+      nome: a.nome_urna,
+      partido: a.partido_sigla,
+      votosReduto: Number(a.votos_reduto),
+      votosMunicipio: Number(a.votos_municipio),
+      situacao: situ,
+      statusLabel: st.label,
+      statusCat: st.cat,
+    };
+  });
   const redutosNome = advRows[0]?.bairros ?? "";
 
   const nome = resumo.nomeUrna;
+  const statusCandidato = classificarStatus(resumo.situacao);
   const pctEstado = resumo.totalEleicao > 0 ? ((resumo.votos / resumo.totalEleicao) * 100).toFixed(2) : "0";
   const votosNoMun = bairros.reduce((s, b) => s + b.votos, 0);
   // Votos do candidato nos seus 5 maiores redutos (mesma base dos adversários) — para o confronto direto.
@@ -180,7 +216,7 @@ export async function briefingEstrategico(
   }
 
   const fatos: string[] = [
-    `Candidato analisado (dados TSE): ${nome} (nº ${resumo.nr}${resumo.partido ? `, ${resumo.partido}` : ""})${resumo.situacao ? ` — ${resumo.situacao}` : ""}`,
+    `Candidato analisado (dados TSE): ${nome} (nº ${resumo.nr}${resumo.partido ? `, ${resumo.partido}` : ""})${resumo.situacao ? ` — situação no TSE: ${resumo.situacao}` : ""}. STATUS NESTA ELEIÇÃO: ${statusCandidato.label || "não informado"}${statusCandidato.cat === "suplente" ? " (ficou SUPLENTE — NÃO assumiu a cadeira; segue no mandato/situação atual e é quem pode disputar a próxima eleição)" : statusCandidato.cat === "eleito" ? " (foi ELEITO para esta vaga)" : statusCandidato.cat === "nao_eleito" ? " (NÃO foi eleito nesta disputa)" : ""}.`,
     `Cargo/eleição: ${cargoAno}. Votos totais do candidato (MG): ${resumo.votos.toLocaleString("pt-BR")} (${pctEstado}% do estado).`,
     `Município analisado: ${munNome}. Votos do candidato no município: ${votosNoMun.toLocaleString("pt-BR")}.`,
     `Redutos do candidato (bairros onde mais fez voto, com a regional administrativa entre colchetes): ${redutos.length ? redutos.join("; ") : "sem bairros com voto"}.`,
@@ -189,8 +225,22 @@ export async function briefingEstrategico(
     `Universo de VOTOS do cargo em ${munNome} (total de votos válidos, não eleitorado): ${proj.universoTotal.toLocaleString("pt-BR")}. Cobertura da base de CRM sobre esse volume: ${(proj.coberturaMedia * 100).toFixed(2)}%.`,
     `Zonas de oportunidade (muito VOTO do cargo e pouca presença da base de CRM): ${oportunidades.length ? oportunidades.join("; ") : "—"}.`,
     `Votos do PRÓPRIO candidato nesses 5 redutos: ${votosCandidatoReduto.toLocaleString("pt-BR")} (compare diretamente com cada adversário abaixo).`,
-    `ADVERSÁRIOS que mais disputam os redutos do candidato (${redutosNome || "bairros fortes"}) — votos deles NESSES bairros / votos totais no município: ${
-      adversarios.length ? adversarios.map((a) => `${a.nome}${a.partido ? ` (${a.partido})` : ""} — ${a.votosReduto.toLocaleString("pt-BR")} no reduto / ${a.votosMunicipio.toLocaleString("pt-BR")} no município`).join("; ") : "—"
+    `ADVERSÁRIOS que mais fizeram voto nos redutos do candidato (${redutosNome || "bairros fortes"}) — nome, STATUS NO TSE (quem GANHOU a vaga), votos deles NESSES bairros / votos totais no município: ${
+      adversarios.length
+        ? adversarios
+            .map((a) => {
+              const st =
+                a.statusCat === "eleito"
+                  ? "ELEITO (já conquistou uma vaga nesta disputa — NÃO disputa mais a mesma cadeira)"
+                  : a.statusCat === "suplente"
+                    ? "SUPLENTE (não assumiu; segue como concorrente real)"
+                    : a.statusCat === "nao_eleito"
+                      ? "NÃO ELEITO"
+                      : "status não informado";
+              return `${a.nome}${a.partido ? ` (${a.partido})` : ""} [${st}] — ${a.votosReduto.toLocaleString("pt-BR")} no reduto / ${a.votosMunicipio.toLocaleString("pt-BR")} no município`;
+            })
+            .join("; ")
+        : "—"
     }.`,
     ...(temEntrega
       ? [
@@ -224,7 +274,11 @@ export async function briefingEstrategico(
     "Não prometa resultado futuro: 'oportunidade' é volume de voto onde a base de CRM é fraca. Markdown com títulos: " +
     "## Posição atual, ## Momentum (só se houver dado de evolução), ## Mapa de força (onde o candidato é forte), ## A batalha (quem disputa seus redutos), ## Entrega × Voto, ## Onde crescer, ## Riscos, ## Plano de 90 dias. " +
     "Em 'Momentum': SE você recebeu o dado de EVOLUÇÃO, diga se o candidato CRESCEU ou ENCOLHEU neste município desde a última eleição em que concorreu — em % e votos — e em QUAIS bairros subiu/caiu mais. Trajetória vale mais que foto: dobrar o voto é sinal fortíssimo; cair é erosão a estancar. Se o cargo anterior era diferente (ex.: Vereador → Deputado), deixe claro que é a trajetória da PESSOA (mesmo nome), não do mesmo cargo, e trate a mudança de patamar com isso em mente. Se NÃO recebeu dado de evolução, OMITA a seção Momentum inteira — nunca invente. " +
-    "Em 'A batalha', analise os adversários que mais fazem voto nos MESMOS bairros fortes do candidato: quem é a ameaça real ao território, quem apenas passa por ali, e o que isso exige. " +
+    "Em 'A batalha', use o STATUS NO TSE de cada adversário (você recebeu quem foi ELEITO, quem ficou SUPLENTE e quem NÃO foi eleito) para ser REALISTA, não alarmista. Regra de leitura: " +
+    "(1) um adversário ELEITO já conquistou a vaga que disputava e NÃO é mais concorrente direto pela mesma cadeira do candidato — não o trate como ameaça frontal; a ameaça real dele é INDIRETA: a TRANSFERÊNCIA de voto e de capital político para os candidatos que ELE vier a apoiar/indicar no território, que podem herdar aquela votação. Diga isso explicitamente e aponte em quais redutos essa herança pesaria mais. " +
+    "(2) um adversário SUPLENTE ou NÃO ELEITO segue como concorrente direto, podendo voltar a disputar — esse sim é confronto frontal pelo mesmo eleitor. " +
+    "(3) leve em conta o próprio STATUS do candidato: se ele é SUPLENTE, ele não assumiu a cadeira nova e normalmente é quem volta a disputar na próxima — o jogo dele é defender e expandir os redutos antes que a herança dos eleitos ou os concorrentes diretos os ocupem. " +
+    "Separe com clareza 'ameaça frontal' (suplentes/não eleitos) de 'risco de transferência' (eleitos), cite cada adversário pelo nome com seu status, e diga o que cada caso exige. Nunca chame um eleito de concorrente pela mesma vaga. " +
     "Em 'Entrega × Voto', cruze o TRABALHO REAL DO GABINETE DA OPERAÇÃO (demandas resolvidas e obras concluídas por bairro — você recebeu esses números) com o voto por bairro. Classifique cada bairro relevante em: (a) CONSOLIDANDO — reduto de voto COM entrega (mantenha a cadência); (b) A CONVERTER — bairro com entrega mas pouco voto (o trabalho ainda não virou voto/base; falta relacionamento/evento); (c) REDUTO DESCOBERTO — muito voto e ZERO entrega (risco: alguém pode ocupar o espaço — urgência). A entrega é da OPERAÇÃO; só cruze com o voto se o candidato analisado for o próprio político da operação — se for adversário, trate a entrega apenas como presença da operação no território. Nunca invente entrega que não esteja nos números. Este bloco é o nosso diferencial: conecta governar com ganhar. " +
     "No plano, liste ações concretas por zona/bairro (cadastrar base de CRM, presença física, evento, lideranças), priorizando os REDUTOS DESCOBERTOS e os bairros A CONVERTER.";
 
