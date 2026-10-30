@@ -40,7 +40,7 @@ function classificarStatus(situacao: string | null | undefined): { label: string
 }
 
 export type ResultadoBriefing =
-  | { ok: true; texto: string; candidato: string; adversarios: AdversarioReduto[]; redutos: string; votosCandidatoReduto: number; votosMunicipio: number }
+  | { ok: true; texto: string; candidato: string; adversarios: AdversarioReduto[]; redutos: string; votosCandidatoReduto: number; votosMunicipio: number; statusLabel: string; statusCat: StatusEleitoral }
   | { ok: false; erro: string };
 
 export async function briefingEstrategico(
@@ -273,6 +273,8 @@ export async function briefingEstrategico(
     regraRegional +
     "Não prometa resultado futuro: 'oportunidade' é volume de voto onde a base de CRM é fraca. Markdown com títulos: " +
     "## Posição atual, ## Momentum (só se houver dado de evolução), ## Mapa de força (onde o candidato é forte), ## A batalha (quem disputa seus redutos), ## Entrega × Voto, ## Onde crescer, ## Riscos, ## Plano de 90 dias. " +
+    "REGRA ABSOLUTA DE STATUS (errar isso é inaceitável): você recebeu o STATUS do candidato no TSE (eleito / suplente / não eleito). NUNCA escreva que o candidato foi ELEITO, venceu, conquistou a cadeira ou é titular do cargo se o status dele NÃO for 'eleito'. Se for SUPLENTE, diga explicitamente que ele ficou na SUPLÊNCIA e NÃO assumiu a cadeira — e, se o cargo anterior dele era outro (ex.: Vereador), que ele SEGUE nesse mandato anterior. Nunca invente eleição. " +
+    "Em 'Posição atual', ABRA pelo total de votos do candidato NO MUNICÍPIO analisado (o número cheio) e pelo STATUS dele (eleito/suplente/não eleito) — esses dois dados vêm primeiro, antes de qualquer leitura ou percentual. " +
     "Em 'Momentum': SE você recebeu o dado de EVOLUÇÃO, diga se o candidato CRESCEU ou ENCOLHEU neste município desde a última eleição em que concorreu — em % e votos — e em QUAIS bairros subiu/caiu mais. Trajetória vale mais que foto: dobrar o voto é sinal fortíssimo; cair é erosão a estancar. Se o cargo anterior era diferente (ex.: Vereador → Deputado), deixe claro que é a trajetória da PESSOA (mesmo nome), não do mesmo cargo, e trate a mudança de patamar com isso em mente. Se NÃO recebeu dado de evolução, OMITA a seção Momentum inteira — nunca invente. " +
     "Em 'A batalha', use o STATUS NO TSE de cada adversário (você recebeu quem foi ELEITO, quem ficou SUPLENTE e quem NÃO foi eleito) para ser REALISTA, não alarmista. Regra de leitura: " +
     "(1) um adversário ELEITO já conquistou a vaga que disputava e NÃO é mais concorrente direto pela mesma cadeira do candidato — não o trate como ameaça frontal; a ameaça real dele é INDIRETA: a TRANSFERÊNCIA de voto e de capital político para os candidatos que ELE vier a apoiar/indicar no território, que podem herdar aquela votação. Diga isso explicitamente e aponte em quais redutos essa herança pesaria mais. " +
@@ -291,7 +293,7 @@ export async function briefingEstrategico(
     const { text } = await generateText({ model: modeloDoCerebro(cerebro), system, prompt, maxOutputTokens: 1600 });
     const texto = text.trim();
     if (!texto) return { ok: false, erro: "A IA não retornou texto. Tente novamente." };
-    return { ok: true, texto, candidato: nome, adversarios, redutos: redutosNome, votosCandidatoReduto, votosMunicipio: votosNoMun };
+    return { ok: true, texto, candidato: nome, adversarios, redutos: redutosNome, votosCandidatoReduto, votosMunicipio: votosNoMun, statusLabel: statusCandidato.label, statusCat: statusCandidato.cat };
   } catch {
     return { ok: false, erro: "Não consegui gerar agora. Tente novamente em instantes." };
   }
