@@ -10,10 +10,11 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { AlertOctagon, AlertTriangle, Bell, Info, Loader2 } from "lucide-react";
+import { AlertOctagon, AlertTriangle, Bell, Info, Loader2, Check } from "lucide-react";
 
 import { CommandHero } from "@/components/politico/command-hero";
 import { EmptyState } from "@/components/politico/empty-state";
+import { definirStatusAlerta } from "@/app/actions/politico/alertas-actions";
 import type { Alerta } from "./page";
 
 const STATUS_LABELS: Record<string, string> = {
@@ -98,25 +99,13 @@ export default function AlertasClient({ alertas, filtros, criticosAtivos }: Aler
     return `/app/politico/alertas${s ? `?${s}` : ""}`;
   }
 
-  async function resolver(id: string) {
+  async function mudar(id: string, status: "resolved" | "dismissed") {
     setPendentes((p) => ({ ...p, [id]: true }));
     setErros((e) => ({ ...e, [id]: "" }));
-    try {
-      const res = await fetch(`/api/v1/pol-alerts/${id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ status: "resolved" }),
-      });
-      if (!res.ok) {
-        const j = await res.json().catch(() => ({}));
-        throw new Error(j.error?.message ?? `Não foi possível resolver (HTTP ${res.status}).`);
-      }
-      router.refresh();
-    } catch (e) {
-      setErros((x) => ({ ...x, [id]: e instanceof Error ? e.message : "Erro ao resolver." }));
-    } finally {
-      setPendentes((p) => ({ ...p, [id]: false }));
-    }
+    const r = await definirStatusAlerta(id, status);
+    setPendentes((p) => ({ ...p, [id]: false }));
+    if (!r.ok) { setErros((x) => ({ ...x, [id]: r.erro })); return; }
+    router.refresh();
   }
 
   function Pill({ ativo, children, alvo }: { ativo: boolean; children: React.ReactNode; alvo: string }) {
@@ -242,16 +231,25 @@ export default function AlertasClient({ alertas, filtros, criticosAtivos }: Aler
                   </div>
 
                   {ativo && (
-                    <button
-                      type="button"
-                      onClick={() => resolver(a.id)}
-                      disabled
-                      title="Em breve"
-                      className="wr-btn shrink-0 cursor-not-allowed text-sm disabled:opacity-50"
-                    >
-                      {pendentes[a.id] && <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden />}
-                      Resolver (em breve)
-                    </button>
+                    <div className="flex shrink-0 flex-col gap-1.5">
+                      <button
+                        type="button"
+                        onClick={() => mudar(a.id, "resolved")}
+                        disabled={pendentes[a.id]}
+                        className="wr-btn-dark inline-flex items-center justify-center gap-1.5 text-sm disabled:opacity-60"
+                      >
+                        {pendentes[a.id] ? <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden /> : <Check className="h-3.5 w-3.5" aria-hidden />}
+                        Resolver
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => mudar(a.id, "dismissed")}
+                        disabled={pendentes[a.id]}
+                        className="wr-btn inline-flex items-center justify-center text-xs disabled:opacity-60"
+                      >
+                        Descartar
+                      </button>
+                    </div>
                   )}
                 </div>
               </div>
