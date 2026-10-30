@@ -44,7 +44,9 @@ const CSS_IMPRESSAO = `
 body{margin:0;font-family:-apple-system,Segoe UI,Roboto,Arial,sans-serif;color:#1a1a1a;background:#fff;line-height:1.5}
 .doc{max-width:720px;margin:0 auto;padding:32px 28px}
 .head{border-bottom:2px solid #3d5a1f;padding-bottom:12px;margin-bottom:18px}
-.brand{font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:#5C7F23;font-weight:700}
+.brandrow{display:flex;align-items:center;gap:9px;margin-bottom:3px}
+.logo{height:30px;width:auto}
+.brand{font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:#5C7F23;font-weight:700}
 h1{font-size:22px;margin:4px 0 2px}
 .meta{font-size:13px;color:#666}
 h2{font-size:15px;color:#3d5a1f;margin:20px 0 6px;border-bottom:1px solid #e3e3df;padding-bottom:3px}
@@ -115,6 +117,7 @@ export default function BriefingClient({ eleicoes, municipios }: { eleicoes: Ele
     if (!dossie || !cand) return;
     const win = window.open("", "_blank", "width=840,height=1000");
     if (!win) return;
+    const origin = window.location.origin;
     const advHtml = adv.length
       ? `<div class="batalha"><h3>&#9876;&#65039; A batalha &mdash; quem disputa seus redutos</h3>` +
         `<p class="sub">Candidatos mais fortes nos seus bairros${redutos ? ` (${escHtml(redutos)})` : ""} &mdash; votos deles no seu reduto / no munic&iacute;pio.</p>` +
@@ -125,11 +128,11 @@ export default function BriefingClient({ eleicoes, municipios }: { eleicoes: Ele
     const html =
       `<!doctype html><html lang="pt-BR"><head><meta charset="utf-8">` +
       `<title>Dossiê — ${escHtml(cand.nomeUrna)} · ${escHtml(munNome)}</title><style>${CSS_IMPRESSAO}</style></head><body>` +
-      `<div class="doc"><div class="head"><div class="brand">Intelig&ecirc;ncia &middot; IA Estrat&eacute;gica</div>` +
+      `<div class="doc"><div class="head"><div class="brandrow"><img class="logo" src="${origin}/gipchat-elmo.png" alt="GIP"/><div class="brand">GIP &middot; Guerrilheiros Intelig&ecirc;ncia Pol&iacute;tica</div></div>` +
       `<h1>Dossi&ecirc; &mdash; ${escHtml(cand.nomeUrna)} &middot; ${escHtml(munNome)}</h1>` +
       `<div class="meta">${escHtml(cargoAno)} &middot; Fonte: TSE (resultados oficiais) &middot; Base: CRM da operação</div></div>` +
       advHtml + mdParaHtml(dossie) +
-      `<p class="foot">Cruza o voto do candidato (TSE) com a base de contatos do SEU CRM &mdash; os contatos s&atilde;o da sua opera&ccedil;&atilde;o, n&atilde;o do candidato analisado. Documento de apoio gerado por IA; confira antes de decidir.</p>` +
+      `<p class="foot"><b>A se&ccedil;&atilde;o Entrega &times; Voto reflete o trabalho REGISTRADO do gabinete</b> &mdash; quanto mais o time registra demandas e obras por bairro, mais preciso fica o cruzamento. Cruza o voto do candidato (TSE) com a base de contatos do SEU CRM: os contatos s&atilde;o da sua opera&ccedil;&atilde;o, n&atilde;o do candidato analisado. Documento de apoio gerado por IA; confira antes de decidir.</p>` +
       `</div></body></html>`;
     win.document.write(html);
     win.document.close();
@@ -203,11 +206,17 @@ export default function BriefingClient({ eleicoes, municipios }: { eleicoes: Ele
       {dossie && (
         <section className="wr-card p-6" id="dossie-impressao">
           <div className="mb-4 flex items-center justify-between gap-3 border-b pb-3" style={{ borderColor: "var(--color-border)" }}>
-            <div className="flex items-center gap-2">
-              <Sparkles className="h-5 w-5" aria-hidden style={{ color: "#D7F36A" }} />
-              <h2 className="font-heading text-lg font-bold" style={{ color: "var(--color-text)" }}>
-                Dossiê — {cand?.nomeUrna} · {munNome}
-              </h2>
+            <div className="flex items-center gap-2.5">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src="/gipchat-elmo.png" alt="GIP" style={{ height: 28, width: "auto" }} />
+              <div>
+                <p className="text-[10px] font-bold uppercase tracking-wider" style={{ color: "#5C7F23" }}>
+                  GIP · Guerrilheiros Inteligência Política
+                </p>
+                <h2 className="font-heading text-lg font-bold leading-tight" style={{ color: "var(--color-text)" }}>
+                  Dossiê — {cand?.nomeUrna} · {munNome}
+                </h2>
+              </div>
             </div>
             <button type="button" onClick={imprimir}
               className="flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold"
