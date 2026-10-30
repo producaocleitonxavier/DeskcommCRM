@@ -43,7 +43,11 @@ async function orgAtiva(): Promise<string | null> {
 function traduzErro(error: { code?: string; message: string }): string {
   if (error.code === "23505") return "Já existe um registro com esse identificador.";
   if (error.code === "23514") return "Algum valor está fora do permitido para este campo.";
-  return error.message;
+  // 57014 = statement timeout. A operação é segura (nada é alterado quando ela
+  // é cancelada), então nunca mostramos o texto cru do Postgres ao usuário.
+  if (error.code === "57014" || /statement timeout/i.test(error.message))
+    return "A base é grande e a operação passou do tempo limite — nada foi alterado. Tente de novo; se continuar, avise a equipe técnica.";
+  return "Não foi possível concluir agora. Tente de novo; se continuar, avise a equipe técnica.";
 }
 
 function normalizarTelefone(tel: string): string | null {
