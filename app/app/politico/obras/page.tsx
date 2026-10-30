@@ -49,6 +49,7 @@ export default async function ObrasPage() {
             ? "As obras, serviços e contratos que você executa — do contrato à entrega, com vistorias e fotos."
             : "As obras, serviços e contratos que você fiscaliza — vistorias em campo, checklist, fotos e cobrança."
         }
+        acoes={[{ href: "/app/politico/obras/nova", label: executivo ? "+ Nova obra/contrato" : "+ Nova fiscalização", primary: true }]}
       />
       <ObrasClient obras={linhas} executivo={executivo} eleicoes={eleicoes as EleicaoOpcao[]} mandatoInicial={mandato} />
     </div>

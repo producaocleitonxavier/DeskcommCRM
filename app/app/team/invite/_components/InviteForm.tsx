@@ -22,6 +22,7 @@ import {
 } from "@/components/ui/select";
 import { ROLES, type Role } from "@/lib/schemas/team";
 import { rotuloDoPapel } from "@/lib/auth/types";
+import { PERFIS_DE_ACESSO } from "@/lib/navigation/perfis";
 import { descreverMotivoDaFalha } from "./motivo-da-falha";
 import { ApiError } from "@/lib/api/types";
 
@@ -35,6 +36,7 @@ export function InviteForm() {
   const [emailsRaw, setEmailsRaw] = useState("");
   const [settings, setSettings] = useState(INTERFACE_COMPLETA);
   const [role, setRole] = useState<Role>("agent");
+  const [perfilNota, setPerfilNota] = useState<string | null>(null);
   const [result, setResult] = useState<ResultState | null>(null);
   const [limiteDoPlano, setLimiteDoPlano] = useState<string | null>(null);
   const invite = useInviteMembers();
@@ -86,6 +88,36 @@ export function InviteForm() {
             placeholder={"alice@empresa.com\nbob@empresa.com"}
           />
         </div>
+        <div className="space-y-2 rounded-lg border p-3">
+          <Label>{t("Perfil de acesso")}</Label>
+          <p className="text-xs text-muted-foreground">
+            {t("Um clique já define o papel e o menu típico de cada função do gabinete. Ajuste abaixo se quiser.")}
+          </p>
+          <div className="flex flex-wrap gap-2">
+            {PERFIS_DE_ACESSO.map((p) => (
+              <Button
+                key={p.chave}
+                type="button"
+                variant="outline"
+                size="sm"
+                disabled={invite.isPending}
+                onClick={() => {
+                  setRole(p.papelRecomendado as Role);
+                  setSettings(p.destinos ? { preset: "completa", destinos: [...p.destinos] } : INTERFACE_COMPLETA);
+                  setPerfilNota(`${p.nome} · ${t("Papel")}: ${p.papelRotulo}. ${p.descricao}`);
+                }}
+              >
+                {p.nome}
+              </Button>
+            ))}
+          </div>
+          {perfilNota && (
+            <p className="text-xs" style={{ color: "var(--color-text-muted, #666)" }}>
+              {perfilNota}
+            </p>
+          )}
+        </div>
+
         <div className="space-y-2">
           <Label htmlFor="role">{t("Papel")}</Label>
           <Select value={role} onValueChange={(v) => setRole(v as Role)}>

@@ -1768,7 +1768,7 @@ export const DICIONARIO: Traducoes = {
   "em aberto": { es: "abiertos" },
   // ─── Agentes de IA: lista ───
   "Agentes de IA": { es: "Agentes de IA" },
-  "Configure o comportamento dos agents que respondem no WhatsApp.": {
+  "Configure o comportamento dos agentes que respondem no WhatsApp.": {
     es: "Configura el comportamiento de los agentes que responden en WhatsApp.",
   },
   "Nenhum agent configurado": { es: "Ningún agente configurado" },
@@ -3185,7 +3185,7 @@ export const DICIONARIO: Traducoes = {
   "Obrigatório": { es: "Obligatorio" },
   "Chave muito curta": { es: "Clave demasiado corta" },
   Casos: { es: "Casos" },
-  "Quando a IA trava em algo que só um humano resolve, ela abre um caso aqui — e continua conversando com o cliente enquanto espera sua resposta.":
+  "Quando a IA trava em algo que só um humano resolve, ela abre um caso aqui — e continua conversando com a pessoa enquanto espera sua resposta.":
     {
       es: "Cuando la IA se atora con algo que solo una persona puede resolver, abre un caso aquí y sigue conversando con el cliente mientras espera tu respuesta.",
     },
@@ -8901,8 +8901,8 @@ export const DICIONARIO: Traducoes = {
   "A gestão de atendimento está disponível para gerentes e administradores.": {
     es: "La gestión de atención está disponible para gerentes y administradores.",
   },
-  "Cole até 20 emails (um por linha) e escolha a role compartilhada.": {
-    es: "Pega hasta 20 correos (uno por línea) y elige el rol compartido.",
+  "Cole até 20 emails (um por linha) e escolha o perfil e o papel compartilhados.": {
+    es: "Pega hasta 20 correos (uno por línea) y elige el perfil y el rol compartidos.",
   },
   "Adicione ao menos um email.": { es: "Agrega al menos un correo." },
   "Máximo 20 emails por convite.": { es: "Máximo 20 correos por invitación." },

@@ -95,11 +95,6 @@ export default function ObrasClient({ obras, executivo, eleicoes, mandatoInicial
           <option value="todos">Todos os status</option>
           {Object.entries(STATUS).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
         </select>
-        <Link href="/app/politico/obras/nova"
-          className="ml-auto inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm font-semibold"
-          style={{ background: "#D7F36A", color: "#16181D" }}>
-          <Plus className="h-4 w-4" aria-hidden /> Nova {executivo ? "obra/contrato" : "fiscalização"}
-        </Link>
       </div>
 
       {/* Lista */}
