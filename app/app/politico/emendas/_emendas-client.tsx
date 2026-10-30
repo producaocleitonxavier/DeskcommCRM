@@ -13,6 +13,7 @@ import { BarChartCard } from "@/components/politico/bar-chart-card";
 import { CommandHero } from "@/components/politico/command-hero";
 import { EmptyState } from "@/components/politico/empty-state";
 import { RelatorioGabineteButton } from "@/components/politico/relatorio-gabinete-button";
+import { SincronizarEmendasButton } from "@/components/politico/sincronizar-emendas-button";
 
 const STATUS: Record<string, { label: string; bg: string; fg: string }> = {
   rascunho: { label: "Rascunho", bg: "#F0F0EB", fg: "#5B606B" },
@@ -40,9 +41,10 @@ export interface EmendasClientProps {
   kpis: { alocado: string; executado: string; pendente: string };
   valorPorArea: { name: string; value: number; fill: string }[];
   emendas: EmendaItem[];
+  ehAdmin?: boolean;
 }
 
-export default function EmendasClient({ kpis, valorPorArea, emendas }: EmendasClientProps) {
+export default function EmendasClient({ kpis, valorPorArea, emendas, ehAdmin }: EmendasClientProps) {
   // Leitura analítica + barras + cores de pílula do relatório PDF.
   const totalArea = valorPorArea.reduce((s, a) => s + a.value, 0);
   const areaTop = [...valorPorArea].sort((a, b) => b.value - a.value)[0];
@@ -75,6 +77,7 @@ export default function EmendasClient({ kpis, valorPorArea, emendas }: EmendasCl
         titulo="Emendas Parlamentares"
         subtitulo="Valores, destino e status de execução."
         acoes={[{ href: "/app/politico/emendas/novo", label: "+ Nova emenda", primary: true }]}
+        extra={ehAdmin ? <SincronizarEmendasButton /> : undefined}
       />
 
       {emendas.length > 0 && (

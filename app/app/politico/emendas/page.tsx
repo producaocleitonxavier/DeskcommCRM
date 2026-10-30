@@ -8,6 +8,7 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { requireAuth, resolveActiveOrg } from "@/lib/auth/server";
+import { ROLE_RANK } from "@/lib/auth/types";
 import EmendasClient, { type EmendaItem } from "./_emendas-client";
 
 export const dynamic = "force-dynamic";
@@ -88,6 +89,7 @@ export default async function EmendasPage() {
       }}
       valorPorArea={valorPorArea}
       emendas={emendas}
+      ehAdmin={ROLE_RANK[org.role] >= ROLE_RANK.admin}
     />
   );
 }
