@@ -51,3 +51,43 @@ export function gabineteDeLabel(id: IdentidadeDoMandato): string {
 export function novidadesDeLabel(id: IdentidadeDoMandato): string {
   return id.nomeParlamentar ? `as novidades de ${id.nomeParlamentar}` : "as novidades do gabinete";
 }
+
+// ── Abrangência do mandato (escopo geográfico da Inteligência) ────────────────
+// A ferramenta se adapta ao TIPO de político escolhido na Identidade do Mandato:
+// vereador/prefeito = MUNICIPAL (cidade + bairros); deputado estadual = ESTADUAL
+// (o estado); deputado federal/senador = NACIONAL (Brasil, enxuto). Derivamos do
+// campo `cargo` (texto livre) — a mesma escolha que a equipe já faz no cadastro.
+export type AbrangenciaMandato = "municipal" | "estadual" | "nacional";
+
+export function abrangenciaDoMandato(cargo: string | null | undefined): AbrangenciaMandato {
+  const c = (cargo ?? "").normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
+  if (/federal|senad|presiden/.test(c)) return "nacional";
+  if (/estadual|distrital|governad|deputad(?!.*federal)/.test(c)) return "estadual";
+  // vereador, prefeito, vice-prefeito, e qualquer coisa não reconhecida → municipal
+  return "municipal";
+}
+
+export interface EscopoDaInteligencia {
+  abrangencia: AbrangenciaMandato;
+  // Rótulo do recorte ("Belo Horizonte", "Minas Gerais", "Brasil").
+  lugar: string;
+  // Como a IA deve chamar a unidade de território analisada.
+  unidadeTerritorio: string; // "bairro" | "município" | "estado"
+  // Frase curta pra cabeçalho.
+  rotulo: string; // "Inteligência municipal — Belo Horizonte"
+}
+
+/** Resolve o escopo geográfico da Inteligência a partir da identidade do mandato. */
+export function escopoDaInteligencia(id: IdentidadeDoMandato, uf?: string | null): EscopoDaInteligencia {
+  const abrangencia = abrangenciaDoMandato(id.cargo);
+  const estado = (uf ?? "").trim().toUpperCase() || null;
+  if (abrangencia === "nacional") {
+    return { abrangencia, lugar: "Brasil", unidadeTerritorio: "estado", rotulo: "Inteligência nacional — Brasil" };
+  }
+  if (abrangencia === "estadual") {
+    const lugar = estado ? `estado (${estado})` : "seu estado";
+    return { abrangencia, lugar, unidadeTerritorio: "município", rotulo: `Inteligência estadual — ${estado ?? "seu estado"}` };
+  }
+  const lugar = id.cidade?.trim() || "seu município";
+  return { abrangencia, lugar, unidadeTerritorio: "bairro", rotulo: `Inteligência municipal — ${lugar}` };
+}

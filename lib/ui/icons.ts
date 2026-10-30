@@ -28,6 +28,7 @@ export {
   FlowArrow,
   ChatsCircle,
   ClipboardText,
+  Newspaper,
   Scales,
   Gauge,
   WifiSlash,

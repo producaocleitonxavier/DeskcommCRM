@@ -970,6 +970,15 @@ export const NAV_CATALOG = [
     sidebar: false, // oculto do menu (rota/funcionalidade mantida)
   },
   {
+    href: "/app/politico/boletim",
+    label: "Boletim Semanal",
+    description: "O raio-x da semana num lugar só: sentimento, pautas da mídia, as dores do povo (demandas), adversários e as ações recomendadas — com resumo por IA e PDF. O escopo se adapta ao mandato (cidade, estado ou país).",
+    icon: "Newspaper",
+    group: "inteligencia",
+    minRole: "manager",
+    sidebar: true,
+  },
+  {
     href: "/app/politico/pesquisas",
     label: "Pesquisas",
     description: "Pesquisas de campo com formulários públicos via token e respostas geolocalizadas.",
