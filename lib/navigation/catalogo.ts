@@ -689,8 +689,11 @@ export const NAV_CATALOG = [
     label: "Casos",
     description: "Os atendimentos que o agente conduziu, do início ao desfecho.",
     icon: "ClipboardText",
-    group: "ia",
-    section: "Acompanhar o agente",
+    // Vive em Atendimento (ao lado do Inbox), não no hub de IA: é trabalho de
+    // GENTE — "onde você atende" + "onde a IA te chama". Deixar no grupo "ia"
+    // criava uma seção Atendimento com um item só (o Inbox) e enterrava os casos
+    // junto da configuração técnica do agente.
+    group: "atendimento",
     minRole: "agent",
     // Uso diário: a IA abre caso quando precisa de uma pessoa e segue
     // atendendo enquanto espera. Escondido no hub, o caso só era visto por quem

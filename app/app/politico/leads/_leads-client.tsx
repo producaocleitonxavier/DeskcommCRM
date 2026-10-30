@@ -142,13 +142,13 @@ export default function LeadsClient({ leads, total, contagens, cidades, mapaResu
           className="wr-btn inline-flex items-center gap-2 disabled:opacity-60"
           title="Religa a cidade do cadastro ao mapa e ao filtro de Cidade. Só preenche quem está sem cidade."
         >
-          <Building2 className="h-4 w-4" aria-hidden /> {carimbandoCidade ? "Religando cidades…" : "Carimbar cidades"}
+          <Building2 className="h-4 w-4" aria-hidden /> {carimbandoCidade ? "Preenchendo cidades…" : "Preencher cidades que faltam"}
         </button>
         <button
           type="button"
           disabled={carimbando}
           onClick={async () => {
-            if (!window.confirm("Carimbar a zona eleitoral das pessoas pelo bairro (dados do TSE)? Preenche só quem está sem zona. Pode levar alguns segundos.")) return;
+            if (!window.confirm("Preencher a zona eleitoral das pessoas pelo bairro (dados do TSE)? Preenche só quem está sem zona. Pode levar alguns segundos.")) return;
             setCarimboMsg(null);
             setCarimbando(true);
             const res = await carimbarZonasDosLeads();
@@ -163,7 +163,7 @@ export default function LeadsClient({ leads, total, contagens, cidades, mapaResu
           className="wr-btn inline-flex items-center gap-2 disabled:opacity-60"
           title="Deriva a zona eleitoral pelo bairro, usando dados agregados do TSE. Só preenche quem está sem zona."
         >
-          <MapPin className="h-4 w-4" aria-hidden /> {carimbando ? "Carimbando zonas…" : "Carimbar zonas pelo bairro"}
+          <MapPin className="h-4 w-4" aria-hidden /> {carimbando ? "Preenchendo zonas…" : "Preencher zonas pelo bairro"}
         </button>
       </div>
 

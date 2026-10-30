@@ -119,19 +119,22 @@ describe("sidebarGroups", () => {
     expect(ids).toContain("atendimento");
   });
 
-  it("a ordem dentro do grupo de IA é a do uso real: agentes, follow-ups, casos", () => {
+  it("a ordem dentro do grupo de IA é a do uso real: agentes, follow-ups", () => {
     // Provedores e Execuções NÃO entram aqui, e a razão é medida: pô-las na
     // sidebar estourou a dobra em 900px (e2e `navegacao.spec.ts`). Elas seguem
     // o padrão das outras nove telas do grupo — alcançáveis pelo hub "Ver tudo
     // em IA", que é o desenho existente para tela de configuração.
     const ia = sidebarGroups(true, null).find((g) => g.group.id === "ia");
-    // Casos entrou no lugar de Roteadores, um por um: roteador se configura
-    // poucas vezes; caso pede resposta no mesmo dia.
+    // Casos SAIU do grupo de IA para Atendimento (ao lado do Inbox): é trabalho
+    // de gente — "onde você atende" + "onde a IA te chama" —, não configuração
+    // do agente. Sem isso, Atendimento era uma seção de item único.
     expect(ia?.items.map((i) => i.href)).toEqual([
       "/app/ai/agents",
       "/app/ai/followups",
-      "/app/ai/cases",
     ]);
+    // E Casos agora vive em Atendimento.
+    const atendimento = sidebarGroups(true, null).find((g) => g.group.id === "atendimento");
+    expect(atendimento?.items.map((i) => i.href)).toContain("/app/ai/cases");
   });
 });
 
@@ -143,7 +146,7 @@ describe("hubSections", () => {
     // War Room v2 (Prompt 6): a seção "Campanha" saiu de Operação — Funil,
     // Ligações, Eventos e Pesquisas foram para os grupos políticos próprios
     // (Comando/Engajamento) com `sidebar: true`.
-    expect(secoes.map((s) => s.section)).toEqual(["O dia a dia da venda", "Preparar a venda", "Fechar a venda"]);
+    expect(secoes.map((s) => s.section)).toEqual(["O dia a dia do relacionamento", "Preparar a venda", "Fechar a venda"]);
     expect(secoes.flatMap((s) => s.items.map((i) => i.href))).toEqual([
       "/app/prospecting",
       "/app/kanban",

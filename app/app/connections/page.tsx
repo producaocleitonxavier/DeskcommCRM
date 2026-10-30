@@ -31,7 +31,7 @@ export default async function ConnectionsPage() {
         <h1 className="text-2xl font-semibold tracking-tight">{traduzir("Conexões", idioma)}</h1>
         <p className="text-sm text-muted-foreground">
           {traduzir(
-            "Por onde seu negócio fala com o cliente. Conecte números por QR ou o número oficial da Meta, e acompanhe a saúde de cada um.",
+            "Por onde você fala com o seu público. Conecte números por QR ou o número oficial da Meta, e acompanhe a saúde de cada um.",
             idioma,
           )}
         </p>
