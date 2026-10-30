@@ -31,14 +31,15 @@ export function SincronizarProposicoesButton() {
       return;
     }
     if (r.naoEhDeputado) {
-      setMsg("Nenhum deputado federal com esse nome na Câmara.");
+      setMsg("Nenhum deputado federal ou senador com esse nome em Brasília.");
       return;
     }
     if (r.total === 0) {
       setMsg("Nenhuma proposição encontrada para este parlamentar.");
       return;
     }
-    setMsg(`${r.inseridas} nova(s) · ${r.atualizadas} atualizada(s).`);
+    const onde = r.fonte === "senado" ? "Senado" : "Câmara";
+    setMsg(`${onde}: ${r.inseridas} nova(s) · ${r.atualizadas} atualizada(s).`);
     router.refresh();
   }
 

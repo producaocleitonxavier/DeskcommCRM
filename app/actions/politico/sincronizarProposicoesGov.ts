@@ -14,10 +14,11 @@ import { loadAuthUser, mfaEmDivida, resolveActiveOrg } from "@/lib/auth/server";
 import { ROLE_RANK } from "@/lib/auth/types";
 import { supportWriteError } from "@/lib/impersonate/support";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { acharDeputado, buscarProposicoes } from "@/lib/politico/gov-camara";
+import { acharDeputado, buscarProposicoes, type ProposicaoGov } from "@/lib/politico/gov-camara";
+import { acharSenador, buscarMateriasSenado } from "@/lib/politico/gov-senado";
 
 export type ResultadoSyncProp =
-  | { ok: true; total: number; inseridas: number; atualizadas: number; semNome?: boolean; naoEhDeputado?: boolean }
+  | { ok: true; total: number; inseridas: number; atualizadas: number; semNome?: boolean; naoEhDeputado?: boolean; fonte?: "camara" | "senado" }
   | { ok: false; error: string };
 
 export async function sincronizarProposicoesGov(): Promise<ResultadoSyncProp> {
@@ -39,13 +40,22 @@ export async function sincronizarProposicoesGov(): Promise<ResultadoSyncProp> {
   const nome = (c?.nome_parlamentar ?? c?.tse_candidato_nome ?? "").trim();
   if (!nome) return { ok: true, total: 0, inseridas: 0, atualizadas: 0, semNome: true };
 
-  let deputado;
-  let proposicoes;
+  const agora = new Date().getFullYear();
+  const anos = [agora, agora - 1, agora - 2];
+  let proposicoes: ProposicaoGov[];
+  let fonte: "camara" | "senado";
   try {
-    deputado = await acharDeputado(nome);
-    if (!deputado) return { ok: true, total: 0, inseridas: 0, atualizadas: 0, naoEhDeputado: true };
-    const agora = new Date().getFullYear();
-    proposicoes = await buscarProposicoes(deputado.id, [agora, agora - 1, agora - 2], 30);
+    // 1º tenta Câmara (deputado federal); se não for, tenta Senado (senador).
+    const deputado = await acharDeputado(nome);
+    if (deputado) {
+      fonte = "camara";
+      proposicoes = await buscarProposicoes(deputado.id, anos, 30);
+    } else {
+      const senador = await acharSenador(nome);
+      if (!senador) return { ok: true, total: 0, inseridas: 0, atualizadas: 0, naoEhDeputado: true };
+      fonte = "senado";
+      proposicoes = await buscarMateriasSenado(senador.codigo, anos, 30);
+    }
   } catch {
     return { ok: false, error: "falha_na_api" };
   }
@@ -55,12 +65,8 @@ export async function sincronizarProposicoesGov(): Promise<ResultadoSyncProp> {
   for (const p of proposicoes) {
     if (!p.numeroLabel) continue;
     const titulo = (p.ementa ?? "").slice(0, 300) || p.numeroLabel;
-    const descricao = [
-      "Importado da Câmara dos Deputados.",
-      p.situacao && `Situação: ${p.situacao}.`,
-    ]
-      .filter(Boolean)
-      .join(" ");
+    const origemLabel = fonte === "senado" ? "Importado do Senado Federal." : "Importado da Câmara dos Deputados.";
+    const descricao = [origemLabel, p.situacao && `Situação: ${p.situacao}.`].filter(Boolean).join(" ");
 
     const { data: existente } = await admin
       .from("pol_projetos_lei")
@@ -105,5 +111,5 @@ export async function sincronizarProposicoesGov(): Promise<ResultadoSyncProp> {
 
   revalidatePath("/app/politico/projetos-lei");
   revalidatePath("/app/politico/prestacao-contas");
-  return { ok: true, total: proposicoes.length, inseridas, atualizadas };
+  return { ok: true, total: proposicoes.length, inseridas, atualizadas, fonte };
 }
