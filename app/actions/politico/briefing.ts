@@ -142,6 +142,43 @@ export async function briefingEstrategico(
     .slice(0, 5)
     .map((x) => `${x.e.nome} (${x.votos} votos): ${descreveEntrega(x.e)}`);
 
+  // ── MOMENTUM / EVOLUÇÃO: votos do MESMO candidato (casado por NOME COMPLETO
+  //    normalizado, exato — sem homônimo) neste município em eleições anteriores.
+  //    Trajetória: cresceu ou encolheu? Por bairro, onde. Degrada liso (omite) se
+  //    não houver candidatura anterior dele neste município.
+  const normNome = (s: string) => s.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().replace(/\s+/g, " ").trim();
+  const alvoNome = normNome(resumo.nome ?? resumo.nomeUrna ?? "");
+  let momentum: { ano: number; cargo: string; votosAntes: number; delta: number; pct: number; porBairro: string[] } | null = null;
+  if (alvoNome) {
+    const { data: eleicoesAnt } = await db
+      .from("intel_elections")
+      .select("id, ano, cargo")
+      .lt("ano", ano)
+      .order("ano", { ascending: false });
+    for (const e of (eleicoesAnt ?? []) as { id: number; ano: number; cargo: string }[]) {
+      const { data: cands } = await db.rpc("intel_cand_ranking_mun", { p_election: e.id, p_municipio: cdMun, p_q: resumo.nome ?? resumo.nomeUrna, p_limit: 25, p_offset: 0 });
+      const matches = ((cands ?? []) as { sq_candidato: number; nome: string | null; votos_total: number }[]).filter((c) => normNome(c.nome ?? "") === alvoNome);
+      if (matches.length !== 1) continue; // 0 ou ambíguo → não arrisca
+      const m = matches[0]!;
+      const votosAntes = Number(m.votos_total);
+      const delta = votosNoMun - votosAntes;
+      const pct = votosAntes > 0 ? Math.round((delta / votosAntes) * 100) : 0;
+      const { data: drillAntes } = await db.rpc("intel_cand_drill", { p_election: e.id, p_sq: String(m.sq_candidato), p_dim: "bairro", p_municipio: cdMun });
+      const antesPorBairro = new Map<string, number>();
+      for (const r of (drillAntes ?? []) as { rotulo: string | null; votos: number | null }[]) {
+        const nb = normNome(r.rotulo ?? "");
+        if (nb) antesPorBairro.set(nb, r.votos ?? 0);
+      }
+      const porBairro = bairros.filter((b) => b.votos > 0).slice(0, 6).map((b) => {
+        const antes = antesPorBairro.get(normNome(b.rotulo)) ?? 0;
+        const d = b.votos - antes;
+        return `${b.rotulo}: ${antes} → ${b.votos} (${d >= 0 ? "+" : ""}${d})`;
+      });
+      momentum = { ano: e.ano, cargo: e.cargo, votosAntes, delta, pct, porBairro };
+      break; // a mais recente candidatura anterior dele neste município
+    }
+  }
+
   const fatos: string[] = [
     `Candidato analisado (dados TSE): ${nome} (nº ${resumo.nr}${resumo.partido ? `, ${resumo.partido}` : ""})${resumo.situacao ? ` — ${resumo.situacao}` : ""}`,
     `Cargo/eleição: ${cargoAno}. Votos totais do candidato (MG): ${resumo.votos.toLocaleString("pt-BR")} (${pctEstado}% do estado).`,
@@ -163,6 +200,11 @@ export async function briefingEstrategico(
       : [
           `ENTREGA DO MANDATO: ainda não há demandas ou obras com bairro registrado nesta operação. NÃO invente entrega; diga que, ao registrar demandas/obras por bairro, o cruzamento entrega×voto passa a aparecer.`,
         ]),
+    ...(momentum
+      ? [
+          `MOMENTUM / EVOLUÇÃO (mesmo candidato, casado por nome, neste município): como ${momentum.cargo} em ${momentum.ano} fez ${momentum.votosAntes.toLocaleString("pt-BR")} votos aqui; agora (${cargoAno}) fez ${votosNoMun.toLocaleString("pt-BR")} — variação de ${momentum.delta >= 0 ? "+" : ""}${momentum.delta.toLocaleString("pt-BR")} votos (${momentum.pct >= 0 ? "+" : ""}${momentum.pct}%). Por bairro (antes → agora): ${momentum.porBairro.join("; ")}.`,
+        ]
+      : []),
   ];
 
   const cerebro = await cerebroDaOrg(createAdminClient(), org.orgId);
@@ -180,7 +222,8 @@ export async function briefingEstrategico(
     "Chame o universo sempre de 'votos do cargo' (jamais 'eleitores'/'eleitorado'). " +
     regraRegional +
     "Não prometa resultado futuro: 'oportunidade' é volume de voto onde a base de CRM é fraca. Markdown com títulos: " +
-    "## Posição atual, ## Mapa de força (onde o candidato é forte), ## A batalha (quem disputa seus redutos), ## Entrega × Voto, ## Onde crescer, ## Riscos, ## Plano de 90 dias. " +
+    "## Posição atual, ## Momentum (só se houver dado de evolução), ## Mapa de força (onde o candidato é forte), ## A batalha (quem disputa seus redutos), ## Entrega × Voto, ## Onde crescer, ## Riscos, ## Plano de 90 dias. " +
+    "Em 'Momentum': SE você recebeu o dado de EVOLUÇÃO, diga se o candidato CRESCEU ou ENCOLHEU neste município desde a última eleição em que concorreu — em % e votos — e em QUAIS bairros subiu/caiu mais. Trajetória vale mais que foto: dobrar o voto é sinal fortíssimo; cair é erosão a estancar. Se o cargo anterior era diferente (ex.: Vereador → Deputado), deixe claro que é a trajetória da PESSOA (mesmo nome), não do mesmo cargo, e trate a mudança de patamar com isso em mente. Se NÃO recebeu dado de evolução, OMITA a seção Momentum inteira — nunca invente. " +
     "Em 'A batalha', analise os adversários que mais fazem voto nos MESMOS bairros fortes do candidato: quem é a ameaça real ao território, quem apenas passa por ali, e o que isso exige. " +
     "Em 'Entrega × Voto', cruze o TRABALHO REAL DO GABINETE DA OPERAÇÃO (demandas resolvidas e obras concluídas por bairro — você recebeu esses números) com o voto por bairro. Classifique cada bairro relevante em: (a) CONSOLIDANDO — reduto de voto COM entrega (mantenha a cadência); (b) A CONVERTER — bairro com entrega mas pouco voto (o trabalho ainda não virou voto/base; falta relacionamento/evento); (c) REDUTO DESCOBERTO — muito voto e ZERO entrega (risco: alguém pode ocupar o espaço — urgência). A entrega é da OPERAÇÃO; só cruze com o voto se o candidato analisado for o próprio político da operação — se for adversário, trate a entrega apenas como presença da operação no território. Nunca invente entrega que não esteja nos números. Este bloco é o nosso diferencial: conecta governar com ganhar. " +
     "No plano, liste ações concretas por zona/bairro (cadastrar base de CRM, presença física, evento, lideranças), priorizando os REDUTOS DESCOBERTOS e os bairros A CONVERTER.";
@@ -188,10 +231,10 @@ export async function briefingEstrategico(
   const prompt =
     `Escreva o briefing estratégico de campanha com base nos dados abaixo.\n\n` +
     fatos.join("\n") +
-    `\n\nMáximo ~480 palavras, com os 6 títulos. Seja específico e cite bairros/zonas/adversários pelo nome. Priorize transformar os números em decisões.`;
+    `\n\nMáximo ~560 palavras, com os títulos acima (omita Momentum se não houver dado). Seja específico e cite bairros/zonas/adversários pelo nome. Priorize transformar os números em decisões.`;
 
   try {
-    const { text } = await generateText({ model: modeloDoCerebro(cerebro), system, prompt, maxOutputTokens: 1300 });
+    const { text } = await generateText({ model: modeloDoCerebro(cerebro), system, prompt, maxOutputTokens: 1600 });
     const texto = text.trim();
     if (!texto) return { ok: false, erro: "A IA não retornou texto. Tente novamente." };
     return { ok: true, texto, candidato: nome, adversarios, redutos: redutosNome, votosCandidatoReduto };
