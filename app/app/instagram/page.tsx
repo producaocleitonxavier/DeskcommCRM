@@ -363,7 +363,7 @@ export default async function InstagramHubPage() {
       href: "/app/instagram/etiquetas",
       titulo: "Funil Político",
       descricao:
-        "Os 3 níveis do apoiador (Simpatizante → Apoiador → Embaixador) e como a pessoa sobe.",
+        "Os 5 níveis do funil (Novo cadastro → Simpatizante → Apoiador → Militante → Voto certo) e como a pessoa sobe.",
       icon: "tag",
       badge: null,
     },
