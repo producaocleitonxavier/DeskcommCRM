@@ -36,7 +36,8 @@ export function InviteForm() {
   const [emailsRaw, setEmailsRaw] = useState("");
   const [settings, setSettings] = useState(INTERFACE_COMPLETA);
   const [role, setRole] = useState<Role>("agent");
-  const [perfilNota, setPerfilNota] = useState<string | null>(null);
+  const [perfilAtivo, setPerfilAtivo] = useState<string | null>(null);
+  const [mostrarAvancado, setMostrarAvancado] = useState(false);
   const [result, setResult] = useState<ResultState | null>(null);
   const [limiteDoPlano, setLimiteDoPlano] = useState<string | null>(null);
   const invite = useInviteMembers();
@@ -91,54 +92,75 @@ export function InviteForm() {
         <div className="space-y-2 rounded-lg border p-3">
           <Label>{t("Perfil de acesso")}</Label>
           <p className="text-xs text-muted-foreground">
-            {t("Um clique já define o papel e o menu típico de cada função do gabinete. Ajuste abaixo se quiser.")}
+            {t("Escolha a função. Um clique já define o papel e o menu típico dela. (Ajuste fino no avançado, se precisar.)")}
           </p>
           <div className="flex flex-wrap gap-2">
             {PERFIS_DE_ACESSO.map((p) => (
               <Button
                 key={p.chave}
                 type="button"
-                variant="outline"
+                variant={perfilAtivo === p.chave ? "default" : "outline"}
                 size="sm"
                 disabled={invite.isPending}
                 onClick={() => {
                   setRole(p.papelRecomendado as Role);
                   setSettings(p.destinos ? { preset: "completa", destinos: [...p.destinos] } : INTERFACE_COMPLETA);
-                  setPerfilNota(`${p.nome} · ${t("Papel")}: ${p.papelRotulo}. ${p.descricao}`);
+                  setPerfilAtivo(p.chave);
                 }}
               >
                 {p.nome}
               </Button>
             ))}
           </div>
-          {perfilNota && (
-            <p className="text-xs" style={{ color: "var(--color-text-muted, #666)" }}>
-              {perfilNota}
-            </p>
-          )}
+          {(() => {
+            const p = PERFIS_DE_ACESSO.find((x) => x.chave === perfilAtivo);
+            return p ? (
+              <p className="text-xs" style={{ color: "var(--color-text-muted, #666)" }}>
+                ✓ <strong>{p.nome}</strong> · {t("Papel")}: {p.papelRotulo}. {p.descricao}
+              </p>
+            ) : (
+              <p className="text-xs text-muted-foreground">
+                {t("Nenhuma função escolhida — será enviado com o ajuste avançado abaixo.")}
+              </p>
+            );
+          })()}
         </div>
 
-        <div className="space-y-2">
-          <Label htmlFor="role">{t("Papel")}</Label>
-          <Select value={role} onValueChange={(v) => setRole(v as Role)}>
-            <SelectTrigger id="role">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {ROLES.map((r) => (
-                <SelectItem key={r} value={r}>
-                  {t(rotuloDoPapel(r))}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+        <div>
+          <button
+            type="button"
+            onClick={() => setMostrarAvancado((v) => !v)}
+            className="text-xs font-medium underline text-muted-foreground"
+          >
+            {mostrarAvancado ? t("Ocultar ajuste avançado") : t("Ajuste avançado (papel e áreas visíveis)")}
+          </button>
         </div>
-        <InterfaceEditor
-          value={settings}
-          onChange={setSettings}
-          role={role}
-          disabled={invite.isPending}
-        />
+
+        {mostrarAvancado && (
+          <>
+            <div className="space-y-2">
+              <Label htmlFor="role">{t("Papel")}</Label>
+              <Select value={role} onValueChange={(v) => { setRole(v as Role); setPerfilAtivo(null); }}>
+                <SelectTrigger id="role">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {ROLES.map((r) => (
+                    <SelectItem key={r} value={r}>
+                      {t(rotuloDoPapel(r))}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <InterfaceEditor
+              value={settings}
+              onChange={setSettings}
+              role={role}
+              disabled={invite.isPending}
+            />
+          </>
+        )}
         <Button
           type="submit"
           disabled={

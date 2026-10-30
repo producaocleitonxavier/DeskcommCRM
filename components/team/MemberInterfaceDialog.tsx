@@ -33,6 +33,7 @@ export function MemberInterfaceDialog({
   const t = useT();
   const [settings, setSettings] = useState(lerInterface(member.interface_settings).settings);
   const [perfilNota, setPerfilNota] = useState<string | null>(null);
+  const [perfilAtivo, setPerfilAtivo] = useState<string | null>(null);
   const qc = useQueryClient();
   const router = useRouter();
   const save = useMutation({
@@ -70,11 +71,12 @@ export function MemberInterfaceDialog({
               <Button
                 key={p.chave}
                 type="button"
-                variant="outline"
+                variant={perfilAtivo === p.chave ? "default" : "outline"}
                 size="sm"
                 disabled={save.isPending}
                 onClick={() => {
                   setSettings(p.destinos ? { preset: "completa", destinos: [...p.destinos] } : { preset: "completa" });
+                  setPerfilAtivo(p.chave);
                   setPerfilNota(
                     `${t("Menu")} "${p.nome}" ${t("aplicado")}. ${t("Papel recomendado")}: ${p.papelRotulo}. — ${p.descricao}`,
                   );
