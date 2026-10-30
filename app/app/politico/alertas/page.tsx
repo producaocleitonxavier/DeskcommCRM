@@ -9,7 +9,7 @@
 
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { requireAuth, resolveActiveOrg } from "@/lib/auth/server";
+import { requireAuth, resolveActiveOrg, exigirPapelNaOrg } from "@/lib/auth/server";
 import AlertasClient from "./_alertas-client";
 import MonitoramentoTabs from "@/components/politico/monitoramento-tabs";
 
@@ -75,6 +75,7 @@ export default async function AlertasPage({
 
   const org = await resolveActiveOrg(user);
   if (!org) redirect("/app/onboarding");
+  exigirPapelNaOrg(user, org, "manager");
 
   const params = await searchParams;
   const filtros = {

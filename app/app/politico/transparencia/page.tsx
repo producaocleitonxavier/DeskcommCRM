@@ -9,7 +9,7 @@
  */
 
 import { redirect } from "next/navigation";
-import { requireAuth, resolveActiveOrg } from "@/lib/auth/server";
+import { requireAuth, resolveActiveOrg, exigirPapelNaOrg } from "@/lib/auth/server";
 import { obterPortalConfig } from "@/app/actions/politico/transparencia-actions";
 import TransparenciaClient from "./_client";
 import PageTabs from "@/components/politico/page-tabs";
@@ -25,6 +25,7 @@ export default async function TransparenciaPage() {
   const user = await requireAuth();
   const org = await resolveActiveOrg(user);
   if (!org) redirect("/app/onboarding");
+  exigirPapelNaOrg(user, org, "manager");
 
   const cfg = await obterPortalConfig();
   if (!cfg) redirect("/app/onboarding");

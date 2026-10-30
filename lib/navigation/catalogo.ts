@@ -927,7 +927,7 @@ export const NAV_CATALOG = [
     icon: "Flag",
     group: "comando",
     section: "Comando",
-    minRole: "manager",
+    minRole: "agent",
     sidebar: true,
   },
 
@@ -939,7 +939,7 @@ export const NAV_CATALOG = [
     icon: "UsersThree",
     group: "comando",
     section: "Comando",
-    minRole: "manager",
+    minRole: "agent",
     sidebar: true,
   },
   {
@@ -948,7 +948,7 @@ export const NAV_CATALOG = [
     description: "Kanban da jornada de apoio — de novo cadastro até voto certo, com histórico de transições.",
     icon: "GitBranch",
     group: "comando",
-    minRole: "manager",
+    minRole: "agent",
     sidebar: true,
   },
   {
@@ -1082,7 +1082,7 @@ export const NAV_CATALOG = [
     description: "Solicitações de cidadãos e lideranças com rascunho de encaminhamento por IA.",
     icon: "Inbox",
     group: "gabinete",
-    minRole: "manager",
+    minRole: "agent",
     sidebar: true,
   },
   {
@@ -1091,7 +1091,7 @@ export const NAV_CATALOG = [
     description: "Busque qualquer ofício emitido por número, assunto, órgão ou nome do cidadão.",
     icon: "FileText",
     group: "gabinete",
-    minRole: "manager",
+    minRole: "agent",
     sidebar: true,
   },
   {
@@ -1100,7 +1100,7 @@ export const NAV_CATALOG = [
     description: "Rede de lideranças com aniversários, WhatsApp e histórico de mobilização.",
     icon: "Crown",
     group: "gabinete",
-    minRole: "manager",
+    minRole: "agent",
     sidebar: true,
   },
   {
@@ -1109,7 +1109,7 @@ export const NAV_CATALOG = [
     description: "Acompanhamento legislativo configurável por tipo de mandato.",
     icon: "FileText",
     group: "gabinete",
-    minRole: "manager",
+    minRole: "agent",
     sidebar: true,
   },
   {
@@ -1118,7 +1118,7 @@ export const NAV_CATALOG = [
     description: "Gestão de emendas parlamentares com valores, destino e status de execução.",
     icon: "CurrencyDollar",
     group: "gabinete",
-    minRole: "manager",
+    minRole: "agent",
     sidebar: true,
   },
   {
@@ -1127,7 +1127,7 @@ export const NAV_CATALOG = [
     description: "Obras, serviços e contratos públicos por território — fiscalização (vistoria, checklist, fotos) ou execução (contrato, fornecedor, prazo).",
     icon: "Buildings",
     group: "gabinete",
-    minRole: "manager",
+    minRole: "agent",
     sidebar: true,
   },
   {
@@ -1140,7 +1140,7 @@ export const NAV_CATALOG = [
     description: "Agenda do mandato — reuniões, visitas, audiências, eventos e compromissos.",
     icon: "CalendarBlank",
     group: "gabinete",
-    minRole: "manager",
+    minRole: "agent",
     sidebar: true,
   },
   {
@@ -1149,7 +1149,7 @@ export const NAV_CATALOG = [
     description: "Banco de conteúdos — e-books, PDFs, cards e links por tema, para enviar e construir relacionamento.",
     icon: "BookOpen",
     group: "gabinete",
-    minRole: "manager",
+    minRole: "agent",
     sidebar: true,
   },
   {
@@ -1158,7 +1158,7 @@ export const NAV_CATALOG = [
     description: "Escolas, igrejas e associações onde o mandato faz eventos — cada local agrupa os cadastros e vira público quente.",
     icon: "MapPin",
     group: "gabinete",
-    minRole: "manager",
+    minRole: "agent",
     sidebar: true,
   },
   {

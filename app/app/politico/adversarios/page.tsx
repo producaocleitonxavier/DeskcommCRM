@@ -8,7 +8,7 @@
 
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { requireAuth, resolveActiveOrg } from "@/lib/auth/server";
+import { requireAuth, resolveActiveOrg, exigirPapelNaOrg } from "@/lib/auth/server";
 import AdversariosClient, { type AdversarioItem } from "./_adversarios-client";
 import AdversariosGestao from "./_adversarios-gestao";
 import MonitoramentoTabs from "@/components/politico/monitoramento-tabs";
@@ -28,6 +28,7 @@ export default async function AdversariosPage() {
 
   const org = await resolveActiveOrg(user);
   if (!org) redirect("/app/onboarding");
+  exigirPapelNaOrg(user, org, "manager");
 
   const db = await createClient();
   const seteDiasAtras = new Date();

@@ -10,7 +10,7 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
-import { requireAuth, resolveActiveOrg } from "@/lib/auth/server";
+import { requireAuth, resolveActiveOrg, exigirPapelNaOrg } from "@/lib/auth/server";
 import { CommandHero } from "@/components/politico/command-hero";
 
 export const dynamic = "force-dynamic";
@@ -91,6 +91,7 @@ export default async function TerritoriosPage({
 
   const org = await resolveActiveOrg(user);
   if (!org) redirect("/app/onboarding");
+  exigirPapelNaOrg(user, org, "manager");
 
   const params = await searchParams;
   const tipo = typeof params.tipo === "string" ? params.tipo : undefined;

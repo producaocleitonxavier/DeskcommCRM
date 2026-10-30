@@ -9,7 +9,7 @@
  */
 
 import { redirect } from "next/navigation";
-import { requireAuth, resolveActiveOrg } from "@/lib/auth/server";
+import { requireAuth, resolveActiveOrg, exigirPapelNaOrg } from "@/lib/auth/server";
 import { CommandHero } from "@/components/politico/command-hero";
 import { listarEleicoes } from "@/app/actions/politico/intelEleitoral";
 import { listarMunicipiosRaioX } from "@/app/actions/politico/raioX";
@@ -21,6 +21,7 @@ export default async function ComparativoPage() {
   const user = await requireAuth();
   const org = await resolveActiveOrg(user);
   if (!org) redirect("/app/onboarding");
+  exigirPapelNaOrg(user, org, "manager");
 
   const [eleicoes, municipios] = await Promise.all([listarEleicoes(), listarMunicipiosRaioX()]);
 

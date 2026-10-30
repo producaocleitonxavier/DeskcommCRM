@@ -11,6 +11,7 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { requireAuth, resolveActiveOrg } from "@/lib/auth/server";
+import { ROLE_RANK } from "@/lib/auth/types";
 import type { BaseTerritorioResumo } from "@/components/politico/base-territorio-hero";
 import LeadsClient from "./_leads-client";
 
@@ -192,6 +193,7 @@ export default async function PessoasPage({
       mapaResumo={mapaResumo}
       filtros={{ etapa, busca, temp, cidade, pagina }}
       porPagina={POR_PAGINA}
+      podeManutencao={ROLE_RANK[org.role] >= ROLE_RANK.manager}
     />
   );
 }

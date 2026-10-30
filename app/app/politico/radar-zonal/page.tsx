@@ -17,7 +17,7 @@ import { redirect } from "next/navigation";
 import Link from "next/link";
 import { Info } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
-import { requireAuth, resolveActiveOrg } from "@/lib/auth/server";
+import { requireAuth, resolveActiveOrg, exigirPapelNaOrg } from "@/lib/auth/server";
 import { CommandHero } from "@/components/politico/command-hero";
 import { listarEleicoes } from "@/app/actions/politico/intelEleitoral";
 import { listarMunicipiosRaioX } from "@/app/actions/politico/raioX";
@@ -58,6 +58,7 @@ export default async function RadarZonalPage({ searchParams }: { searchParams: P
   const user = await requireAuth();
   const org = await resolveActiveOrg(user);
   if (!org) redirect("/app/onboarding");
+  exigirPapelNaOrg(user, org, "manager");
 
   const params = await searchParams;
   const view = params.view === "projecao" || params.view === "base" ? params.view : "radar";

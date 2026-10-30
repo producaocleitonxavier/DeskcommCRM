@@ -7,7 +7,7 @@
  */
 
 import { redirect } from "next/navigation";
-import { requireAuth, resolveActiveOrg } from "@/lib/auth/server";
+import { requireAuth, resolveActiveOrg, exigirPapelNaOrg } from "@/lib/auth/server";
 import { obterConfigMonitor, resumoOpiniao, listarMencoes } from "@/app/actions/politico/opiniaoPublica";
 import OpiniaoPublicaClient from "./_social-client";
 import MonitoramentoTabs from "@/components/politico/monitoramento-tabs";
@@ -18,6 +18,7 @@ export default async function OpiniaoPublicaPage() {
   const user = await requireAuth();
   const org = await resolveActiveOrg(user);
   if (!org) redirect("/app/onboarding");
+  exigirPapelNaOrg(user, org, "manager");
 
   const [config, resumo, mencoes] = await Promise.all([obterConfigMonitor(), resumoOpiniao(), listarMencoes(50)]);
 

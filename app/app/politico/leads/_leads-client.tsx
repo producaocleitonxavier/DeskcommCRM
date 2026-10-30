@@ -71,9 +71,11 @@ export interface LeadsClientProps {
   mapaResumo: BaseTerritorioResumo;
   filtros: Filtros;
   porPagina: number;
+  /** Manutenção em massa (preencher cidade/zona) é só de Gerente+. */
+  podeManutencao?: boolean;
 }
 
-export default function LeadsClient({ leads, total, contagens, cidades, mapaResumo, filtros, porPagina }: LeadsClientProps) {
+export default function LeadsClient({ leads, total, contagens, cidades, mapaResumo, filtros, porPagina, podeManutencao }: LeadsClientProps) {
   const router = useRouter();
   const [carimbando, setCarimbando] = useState(false);
   const [carimboMsg, setCarimboMsg] = useState<string | null>(null);
@@ -118,7 +120,8 @@ export default function LeadsClient({ leads, total, contagens, cidades, mapaResu
         acoes={[{ href: "/app/politico/leads/novo", label: "+ Novo cadastro", primary: true }]}
       />
 
-      {/* ── Manutenção da base: preencher cidade e zona que faltam ─ */}
+      {/* ── Manutenção da base (só Gerente+): preencher cidade e zona que faltam ─ */}
+      {podeManutencao && (
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
         <p className="text-xs leading-relaxed" style={{ color: "var(--color-text-muted)", maxWidth: "46ch" }}>
           <strong>Manutenção da base.</strong> Depois de importar os contatos, algumas pessoas ficam sem a <strong>cidade</strong> ou sem a <strong>zona eleitoral</strong> ligada no sistema — e some do mapa e dos filtros. Estes botões preenchem automaticamente <strong>só quem está faltando</strong> (a cidade vem do cadastro; a zona, do bairro, com dados do TSE).
@@ -171,6 +174,7 @@ export default function LeadsClient({ leads, total, contagens, cidades, mapaResu
         </button>
         </div>
       </div>
+      )}
 
       {/* ── Filtros ─────────────────────────────────────────────── */}
       <div className="wr-card space-y-4 p-4 sm:p-5">

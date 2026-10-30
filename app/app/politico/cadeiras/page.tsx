@@ -8,7 +8,7 @@
  */
 
 import { redirect } from "next/navigation";
-import { requireAuth, resolveActiveOrg } from "@/lib/auth/server";
+import { requireAuth, resolveActiveOrg, exigirPapelNaOrg } from "@/lib/auth/server";
 import { listarEleicoes } from "@/app/actions/politico/intelEleitoral";
 import { listarMunicipiosRaioX } from "@/app/actions/politico/raioX";
 import CadeirasClient from "./_cadeiras-client";
@@ -21,6 +21,7 @@ export default async function CadeirasPage() {
   const user = await requireAuth();
   const org = await resolveActiveOrg(user);
   if (!org) redirect("/app/onboarding");
+  exigirPapelNaOrg(user, org, "manager");
 
   const [eleicoes, municipios] = await Promise.all([listarEleicoes(), listarMunicipiosRaioX("MG")]);
   const proporcionais = eleicoes

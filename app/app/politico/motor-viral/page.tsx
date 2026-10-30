@@ -7,7 +7,7 @@
 
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { requireAuth, resolveActiveOrg } from "@/lib/auth/server";
+import { requireAuth, resolveActiveOrg, exigirPapelNaOrg } from "@/lib/auth/server";
 import MotorViralClient, { type ConteudoItem } from "./_motor-viral-client";
 
 export const dynamic = "force-dynamic";
@@ -42,6 +42,7 @@ export default async function MotorViralPage(props: { searchParams: Promise<{ pa
 
   const org = await resolveActiveOrg(user);
   if (!org) redirect("/app/onboarding");
+  exigirPapelNaOrg(user, org, "manager");
 
   const sp = await props.searchParams;
   const pagina = Math.max(1, parseInt(sp.pagina ?? "1", 10) || 1);

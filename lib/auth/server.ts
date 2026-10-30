@@ -24,6 +24,7 @@ import {
 import { normalizarIdioma } from "@/lib/i18n/idiomas";
 import { STATUS_OPERANTE, ehOperante } from "@/lib/organizacao/operante";
 import type { AuthUser, Role, UserOrgMembership, ActiveOrg } from "./types";
+import { roleAtLeast } from "./types";
 
 const ACTIVE_ORG_COOKIE = "active_org";
 
@@ -375,6 +376,20 @@ export async function requireAuth(): Promise<AuthUser> {
   const user = await loadAuthUser();
   if (!user) redirect("/login");
   return user;
+}
+
+/**
+ * Guard de PAPEL para Server Components: redireciona para /app quem não tem o
+ * papel mínimo na org ativa. Platform admin (fora de impersonation) passa.
+ *
+ * Isto é AUTORIZAÇÃO de verdade — a visibilidade no menu (`minRole` do catálogo)
+ * é só apresentação. Telas sensíveis (Disparos, Inteligência, IA, config)
+ * chamam este guard no topo para NÃO poderem ser alcançadas por URL por quem o
+ * papel não permite, mesmo que o item esteja escondido do menu dele.
+ */
+export function exigirPapelNaOrg(user: AuthUser, org: ActiveOrg, min: Role): void {
+  const bypassPlataforma = user.is_platform_admin && !user.support;
+  if (!bypassPlataforma && !roleAtLeast(org.role, min)) redirect("/app");
 }
 
 /**

@@ -8,7 +8,7 @@
 
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { requireAuth, resolveActiveOrg } from "@/lib/auth/server";
+import { requireAuth, resolveActiveOrg, exigirPapelNaOrg } from "@/lib/auth/server";
 import DecisaoClient, { type AlertaItem, type SinalItem } from "./_decisao-client";
 import MonitoramentoTabs from "@/components/politico/monitoramento-tabs";
 
@@ -19,6 +19,7 @@ export default async function DecisaoPage() {
 
   const org = await resolveActiveOrg(user);
   if (!org) redirect("/app/onboarding");
+  exigirPapelNaOrg(user, org, "manager");
 
   const db = await createClient();
 
