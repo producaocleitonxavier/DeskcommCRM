@@ -9,7 +9,7 @@
 
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { requireAuth, resolveActiveOrg } from "@/lib/auth/server";
+import { requireAuth, resolveActiveOrg, orgSeAoMenos } from "@/lib/auth/server";
 import { resolveIgCreds, type IgCredentials } from "@/lib/channels/instagram/credentials";
 import { businessDiscovery } from "@/lib/channels/instagram/business-discovery";
 
@@ -103,11 +103,11 @@ export async function registrarAdversario(nome: string, handle?: string): Promis
 }
 
 export async function removerAdversario(id: string): Promise<{ ok: boolean }> {
-  const user = await requireAuth();
-  const org = await resolveActiveOrg(user);
+  // Exclusão = Gerente+ (defesa no servidor, além da tela de Inteligência já ser manager).
+  const org = await orgSeAoMenos("manager");
   if (!org) return { ok: false };
   const db = await createClient();
-  await db.from("pol_opponents").delete().eq("id", id).eq("organization_id", org.orgId);
+  await db.from("pol_opponents").delete().eq("id", id).eq("organization_id", org);
   return { ok: true };
 }
 

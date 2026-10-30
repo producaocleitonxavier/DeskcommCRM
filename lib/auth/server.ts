@@ -393,6 +393,22 @@ export function exigirPapelNaOrg(user: AuthUser, org: ActiveOrg, min: Role): voi
 }
 
 /**
+ * Para SERVER ACTIONS: devolve o orgId da org ativa só quando o papel é >= `min`
+ * (platform admin fora de impersonation passa). Null = sem org OU papel
+ * insuficiente — o chamador devolve o erro no formato dele. Em Server Components
+ * use `exigirPapelNaOrg` (que redireciona). Fecha a brecha de uma ação sensível
+ * ser chamada direto por quem o papel não permite, mesmo sem o botão na tela.
+ */
+export async function orgSeAoMenos(min: Role): Promise<string | null> {
+  const user = await requireAuth();
+  const org = await resolveActiveOrg(user);
+  if (!org) return null;
+  const bypassPlataforma = user.is_platform_admin && !user.support;
+  if (!bypassPlataforma && !roleAtLeast(org.role, min)) return null;
+  return org.orgId;
+}
+
+/**
  * Returns true if the current session has at least one verified TOTP factor.
  * Use only in Server Components / Server Actions (cookie session).
  *

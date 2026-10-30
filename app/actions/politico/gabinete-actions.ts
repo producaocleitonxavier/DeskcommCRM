@@ -11,8 +11,7 @@
 
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { requireAuth, resolveActiveOrg } from "@/lib/auth/server";
-import { ROLE_RANK } from "@/lib/auth/types";
+import { requireAuth, resolveActiveOrg, orgSeAoMenos } from "@/lib/auth/server";
 
 export type AcaoResultado = { ok: true; id?: string } | { ok: false; erro: string };
 export interface CidadaoOpcao {
@@ -41,19 +40,6 @@ async function orgAtiva(): Promise<string | null> {
   return org?.orgId ?? null;
 }
 
-/**
- * Como `orgAtiva`, mas exige Gerente+ (platform admin passa). Null = sem org OU
- * papel insuficiente. Para ações sensíveis de manutenção em massa que não devem
- * ser alcançáveis por URL/action por quem o papel não permite.
- */
-async function orgSeGerente(): Promise<string | null> {
-  const user = await requireAuth();
-  const org = await resolveActiveOrg(user);
-  if (!org) return null;
-  const bypassPlataforma = user.is_platform_admin && !user.support;
-  if (!bypassPlataforma && ROLE_RANK[org.role] < ROLE_RANK.manager) return null;
-  return org.orgId;
-}
 
 function traduzErro(error: { code?: string; message: string }): string {
   if (error.code === "23505") return "Já existe um registro com esse identificador.";
@@ -153,7 +139,7 @@ export async function garantirLeadNovoCadastro(contactId: string): Promise<AcaoR
  * que está vazio). Devolve quantas pessoas foram carimbadas.
  */
 export async function carimbarZonasDosLeads(): Promise<{ ok: true; carimbados: number } | { ok: false; erro: string }> {
-  const org = await orgSeGerente();
+  const org = await orgSeAoMenos("manager");
   if (!org) return { ok: false, erro: "Sem permissão para esta ação (requer Gerente ou Administrador)." };
   const db = await createClient();
   const { data, error } = await db.rpc("pol_carimbar_zonas_leads", { p_org: org });
@@ -168,7 +154,7 @@ export async function carimbarZonasDosLeads(): Promise<{ ok: true; carimbados: n
  * o mapa de calor ficam zerados. Idempotente (só onde territory_id é nulo).
  */
 export async function carimbarCidadesDosLeads(): Promise<{ ok: true; carimbados: number } | { ok: false; erro: string }> {
-  const org = await orgSeGerente();
+  const org = await orgSeAoMenos("manager");
   if (!org) return { ok: false, erro: "Sem permissão para esta ação (requer Gerente ou Administrador)." };
   const db = await createClient();
   const { data, error } = await db.rpc("pol_carimbar_cidade_leads", { p_org: org });
@@ -228,8 +214,9 @@ export async function registrarEventoDemanda(
  * referências em mensagens/conversas viram null). */
 export async function excluirRegistro(tabela: string, id: string): Promise<AcaoResultado> {
   if (!TABELAS.has(tabela)) return { ok: false, erro: "Tabela inválida." };
-  const org = await orgAtiva();
-  if (!org) return { ok: false, erro: "Sessão ou organização inválida." };
+  // Excluir é destrutivo: Gerente+ (Atendente cria e edita, não exclui).
+  const org = await orgSeAoMenos("manager");
+  if (!org) return { ok: false, erro: "Sem permissão para excluir (requer Gerente ou Administrador)." };
   const db = await createClient();
   const { error } = await db.from(tabela).delete().eq("id", id).eq("organization_id", org);
   if (error) return { ok: false, erro: traduzErro(error) };
