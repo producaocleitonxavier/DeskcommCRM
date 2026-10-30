@@ -94,6 +94,54 @@ export async function briefingEstrategico(
     .slice(0, 6)
     .map((z) => `Zona ${z.zona} (${z.universo.toLocaleString("pt-BR")} votos, sua base ${z.base}${z.bairros.length ? `, bairros: ${z.bairros.slice(0, 4).join(", ")}` : ""})`);
 
+  // ── ENTREGA DO MANDATO × VOTO (o cruzamento que só nós temos: governar × ganhar).
+  //    Demandas resolvidas + obras concluídas por bairro, casadas com o voto do TSE.
+  const normBairro = (s: string) => s.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().replace(/\s+/g, " ").trim();
+  const [demRows, obrRows] = await Promise.all([
+    db.from("demandas").select("pol_bairro, estado").eq("organization_id", org.orgId).eq("pol_gabinete", true).not("pol_bairro", "is", null).limit(5000),
+    db.from("pol_obras").select("bairro, status").eq("organization_id", org.orgId).not("bairro", "is", null).limit(2000),
+  ]);
+  interface Entrega { nome: string; demandas: number; demandasResolvidas: number; obras: number; obrasConcluidas: number }
+  const entregaPorBairro = new Map<string, Entrega>();
+  const addEntrega = (bairro: string): Entrega => {
+    const k = normBairro(bairro);
+    let e = entregaPorBairro.get(k);
+    if (!e) { e = { nome: bairro.trim(), demandas: 0, demandasResolvidas: 0, obras: 0, obrasConcluidas: 0 }; entregaPorBairro.set(k, e); }
+    return e;
+  };
+  for (const r of (demRows.data ?? []) as { pol_bairro: string | null; estado: string | null }[]) {
+    if (!r.pol_bairro?.trim()) continue;
+    const e = addEntrega(r.pol_bairro);
+    e.demandas++;
+    if (r.estado === "resolvida") e.demandasResolvidas++;
+  }
+  for (const r of (obrRows.data ?? []) as { bairro: string | null; status: string | null }[]) {
+    if (!r.bairro?.trim()) continue;
+    const e = addEntrega(r.bairro);
+    e.obras++;
+    if (r.status === "concluida") e.obrasConcluidas++;
+  }
+  const temEntrega = entregaPorBairro.size > 0;
+  const votesByBairro = new Map<string, number>();
+  for (const b of bairros) votesByBairro.set(normBairro(b.rotulo), b.votos);
+  const descreveEntrega = (e: Entrega | undefined): string => {
+    if (!e) return "nenhuma entrega registrada";
+    const partes: string[] = [];
+    if (e.demandas) partes.push(`${e.demandasResolvidas}/${e.demandas} demandas resolvidas`);
+    if (e.obras) partes.push(`${e.obrasConcluidas}/${e.obras} obras concluídas`);
+    return partes.length ? partes.join(", ") : "nenhuma entrega registrada";
+  };
+  // Entrega nos redutos (bairros fortes em voto) — mostra onde a entrega consolida e onde o reduto está descoberto.
+  const entregaNosRedutos = bairros.filter((b) => b.votos > 0).slice(0, 8)
+    .map((b) => `${b.rotulo} (${b.votos} votos): ${descreveEntrega(entregaPorBairro.get(normBairro(b.rotulo)))}`);
+  // Entrega FORA dos redutos (muito trabalho, pouco voto) — entrega a converter em voto/base.
+  const entregaAConverter = [...entregaPorBairro.values()]
+    .map((e) => ({ e, votos: votesByBairro.get(normBairro(e.nome)) ?? 0 }))
+    .filter((x) => x.e.demandasResolvidas + x.e.obrasConcluidas > 0)
+    .sort((a, b) => a.votos - b.votos || (b.e.demandasResolvidas + b.e.obrasConcluidas) - (a.e.demandasResolvidas + a.e.obrasConcluidas))
+    .slice(0, 5)
+    .map((x) => `${x.e.nome} (${x.votos} votos): ${descreveEntrega(x.e)}`);
+
   const fatos: string[] = [
     `Candidato analisado (dados TSE): ${nome} (nº ${resumo.nr}${resumo.partido ? `, ${resumo.partido}` : ""})${resumo.situacao ? ` — ${resumo.situacao}` : ""}`,
     `Cargo/eleição: ${cargoAno}. Votos totais do candidato (MG): ${resumo.votos.toLocaleString("pt-BR")} (${pctEstado}% do estado).`,
@@ -107,6 +155,14 @@ export async function briefingEstrategico(
     `ADVERSÁRIOS que mais disputam os redutos do candidato (${redutosNome || "bairros fortes"}) — votos deles NESSES bairros / votos totais no município: ${
       adversarios.length ? adversarios.map((a) => `${a.nome}${a.partido ? ` (${a.partido})` : ""} — ${a.votosReduto.toLocaleString("pt-BR")} no reduto / ${a.votosMunicipio.toLocaleString("pt-BR")} no município`).join("; ") : "—"
     }.`,
+    ...(temEntrega
+      ? [
+          `ENTREGA DO MANDATO NOS REDUTOS (trabalho REAL do gabinete da operação — demandas resolvidas e obras concluídas, por bairro; cruze DIRETO com os votos acima): ${entregaNosRedutos.join("; ")}.`,
+          ...(entregaAConverter.length ? [`ENTREGA FORA DOS REDUTOS (onde o gabinete trabalhou mas há pouco voto — a converter em voto/base): ${entregaAConverter.join("; ")}.`] : []),
+        ]
+      : [
+          `ENTREGA DO MANDATO: ainda não há demandas ou obras com bairro registrado nesta operação. NÃO invente entrega; diga que, ao registrar demandas/obras por bairro, o cruzamento entrega×voto passa a aparecer.`,
+        ]),
   ];
 
   const cerebro = await cerebroDaOrg(createAdminClient(), org.orgId);
@@ -124,9 +180,10 @@ export async function briefingEstrategico(
     "Chame o universo sempre de 'votos do cargo' (jamais 'eleitores'/'eleitorado'). " +
     regraRegional +
     "Não prometa resultado futuro: 'oportunidade' é volume de voto onde a base de CRM é fraca. Markdown com títulos: " +
-    "## Posição atual, ## Mapa de força (onde o candidato é forte), ## A batalha (quem disputa seus redutos), ## Onde crescer, ## Riscos, ## Plano de 90 dias. " +
+    "## Posição atual, ## Mapa de força (onde o candidato é forte), ## A batalha (quem disputa seus redutos), ## Entrega × Voto, ## Onde crescer, ## Riscos, ## Plano de 90 dias. " +
     "Em 'A batalha', analise os adversários que mais fazem voto nos MESMOS bairros fortes do candidato: quem é a ameaça real ao território, quem apenas passa por ali, e o que isso exige. " +
-    "No plano, liste ações concretas por zona/bairro (cadastrar base de CRM, presença física, evento, lideranças).";
+    "Em 'Entrega × Voto', cruze o TRABALHO REAL DO GABINETE DA OPERAÇÃO (demandas resolvidas e obras concluídas por bairro — você recebeu esses números) com o voto por bairro. Classifique cada bairro relevante em: (a) CONSOLIDANDO — reduto de voto COM entrega (mantenha a cadência); (b) A CONVERTER — bairro com entrega mas pouco voto (o trabalho ainda não virou voto/base; falta relacionamento/evento); (c) REDUTO DESCOBERTO — muito voto e ZERO entrega (risco: alguém pode ocupar o espaço — urgência). A entrega é da OPERAÇÃO; só cruze com o voto se o candidato analisado for o próprio político da operação — se for adversário, trate a entrega apenas como presença da operação no território. Nunca invente entrega que não esteja nos números. Este bloco é o nosso diferencial: conecta governar com ganhar. " +
+    "No plano, liste ações concretas por zona/bairro (cadastrar base de CRM, presença física, evento, lideranças), priorizando os REDUTOS DESCOBERTOS e os bairros A CONVERTER.";
 
   const prompt =
     `Escreva o briefing estratégico de campanha com base nos dados abaixo.\n\n` +
