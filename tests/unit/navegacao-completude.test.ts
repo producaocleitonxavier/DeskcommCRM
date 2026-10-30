@@ -58,6 +58,32 @@ const NAV_ALLOWLIST: Record<string, string> = {
     "painel de inteligência dos eventos, alcançado pelo botão '📊 Inteligência' em /app/politico/locais",
   "/app/politico/funil-invisivel":
     "rota parkeada (2026-10-25) — redireciona para /app/politico/funil; funil comportamental retirado do front por estar vazio/sem pipeline, conceito guardado como Termômetro de Base (2027)",
+  "/app/politico/demandas/nova":
+    "sub-fluxo de nova demanda, alcançado pelo botão '+ Nova demanda' em /app/politico/demandas",
+  "/app/politico/emendas/novo":
+    "sub-fluxo de nova emenda, alcançado pelo botão '+ Nova emenda' em /app/politico/emendas",
+  "/app/politico/obras/nova":
+    "sub-fluxo de nova obra/fiscalização, alcançado pelo botão '+ Nova' em /app/politico/obras",
+  "/app/politico/liderancas/novo":
+    "sub-fluxo de nova liderança, alcançado pelo botão '+ Adicionar liderança' em /app/politico/liderancas",
+  "/app/politico/projetos-lei/novo":
+    "sub-fluxo de novo projeto de lei, alcançado pelo botão '+ Novo projeto' em /app/politico/projetos-lei",
+  "/app/politico/agenda/novo":
+    "sub-fluxo de novo compromisso, alcançado pelo botão '+ Novo compromisso' em /app/politico/agenda",
+  "/app/politico/pesquisas/nova":
+    "sub-fluxo de nova pesquisa, alcançado pelo botão '+ Nova pesquisa' em /app/politico/pesquisas",
+  "/app/politico/configuracao":
+    "assistente de configuração do mandato, alcançado pelo redirect de primeiro acesso (deveAbrirSetup) e pelo menu Identidade do Mandato",
+  "/app/politico/prestacao-contas":
+    "Painel do Mandato — 3ª aba do Comando (Hoje · Painel · Prestação de Contas), alcançada pelas abas do topo",
+  "/app/politico/rankings":
+    "painel de rankings da base, alcançado de dentro do War Room",
+  "/app/instagram/captacao":
+    "Kanban de captação do Instagram, alcançado pelo card 'Captação' no hub do Instagram",
+  "/app/instagram/captacao/config":
+    "configuração da captação do Instagram, alcançada pelo botão 'Configurar captação' dentro da Captação",
+  "/app/instagram/performance":
+    "painel 'Minha Performance' do Instagram, alcançado pelo card 'Minha Performance' no hub do Instagram",
 };
 
 /** Deriva as rotas estáticas a partir dos arquivos de página que existem. */

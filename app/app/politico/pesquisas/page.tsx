@@ -12,6 +12,7 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { requireAuth, resolveActiveOrg, exigirPapelNaOrg } from "@/lib/auth/server";
 import CopiarLink from "./_copiar-link";
+import CardAcoes from "./_card-acoes";
 
 export const dynamic = "force-dynamic";
 
@@ -131,11 +132,16 @@ export default async function PesquisasPage({
       </Link>
 
       {/* Cabecalho */}
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight">Pesquisas</h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Pesquisas de opinião e intenção de voto com links públicos e contagem de respostas.
-        </p>
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight">Pesquisas</h1>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Pesquisas de opinião e intenção de voto com links públicos e contagem de respostas.
+          </p>
+        </div>
+        <Link href="/app/politico/pesquisas/nova" className="wr-btn-dark inline-flex items-center gap-1.5 whitespace-nowrap">
+          + Nova pesquisa
+        </Link>
       </div>
 
       {/* Filtro */}
@@ -201,6 +207,17 @@ export default async function PesquisasPage({
               </div>
 
               {p.public_token && <CopiarLink token={p.public_token} />}
+
+              <div className="mt-1 flex flex-wrap items-center gap-2 border-t pt-3" style={{ borderColor: "var(--color-border)" }}>
+                <Link
+                  href={`/app/politico/pesquisas/${p.id}/editar`}
+                  className="inline-flex items-center gap-1 rounded-full px-3 py-1.5 text-xs font-semibold"
+                  style={{ background: "var(--color-surface-elevated)", color: "var(--color-text)" }}
+                >
+                  Editar perguntas
+                </Link>
+                <CardAcoes id={p.id} status={p.status} />
+              </div>
             </div>
           ))}
         </div>
