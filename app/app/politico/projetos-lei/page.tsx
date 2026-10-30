@@ -8,6 +8,7 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { requireAuth, resolveActiveOrg } from "@/lib/auth/server";
+import { ROLE_RANK } from "@/lib/auth/types";
 import ProjetosClient, { type ProjetoItem } from "./_projetos-client";
 
 export const dynamic = "force-dynamic";
@@ -51,5 +52,5 @@ export default async function ProjetosLeiPage() {
     aprovados: projetos.filter((p) => ["aprovado", "promulgado"].includes(p.status)).length,
   };
 
-  return <ProjetosClient kpis={kpis} projetos={projetos} />;
+  return <ProjetosClient kpis={kpis} projetos={projetos} ehAdmin={ROLE_RANK[org.role] >= ROLE_RANK.admin} />;
 }

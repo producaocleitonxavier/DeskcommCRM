@@ -12,6 +12,7 @@ import { KpiCard } from "@/components/politico/kpi-card";
 import { CommandHero } from "@/components/politico/command-hero";
 import { EmptyState } from "@/components/politico/empty-state";
 import { RelatorioGabineteButton } from "@/components/politico/relatorio-gabinete-button";
+import { SincronizarProposicoesButton } from "@/components/politico/sincronizar-proposicoes-button";
 
 const STATUS: Record<string, { label: string; bg: string; fg: string }> = {
   rascunho: { label: "Rascunho", bg: "#F0F0EB", fg: "#5B606B" },
@@ -46,13 +47,14 @@ export interface ProjetoItem {
 export interface ProjetosClientProps {
   kpis: { emTramitacao: number; deAutoria: number; alinhados: number; aprovados: number };
   projetos: ProjetoItem[];
+  ehAdmin?: boolean;
 }
 
 function data(d: string | null): string {
   return d ? new Date(d).toLocaleDateString("pt-BR", { day: "2-digit", month: "short", year: "numeric" }) : "—";
 }
 
-export default function ProjetosClient({ kpis, projetos }: ProjetosClientProps) {
+export default function ProjetosClient({ kpis, projetos, ehAdmin }: ProjetosClientProps) {
   return (
     <div className="mx-auto max-w-[1140px] px-4 py-7 space-y-6" style={{ background: "var(--color-bg)" }}>
       <CommandHero
@@ -60,6 +62,7 @@ export default function ProjetosClient({ kpis, projetos }: ProjetosClientProps) 
         titulo="Projetos de Lei"
         subtitulo="Acompanhamento legislativo — projetos, indicações e requerimentos."
         acoes={[{ href: "/app/politico/projetos-lei/novo", label: "+ Novo projeto", primary: true }]}
+        extra={ehAdmin ? <SincronizarProposicoesButton /> : undefined}
       />
 
       {projetos.length > 0 && (
