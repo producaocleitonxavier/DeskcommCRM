@@ -25,7 +25,7 @@ export interface AdversarioReduto {
 }
 
 export type ResultadoBriefing =
-  | { ok: true; texto: string; candidato: string; adversarios: AdversarioReduto[]; redutos: string; votosCandidatoReduto: number }
+  | { ok: true; texto: string; candidato: string; adversarios: AdversarioReduto[]; redutos: string; votosCandidatoReduto: number; votosMunicipio: number }
   | { ok: false; erro: string };
 
 export async function briefingEstrategico(
@@ -237,7 +237,7 @@ export async function briefingEstrategico(
     const { text } = await generateText({ model: modeloDoCerebro(cerebro), system, prompt, maxOutputTokens: 1600 });
     const texto = text.trim();
     if (!texto) return { ok: false, erro: "A IA não retornou texto. Tente novamente." };
-    return { ok: true, texto, candidato: nome, adversarios, redutos: redutosNome, votosCandidatoReduto };
+    return { ok: true, texto, candidato: nome, adversarios, redutos: redutosNome, votosCandidatoReduto, votosMunicipio: votosNoMun };
   } catch {
     return { ok: false, erro: "Não consegui gerar agora. Tente novamente em instantes." };
   }

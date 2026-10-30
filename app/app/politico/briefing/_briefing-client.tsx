@@ -78,6 +78,7 @@ export default function BriefingClient({ eleicoes, municipios }: { eleicoes: Ele
   const [adv, setAdv] = useState<AdversarioReduto[]>([]);
   const [redutos, setRedutos] = useState("");
   const [meuReduto, setMeuReduto] = useState(0);
+  const [meuMunicipio, setMeuMunicipio] = useState(0);
   const [erro, setErro] = useState<string | null>(null);
   const boxRef = useRef<HTMLDivElement>(null);
 
@@ -91,7 +92,7 @@ export default function BriefingClient({ eleicoes, municipios }: { eleicoes: Ele
     return () => document.removeEventListener("mousedown", onDoc);
   }, []);
 
-  function limparSaida() { setDossie(null); setErro(null); setAdv([]); setRedutos(""); setMeuReduto(0); }
+  function limparSaida() { setDossie(null); setErro(null); setAdv([]); setRedutos(""); setMeuReduto(0); setMeuMunicipio(0); }
   function buscar(termo: string) {
     setQ(termo);
     if (termo.trim().length < 2) { setResultados([]); setAberto(false); return; }
@@ -105,7 +106,7 @@ export default function BriefingClient({ eleicoes, municipios }: { eleicoes: Ele
     setGerando(true); setDossie(null); setErro(null);
     try {
       const r = await briefingEstrategico(eleicaoId, cand.sq, munTse, munNome, cargoAno, ano);
-      if (r.ok) { setDossie(r.texto); setAdv(r.adversarios); setRedutos(r.redutos); setMeuReduto(r.votosCandidatoReduto); } else setErro(r.erro);
+      if (r.ok) { setDossie(r.texto); setAdv(r.adversarios); setRedutos(r.redutos); setMeuReduto(r.votosCandidatoReduto); setMeuMunicipio(r.votosMunicipio); } else setErro(r.erro);
     } catch {
       setErro("Não consegui gerar agora. Tente novamente em instantes.");
     } finally {
@@ -121,7 +122,7 @@ export default function BriefingClient({ eleicoes, municipios }: { eleicoes: Ele
     const advHtml = adv.length
       ? `<div class="batalha"><h3>&#9876;&#65039; A batalha &mdash; quem disputa seus redutos</h3>` +
         `<p class="sub">Candidatos mais fortes nos seus bairros${redutos ? ` (${escHtml(redutos)})` : ""} &mdash; votos deles no seu reduto / no munic&iacute;pio.</p>` +
-        `<div class="advrow me"><span>&#9733; <b>${escHtml(cand.nomeUrna)}</b> &middot; voc&ecirc;</span><span class="r me">${meuReduto.toLocaleString("pt-BR")} <small>nos seus redutos</small></span></div>` +
+        `<div class="advrow me"><span>&#9733; <b>${escHtml(cand.nomeUrna)}</b> &middot; voc&ecirc;</span><span class="r me"><b>${meuMunicipio.toLocaleString("pt-BR")}</b> <small>no munic&iacute;pio</small> &middot; <b>${meuReduto.toLocaleString("pt-BR")}</b> <small>nos redutos</small></span></div>` +
         adv.map((a, i) => `<div class="advrow"><span>${i + 1}. <b>${escHtml(a.nome)}</b>${a.partido ? ` &middot; ${escHtml(a.partido)}` : ""}</span><span class="r">${a.votosReduto.toLocaleString("pt-BR")} <small>/ ${a.votosMunicipio.toLocaleString("pt-BR")} mun.</small></span></div>`).join("") +
         `</div>`
       : "";
@@ -237,8 +238,10 @@ export default function BriefingClient({ eleicoes, municipios }: { eleicoes: Ele
                   <span className="min-w-0 flex-1 truncate font-bold" style={{ color: "var(--color-text)" }}>
                     {cand?.nomeUrna} <span className="font-normal" style={{ color: "var(--color-text-muted)" }}>· você</span>
                   </span>
-                  <span className="shrink-0 tabular-nums font-bold" style={{ color: "#17784F" }}>{meuReduto.toLocaleString("pt-BR")}</span>
-                  <span className="w-24 shrink-0 text-right text-xs" style={{ color: "var(--color-text-subtle)" }}>nos seus redutos</span>
+                  <span className="shrink-0 tabular-nums text-base font-bold" style={{ color: "#17784F" }}>{meuMunicipio.toLocaleString("pt-BR")}</span>
+                  <span className="shrink-0 text-xs" style={{ color: "var(--color-text-subtle)" }}>no município</span>
+                  <span className="ml-1.5 shrink-0 tabular-nums font-bold" style={{ color: "#17784F" }}>{meuReduto.toLocaleString("pt-BR")}</span>
+                  <span className="w-16 shrink-0 text-right text-xs" style={{ color: "var(--color-text-subtle)" }}>nos redutos</span>
                 </div>
                 {adv.map((a, i) => (
                   <div key={i} className="flex items-center gap-3 text-sm">
