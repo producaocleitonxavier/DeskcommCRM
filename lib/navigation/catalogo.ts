@@ -944,6 +944,16 @@ export const NAV_CATALOG = [
     sidebar: true,
   },
   {
+    href: "/app/politico/importar",
+    label: "Importar lista",
+    description: "Suba a planilha (Excel/CSV) do gabinete — o sistema entende as colunas sozinho. E exporte a base organizada.",
+    icon: "FileText",
+    group: "comando",
+    section: "Comando",
+    minRole: "agent",
+    sidebar: true,
+  },
+  {
     href: "/app/politico/funil",
     label: "Funil",
     description: "Kanban da jornada de apoio — de novo cadastro até voto certo, com histórico de transições.",
