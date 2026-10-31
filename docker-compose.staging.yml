@@ -1,0 +1,74 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# STAGING / HOMOLOGAÇÃO — homologacao.warromcleitonxavier.cloud
+#
+# Ambiente de validação na MESMA VPS de produção, mas ISOLADO:
+#   • Banco: Supabase PRÓPRIO do staging (via .env.staging) — nenhum dado de
+#     produção é tocado. O schema é espelhado de produção (pg_dump do public).
+#   • Filas: redis_staging + srh_staging DEDICADOS — assim o worker de PRODUÇÃO
+#     nunca drena um job criado no staging (e vice-versa).
+#   • SEM worker / scheduler / WAHA no staging: o ambiente NÃO envia WhatsApp
+#     nem roda cron. É só pra click-test de tela/fluxo antes de promover.
+#
+# A imagem é REUSADA de produção (deskcomm-app:local). Pode, porque os
+# NEXT_PUBLIC_* são injetados em RUNTIME (app/public-env-script.tsx →
+# window.__PUBLIC_ENV__), então o navegador do staging aponta pro Supabase do
+# staging mesmo com a imagem buildada pra produção. Zero rebuild.
+#
+# O Caddy (warroom-caddy-1, rede warroom_internal) faz reverse_proxy pra
+# `app_staging:3000` — por isso o alias de rede abaixo.
+#
+# Subir:
+#   docker compose -p warroom-staging --env-file .env.staging \
+#     -f docker-compose.staging.yml up -d
+# ─────────────────────────────────────────────────────────────────────────────
+
+services:
+  redis_staging:
+    image: redis:7-alpine
+    restart: unless-stopped
+    command: ["redis-server", "--save", "", "--appendonly", "no"]
+    networks: [stg]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+
+  srh_staging:
+    image: hiett/serverless-redis-http@sha256:5b0bb9239fce53abf87b2018a7a0deb9ec7bd900c5360738fe5fbeeb426f9150
+    restart: unless-stopped
+    environment:
+      SRH_MODE: env
+      SRH_TOKEN: ${SRH_TOKEN}
+      SRH_CONNECTION_STRING: redis://redis_staging:6379
+    networks: [stg]
+    depends_on:
+      redis_staging:
+        condition: service_healthy
+
+  app_staging:
+    image: deskcomm-app:local
+    pull_policy: never
+    restart: unless-stopped
+    env_file: .env.staging
+    environment:
+      # WAHA inalcançável DE PROPÓSITO: staging jamais comanda o WhatsApp real.
+      WAHA_API_BASE_URL: http://127.0.0.1:1
+      # Sem worker no staging: o app não deve tentar drenar o event_log.
+      EVENT_LOG_WORKER_DRAINS: "false"
+    networks:
+      internal:
+        aliases: [app_staging]
+      stg: {}
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('net').connect(3000,'127.0.0.1').on('connect',()=>process.exit(0)).on('error',()=>process.exit(1))"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 40s
+
+networks:
+  stg:
+  internal:
+    external: true
+    name: warroom_internal
