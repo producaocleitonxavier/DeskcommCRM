@@ -19,6 +19,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { modulosLigados } from "@/lib/instalacao/modulos";
 import { capacidadesLigadas } from "@/lib/organizacao/capacidades";
 import { ehOperante } from "@/lib/organizacao/operante";
+import { setupDoMandatoCompleto } from "@/lib/politico/setup-do-mandato";
 import {
   ImpersonateBanner,
 } from "@/components/app/ImpersonateBanner";
@@ -135,6 +136,19 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     // onboarding ia para `/onboarding` e escapava da tela da suspensão.
     if (!ehOperante(orgRow?.status)) redirect("/account-suspended");
     if (orgRow && !orgRow.onboarded_at && !user.support) redirect("/onboarding");
+    // TRAVA do Setup do Mandato: o ADMIN (chefia) precisa configurar o mandato
+    // ANTES de usar o sistema. Vai para /configurar-mandato (tela cheia fora do
+    // /app → sem menu, sem loop). Passam direto: assessores (não-admin — caem no
+    // sistema já configurado pela chefia), suporte e admin de plataforma.
+    if (
+      orgRow &&
+      !user.support &&
+      !user.is_platform_admin &&
+      roleAtLeast(activeOrg.role, "admin") &&
+      !setupDoMandatoCompleto(orgRow.settings)
+    ) {
+      redirect("/configurar-mandato");
+    }
     // G4-02: expõe visibility_mode ao client (inbox decide visões visíveis).
     // Fonte confiável (admin client, org do cookie validado) — nunca do body.
     const mode = (orgRow?.settings as { visibility_mode?: VisibilityMode } | null)
