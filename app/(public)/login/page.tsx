@@ -2,7 +2,6 @@ import Link from "next/link";
 
 import { EntrarComGoogle } from "@/components/auth/EntrarComGoogle";
 import { LoginForm } from "@/components/auth/LoginForm";
-import { marcaDaSaida } from "@/lib/branding/saida";
 import { createClient } from "@/lib/supabase/server";
 import { idiomaDoVisitante } from "@/lib/i18n/idiomaAnonimo";
 import { traduzir } from "@/lib/i18n/dicionario";
@@ -33,14 +32,12 @@ export default async function LoginPage({
   }
   const idioma = await idiomaDoVisitante(userLocale);
   const t = (texto: string) => traduzir(texto, idioma);
-  const marca = await marcaDaSaida(null);
 
   return (
     <div className="space-y-6">
       <div className="space-y-1 text-center">
         <p className="text-[10px] font-bold uppercase tracking-[0.3em]" style={{ color: "rgba(212,165,55,0.8)" }}>{t("Acesso restrito")}</p>
         <h1 className="text-2xl font-semibold tracking-tight">{t("Entrar")}</h1>
-        <p className="text-sm text-muted-foreground">{marca.nome}</p>
       </div>
       {reset === "success" && (
         <div

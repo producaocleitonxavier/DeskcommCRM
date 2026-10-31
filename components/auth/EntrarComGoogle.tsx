@@ -57,7 +57,7 @@ export function EntrarComGoogle({ next, convite }: { next?: string; convite?: st
       <Button
         type="button"
         variant="outline"
-        className="w-full"
+        className="w-full gip-google-btn"
         disabled={isPending}
         onClick={onClick}
       >
