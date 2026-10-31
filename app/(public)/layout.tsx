@@ -58,10 +58,10 @@ export default async function PublicLayout({ children }: { children: React.React
               data-testid="logo-da-fachada"
               src="/gipchat-elmo.png"
               alt={marca.nome}
-              className="gip-elmo h-40 w-auto object-contain sm:h-44 lg:h-72"
+              className="gip-elmo h-52 w-auto object-contain sm:h-60 lg:h-[400px] xl:h-[480px]"
             />
             <div className="gip-brand-name text-lg lg:hidden">{marca.nome}</div>
-            <h2 className="gip-headline hidden max-w-[20ch] text-[34px] lg:block xl:text-[40px]">
+            <h2 className="gip-headline hidden max-w-[22ch] text-[26px] lg:block xl:text-[30px]">
               Campanhas não são vencidas por sorte. <span className="accent">São vencidas por estratégia, dados e domínio da percepção pública.</span>
             </h2>
             <div className="gip-brand-name hidden text-base lg:block">{marca.nome}</div>
