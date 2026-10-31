@@ -3,6 +3,21 @@ import { marcaEhADoProduto } from "@/lib/branding";
 import { marcaDaSaida } from "@/lib/branding/saida";
 import { createClient } from "@/lib/supabase/server";
 import { IdiomaProvider } from "@/lib/i18n/IdiomaProvider";
+import { FundoDourado } from "@/components/auth/FundoDourado";
+
+// Acentos dourados premium das telas de acesso. Escopados em `.gip-auth` para não
+// vazar. O tema dourado é a identidade do PRODUTO; o logo/marca continua dinâmico
+// (white-label preservado) — aqui só o acabamento.
+const GIP_AUTH_CSS = `
+.gip-card{background:linear-gradient(180deg, rgba(20,23,31,0.82), rgba(12,14,19,0.9));border:1px solid rgba(212,165,55,0.30);border-radius:20px;padding:28px 24px;box-shadow:0 24px 70px -20px rgba(0,0,0,0.78), 0 0 40px -12px rgba(212,165,55,0.22), inset 0 0 0 1px rgba(255,255,255,0.03);backdrop-filter:blur(10px)}
+.gip-auth h1{color:#F4F6FA}
+.gip-auth button[type="submit"]{background:linear-gradient(180deg,#E7C260,#C9A23A);color:#1b1403;border:none;font-weight:700;box-shadow:0 8px 24px -8px rgba(201,162,58,0.6);transition:filter .15s ease, transform .1s ease}
+.gip-auth button[type="submit"]:hover:not(:disabled){filter:brightness(1.07)}
+.gip-auth button[type="submit"]:active:not(:disabled){transform:translateY(1px)}
+.gip-auth input{background:rgba(255,255,255,0.04);border-color:rgba(212,165,55,0.22)}
+.gip-auth input:focus,.gip-auth input:focus-visible{border-color:rgba(212,165,55,0.70);box-shadow:0 0 0 3px rgba(212,165,55,0.18);outline:none}
+.gip-logo-wrap img,.gip-logo-wrap svg{filter:drop-shadow(0 6px 22px rgba(212,165,55,0.42))}
+`;
 
 /**
  * A casca das telas de acesso — login, cadastro, recuperação, MFA, confirmar acesso.
@@ -62,8 +77,14 @@ export default async function PublicLayout({ children }: { children: React.React
 
   return (
     <IdiomaProvider locale={locale}>
-      <div className="flex min-h-screen items-center justify-center bg-background p-6">
-        <div className="w-full max-w-sm space-y-6">
+      <div
+        className="dark gip-auth"
+        style={{ position: "relative", minHeight: "100dvh", display: "flex", alignItems: "center", justifyContent: "center", padding: "24px 16px" }}
+      >
+        <style dangerouslySetInnerHTML={{ __html: GIP_AUTH_CSS }} />
+        <FundoDourado />
+        <div style={{ position: "relative", zIndex: 10, width: "100%", maxWidth: 400 }}>
+          <div className="gip-logo-wrap" style={{ marginBottom: 22 }}>
           {marca.logoUrl || marca.logoDarkUrl ? (
             <div className="flex justify-center">
               {/*
@@ -117,10 +138,14 @@ export default async function PublicLayout({ children }: { children: React.React
             </div>
           ) : marcaEhADoProduto({ name: marca.nome, logoUrl: null }) ? (
             <div className="flex justify-center">
-              <LogotipoDoProduto nome={marca.nome} className="h-12 w-auto" />
+              <LogotipoDoProduto nome={marca.nome} className="h-14 w-auto" />
             </div>
           ) : null}
-          {children}
+          </div>
+          <div className="gip-card">{children}</div>
+          <p style={{ textAlign: "center", marginTop: 18, fontSize: 10, letterSpacing: "0.26em", textTransform: "uppercase", color: "rgba(212,165,55,0.65)" }}>
+            Estratégia de elite ✦
+          </p>
         </div>
       </div>
     </IdiomaProvider>

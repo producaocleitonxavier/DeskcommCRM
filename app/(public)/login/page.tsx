@@ -37,7 +37,8 @@ export default async function LoginPage({
 
   return (
     <div className="space-y-6">
-      <div className="space-y-1.5 text-center">
+      <div className="space-y-1 text-center">
+        <p className="text-[10px] font-bold uppercase tracking-[0.3em]" style={{ color: "rgba(212,165,55,0.8)" }}>{t("Acesso restrito")}</p>
         <h1 className="text-2xl font-semibold tracking-tight">{t("Entrar")}</h1>
         <p className="text-sm text-muted-foreground">{marca.nome}</p>
       </div>
