@@ -7,9 +7,9 @@
  * quando o mandato abre o Boletim/Opinião Pública, os dados da semana já estão lá
  * — o "ritmo recorrente" que nos diferencia do concorrente (tempo real caro).
  *
- * NÃO gera nem persiste o PDF do boletim (isso é leitura sob demanda hoje); a
- * persistência de histórico + entrega por canal fica como próximo passo (precisa
- * de tabela de histórico + decisão de canal).
+ * Depois de refrescar a escuta, GERA E GRAVA a edição da semana em pol_boletins
+ * (entrega IN-APP: a tela mostra "última edição + histórico"). UPSERT por
+ * (org, segunda da semana) — reexecução no mesmo dia/semana não duplica.
  *
  * Auth: Bearer INTERNAL_CRON_SECRET|INTERNAL_SECRET (autorizaCron), fail-closed.
  * Roda para TODAS as orgs (sem organization_id no escopo). Idempotente: a escuta
@@ -23,6 +23,7 @@ import { logger } from "@/lib/logger";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { autorizaCron } from "@/lib/auth/cron-auth";
 import { orgsComMonitor, lerConfigMonitorAdmin, atualizarMencoesDaOrg } from "@/app/actions/politico/opiniaoPublica";
+import { gerarEArmazenarBoletim } from "@/app/actions/politico/boletim";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -38,13 +39,24 @@ async function handle(req: NextRequest): Promise<Response> {
 
   let novasTotais = 0;
   let orgsComErro = 0;
-  const resultados: { org: string; novas: number; erro?: string }[] = [];
+  let boletinsGravados = 0;
+  const resultados: { org: string; novas: number; boletim?: boolean; erro?: string }[] = [];
   for (const orgId of orgs) {
     try {
       const cfg = await lerConfigMonitorAdmin(admin, orgId);
       const { novas } = await atualizarMencoesDaOrg(admin, orgId, cfg);
       novasTotais += novas;
-      resultados.push({ org: orgId, novas });
+      // Com a escuta fresca, gera e persiste a edição da semana (histórico in-app).
+      // Falha aqui não derruba a org inteira — a escuta já foi atualizada.
+      let boletim = false;
+      try {
+        await gerarEArmazenarBoletim(admin, orgId, "cron");
+        boletim = true;
+        boletinsGravados += 1;
+      } catch (e) {
+        logger.error("[cron boletim-semanal] falha ao gravar boletim", { orgId, erro: e instanceof Error ? e.message : String(e) });
+      }
+      resultados.push({ org: orgId, novas, boletim });
     } catch (e) {
       orgsComErro += 1;
       resultados.push({ org: orgId, novas: 0, erro: e instanceof Error ? e.message : "erro" });
@@ -52,9 +64,9 @@ async function handle(req: NextRequest): Promise<Response> {
     }
   }
 
-  logger.info("[cron boletim-semanal] concluído", { orgs: orgs.length, novasTotais, orgsComErro });
+  logger.info("[cron boletim-semanal] concluído", { orgs: orgs.length, novasTotais, boletinsGravados, orgsComErro });
   return ok(
-    { orgs: orgs.length, novasTotais, orgsComErro, resultados },
+    { orgs: orgs.length, novasTotais, boletinsGravados, orgsComErro, resultados },
     { status: 200, headers: { "x-request-id": requestId } },
   );
 }

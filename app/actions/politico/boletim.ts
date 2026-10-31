@@ -19,6 +19,7 @@ import { generateText } from "ai";
 
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+type AdminClient = ReturnType<typeof createAdminClient>;
 import { cerebroDaOrg, modeloDoCerebro } from "@/lib/ai/cerebro";
 import { requireAuth, resolveActiveOrg } from "@/lib/auth/server";
 import { ROLE_RANK } from "@/lib/auth/types";
@@ -69,19 +70,31 @@ export async function gerarBoletimSemanal(opcoes?: { atualizarAntes?: boolean })
     return { ok: false, erro: "Sem permissão (requer Gerente ou Administrador)." };
   }
   const orgId = org.orgId;
-  const db = await createClient();
   const admin = createAdminClient();
-
-  // Escopo adaptativo por tipo de mandato (vereador/prefeito=cidade; dep.
-  // estadual=estado; dep. federal=Brasil). A UF virá do cadastro quando a tela de
-  // tipo de mandato ganhar esse campo; por ora o escopo municipal usa a cidade.
-  const identidade = await lerIdentidadeDoMandato(db, orgId);
-  const escopo = escopoDaInteligencia(identidade, null);
 
   // Atualização da escuta antes de sintetizar (best-effort — não bloqueia).
   if (opcoes?.atualizarAntes) {
     try { await atualizarMencoes(); } catch { /* segue com o que há */ }
   }
+
+  const boletim = await computarBoletim(admin, orgId);
+  // Persiste a edição desta semana no histórico in-app (best-effort — a tela
+  // funciona mesmo se gravar falhar). UPSERT por (org, segunda da semana).
+  try { await salvarBoletim(admin, orgId, boletim, "manual"); } catch { /* histórico é best-effort */ }
+  return boletim;
+}
+
+/**
+ * NÚCLEO do boletim: calcula a edição da semana só com `admin` + `orgId` (toda
+ * query filtra organization_id), pra servir TANTO a tela (sessão) QUANTO o cron
+ * (sem sessão). Não faz auth nem persiste — quem chama decide.
+ */
+async function computarBoletim(admin: AdminClient, orgId: string): Promise<BoletimSemanal> {
+  // Escopo adaptativo por tipo de mandato (vereador/prefeito=cidade; dep.
+  // estadual=estado; dep. federal=Brasil). A UF virá do cadastro quando a tela de
+  // tipo de mandato ganhar esse campo; por ora o escopo municipal usa a cidade.
+  const identidade = await lerIdentidadeDoMandato(admin, orgId);
+  const escopo = escopoDaInteligencia(identidade, null);
 
   const agora = Date.now();
   const de = new Date(agora - 7 * DIA);
@@ -89,7 +102,7 @@ export async function gerarBoletimSemanal(opcoes?: { atualizarAntes?: boolean })
   const deISO = de.toISOString();
 
   // ── Escuta (intel_mentions, 14d p/ comparar semana vs. semana) ──────────────
-  const { data: mRows } = await db
+  const { data: mRows } = await admin
     .from("intel_mentions")
     .select("canal, fonte, titulo, url, publicado_em, created_at, sentimento, topico")
     .eq("organization_id", orgId)
@@ -144,7 +157,7 @@ export async function gerarBoletimSemanal(opcoes?: { atualizarAntes?: boolean })
   }));
 
   // ── Dores do mandato (demandas do gabinete — o diferencial) ─────────────────
-  const { data: demRows } = await db
+  const { data: demRows } = await admin
     .from("demandas")
     .select("estado, pol_tipo, pol_bairro, aberta_em, fechada_em")
     .eq("organization_id", orgId)
@@ -167,7 +180,7 @@ export async function gerarBoletimSemanal(opcoes?: { atualizarAntes?: boolean })
   const doresBairros = [...doresBairroMap.entries()].map(([bairro, total]) => ({ bairro, total })).sort((a, b) => b.total - a.total).slice(0, 6);
 
   // ── Adversários (radar) ─────────────────────────────────────────────────────
-  const { data: oppRows } = await db
+  const { data: oppRows } = await admin
     .from("pol_opponents")
     .select("id, name, risk_level, threat_score")
     .eq("organization_id", orgId)
@@ -177,7 +190,7 @@ export async function gerarBoletimSemanal(opcoes?: { atualizarAntes?: boolean })
   const opps = (oppRows ?? []) as { id: string; name: string; risk_level: string | null; threat_score: number | null }[];
   let sinaisPorOpp = new Map<string, number>();
   if (opps.length) {
-    const { data: sig } = await db.from("pol_opponent_signals").select("opponent_id").eq("organization_id", orgId).gte("created_at", deISO).limit(2000);
+    const { data: sig } = await admin.from("pol_opponent_signals").select("opponent_id").eq("organization_id", orgId).gte("created_at", deISO).limit(2000);
     for (const s of (sig ?? []) as { opponent_id: string }[]) sinaisPorOpp.set(s.opponent_id, (sinaisPorOpp.get(s.opponent_id) ?? 0) + 1);
   }
   const adversarios = opps.map((o) => ({
@@ -185,7 +198,7 @@ export async function gerarBoletimSemanal(opcoes?: { atualizarAntes?: boolean })
   }));
 
   // ── Ações recomendadas (sinais de decisão pendentes) ────────────────────────
-  const { data: sigRows } = await db
+  const { data: sigRows } = await admin
     .from("pol_decision_signals")
     .select("severity, data, created_at, processed_at")
     .eq("organization_id", orgId)
@@ -200,7 +213,7 @@ export async function gerarBoletimSemanal(opcoes?: { atualizarAntes?: boolean })
   }));
 
   // Alertas abertos.
-  const { data: alRows } = await db.from("pol_alerts").select("id").eq("organization_id", orgId).eq("status", "open").limit(500);
+  const { data: alRows } = await admin.from("pol_alerts").select("id").eq("organization_id", orgId).eq("status", "open").limit(500);
   const alertasAbertos = (alRows ?? []).length;
 
   const ultimaMencaoEm = mencoes[0] ? quando(mencoes[0]) : null;
@@ -256,4 +269,112 @@ export async function gerarBoletimSemanal(opcoes?: { atualizarAntes?: boolean })
     alertasAbertos,
     ultimaMencaoEm,
   };
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// PERSISTÊNCIA + HISTÓRICO (tabela pol_boletins) — entrega IN-APP do boletim.
+// O cron de segunda grava a edição; a tela lista "última + anteriores".
+// ─────────────────────────────────────────────────────────────────────────────
+
+/** Segunda-feira (UTC) da semana de uma data, como ISO date (YYYY-MM-DD). É a
+ * CHAVE natural de uma edição: cron de segunda e regeneração manual na mesma
+ * semana caem na MESMA edição (UPSERT), não duplicam. */
+function segundaDaSemanaISO(d: Date): string {
+  const dt = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()));
+  const dow = dt.getUTCDay(); // 0=domingo … 6=sábado
+  dt.setUTCDate(dt.getUTCDate() + (dow === 0 ? -6 : 1 - dow));
+  return dt.toISOString().slice(0, 10);
+}
+
+/** Grava (UPSERT por org+semana) uma edição do boletim no histórico in-app.
+ * Guarda o snapshot COMPLETO em `dados` pra a tela remontar + o PDF. */
+export async function salvarBoletim(
+  admin: AdminClient, orgId: string, b: BoletimSemanal, origem: "cron" | "manual",
+): Promise<void> {
+  const inicio = segundaDaSemanaISO(new Date(b.periodoAte));
+  const fim = new Date(new Date(`${inicio}T00:00:00Z`).getTime() + 6 * DIA).toISOString().slice(0, 10);
+  await admin.from("pol_boletins").upsert({
+    organization_id: orgId,
+    periodo_inicio: inicio,
+    periodo_fim: fim,
+    escopo: b.escopoRotulo,
+    resumo: b.resumoIa || null,
+    dados: b,
+    origem,
+    gerado_em: b.geradoEm,
+  }, { onConflict: "organization_id,periodo_inicio" });
+}
+
+/** Gera E grava a edição da semana — usado pelo CRON (sem sessão). */
+export async function gerarEArmazenarBoletim(
+  admin: AdminClient, orgId: string, origem: "cron" | "manual" = "cron",
+): Promise<BoletimSemanal> {
+  const b = await computarBoletim(admin, orgId);
+  await salvarBoletim(admin, orgId, b, origem);
+  return b;
+}
+
+export interface BoletimHistItem {
+  id: string;
+  geradoEm: string;
+  periodoDe: string;
+  periodoAte: string;
+  escopo: string | null;
+  resumo: string | null;
+  indice: number;
+  origem: string;
+}
+
+/** Histórico das edições da org (mais recente primeiro), pra a tela listar. */
+export async function listarBoletins(): Promise<{ ok: true; itens: BoletimHistItem[] } | { ok: false; erro: string }> {
+  const user = await requireAuth();
+  const org = await resolveActiveOrg(user);
+  if (!org) return { ok: false, erro: "Sessão ou organização inválida." };
+  const bypass = user.is_platform_admin && !user.support;
+  if (!bypass && ROLE_RANK[org.role] < ROLE_RANK.manager) {
+    return { ok: false, erro: "Sem permissão (requer Gerente ou Administrador)." };
+  }
+  const db = await createClient();
+  const { data, error } = await db
+    .from("pol_boletins")
+    .select("id, gerado_em, periodo_inicio, periodo_fim, escopo, resumo, dados, origem")
+    .eq("organization_id", org.orgId)
+    .order("gerado_em", { ascending: false })
+    .limit(26);
+  if (error) return { ok: false, erro: error.message };
+  const itens: BoletimHistItem[] = (data ?? []).map((r) => {
+    const dados = (r.dados ?? {}) as Partial<BoletimSemanal>;
+    const indice = dados.sentimento?.indice;
+    return {
+      id: r.id as string,
+      geradoEm: r.gerado_em as string,
+      periodoDe: (dados.periodoDe ?? r.periodo_inicio) as string,
+      periodoAte: (dados.periodoAte ?? r.periodo_fim) as string,
+      escopo: (r.escopo ?? null) as string | null,
+      resumo: (r.resumo ?? null) as string | null,
+      indice: typeof indice === "number" ? indice : 0,
+      origem: (r.origem ?? "cron") as string,
+    };
+  });
+  return { ok: true, itens };
+}
+
+/** Reabre uma edição salva (snapshot completo) pra a tela exibir o boletim. */
+export async function lerBoletimSalvo(id: string): Promise<ResultadoBoletim> {
+  const user = await requireAuth();
+  const org = await resolveActiveOrg(user);
+  if (!org) return { ok: false, erro: "Sessão ou organização inválida." };
+  const bypass = user.is_platform_admin && !user.support;
+  if (!bypass && ROLE_RANK[org.role] < ROLE_RANK.manager) {
+    return { ok: false, erro: "Sem permissão (requer Gerente ou Administrador)." };
+  }
+  const db = await createClient();
+  const { data, error } = await db
+    .from("pol_boletins")
+    .select("dados")
+    .eq("organization_id", org.orgId)
+    .eq("id", id)
+    .maybeSingle();
+  if (error || !data?.dados) return { ok: false, erro: "Edição não encontrada." };
+  return data.dados as BoletimSemanal;
 }

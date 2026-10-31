@@ -6,14 +6,18 @@
  * a justaposição MÍDIA (pautas) × POVO (dores/demandas), menções, adversários e
  * ações — e exporta em PDF. Escopo adaptativo ao mandato vem pronto do servidor.
  */
-import { useState, useTransition } from "react";
+import { useCallback, useEffect, useState, useTransition } from "react";
 import {
   Sparkles, RefreshCw, Printer, TrendingUp, TrendingDown, Minus,
   Newspaper, HeartHandshake, Users, Lightbulb, MapPin, Loader2, ExternalLink,
+  History, CalendarClock, Clock,
 } from "lucide-react";
 
 import { CommandHero } from "@/components/politico/command-hero";
-import { gerarBoletimSemanal, type BoletimSemanal } from "@/app/actions/politico/boletim";
+import {
+  gerarBoletimSemanal, listarBoletins, lerBoletimSalvo,
+  type BoletimSemanal, type BoletimHistItem,
+} from "@/app/actions/politico/boletim";
 
 const VERDE = "#17784F";
 const VERMELHO = "#A3302A";
@@ -41,15 +45,36 @@ export default function BoletimClient({
   const [bol, setBol] = useState<BoletimSemanal | null>(null);
   const [erro, setErro] = useState<string | null>(null);
   const [gerando, startGerar] = useTransition();
+  const [hist, setHist] = useState<BoletimHistItem[]>([]);
+  const [abrindoId, setAbrindoId] = useState<string | null>(null);
 
   const abrangLabel = abrangencia === "nacional" ? "Nacional" : abrangencia === "estadual" ? "Estadual" : "Municipal";
+
+  const carregarHistorico = useCallback(async () => {
+    const r = await listarBoletins();
+    if (r.ok) setHist(r.itens);
+  }, []);
+
+  // Carrega o histórico ao abrir a tela (edições que o cron de segunda gravou).
+  useEffect(() => { void carregarHistorico(); }, [carregarHistorico]);
 
   function gerar() {
     setErro(null);
     startGerar(async () => {
       const r = await gerarBoletimSemanal({ atualizarAntes: true });
-      if (r.ok) setBol(r);
+      if (r.ok) { setBol(r); void carregarHistorico(); }
       else { setErro(r.erro); setBol(null); }
+    });
+  }
+
+  function abrirEdicao(id: string) {
+    setErro(null);
+    setAbrindoId(id);
+    startGerar(async () => {
+      const r = await lerBoletimSalvo(id);
+      if (r.ok) { setBol(r); if (typeof window !== "undefined") window.scrollTo({ top: 0, behavior: "smooth" }); }
+      else setErro(r.erro);
+      setAbrindoId(null);
     });
   }
 
@@ -126,6 +151,43 @@ export default function BoletimClient({
           </span>
         }
       />
+
+      {/* Edições anteriores — o cron de segunda grava cada semana aqui. */}
+      {hist.length > 0 && (
+        <div className="wr-card p-4">
+          <p className="mb-3 inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-wide" style={{ color: "var(--color-text-subtle)" }}>
+            <History size={14} /> Edições anteriores
+          </p>
+          <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+            {hist.map((h) => {
+              const ativo = abrindoId === h.id;
+              return (
+                <button
+                  key={h.id}
+                  type="button"
+                  onClick={() => abrirEdicao(h.id)}
+                  disabled={gerando}
+                  className="flex items-center justify-between gap-2 rounded-xl px-3 py-2.5 text-left transition hover:brightness-[1.03] disabled:opacity-60"
+                  style={{ background: "var(--color-surface-elevated)", border: "1px solid var(--color-border)" }}
+                >
+                  <span className="min-w-0">
+                    <span className="flex items-center gap-1.5 text-[13px] font-semibold" style={{ color: "var(--color-text)" }}>
+                      <CalendarClock size={13} style={{ color: "#5C7F23" }} />
+                      {fmtData(h.periodoDe)} a {fmtData(h.periodoAte)}
+                    </span>
+                    <span className="mt-0.5 flex items-center gap-1.5 text-[11px]" style={{ color: "var(--color-text-subtle)" }}>
+                      {h.origem === "cron" ? <><Clock size={11} /> semana automática</> : "gerado à mão"}
+                    </span>
+                  </span>
+                  <span className="shrink-0 font-heading text-lg font-black tabular-nums" style={{ color: h.indice >= 0 ? VERDE : VERMELHO }}>
+                    {ativo ? <Loader2 className="h-4 w-4 animate-spin" /> : <>{h.indice >= 0 ? "+" : ""}{h.indice}</>}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       {!bol && (
         <div className="wr-card p-7 text-center">
