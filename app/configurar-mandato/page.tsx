@@ -11,8 +11,6 @@ import { redirect } from "next/navigation";
 import { requireAuth, resolveActiveOrg } from "@/lib/auth/server";
 import { ROLE_RANK, type Role } from "@/lib/auth/types";
 import { createClient } from "@/lib/supabase/server";
-import { createAdminClient } from "@/lib/supabase/admin";
-import { setupDoMandatoCompleto } from "@/lib/politico/setup-do-mandato";
 import { marcaDaSaida } from "@/lib/branding/saida";
 import BoasVindasEConfig from "./_boas-vindas";
 
@@ -25,15 +23,11 @@ export default async function ConfigurarMandatoPage() {
   // Só o admin (chefia) configura. Assessor cai direto no sistema.
   if (ROLE_RANK[org.role as Role] < ROLE_RANK.admin) redirect("/app/politico");
 
-  const admin = createAdminClient();
-  const { data: orgRow } = await admin
-    .from("organizations")
-    .select("settings")
-    .eq("id", org.orgId)
-    .maybeSingle();
-  // Já configurado → não força de novo (acesso direto à rota não re-tranca).
-  if (setupDoMandatoCompleto(orgRow?.settings)) redirect("/app/politico");
-
+  // NÃO redireciona quando já está configurado: ao concluir o wizard, a ação de
+  // salvar revalida a rota e o `redirect` disparava ANTES do clique, matando a
+  // tela de "Tudo pronto!". Quem já configurou chega aqui só digitando a URL —
+  // e aí reabrir o assistente (pra reeditar) é inofensivo. A TRAVA de obrigar a
+  // config vive no portão do /app (app/app/layout.tsx), não aqui.
   const db = await createClient();
   const { data } = await db
     .from("pol_gabinete_config")

@@ -126,10 +126,10 @@ export default function SetupWizard({ inicial }: { inicial: { nome: string; carg
           <button
             type="button"
             onClick={() => router.push("/app/politico")}
-            className="mt-7 inline-flex items-center gap-2 rounded-full px-6 py-2.5 text-sm font-bold transition-opacity hover:opacity-90"
+            className="mt-7 inline-flex items-center gap-2 rounded-full px-7 py-3 text-sm font-bold transition-opacity hover:opacity-90"
             style={{ background: "#D7F36A", color: "#16181D" }}
           >
-            Ir para o gabinete <ArrowRight size={16} />
+            Acessar a ferramenta agora <ArrowRight size={16} />
           </button>
         </div>
       </div>
