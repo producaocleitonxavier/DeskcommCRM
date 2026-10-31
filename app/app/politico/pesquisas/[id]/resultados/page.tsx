@@ -19,7 +19,7 @@ export const dynamic = "force-dynamic";
 
 type Tipo = "text" | "choice" | "scale" | "boolean" | "number" | "date" | "multi_choice";
 interface Pergunta { id: string; question: string; response_type: Tipo; options: string[]; theme: string | null; order: number; }
-interface Resposta { id: string; answers: Record<string, unknown>; completed: boolean; city: string | null; state: string | null; created_at: string; }
+interface Resposta { id: string; answers: Record<string, unknown>; completed: boolean; city: string | null; state: string | null; created_at: string; contactId: string | null; }
 
 function opcoes(raw: unknown): string[] {
   if (Array.isArray(raw)) return raw.map((o) => String(o));
@@ -46,7 +46,7 @@ export default async function ResultadosPage({ params }: { params: Promise<{ id:
 
   const [{ data: qData }, { data: rData }] = await Promise.all([
     db.from("pol_survey_questions").select('id, question, response_type, options, theme, "order"').eq("survey_id", id).eq("organization_id", org.orgId).order("order", { ascending: true }),
-    db.from("pol_survey_responses").select("id, answers, completed, city, state, created_at").eq("survey_id", id).eq("organization_id", org.orgId).order("created_at", { ascending: false }).limit(5000),
+    db.from("pol_survey_responses").select("id, answers, completed, city, state, created_at, contact_id").eq("survey_id", id).eq("organization_id", org.orgId).order("created_at", { ascending: false }).limit(5000),
   ]);
 
   const perguntas: Pergunta[] = ((qData ?? []) as Record<string, unknown>[]).map((r) => ({
@@ -64,7 +64,18 @@ export default async function ResultadosPage({ params }: { params: Promise<{ id:
     city: (r.city as string | null) ?? null,
     state: (r.state as string | null) ?? null,
     created_at: String(r.created_at ?? ""),
+    contactId: (r.contact_id as string | null) ?? null,
   }));
+
+  // Identidade de quem respondeu (a pesquisa captura nome/WhatsApp/bairro no contato).
+  const contactIds = [...new Set(respostas.map((r) => r.contactId).filter((x): x is string => !!x))];
+  const contatoPorId = new Map<string, { nome: string | null; telefone: string | null; bairro: string | null }>();
+  if (contactIds.length) {
+    const { data: cs } = await db.from("contacts").select("id, name, phone_number, custom_fields").in("id", contactIds).eq("organization_id", org.orgId);
+    for (const c of (cs ?? []) as { id: string; name: string | null; phone_number: string | null; custom_fields: Record<string, unknown> | null }[]) {
+      contatoPorId.set(c.id, { nome: c.name, telefone: c.phone_number, bairro: ((c.custom_fields?.bairro as string | null) ?? null) });
+    }
+  }
 
   const total = respostas.length;
   const completas = respostas.filter((r) => r.completed).length;
@@ -147,13 +158,16 @@ export default async function ResultadosPage({ params }: { params: Promise<{ id:
               <div className="space-y-2">
                 {respostas.slice(0, 200).map((r, idx) => {
                   const respondidas = perguntas.filter((p) => r.answers[p.id] != null && r.answers[p.id] !== "").length;
+                  const c = r.contactId ? contatoPorId.get(r.contactId) : null;
+                  const local = [c?.bairro, r.city, r.state].filter(Boolean).join(" · ") || "Local não informado";
                   return (
                     <details key={r.id} className="rounded-lg" style={{ background: "var(--color-surface-elevated)", border: "1px solid var(--color-border)" }}>
                       <summary className="flex cursor-pointer items-center justify-between gap-2 px-3 py-2 text-[12px]" style={{ color: "var(--color-text)" }}>
-                        <span className="font-medium">#{total - idx} · {r.city ? `${r.city}${r.state ? `/${r.state}` : ""}` : "Local não informado"}</span>
-                        <span style={{ color: "var(--color-text-subtle)" }}>{respondidas}/{perguntas.length} · {fmtData(r.created_at)}</span>
+                        <span className="min-w-0 truncate font-medium">{c?.nome || `Resposta #${total - idx}`}{c?.telefone ? <span className="font-normal" style={{ color: "var(--color-text-subtle)" }}> · {c.telefone}</span> : null}</span>
+                        <span className="shrink-0" style={{ color: "var(--color-text-subtle)" }}>{respondidas}/{perguntas.length} · {fmtData(r.created_at)}</span>
                       </summary>
                       <div className="space-y-2 border-t px-3 py-2.5" style={{ borderColor: "var(--color-border)" }}>
+                        <p className="text-[11px]" style={{ color: "var(--color-text-subtle)" }}>📍 {local}</p>
                         {perguntas.map((p) => (
                           <div key={p.id}>
                             <p className="text-[11px]" style={{ color: "var(--color-text-subtle)" }}>{p.question}</p>

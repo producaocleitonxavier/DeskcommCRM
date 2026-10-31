@@ -54,7 +54,10 @@ export default function PesquisaForm({
 }) {
   const inicio = useMemo(() => Date.now(), []);
   const [resp, setResp] = useState<Record<string, unknown>>({});
+  const [nome, setNome] = useState("");
+  const [whatsapp, setWhatsapp] = useState("");
   const [cidade, setCidade] = useState("");
+  const [bairro, setBairro] = useState("");
   const [estado, setEstado] = useState("");
   const [enviando, setEnviando] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
@@ -82,6 +85,11 @@ export default function PesquisaForm({
         return;
       }
     }
+    // Identificação (obrigatória): nome, WhatsApp, cidade e bairro.
+    if (nome.trim().length < 2) { setErro("Informe seu nome."); return; }
+    if (whatsapp.replace(/\D/g, "").length < 10) { setErro("Informe um WhatsApp válido (com DDD)."); return; }
+    if (cidade.trim().length < 2) { setErro("Informe sua cidade."); return; }
+    if (bairro.trim().length < 2) { setErro("Informe seu bairro."); return; }
     setEnviando(true);
     try {
       const res = await fetch(`/api/v1/pol-surveys/public/${encodeURIComponent(token)}`, {
@@ -89,7 +97,10 @@ export default function PesquisaForm({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           answers: resp,
-          city: cidade.trim() || null,
+          name: nome.trim(),
+          whatsapp: whatsapp.trim(),
+          city: cidade.trim(),
+          bairro: bairro.trim(),
           state: estado.trim().toUpperCase().slice(0, 2) || null,
           duration_seconds: Math.round((Date.now() - inicio) / 1000),
         }),
@@ -190,12 +201,20 @@ export default function PesquisaForm({
           );
         })}
 
-        {/* Localização (opcional) — útil pra leitura territorial */}
+        {/* Identificação (obrigatória) — o respondente vira contato do gabinete */}
         <div style={{ background: SURFACE, border: `1px solid ${BORDER}`, borderRadius: 16, padding: 18 }}>
-          <label style={{ display: "block", fontSize: 13, fontWeight: 600, color: "#9AA0AE", marginBottom: 10 }}>De onde você fala? (opcional)</label>
-          <div style={{ display: "flex", gap: 10 }}>
-            <input placeholder="Cidade" style={{ ...campoStyle, flex: 1 }} value={cidade} onChange={(e) => setCidade(e.target.value)} />
-            <input placeholder="UF" maxLength={2} style={{ ...campoStyle, width: 72, textTransform: "uppercase" }} value={estado} onChange={(e) => setEstado(e.target.value)} />
+          <label style={{ display: "block", fontSize: 15, fontWeight: 600, marginBottom: 4 }}>
+            Seus dados <span style={{ color: ACCENT }}>*</span>
+          </label>
+          <p style={{ fontSize: 12.5, color: "#9AA0AE", marginBottom: 12 }}>Para o gabinete poder te dar retorno.</p>
+          <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+            <input placeholder="Seu nome" style={campoStyle} value={nome} onChange={(e) => setNome(e.target.value)} />
+            <input placeholder="WhatsApp com DDD" inputMode="tel" style={campoStyle} value={whatsapp} onChange={(e) => setWhatsapp(e.target.value)} />
+            <div style={{ display: "flex", gap: 10 }}>
+              <input placeholder="Cidade" style={{ ...campoStyle, flex: 1 }} value={cidade} onChange={(e) => setCidade(e.target.value)} />
+              <input placeholder="UF" maxLength={2} style={{ ...campoStyle, width: 72, textTransform: "uppercase" }} value={estado} onChange={(e) => setEstado(e.target.value)} />
+            </div>
+            <input placeholder="Bairro" style={campoStyle} value={bairro} onChange={(e) => setBairro(e.target.value)} />
           </div>
         </div>
       </div>
