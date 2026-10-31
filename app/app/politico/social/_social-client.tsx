@@ -180,10 +180,10 @@ export default function OpiniaoPublicaClient({ config, resumo, mencoes }: { conf
             <div className="mb-4 flex items-center justify-between">
               <h2 className="text-sm font-bold" style={{ color: "var(--color-text)" }}>Pulso da cobertura</h2>
               <div className="flex items-center gap-3 text-[11px]" style={{ color: "var(--color-text-subtle)" }}>
-                <Leg cor={SENT.positivo.cor} t="positivo" /><Leg cor={SENT.neutro.cor} t="neutro" /><Leg cor={SENT.negativo.cor} t="negativo" />
+                <Leg cor="#D7F36A" t="cobertura" /><Leg cor={SENT.positivo.cor} t="positivo" /><Leg cor={SENT.negativo.cor} t="negativo" />
               </div>
             </div>
-            <PulsoBarras dados={resumo.porDia} />
+            <PulsoArea dados={resumo.porDia} />
           </section>
 
           {/* Pautas + origem */}
@@ -224,39 +224,42 @@ export default function OpiniaoPublicaClient({ config, resumo, mencoes }: { conf
             </div>
           </section>
 
-          {/* Feed */}
+          {/* Feed — cards (estilo premium, limitado para não poluir) */}
           <section className="wr-card p-5">
-            <h2 className="mb-3 text-sm font-bold" style={{ color: "var(--color-text)" }}>Menções recentes</h2>
-            <ul className="flex flex-col gap-2">
-              {mencoes.map((m) => {
+            <div className="mb-3 flex items-center justify-between">
+              <h2 className="text-sm font-bold" style={{ color: "var(--color-text)" }}>Menções recentes</h2>
+              <span className="text-[11px]" style={{ color: "var(--color-text-subtle)" }}>as {Math.min(mencoes.length, 15)} mais recentes</span>
+            </div>
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              {mencoes.slice(0, 15).map((m) => {
                 const s = SENT[(m.sentimento as keyof typeof SENT)] ?? SENT.neutro;
                 const href = m.canal === "instagram" ? (m.autor ? `https://www.instagram.com/${m.autor}/` : null) : (m.url && m.url.startsWith("http") ? m.url : null);
-                return (
-                  <li key={m.id} className="overflow-hidden rounded-lg" style={{ background: "rgba(255,255,255,0.02)", border: "1px solid var(--color-border)" }}>
-                    <div className="flex items-stretch">
-                      <span className="w-1 shrink-0" style={{ background: s.cor }} aria-hidden />
-                      <div className="min-w-0 flex-1 p-3">
-                        {href ? (
-                          <a href={href} target="_blank" rel="noopener noreferrer" className="flex items-start gap-1 text-sm font-medium hover:opacity-70" style={{ color: "var(--color-text)" }}>
-                            <span className="min-w-0">{m.titulo}</span>
-                            <ExternalLink className="mt-0.5 h-3 w-3 shrink-0" aria-hidden style={{ color: "var(--color-text-subtle)" }} />
-                          </a>
-                        ) : (
-                          <span className="text-sm font-medium" style={{ color: "var(--color-text)" }}>{m.titulo}</span>
-                        )}
-                        <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-[11px]" style={{ color: "var(--color-text-subtle)" }}>
-                          <span className="rounded-full px-1.5 py-0.5 font-semibold" style={{ background: s.bg, color: s.cor }}>{s.label}</span>
-                          {m.topico && <span className="capitalize">{m.topico}</span>}
-                          {m.fonte && <span>· {m.fonte}</span>}
-                          {m.bairro && <span>· {m.bairro}</span>}
-                          <span>· {fmtData(m.publicadoEm)}</span>
-                        </div>
+                const cls = "group flex flex-col overflow-hidden rounded-xl transition-transform duration-150 hover:-translate-y-0.5";
+                const sty = { background: "rgba(255,255,255,0.025)", border: "1px solid var(--color-border)" } as const;
+                const inner = (
+                  <>
+                    <div style={{ height: 3, background: s.cor }} aria-hidden />
+                    <div className="flex flex-1 flex-col p-3.5">
+                      <div className="mb-2 flex items-center gap-2">
+                        <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-[10px] font-bold" style={{ background: s.bg, color: s.cor }} aria-hidden>{iniciaisFonte(m)}</span>
+                        <span className="min-w-0 flex-1 truncate text-xs font-semibold" style={{ color: "var(--color-text-muted)" }}>{m.fonte || (m.canal === "instagram" ? "Instagram" : m.canal)}</span>
+                        <span className="shrink-0 rounded-full px-1.5 py-0.5 text-[9px] font-bold uppercase" style={{ background: s.bg, color: s.cor }}>{s.label}</span>
+                      </div>
+                      <p className="line-clamp-3 text-sm font-medium" style={{ color: "var(--color-text)" }}>{m.titulo}</p>
+                      <div className="mt-auto flex flex-wrap items-center gap-x-2 gap-y-1 pt-2.5 text-[10px]" style={{ color: "var(--color-text-subtle)" }}>
+                        {m.topico && <span className="capitalize">{m.topico}</span>}
+                        {m.bairro && <span>· {m.bairro}</span>}
+                        <span>· {fmtData(m.publicadoEm)}</span>
+                        {href && <ExternalLink className="ml-auto h-3 w-3 opacity-0 transition-opacity group-hover:opacity-100" aria-hidden />}
                       </div>
                     </div>
-                  </li>
+                  </>
                 );
+                return href
+                  ? <a key={m.id} href={href} target="_blank" rel="noopener noreferrer" className={cls} style={sty}>{inner}</a>
+                  : <div key={m.id} className={cls} style={sty}>{inner}</div>;
               })}
-            </ul>
+            </div>
           </section>
         </>
       )}
@@ -285,26 +288,71 @@ function StatSent({ tipo, n, total, icone }: { tipo: keyof typeof SENT; n: numbe
     </div>
   );
 }
-function PulsoBarras({ dados }: { dados: { dia: string; total: number; pos: number; neg: number }[] }) {
+/** Caminho suave (Catmull-Rom → bézier) para a linha de cobertura. */
+function smoothPath(pts: [number, number][]): string {
+  if (pts.length === 0) return "";
+  if (pts.length === 1) return `M ${pts[0]![0]} ${pts[0]![1]}`;
+  let d = `M ${pts[0]![0]} ${pts[0]![1]}`;
+  for (let i = 0; i < pts.length - 1; i++) {
+    const p0 = pts[i - 1] ?? pts[i]!;
+    const p1 = pts[i]!;
+    const p2 = pts[i + 1]!;
+    const p3 = pts[i + 2] ?? p2;
+    const c1x = p1[0] + (p2[0] - p0[0]) / 6, c1y = p1[1] + (p2[1] - p0[1]) / 6;
+    const c2x = p2[0] - (p3[0] - p1[0]) / 6, c2y = p2[1] - (p3[1] - p1[1]) / 6;
+    d += ` C ${c1x} ${c1y}, ${c2x} ${c2y}, ${p2[0]} ${p2[1]}`;
+  }
+  return d;
+}
+
+/**
+ * Pulso da cobertura — premium e LEGÍVEL: a área/linha dourada com brilho mostra o
+ * VOLUME de menções por dia; a bolinha de cada dia mostra o CLIMA (verde = dia mais
+ * positivo, vermelho = mais negativo, cinza = neutro). Bater o olho e entender.
+ */
+function PulsoArea({ dados }: { dados: { dia: string; total: number; pos: number; neg: number }[] }) {
   if (dados.length === 0) return <p className="text-xs" style={{ color: "var(--color-text-subtle)" }}>Sem série ainda.</p>;
+  const W = 720, H = 150, padX = 12, padTop = 16, padBot = 26;
   const max = Math.max(...dados.map((d) => d.total), 1);
+  const n = dados.length;
+  const X = (i: number) => (n <= 1 ? W / 2 : padX + (i / (n - 1)) * (W - 2 * padX));
+  const Y = (v: number) => padTop + (1 - v / max) * (H - padTop - padBot);
+  const pts = dados.map((d, i) => [X(i), Y(d.total)] as [number, number]);
+  const linha = smoothPath(pts);
+  const area = `${linha} L ${X(n - 1)} ${H - padBot} L ${X(0)} ${H - padBot} Z`;
+  const corDia = (d: { pos: number; neg: number }) => (d.pos > d.neg ? SENT.positivo.cor : d.neg > d.pos ? SENT.negativo.cor : SENT.neutro.cor);
+  const passo = Math.max(1, Math.ceil(n / 7));
   return (
-    <div className="flex h-[130px] items-end gap-2">
-      {dados.map((d) => {
-        const h = Math.max(6, (d.total / max) * 112);
-        const neu = d.total - d.pos - d.neg;
-        const seg = (v: number) => (d.total > 0 ? (v / d.total) * h : 0);
-        return (
-          <div key={d.dia} className="group flex flex-1 flex-col items-center gap-1.5" title={`${d.dia}: ${d.total} menções (${d.pos}+ / ${d.neg}−)`}>
-            <div className="flex w-full max-w-[26px] flex-col justify-end overflow-hidden rounded-md transition-opacity group-hover:opacity-100" style={{ height: h, opacity: 0.9 }}>
-              <div style={{ height: seg(d.neg), background: SENT.negativo.cor }} />
-              <div style={{ height: seg(neu), background: SENT.neutro.cor }} />
-              <div style={{ height: seg(d.pos), background: SENT.positivo.cor }} />
-            </div>
-            <span className="text-[9px]" style={{ color: "var(--color-text-subtle)" }}>{d.dia.slice(8, 10)}/{d.dia.slice(5, 7)}</span>
-          </div>
-        );
-      })}
-    </div>
+    <svg viewBox={`0 0 ${W} ${H}`} width="100%" height={H} preserveAspectRatio="none" role="img" aria-label="Pulso da cobertura por dia">
+      <defs>
+        <linearGradient id="pulsoFill" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor="rgba(215,243,106,0.32)" />
+          <stop offset="100%" stopColor="rgba(215,243,106,0)" />
+        </linearGradient>
+        <filter id="pulsoGlow" x="-10%" y="-60%" width="120%" height="220%">
+          <feGaussianBlur stdDeviation="3.2" result="b" />
+          <feMerge><feMergeNode in="b" /><feMergeNode in="SourceGraphic" /></feMerge>
+        </filter>
+      </defs>
+      <path d={area} fill="url(#pulsoFill)" />
+      <path d={linha} fill="none" stroke="#D7F36A" strokeWidth={2.5} strokeLinecap="round" filter="url(#pulsoGlow)" />
+      {dados.map((d, i) => (
+        <g key={d.dia}>
+          <circle cx={X(i)} cy={Y(d.total)} r={3.5} fill={corDia(d)} stroke="#0C0E13" strokeWidth={1.5}>
+            <title>{`${d.dia.slice(8, 10)}/${d.dia.slice(5, 7)}: ${d.total} menções (${d.pos}+ / ${d.neg}−)`}</title>
+          </circle>
+          {i % passo === 0 && (
+            <text x={X(i)} y={H - 8} fontSize="9" fill="var(--color-text-subtle)" textAnchor="middle">{d.dia.slice(8, 10)}/{d.dia.slice(5, 7)}</text>
+          )}
+        </g>
+      ))}
+    </svg>
   );
+}
+
+/** Iniciais de uma fonte/autor para o avatar do card. */
+function iniciaisFonte(m: Mencao): string {
+  const base = (m.canal === "instagram" ? (m.autor ?? m.fonte) : m.fonte) ?? m.canal ?? "?";
+  const p = base.replace(/^@/, "").trim().split(/\s+/);
+  return ((p[0]?.[0] ?? "") + (p.length > 1 ? (p[p.length - 1]?.[0] ?? "") : "")).toUpperCase() || "•";
 }
