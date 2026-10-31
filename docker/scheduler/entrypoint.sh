@@ -131,6 +131,12 @@ CRONS="
 # Token de longa duração do Instagram expira em 60 dias. Renova quando faltam ≤7.
 # Uma vez ao dia é suficiente — a janela de renovação é de uma semana.
 10 6 * * *|60|api/v1/cron/ig-token-refresh
+# O BOLETIM SEMANAL DE INTELIGÊNCIA (#2026). Uma vez por semana (segunda, 06:00 UTC
+# = 03:00 BRT): refresca a escuta (imprensa RSS + comentários IG + sinais de
+# Alertas/Decisão/Adversários) de CADA org com monitor, pro boletim da semana já
+# estar fresco quando o mandato abrir. Modelo recorrente barato — não tempo real,
+# de propósito. Timeout generoso: a escuta de várias orgs passa por IA.
+0 6 * * 1|600|api/v1/cron/boletim-semanal
 "
 
 # CRONTAB_PATH é ponto de injeção do teste (tests/shell/scheduler-entrypoint.test.sh).
