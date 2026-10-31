@@ -49,18 +49,19 @@ export default async function PublicLayout({ children }: { children: React.React
         <style dangerouslySetInnerHTML={{ __html: GIP_AUTH_CSS }} />
         <FundoDourado />
         <div className="relative z-10 grid min-h-[100dvh] w-full lg:grid-cols-2">
-          {/* ESQUERDA / TOPO — marca */}
-          <div className="flex flex-col items-center justify-center gap-5 px-6 pt-10 pb-2 text-center lg:items-start lg:gap-7 lg:px-16 lg:py-12 lg:text-left">
+          {/* ESQUERDA / TOPO — marca (tudo CENTRALIZADO: elmo + frases como um
+              bloco central, no celular e no computador) */}
+          <div className="flex flex-col items-center justify-center gap-5 px-6 pt-10 pb-2 text-center lg:gap-7 lg:px-16 lg:py-12">
             <span className="gip-eyebrow hidden lg:block">Estratégia de elite ✦</span>
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               data-testid="logo-da-fachada"
               src="/gipchat-elmo.png"
               alt={marca.nome}
-              className="gip-elmo h-36 w-auto object-contain sm:h-40 lg:h-64"
+              className="gip-elmo h-40 w-auto object-contain sm:h-44 lg:h-72"
             />
             <div className="gip-brand-name text-lg lg:hidden">{marca.nome}</div>
-            <h2 className="gip-headline hidden max-w-[16ch] text-[34px] lg:block xl:text-[40px]">
+            <h2 className="gip-headline hidden max-w-[20ch] text-[34px] lg:block xl:text-[40px]">
               Campanhas não são vencidas por sorte. <span className="accent">São vencidas por estratégia, dados e domínio da percepção pública.</span>
             </h2>
             <div className="gip-brand-name hidden text-base lg:block">{marca.nome}</div>
