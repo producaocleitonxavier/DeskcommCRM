@@ -138,10 +138,21 @@ export async function importarContatos(formData: FormData): Promise<ResultadoImp
     const estado = col(linha, "uf");
     const bairro = col(linha, "bairro");
     const logradouro = col(linha, "endereco");
+    const numero = col(linha, "numero");
+    const complemento = col(linha, "complemento");
+    const cepRaw = col(linha, "cep");
     if (cidade) endereco.cidade = cidade;
     if (estado) endereco.estado = estado.toUpperCase().slice(0, 2);
     if (bairro) endereco.bairro = bairro;
     if (logradouro) endereco.logradouro = logradouro;
+    if (numero) endereco.numero = numero;
+    if (complemento) endereco.complemento = complemento;
+    if (cepRaw) { const d = cepRaw.replace(/\D/g, ""); endereco.cep = d.length === 8 ? `${d.slice(0, 5)}-${d.slice(5)}` : cepRaw; }
+    // Endereço COMPLETO montado (Logradouro, Número - Complemento) — o diferencial:
+    // mesmo quando o número vem em coluna separada, ele entra no endereço.
+    if (logradouro || numero) {
+      endereco.completo = [logradouro, numero].filter(Boolean).join(", ") + (complemento ? ` - ${complemento}` : "");
+    }
 
     const custom: Record<string, unknown> = {};
     if (Object.keys(endereco).length) custom.endereco_gip = endereco;

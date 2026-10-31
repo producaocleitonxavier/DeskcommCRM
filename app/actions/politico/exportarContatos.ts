@@ -55,7 +55,7 @@ export async function exportarContatos(): Promise<ResultadoExport> {
   }
 
   const colunas = [
-    "Nome", "Telefone", "E-mail", "Cidade", "Bairro", "UF", "Nascimento",
+    "Nome", "Telefone", "E-mail", "Endereço", "Bairro", "Cidade", "UF", "CEP", "Nascimento",
     "Nível de apoio", "Temperatura", "Zona eleitoral", "Seção eleitoral", "Etiquetas", "Cadastrado em",
   ];
   const linhas: string[] = [colunas.join(",")];
@@ -80,7 +80,7 @@ export async function exportarContatos(): Promise<ResultadoExport> {
       const lead = leads.get(c.id);
       linhas.push([
         esc(c.name), esc(c.phone_number), esc(c.email),
-        esc(end.cidade ?? ""), esc(end.bairro ?? ""), esc(end.estado ?? ""),
+        esc(end.completo ?? end.logradouro ?? ""), esc(end.bairro ?? ""), esc(end.cidade ?? ""), esc(end.estado ?? ""), esc(end.cep ?? ""),
         esc(dataBR(c.birthdate)),
         esc(prettyNivel(lead?.nivel ?? null)), esc(lead?.temp ?? ""),
         esc(lead?.zona ?? ""), esc(lead?.secao ?? ""),

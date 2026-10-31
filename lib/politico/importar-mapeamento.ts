@@ -23,6 +23,9 @@ export type CampoPolitico =
   | "secao_eleitoral"
   | "genero"
   | "endereco"
+  | "numero"
+  | "complemento"
+  | "cep"
   | "tags";
 
 /** Rótulo amigável de cada campo (pt-BR), pra tela de conferência. */
@@ -38,7 +41,10 @@ export const ROTULO_CAMPO: Record<CampoPolitico, string> = {
   zona_eleitoral: "Zona eleitoral",
   secao_eleitoral: "Seção eleitoral",
   genero: "Gênero / Sexo",
-  endereco: "Endereço",
+  endereco: "Endereço (rua/logradouro)",
+  numero: "Número",
+  complemento: "Complemento",
+  cep: "CEP",
   tags: "Etiquetas / Nível de apoio",
 };
 
@@ -46,7 +52,7 @@ export const ROTULO_CAMPO: Record<CampoPolitico, string> = {
 export const CAMPOS_NA_ORDEM: CampoPolitico[] = [
   "nome", "telefone", "cpf", "email", "nascimento",
   "cidade", "uf", "bairro", "zona_eleitoral", "secao_eleitoral",
-  "genero", "endereco", "tags",
+  "genero", "endereco", "numero", "complemento", "cep", "tags",
 ];
 
 /**
@@ -78,7 +84,10 @@ const SINONIMOS: Record<CampoPolitico, string[]> = {
   zona_eleitoral: ["zona", "zona eleitoral", "zona eleit", "zona de votacao", "zona voto"],
   secao_eleitoral: ["secao", "secao eleitoral", "secao eleit", "secao de votacao", "secao voto", "sessao", "sessao eleitoral"],
   genero: ["genero", "sexo", "gender"],
-  endereco: ["endereco", "logradouro", "rua", "endereco completo", "endereco residencial", "address", "rua/numero"],
+  endereco: ["endereco", "logradouro", "rua", "endereco completo", "endereco residencial", "address", "avenida", "av", "rua avenida"],
+  numero: ["numero", "num", "nr", "numero casa", "numero da casa", "numero residencia", "no", "number", "n casa"],
+  complemento: ["complemento", "compl", "apto", "apartamento", "bloco", "complemento endereco", "ponto de referencia", "referencia"],
+  cep: ["cep", "codigo postal", "codigo de endereco postal", "zip", "zipcode", "zip code"],
   tags: ["tags", "tag", "etiqueta", "etiquetas", "nivel", "nivel de apoio", "nivel apoio", "categoria", "grupo", "classificacao", "perfil", "segmento"],
 };
 
