@@ -91,6 +91,29 @@ const SINONIMOS: Record<CampoPolitico, string[]> = {
   tags: ["tags", "tag", "etiqueta", "etiquetas", "nivel", "nivel de apoio", "nivel apoio", "categoria", "grupo", "classificacao", "perfil", "segmento"],
 };
 
+const UFS = ["AC", "AL", "AP", "AM", "BA", "CE", "DF", "ES", "GO", "MA", "MT", "MS", "MG", "PA", "PB", "PR", "PE", "PI", "RJ", "RN", "RS", "RO", "RR", "SC", "SP", "SE", "TO"];
+const NOMES_UF: Record<string, string> = {
+  acre: "AC", alagoas: "AL", amapa: "AP", amazonas: "AM", bahia: "BA", ceara: "CE",
+  "distrito federal": "DF", "espirito santo": "ES", goias: "GO", maranhao: "MA",
+  "mato grosso": "MT", "mato grosso do sul": "MS", "minas gerais": "MG", para: "PA",
+  paraiba: "PB", parana: "PR", pernambuco: "PE", piaui: "PI", "rio de janeiro": "RJ",
+  "rio grande do norte": "RN", "rio grande do sul": "RS", rondonia: "RO", roraima: "RR",
+  "santa catarina": "SC", "sao paulo": "SP", sergipe: "SE", tocantins: "TO",
+};
+
+/**
+ * Reconhece se um texto É um estado (sigla "MG" ou nome "Minas Gerais") → devolve
+ * a UF de 2 letras, ou null. Serve pra "consertar" planilha onde o estado veio
+ * na coluna de Bairro/Cidade: a importação move pro campo certo.
+ */
+export function ufDeTexto(valor: string): string | null {
+  const v = (valor ?? "").trim();
+  if (!v) return null;
+  const up = v.toUpperCase();
+  if (up.length === 2 && UFS.includes(up)) return up;
+  return NOMES_UF[normalizarCabecalho(v)] ?? null;
+}
+
 /** Normaliza um cabeçalho pra comparar: minúsculo, sem acento, espaços colapsados. */
 export function normalizarCabecalho(h: string): string {
   return (h ?? "")

@@ -23,7 +23,7 @@ import { normalizaTelefone, normalizaData } from "@/lib/contacts/csv";
 import { encontrarContatoPorTelefone } from "@/lib/channels/contato-por-telefone";
 import { camposCpfParaGravar } from "@/lib/contacts/cpf";
 import {
-  type CampoPolitico, sugerirMapeamento, normalizarCabecalho,
+  type CampoPolitico, sugerirMapeamento, normalizarCabecalho, ufDeTexto,
 } from "@/lib/politico/importar-mapeamento";
 
 export interface PreviewOk {
@@ -135,13 +135,22 @@ export async function importarContatos(formData: FormData): Promise<ResultadoImp
 
     // custom_fields: endereço (compatível com pol_carimbar_cidade_leads) + extras.
     const endereco: Record<string, string> = {};
-    const cidade = col(linha, "cidade");
-    const estado = col(linha, "uf");
-    const bairro = col(linha, "bairro");
+    let cidade = col(linha, "cidade");
+    let estado = col(linha, "uf");
+    let bairro = col(linha, "bairro");
     const logradouro = col(linha, "endereco");
     const numero = col(linha, "numero");
     const complemento = col(linha, "complemento");
     const cepRaw = col(linha, "cep");
+    // INTELIGÊNCIA: se o Estado não veio numa coluna própria, mas o Bairro ou a
+    // Cidade É na verdade um estado ("MG", "Minas Gerais"), reconhece e move pro
+    // lugar certo — limpando o campo errado. Conserta planilha bagunçada.
+    if (!estado) {
+      const ufB = ufDeTexto(bairro);
+      const ufC = ufDeTexto(cidade);
+      if (ufB) { estado = ufB; bairro = ""; }
+      else if (ufC) { estado = ufC; cidade = ""; }
+    }
     if (cidade) endereco.cidade = cidade;
     if (estado) endereco.estado = estado.toUpperCase().slice(0, 2);
     if (bairro) endereco.bairro = bairro;
