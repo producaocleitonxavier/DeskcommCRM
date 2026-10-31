@@ -6,6 +6,7 @@ import { notFound, redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { requireAuth, resolveActiveOrg, exigirPapelNaOrg } from "@/lib/auth/server";
 import { lerIdentidadeDoMandato } from "@/lib/politico/identidade-do-mandato";
+import { origensDaOrg } from "@/app/actions/politico/pesquisa-disparo";
 import DispararClient from "./_disparar-client";
 
 export const dynamic = "force-dynamic";
@@ -33,6 +34,7 @@ export default async function DispararPesquisaPage({ params }: { params: Promise
     .eq("survey_id", id)
     .eq("organization_id", org.orgId);
   const identidade = await lerIdentidadeDoMandato(db, org.orgId);
+  const origens = await origensDaOrg();
 
   return (
     <DispararClient
@@ -40,6 +42,7 @@ export default async function DispararPesquisaPage({ params }: { params: Promise
       titulo={s.title}
       numPerguntas={count ?? 0}
       nomeMandato={identidade.nomeParlamentar}
+      origens={origens}
     />
   );
 }

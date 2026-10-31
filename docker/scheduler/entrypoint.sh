@@ -12,8 +12,13 @@
 # máquina está se recuperando de alguma coisa.
 set -eu
 
-if [ -z "${INTERNAL_SECRET:-}" ]; then
-  echo "scheduler: INTERNAL_SECRET vazio — os crons responderiam 401 em silêncio." >&2
+# Prefere um segredo DEDICADO do cron (INTERNAL_CRON_SECRET) e cai no
+# INTERNAL_SECRET geral se ele não existir (compatível com instalações antigas).
+# Separar reduz o raio de exposição: se o header do cron vazar, não é a chave
+# interna geral. autorizaCron (app) aceita os dois.
+CRON_SECRET="${INTERNAL_CRON_SECRET:-${INTERNAL_SECRET:-}}"
+if [ -z "$CRON_SECRET" ]; then
+  echo "scheduler: INTERNAL_CRON_SECRET/INTERNAL_SECRET vazios — os crons responderiam 401 em silêncio." >&2
   echo "scheduler: confira a chave no .env e suba de novo." >&2
   exit 1
 fi
@@ -159,7 +164,7 @@ mkdir -p "$AUTH_DIR"
 chmod 700 "$AUTH_DIR"
 # Com o umask 077 o arquivo nasce 600 desde o primeiro byte; o chmod cobre um
 # arquivo que já existisse de um start anterior.
-printf 'Authorization: Bearer %s\n' "$INTERNAL_SECRET" > "$AUTH_FILE"
+printf 'Authorization: Bearer %s\n' "$CRON_SECRET" > "$AUTH_FILE"
 chmod 600 "$AUTH_FILE"
 
 : > "$DESTINO"

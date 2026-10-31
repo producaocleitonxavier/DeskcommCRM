@@ -23,8 +23,14 @@ import { VARIAVEL_LINK } from "@/lib/politico/pesquisa-link";
 export interface SegmentoPesquisa {
   niveis: ("novo_cadastro" | "simpatizante" | "apoiador" | "militante" | "voto_certo")[];
   temperaturas: ("frio" | "morno" | "quente")[];
+  /** Origem do contato (contacts.source) — ex.: pesquisa, qr, saga_palestras. */
+  origens: string[];
+  /** IDs de contatos escolhidos a dedo (entram SEMPRE, em união com o recorte). */
+  contatosIndividuais: string[];
   limite: number;
 }
+
+export interface ContatoEscolha { id: string; nome: string; telefone: string | null }
 
 export type ResultadoDisparo =
   | { ok: true; campaignId: string; total: number }
@@ -48,8 +54,10 @@ export async function prepararDisparoDaPesquisa(entrada: {
     return { ok: false, erro: `A mensagem precisa conter o link ${VARIAVEL_LINK} — é onde entra o link único de cada pessoa.` };
   }
   const { niveis, temperaturas } = entrada.segmento;
-  if (niveis.length === 0 && temperaturas.length === 0) {
-    return { ok: false, erro: "Escolha pelo menos um nível do funil ou uma temperatura." };
+  const origens = (entrada.segmento.origens ?? []).map((o) => o.trim()).filter(Boolean).slice(0, 20);
+  const contatosIndividuais = [...new Set((entrada.segmento.contatosIndividuais ?? []).filter(Boolean))].slice(0, 5000);
+  if (niveis.length === 0 && temperaturas.length === 0 && origens.length === 0 && contatosIndividuais.length === 0) {
+    return { ok: false, erro: "Escolha um nível, temperatura, origem — ou contatos específicos." };
   }
 
   const admin = createAdminClient();
@@ -77,7 +85,7 @@ export async function prepararDisparoDaPesquisa(entrada: {
 
   // Audiência (opt-out/bloqueado excluído; só com telefone).
   const limite = Math.min(5000, Math.max(1, entrada.segmento.limite || 500));
-  const filtro = { ...FILTRO_VAZIO, niveis_de_apoio: niveis, temperaturas, limite };
+  const filtro = { ...FILTRO_VAZIO, niveis_de_apoio: niveis, temperaturas, origens, incluir_contatos: contatosIndividuais, limite };
   const { candidatos } = await buscarCandidatos(admin, { organizationId: orgId, filtro, agora: new Date() });
   // Opt-out/LGPD: bloqueado (descadastro) e quem recusou marketing saem; pessoais/
   // anonimizados também; só com telefone. O motor confere de novo no envio.
@@ -141,4 +149,53 @@ export async function prepararDisparoDaPesquisa(entrada: {
   revalidatePath("/app/campaigns");
   revalidatePath("/app/politico/pesquisas");
   return { ok: true, campaignId: String((camp as { id: string }).id), total: elegiveis.length };
+}
+
+/** Papel manager+ ou null (sem vazar motivo). */
+async function orgGerenteId(): Promise<string | null> {
+  const user = await requireAuth();
+  const org = await resolveActiveOrg(user);
+  if (!org) return null;
+  const bypass = user.is_platform_admin && !user.support;
+  if (!bypass && ROLE_RANK[org.role] < ROLE_RANK.manager) return null;
+  return org.orgId;
+}
+
+/** Origens (contacts.source) distintas da org — vira chips de filtro no disparo. */
+export async function origensDaOrg(): Promise<{ origem: string; total: number }[]> {
+  const orgId = await orgGerenteId();
+  if (!orgId) return [];
+  const admin = createAdminClient();
+  const { data } = await admin.from("contacts").select("source").eq("organization_id", orgId).not("source", "is", null).is("is_merged_into", null).limit(20000);
+  const map = new Map<string, number>();
+  for (const r of (data ?? []) as { source: string | null }[]) {
+    const s = (r.source ?? "").trim();
+    if (s) map.set(s, (map.get(s) ?? 0) + 1);
+  }
+  return [...map.entries()].map(([origem, total]) => ({ origem, total })).sort((a, b) => b.total - a.total).slice(0, 20);
+}
+
+/** Busca contatos por nome/telefone para a seleção INDIVIDUAL do disparo. */
+export async function buscarContatosParaDisparo(q: string): Promise<ContatoEscolha[]> {
+  const orgId = await orgGerenteId();
+  if (!orgId) return [];
+  const termo = (q ?? "").trim();
+  if (termo.length < 2) return [];
+  const safe = termo.replace(/[,()*%\\]/g, " ").trim();
+  const digits = termo.replace(/\D/g, "");
+  const admin = createAdminClient();
+  let consulta = admin
+    .from("contacts")
+    .select("id, name, phone_number")
+    .eq("organization_id", orgId)
+    .is("is_merged_into", null)
+    .eq("is_blocked", false)
+    .limit(15);
+  if (digits.length >= 4) consulta = consulta.or(`name.ilike.%${safe}%,phone_number.ilike.%${digits}%`);
+  else if (safe.length >= 2) consulta = consulta.ilike("name", `%${safe}%`);
+  else return [];
+  const { data } = await consulta;
+  return ((data ?? []) as { id: string; name: string | null; phone_number: string | null }[]).map((c) => ({
+    id: c.id, nome: c.name ?? "(sem nome)", telefone: c.phone_number,
+  }));
 }
