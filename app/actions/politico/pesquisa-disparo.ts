@@ -18,6 +18,7 @@ import { ROLE_RANK } from "@/lib/auth/types";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { buscarCandidatos } from "@/lib/campanhas/consulta-de-audiencia";
 import { FILTRO_VAZIO } from "@/lib/campanhas/audiencia";
+import { VARIAVEL_LINK } from "@/lib/politico/pesquisa-link";
 
 export interface SegmentoPesquisa {
   niveis: ("novo_cadastro" | "simpatizante" | "apoiador" | "militante" | "voto_certo")[];
@@ -28,8 +29,6 @@ export interface SegmentoPesquisa {
 export type ResultadoDisparo =
   | { ok: true; campaignId: string; total: number }
   | { ok: false; erro: string; precisaTse?: boolean };
-
-export const VARIAVEL_LINK = "{{contato.pesquisa_link}}";
 
 export async function prepararDisparoDaPesquisa(entrada: {
   surveyId: string;

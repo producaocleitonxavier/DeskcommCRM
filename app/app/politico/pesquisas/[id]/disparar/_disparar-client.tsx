@@ -6,7 +6,8 @@ import Link from "next/link";
 import { Send, Loader2, ShieldAlert, Info } from "lucide-react";
 
 import { CommandHero } from "@/components/politico/command-hero";
-import { prepararDisparoDaPesquisa, VARIAVEL_LINK, type SegmentoPesquisa } from "@/app/actions/politico/pesquisa-disparo";
+import { prepararDisparoDaPesquisa, type SegmentoPesquisa } from "@/app/actions/politico/pesquisa-disparo";
+import { VARIAVEL_LINK } from "@/lib/politico/pesquisa-link";
 
 const NIVEIS: { v: SegmentoPesquisa["niveis"][number]; l: string }[] = [
   { v: "novo_cadastro", l: "Novo cadastro" },
