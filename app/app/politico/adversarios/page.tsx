@@ -12,7 +12,7 @@ import { requireAuth, resolveActiveOrg, exigirPapelNaOrg } from "@/lib/auth/serv
 import AdversariosClient, { type AdversarioItem } from "./_adversarios-client";
 import AdversariosGestao from "./_adversarios-gestao";
 import MonitoramentoTabs from "@/components/politico/monitoramento-tabs";
-import { listarSinaisAdversarios } from "@/app/actions/politico/adversarios";
+import { listarSinaisAdversarios, dimensaoEleitoralDosAdversarios } from "@/app/actions/politico/adversarios";
 
 export const dynamic = "force-dynamic";
 
@@ -55,11 +55,19 @@ export default async function AdversariosPage() {
     threatScore: Number(a.threat_score ?? 0),
     followers: Number(a.followers ?? 0),
     active: Boolean(a.active),
+    eleitoral: null,
   }));
 
+  // 3ª dimensão: força ELEITORAL (TSE) de cada adversário no município do mandato.
+  const mapaEleitoral = await dimensaoEleitoralDosAdversarios(adversarios.map((a) => a.name));
+  for (const a of adversarios) a.eleitoral = mapaEleitoral[a.name.toLowerCase()] ?? null;
+
+  // Comparativo agora mostra FORÇA ELEITORAL real (votos no município) — bem mais
+  // útil que o placar de sinais (que fica zerado sem menções).
   const comparativo = adversarios
+    .filter((a) => (a.eleitoral?.votosMunicipio ?? 0) > 0)
     .slice(0, 8)
-    .map((a) => ({ name: a.name, value: Math.round(a.threatScore * 10) / 10, fill: RISCO_COR[a.riskLevel] ?? "#4352C4" }));
+    .map((a) => ({ name: a.name, value: a.eleitoral!.votosMunicipio, fill: RISCO_COR[a.riskLevel] ?? "#4352C4" }));
 
   const sinais = await listarSinaisAdversarios(30);
 

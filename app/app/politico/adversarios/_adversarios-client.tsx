@@ -8,12 +8,13 @@
  * plataforma, nível de ameaça, threat score e seguidores.
  */
 
-import { Activity, AlertTriangle, ShieldAlert } from "lucide-react";
+import { Activity, AlertTriangle, ShieldAlert, Vote, Newspaper, AtSign } from "lucide-react";
 
 import { KpiCard } from "@/components/politico/kpi-card";
 import { BarChartCard } from "@/components/politico/bar-chart-card";
 import { CommandHero } from "@/components/politico/command-hero";
 import { EmptyState } from "@/components/politico/empty-state";
+import type { DimensaoEleitoral } from "@/app/actions/politico/adversarios";
 
 const RISCO: Record<string, { label: string; bg: string; fg: string }> = {
   low: { label: "Baixo", bg: "#E2F5EC", fg: "#17784F" },
@@ -36,6 +37,7 @@ export interface AdversarioItem {
   threatScore: number;
   followers: number;
   active: boolean;
+  eleitoral: DimensaoEleitoral | null;
 }
 
 export interface AdversariosClientProps {
@@ -47,7 +49,7 @@ export interface AdversariosClientProps {
 export default function AdversariosClient({ kpis, comparativo, adversarios }: AdversariosClientProps) {
   return (
     <div className="mx-auto max-w-[1140px] px-4 py-7 space-y-6" style={{ background: "var(--color-bg)" }}>
-      <CommandHero eyebrow="Inteligência" titulo="Adversários" subtitulo="Oposição monitorada — nível de ameaça, alcance e sinais de alerta." />
+      <CommandHero eyebrow="Inteligência" titulo="Adversários" subtitulo="Oposição monitorada em 3 frentes — força eleitoral (TSE), mídia e digital." />
 
       <section className="grid grid-cols-1 gap-4 sm:grid-cols-3">
         <KpiCard label="Adversários monitorados" valor={kpis.total} icone={ShieldAlert} />
@@ -64,7 +66,7 @@ export default function AdversariosClient({ kpis, comparativo, adversarios }: Ad
       ) : (
         <>
           {comparativo.length > 0 && (
-            <BarChartCard title="Comparativo de ameaça (nível de risco)" data={comparativo} horizontal height={320} />
+            <BarChartCard title="Força eleitoral no município (votos — TSE)" data={comparativo} horizontal height={320} />
           )}
 
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -96,9 +98,36 @@ export default function AdversariosClient({ kpis, comparativo, adversarios }: Ad
                       <span className="rounded-full px-2 py-0.5 text-xs font-medium" style={{ background: "var(--color-surface-elevated)", color: "var(--color-text-subtle)" }}>Inativo</span>
                     )}
                   </div>
-                  <div className="mt-auto flex items-center justify-between border-t pt-2.5 text-sm" style={{ borderColor: "var(--color-border)" }}>
-                    <span><span className="text-muted-foreground">Ameaça</span> <strong className="tabular-nums">{Number(a.threatScore).toFixed(1)}</strong></span>
-                    <span><strong className="tabular-nums">{a.followers.toLocaleString("pt-BR")}</strong> <span className="text-muted-foreground">seguidores</span></span>
+                  <div className="mt-auto space-y-1.5 border-t pt-2.5 text-xs" style={{ borderColor: "var(--color-border)" }}>
+                    {/* Eleitoral (TSE) */}
+                    <div className="flex items-start justify-between gap-2">
+                      <span className="inline-flex shrink-0 items-center gap-1 text-muted-foreground"><Vote size={13} /> Eleitoral</span>
+                      {a.eleitoral && a.eleitoral.votosMunicipio > 0 ? (
+                        <span className="min-w-0 text-right">
+                          <span>
+                            <strong className="tabular-nums" style={{ color: "var(--color-text)" }}>{a.eleitoral.votosMunicipio.toLocaleString("pt-BR")}</strong> votos
+                            {a.eleitoral.statusLabel && (
+                              <span className="ml-1 rounded px-1 py-0.5 text-[9px] font-bold uppercase" style={{ background: "#FDEBE9", color: "#A3302A" }}>{a.eleitoral.statusLabel}</span>
+                            )}
+                          </span>
+                          <span className="block text-[10px] text-muted-foreground">{[a.eleitoral.cargo, a.eleitoral.ano].filter(Boolean).join(" ")}</span>
+                        </span>
+                      ) : (
+                        <span className="text-muted-foreground">sem histórico</span>
+                      )}
+                    </div>
+                    {/* Mídia */}
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="inline-flex items-center gap-1 text-muted-foreground"><Newspaper size={13} /> Mídia</span>
+                      <span><strong className="tabular-nums" style={{ color: "var(--color-text)" }}>{Math.round(a.threatScore)}</strong> <span className="text-muted-foreground">sinais</span></span>
+                    </div>
+                    {/* Digital */}
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="inline-flex items-center gap-1 text-muted-foreground"><AtSign size={13} /> Digital</span>
+                      {a.followers > 0
+                        ? <span><strong className="tabular-nums" style={{ color: "var(--color-text)" }}>{a.followers.toLocaleString("pt-BR")}</strong> <span className="text-muted-foreground">seguidores</span></span>
+                        : <span className="text-muted-foreground">{a.username ? "aguardando" : "—"}</span>}
+                    </div>
                   </div>
                 </div>
               );

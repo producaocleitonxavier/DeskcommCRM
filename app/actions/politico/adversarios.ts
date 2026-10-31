@@ -12,6 +12,108 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { requireAuth, resolveActiveOrg, orgSeAoMenos } from "@/lib/auth/server";
 import { resolveIgCreds, type IgCredentials } from "@/lib/channels/instagram/credentials";
 import { businessDiscovery } from "@/lib/channels/instagram/business-discovery";
+import { lerIdentidadeDoMandato } from "@/lib/politico/identidade-do-mandato";
+
+// ── Dimensão ELEITORAL do adversário (TSE) — a 3ª perna do score de ameaça ────
+// Além de Mídia (menções) e Digital (Instagram), medimos a FORÇA ELEITORAL real:
+// a maior votação do adversário no SEU município (qualquer eleição seedada) + se
+// foi eleito/suplente. É o dado que o concorrente (SAM) não cruza com o resto.
+export interface DimensaoEleitoral {
+  votosMunicipio: number;
+  situacao: string | null;
+  statusLabel: string; // "eleito" | "suplente" | "não eleito" | ""
+  partido: string | null;
+  cargo: string | null;
+  ano: number | null;
+  lugar: string;
+}
+
+function statusCurtoTSE(s: string | null | undefined): string {
+  const x = (s ?? "").normalize("NFD").replace(/[̀-ͯ]/g, "").toUpperCase().trim();
+  if (x.startsWith("ELEITO")) return "eleito";
+  if (x === "SUPLENTE") return "suplente";
+  if (x === "NAO ELEITO") return "não eleito";
+  return "";
+}
+const semAcento = (s: string) => s.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
+
+/**
+ * Para os nomes de adversários dados, devolve a maior votação de cada um no
+ * município do mandato (via intel_candidatos ∪ intel_cand_mun) + status TSE.
+ * Chave do retorno = nome em minúsculas. Degrada liso (mapa vazio) sem cidade,
+ * sem match ou sem dados TSE. Casa por TODOS os tokens do nome (defensivo).
+ */
+export async function dimensaoEleitoralDosAdversarios(nomes: string[]): Promise<Record<string, DimensaoEleitoral>> {
+  const user = await requireAuth();
+  const org = await resolveActiveOrg(user);
+  if (!org) return {};
+  const limpos = [...new Set(nomes.map((n) => (n ?? "").trim()).filter((n) => n.length >= 4))];
+  if (limpos.length === 0) return {};
+
+  const db = await createClient();
+  const identidade = await lerIdentidadeDoMandato(db, org.orgId);
+  const cidade = identidade.cidade?.trim();
+  if (!cidade) return {};
+  const { data: mun } = await db.from("intel_municipios").select("tse_code, nome").ilike("nome", cidade).limit(1).maybeSingle();
+  const cdMun = (mun as { tse_code?: string } | null)?.tse_code;
+  const lugar = (mun as { nome?: string } | null)?.nome ?? cidade;
+  if (!cdMun) return {};
+
+  // Busca ampla por nome (ilike por tokens); a filtragem exata (todos os tokens,
+  // sem acento) é feita no JS logo abaixo.
+  const orFilter = limpos
+    .map((n) => `nome_urna.ilike.%${n.split(/\s+/).filter(Boolean).join("%")}%`)
+    .join(",");
+  const { data: cands } = await db
+    .from("intel_candidatos")
+    .select("election_id, sq_candidato, nome_urna, partido_sigla, situacao")
+    .or(orFilter)
+    .limit(300);
+  const candidatos = (cands ?? []) as { election_id: number; sq_candidato: number; nome_urna: string; partido_sigla: string | null; situacao: string | null }[];
+  if (candidatos.length === 0) return {};
+
+  const sqs = [...new Set(candidatos.map((c) => Number(c.sq_candidato)))];
+  const { data: cm } = await db
+    .from("intel_cand_mun")
+    .select("election_id, sq_candidato, votos")
+    .eq("cd_municipio", Number(cdMun))
+    .in("sq_candidato", sqs)
+    .limit(3000);
+  const votosMap = new Map<string, number>();
+  for (const r of (cm ?? []) as { election_id: number; sq_candidato: number; votos: number }[]) votosMap.set(`${r.election_id}:${r.sq_candidato}`, Number(r.votos));
+
+  const { data: els } = await db.from("intel_elections").select("id, ano, cargo");
+  const elMap = new Map<number, { ano: number; cargo: string }>();
+  for (const e of (els ?? []) as { id: number; ano: number; cargo: string }[]) elMap.set(e.id, { ano: e.ano, cargo: e.cargo });
+
+  const out: Record<string, DimensaoEleitoral> = {};
+  for (const nome of limpos) {
+    const tokens = semAcento(nome).split(/\s+/).filter(Boolean);
+    const matches = candidatos.filter((c) => {
+      const nm = semAcento(c.nome_urna ?? "");
+      return tokens.every((t) => nm.includes(t));
+    });
+    if (matches.length === 0) continue;
+    let melhor: (typeof matches)[number] | null = null;
+    let melhorVotos = -1;
+    for (const m of matches) {
+      const v = votosMap.get(`${m.election_id}:${m.sq_candidato}`) ?? 0;
+      if (v > melhorVotos) { melhorVotos = v; melhor = m; }
+    }
+    if (!melhor) continue;
+    const el = elMap.get(melhor.election_id);
+    out[nome.toLowerCase()] = {
+      votosMunicipio: Math.max(0, melhorVotos),
+      situacao: melhor.situacao,
+      statusLabel: statusCurtoTSE(melhor.situacao),
+      partido: melhor.partido_sigla,
+      cargo: el?.cargo ?? null,
+      ano: el?.ano ?? null,
+      lugar,
+    };
+  }
+  return out;
+}
 
 /** Credenciais do Instagram da org (channel_sessions). null = Instagram não conectado. */
 async function credsIgDaOrg(orgId: string): Promise<IgCredentials | null> {
