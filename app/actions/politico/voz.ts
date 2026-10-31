@@ -25,8 +25,9 @@ import {
   CHAVE_VOZ_SPEED,
   clampVozSpeed,
   lerVozSpeed,
+  lerRotuloNoAudio,
 } from "@/lib/voz/velocidade";
-import { comAvisoIA } from "@/lib/voz/recado";
+import { comAvisoIA, AVISO_IA_TEXTO } from "@/lib/voz/recado";
 import { dentroDoBlackout } from "@/lib/voz/blackout";
 import { mp3ParaNotaDeVoz, VOICE_MIME } from "@/lib/messaging/media/voice-transcode";
 import { openSharedContactConversation } from "@/lib/messaging/open-shared-contact-conversation";
@@ -213,7 +214,10 @@ export async function mandarRecadoDeVoz(
 
   const { data: orgRow } = await db.from("organizations").select("settings").eq("id", org.orgId).maybeSingle();
   const velocidade = lerVozSpeed(orgRow?.settings);
-  const a = await gerarAudio(cfg.voiceId, comAvisoIA(corpo), velocidade);
+  // Fora de campanha (padrão): áudio LIMPO + aviso de IA em TEXTO. Em modo campanha
+  // (voz_rotulo_no_audio=true): aviso FALADO dentro do áudio (TSE 23.755/2026).
+  const rotuloNoAudio = lerRotuloNoAudio(orgRow?.settings);
+  const a = await gerarAudio(cfg.voiceId, comAvisoIA(corpo, rotuloNoAudio), velocidade);
   if (!a.ok) return { ok: false, erro: "Falha ao gerar o áudio.", status: "falha" };
   const ogg = await mp3ParaNotaDeVoz(Buffer.from(a.audio));
   if (!ogg) return { ok: false, erro: "Falha ao preparar o áudio.", status: "falha" };
@@ -221,6 +225,17 @@ export async function mandarRecadoDeVoz(
   const waPath = `${org.orgId}/${conversationId}/recado-voz-${Date.now()}.ogg`;
   const up = await admin.storage.from("whatsapp-media").upload(waPath, ogg.buffer, { contentType: VOICE_MIME, upsert: true });
   if (up.error) return { ok: false, erro: "Falha ao salvar o áudio.", status: "falha" };
+
+  // Aviso de IA em texto (precede o áudio) quando não vai falado — best-effort.
+  if (!rotuloNoAudio) {
+    try {
+      await sendMessageHandler(
+        db,
+        { organization_id: org.orgId, actor: { type: "user", id: user.id }, requestId: randomUUID(), idioma: user.idioma },
+        { conversation_id: conversationId, type: "text", body: AVISO_IA_TEXTO },
+      );
+    } catch { /* o rótulo-texto é best-effort; o áudio é o que importa */ }
+  }
 
   const input: SendMessageInput = {
     conversation_id: conversationId,

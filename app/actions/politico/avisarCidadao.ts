@@ -23,8 +23,8 @@ import { ApiError } from "@/lib/api/types";
 import { avisoDeResolucaoLigado } from "@/lib/politico/aviso-de-resolucao";
 import { lerVozConfig, vozArmada } from "@/lib/voz/config";
 import { gerarAudio } from "@/lib/voz/elevenlabs";
-import { lerVozSpeed } from "@/lib/voz/velocidade";
-import { scriptRecado, type MomentoVoz } from "@/lib/voz/recado";
+import { lerVozSpeed, lerRotuloNoAudio } from "@/lib/voz/velocidade";
+import { scriptRecado, AVISO_IA_TEXTO, type MomentoVoz } from "@/lib/voz/recado";
 import { lerIdentidadeDoMandato } from "@/lib/politico/identidade-do-mandato";
 import { dentroDoBlackout } from "@/lib/voz/blackout";
 import { mp3ParaNotaDeVoz, VOICE_MIME } from "@/lib/messaging/media/voice-transcode";
@@ -279,9 +279,11 @@ async function enviarRecadoDeVoz(args: {
 
     const { data: orgRow } = await db.from("organizations").select("settings").eq("id", orgId).maybeSingle();
     const velocidade = lerVozSpeed(orgRow?.settings);
+    // Fora de campanha (padrão): áudio limpo + aviso de IA em texto. Campanha: falado.
+    const rotuloNoAudio = lerRotuloNoAudio(orgRow?.settings);
 
     const idMandato = await lerIdentidadeDoMandato(db, orgId);
-    const texto = scriptRecado({ momento, primeiroNome: primeiroNome || null, nomeParlamentar: idMandato.nomeParlamentar });
+    const texto = scriptRecado({ momento, primeiroNome: primeiroNome || null, nomeParlamentar: idMandato.nomeParlamentar, incluirAvisoIA: rotuloNoAudio });
     const r = await gerarAudio(cfg.voiceId, texto, velocidade);
     if (!r.ok) return "falha";
 
@@ -293,6 +295,16 @@ async function enviarRecadoDeVoz(args: {
       .from("whatsapp-media")
       .upload(waPath, ogg.buffer, { contentType: VOICE_MIME, upsert: true });
     if (up.error) return "falha";
+
+    if (!rotuloNoAudio) {
+      try {
+        await sendMessageHandler(
+          db,
+          { organization_id: orgId, actor: { type: "user", id: userId }, requestId: randomUUID(), idioma },
+          { conversation_id: conversationId, type: "text", body: AVISO_IA_TEXTO },
+        );
+      } catch { /* rótulo-texto best-effort; o áudio é o que importa */ }
+    }
 
     const input: SendMessageInput = {
       conversation_id: conversationId,

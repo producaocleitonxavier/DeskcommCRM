@@ -43,3 +43,19 @@ export function lerVozSpeed(settings: unknown): number {
   if (raw === undefined || raw === null) return VOZ_SPEED_PADRAO;
   return clampVozSpeed(raw);
 }
+
+export const CHAVE_VOZ_ROTULO_NO_AUDIO = "voz_rotulo_no_audio";
+
+/**
+ * O aviso de IA vai DENTRO do áudio (falado)? Padrão = FALSE: fora de período
+ * eleitoral (decisão 31/out) o áudio sai limpo e o aviso de IA vai numa mensagem
+ * de TEXTO curta junto. Em MODO CAMPANHA (TSE 23.755/2026 exige o aviso no
+ * próprio áudio), ligar isto (settings.gabinete.voz_rotulo_no_audio = true).
+ * Mesma gaveta jsonb da velocidade — sem migration.
+ */
+export function lerRotuloNoAudio(settings: unknown): boolean {
+  if (!settings || typeof settings !== "object") return false;
+  const gab = (settings as Record<string, unknown>)[CHAVE_GABINETE];
+  if (!gab || typeof gab !== "object") return false;
+  return (gab as Record<string, unknown>)[CHAVE_VOZ_ROTULO_NO_AUDIO] === true;
+}

@@ -16,6 +16,12 @@ export type MomentoVoz = "resolucao" | "encaminhamento";
 export const AVISO_IA_FALADO =
   "Ah, este áudio foi gerado com apoio de inteligência artificial, com a minha voz e a minha autorização.";
 
+/** Aviso de IA em TEXTO (quando o áudio sai LIMPO, fora de período eleitoral):
+ * uma mensagem curta acompanha a nota de voz dizendo que ela foi criada com IA.
+ * Transparência sem poluir o áudio. Em modo campanha, usa-se o AVISO_IA_FALADO. */
+export const AVISO_IA_TEXTO =
+  "🔊 Mensagem de voz criada com inteligência artificial, com a voz autorizada do mandato.";
+
 /** Acrescenta o aviso de IA falado ao fim de um texto livre (recado avulso).
  * Guardrail TSE 23.755/2026 — centralizado pra viajar junto do componente. */
 export function comAvisoIA(texto: string, incluir = true): string {
