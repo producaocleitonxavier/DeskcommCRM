@@ -22,14 +22,17 @@ type ThemeContextValue = {
 const ThemeContext = React.createContext<ThemeContextValue | null>(null);
 
 function readStoredTheme(): Theme {
-  if (typeof window === "undefined") return "system";
+  // Padrão do PRODUTO = ESCURO (marca premium escura+dourada). Quem quiser claro
+  // ou "acompanhar o sistema" escolhe no menu e fica gravado. Sem preferência
+  // salva, o sistema abre no escuro.
+  if (typeof window === "undefined") return "dark";
   try {
     const v = window.localStorage.getItem(STORAGE_KEY);
     if (v === "light" || v === "dark" || v === "system") return v;
   } catch {
     // localStorage indisponível (modo privado, sandbox) — segue com default.
   }
-  return "system";
+  return "dark";
 }
 
 function getSystemTheme(): ResolvedTheme {
@@ -78,7 +81,9 @@ function getTemaSnapshot(): Theme {
   return temaEmCache;
 }
 function getTemaSnapshotDoServidor(): Theme {
-  return "system";
+  // Igual ao default do cliente (ESCURO) — é o valor que a hidratação compara dos
+  // dois lados, então mantê-los idênticos é o que evita o aviso de mismatch.
+  return "dark";
 }
 function inscreverEmTema(ouvinte: Ouvinte): () => void {
   ouvintesDeTema.add(ouvinte);

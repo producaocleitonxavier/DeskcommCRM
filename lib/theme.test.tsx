@@ -118,16 +118,17 @@ describe("o tema não diverge entre o SSR e a primeira renderização do cliente
     const doServidor = renderizarComoServidor();
     const doCliente = renderizarComoPrimeiraPassadaDoCliente();
 
-    // Os dois precisam dizer "system" — é o valor que `readStoredTheme()`
-    // devolve sem `window`, e é o que a hidratação tem de bater ANTES do
-    // efeito que sincroniza com o localStorage rodar.
-    expect(doServidor).toContain("Tema: system");
+    // Os dois precisam dizer "dark" — é o DEFAULT do produto que
+    // `getTemaSnapshotDoServidor()`/`readStoredTheme()` devolvem sem preferência
+    // efetiva, e é o que a hidratação tem de bater ANTES do efeito que
+    // sincroniza com o localStorage rodar.
+    expect(doServidor).toContain("Tema: dark");
     expect(
       doCliente,
       "A primeira renderização do cliente leu o localStorage direto no " +
-        "inicializador do useState, produzindo 'Tema: dark' — diferente do " +
-        "que o servidor mandou ('Tema: system'). É o hydration mismatch.",
-    ).toContain("Tema: system");
+        "inicializador do useState — diferente do default que o servidor " +
+        "mandou ('Tema: dark'). É o hydration mismatch.",
+    ).toContain("Tema: dark");
     expect(doCliente).toBe(doServidor);
   });
 
