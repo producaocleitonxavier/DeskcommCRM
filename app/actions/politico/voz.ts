@@ -33,12 +33,12 @@ import { openSharedContactConversation } from "@/lib/messaging/open-shared-conta
 import { sendMessageHandler } from "@/app/api/v1/messages/_handler";
 import type { SendMessageInput } from "@/lib/schemas";
 
-async function adminDaOrg() {
+async function gerenteDaOrg() {
   const user = await requireAuth();
   const org = await resolveActiveOrg(user);
   if (!org) return { erro: "Sessão inválida." as const };
-  if (ROLE_RANK[org.role as Role] < ROLE_RANK.admin) {
-    return { erro: "Apenas administradores configuram a Voz do Mandato." as const };
+  if (ROLE_RANK[org.role as Role] < ROLE_RANK.manager) {
+    return { erro: "Requer Gerente ou Administrador (Assessoria técnica) para operar a Voz do Mandato." as const };
   }
   return { org, user };
 }
@@ -46,7 +46,7 @@ async function adminDaOrg() {
 export async function clonarVozDoMandato(
   form: FormData,
 ): Promise<{ ok: boolean; erro?: string }> {
-  const ctx = await adminDaOrg();
+  const ctx = await gerenteDaOrg();
   if ("erro" in ctx) return { ok: false, erro: ctx.erro };
 
   const consentiu = form.get("consentimento") === "on" || form.get("consentimento") === "true";
@@ -98,7 +98,7 @@ export async function clonarVozDoMandato(
 }
 
 export async function alternarVozAtiva(ativo: boolean): Promise<{ ok: boolean; erro?: string }> {
-  const ctx = await adminDaOrg();
+  const ctx = await gerenteDaOrg();
   if ("erro" in ctx) return { ok: false, erro: ctx.erro };
 
   const db = await createClient();
@@ -121,7 +121,7 @@ export async function gerarPreviaVoz(
   texto: string,
   speed?: number,
 ): Promise<{ ok: boolean; audioDataUrl?: string; erro?: string }> {
-  const ctx = await adminDaOrg();
+  const ctx = await gerenteDaOrg();
   if ("erro" in ctx) return { ok: false, erro: ctx.erro };
 
   const db = await createClient();
@@ -145,7 +145,7 @@ export async function gerarPreviaVoz(
 /** Salva a velocidade preferida da voz (vale pra prévia e pros envios).
  * Mescla em `organizations.settings.gabinete.voz_speed` sem pisar no resto. */
 export async function definirVozSpeed(speed: number): Promise<{ ok: boolean; erro?: string }> {
-  const ctx = await adminDaOrg();
+  const ctx = await gerenteDaOrg();
   if ("erro" in ctx) return { ok: false, erro: ctx.erro };
   const db = await createClient();
 
@@ -161,7 +161,7 @@ export async function definirVozSpeed(speed: number): Promise<{ ok: boolean; err
 
 /** Lido pela tela (status atual). */
 export async function lerStatusVoz() {
-  const ctx = await adminDaOrg();
+  const ctx = await gerenteDaOrg();
   if ("erro" in ctx) return { erro: ctx.erro };
   const db = await createClient();
   const cfg = await lerVozConfig(db, ctx.org.orgId);

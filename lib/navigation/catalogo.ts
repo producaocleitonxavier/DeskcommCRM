@@ -244,14 +244,15 @@ export const NAV_CATALOG = [
   },
   {
     // Voz do Mandato: clone da voz do próprio político (com consentimento TSE)
-    // para recados pessoais em áudio. É admin-only (a tela já redireciona quem
-    // não é), por isso `minRole: "admin"` — some do menu para os demais papéis.
+    // para recados pessoais em áudio. Acesso Gerente+ (Assessoria técnica) — é
+    // quem opera a ferramenta no dia a dia; a trava da tela e das actions também
+    // é manager. A blindagem eleitoral (consentimento + guardrail) segue intacta.
     href: "/app/politico/voz",
     label: "Voz do Mandato",
     description: "Clone da sua voz para mandar recados em áudio, com as travas da lei eleitoral.",
     icon: "Microphone",
     group: "atendimento",
-    minRole: "admin",
+    minRole: "manager",
     sidebar: true,
   },
 

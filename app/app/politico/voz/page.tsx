@@ -3,7 +3,8 @@
  *
  * Setup do clone de voz do próprio político (ElevenLabs): grava/sobe a amostra,
  * assina o consentimento, ouve a prévia e liga/desliga. DORMENTE por padrão.
- * No menu em Atendimento (minRole admin). Acesso: admin.
+ * No menu em Atendimento. Acesso: Gerente+ (Assessoria técnica) — é quem opera a
+ * ferramenta no dia a dia. A blindagem eleitoral (consentimento + guardrail) segue.
  */
 
 import { redirect } from "next/navigation";
@@ -22,7 +23,7 @@ export default async function VozPage() {
   const user = await requireAuth();
   const org = await resolveActiveOrg(user);
   if (!org) redirect("/app/onboarding");
-  if (ROLE_RANK[org.role as Role] < ROLE_RANK.admin) redirect("/app/politico");
+  if (ROLE_RANK[org.role as Role] < ROLE_RANK.manager) redirect("/app/politico");
 
   const db = await createClient();
   const cfg = await lerVozConfig(db, org.orgId);
