@@ -181,17 +181,21 @@ export async function atualizarMencoes(): Promise<{ ok: boolean; novas: number; 
   // Instagram: importa comentários já recebidos (vazio até conectar o IG).
   const igLinhas = await importarComentariosIg(db, org.orgId, cfg);
 
-  // Monta as buscas: nome do candidato; cada tema combinado com a cidade.
+  // Monta as buscas: nome do candidato; cada tema combinado com a cidade; e
+  // FONTES LOCAIS por bairro (hiperlocal) — a notícia de bairro que a busca ampla
+  // não traz, essencial pro mandato regional. Nome e temas vêm primeiro (prioridade).
   const buscas: { q: string; termo: string }[] = [];
   for (const nome of cfg.termosNome) buscas.push({ q: `"${nome}"`, termo: nome });
   if (cfg.cidade) {
     for (const tema of cfg.temas) buscas.push({ q: `${tema} ${cfg.cidade}`, termo: tema });
     if (cfg.temas.length === 0) buscas.push({ q: cfg.cidade, termo: cfg.cidade });
+    // Bairro + cidade: capta dor/entrega hiperlocal (obra, violência, enchente no bairro X).
+    for (const bairro of cfg.bairros.slice(0, 6)) buscas.push({ q: `"${bairro}" ${cfg.cidade}`, termo: bairro });
   }
   if (buscas.length === 0) return { ok: false, novas: 0, erro: "Nada para buscar." };
 
-  // Busca RSS (em paralelo, cap de 8 buscas por atualização).
-  const lotes = await Promise.all(buscas.slice(0, 8).map((b) => buscarNoticias(b.q).then((itens) => itens.map((i) => ({ ...i, termo: b.termo })))));
+  // Busca RSS (em paralelo, cap de 14 buscas por atualização — cobre nome+temas+bairros).
+  const lotes = await Promise.all(buscas.slice(0, 14).map((b) => buscarNoticias(b.q).then((itens) => itens.map((i) => ({ ...i, termo: b.termo })))));
   const itens = lotes.flat();
 
   // Dedupe contra o que já existe (urls recentes da org).
