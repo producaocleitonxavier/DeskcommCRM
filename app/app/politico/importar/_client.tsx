@@ -14,9 +14,10 @@ import {
 
 import { CommandHero } from "@/components/politico/command-hero";
 import {
-  previewImportacao, importarContatos,
+  previewImportacao, importarContatos, contarImportados, excluirImportados,
   type PreviewOk, type RelatorioImport,
 } from "@/app/actions/politico/importarContatos";
+import { Trash2 } from "lucide-react";
 import { exportarContatos } from "@/app/actions/politico/exportarContatos";
 import { CAMPOS_NA_ORDEM, ROTULO_CAMPO, type CampoPolitico } from "@/lib/politico/importar-mapeamento";
 
@@ -29,6 +30,7 @@ export default function ImportarClient() {
   const [mapa, setMapa] = useState<Record<CampoPolitico, number | null>>({} as Record<CampoPolitico, number | null>);
   const [relatorio, setRelatorio] = useState<RelatorioImport | null>(null);
   const [erro, setErro] = useState<string | null>(null);
+  const [aviso, setAviso] = useState<string | null>(null);
   const [ocupado, start] = useTransition();
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -73,6 +75,20 @@ export default function ImportarClient() {
     });
   }
 
+  function limparImportados() {
+    setErro(null); setAviso(null);
+    start(async () => {
+      const c = await contarImportados();
+      if (!c.ok) { setErro(c.erro); return; }
+      if (c.total === 0) { setAviso("Não há contatos importados por planilha pra excluir."); return; }
+      if (!window.confirm(`Excluir ${c.total} contato(s) que entraram por planilha? Isso NÃO pode ser desfeito.`)) return;
+      const r = await excluirImportados();
+      if (!r.ok) { setErro(r.erro); return; }
+      setAviso(`✅ ${r.excluidos} contato(s) importado(s) excluído(s). Pode reimportar.`);
+      recomecar();
+    });
+  }
+
   function recomecar() {
     setEtapa("upload"); setArquivo(null); setPreview(null); setRelatorio(null); setErro(null);
     setMapa({} as Record<CampoPolitico, number | null>);
@@ -102,6 +118,11 @@ export default function ImportarClient() {
       {erro && (
         <div className="wr-card flex items-center gap-2 p-3 text-sm" style={{ borderColor: "rgba(248,113,113,0.5)", color: "#F87171" }}>
           <AlertTriangle size={16} /> {erro}
+        </div>
+      )}
+      {aviso && (
+        <div className="wr-card flex items-center gap-2 p-3 text-sm" style={{ borderColor: "rgba(92,127,35,0.5)", color: "#8AA62E" }}>
+          <CheckCircle2 size={16} /> {aviso}
         </div>
       )}
 
@@ -241,6 +262,21 @@ export default function ImportarClient() {
           </div>
         </div>
       )}
+
+      {/* Limpar importados — pra testar à vontade (importar → desfazer → reimportar). */}
+      <div className="wr-card flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between" style={{ border: "1px solid rgba(163,48,42,0.25)" }}>
+        <div>
+          <p className="text-sm font-bold" style={{ color: "var(--color-text)" }}>Limpar contatos importados</p>
+          <p className="text-[12px]" style={{ color: "var(--color-text-subtle)" }}>
+            Exclui apenas os contatos que entraram por planilha (não toca no resto). Útil pra refazer um teste.
+          </p>
+        </div>
+        <button type="button" onClick={limparImportados} disabled={ocupado}
+          className="inline-flex shrink-0 items-center gap-1.5 rounded-full px-4 py-2 text-sm font-semibold disabled:opacity-60"
+          style={{ border: "1px solid rgba(163,48,42,0.5)", color: "#E08079" }}>
+          <Trash2 size={15} /> Excluir importados
+        </button>
+      </div>
     </div>
   );
 }

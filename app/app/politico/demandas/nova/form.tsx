@@ -72,6 +72,8 @@ export default function NovaDemandaForm({ assessores }: NovaDemandaFormProps) {
   const [novoNome, setNovoNome] = useState("");
   const [novoFone, setNovoFone] = useState("");
   const [novoEndereco, setNovoEndereco] = useState("");
+  const [novoBairro, setNovoBairro] = useState("");
+  const [novoCidade, setNovoCidade] = useState("");
   const [novoNascimento, setNovoNascimento] = useState("");
   const [criandoCidadao, setCriandoCidadao] = useState(false);
 
@@ -127,7 +129,10 @@ export default function NovaDemandaForm({ assessores }: NovaDemandaFormProps) {
     if (!novoFone.trim()) return setErro("Informe o WhatsApp do cidadão — é por onde o gabinete dá retorno.");
     if (!novoEndereco.trim()) return setErro("Informe o endereço do cidadão (rua, número e bairro).");
     setCriandoCidadao(true);
-    const res = await criarCidadao(novoNome, novoFone || undefined, novoEndereco || undefined, novoNascimento || undefined);
+    const res = await criarCidadao(
+      novoNome, novoFone || undefined, novoEndereco || undefined, novoNascimento || undefined,
+      novoBairro || undefined, novoCidade || undefined,
+    );
     // Solicitante novo entra na nossa base (funil) como novo_cadastro — pronto pra nutrir.
     if (res.ok && res.id) await garantirLeadNovoCadastro(res.id);
     setCriandoCidadao(false);
@@ -250,7 +255,17 @@ export default function NovaDemandaForm({ assessores }: NovaDemandaFormProps) {
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                 <div>
                   <Label obrig>Endereço</Label>
-                  <input type="text" value={novoEndereco} onChange={(e) => setNovoEndereco(e.target.value)} placeholder="Rua, número, bairro" className="wr-input w-full" />
+                  <input type="text" value={novoEndereco} onChange={(e) => setNovoEndereco(e.target.value)} placeholder="Rua e número" className="wr-input w-full" />
+                </div>
+                <div>
+                  <Label>Bairro</Label>
+                  <input type="text" value={novoBairro} onChange={(e) => setNovoBairro(e.target.value)} placeholder="Ex.: Esplanada" className="wr-input w-full" />
+                </div>
+              </div>
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                <div>
+                  <Label>Cidade</Label>
+                  <input type="text" value={novoCidade} onChange={(e) => setNovoCidade(e.target.value)} placeholder="Ex.: Belo Horizonte" className="wr-input w-full" />
                 </div>
                 <div>
                   <Label>Data de nascimento</Label>

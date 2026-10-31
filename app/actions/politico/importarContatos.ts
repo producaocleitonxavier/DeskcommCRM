@@ -103,6 +103,7 @@ export async function importarContatos(formData: FormData): Promise<ResultadoImp
   // Índices já mapeados pra algum campo → o resto vira "extra" (nada se perde).
   const mapeados = new Set(Object.values(mapa).filter((v): v is number => typeof v === "number"));
 
+  const lote = Date.now().toString(36); // carimbo deste lote (pra rastrear/desfazer)
   let importados = 0;
   let duplicados = 0;
   const erros: { linha: number; motivo: string }[] = [];
@@ -180,7 +181,7 @@ export async function importarContatos(formData: FormData): Promise<ResultadoImp
       birthdate: nascimento,
       tags,
       source: "importacao_planilha",
-      source_metadata: { importado_em: new Date().toISOString() },
+      source_metadata: { importado_em: new Date().toISOString(), lote },
       consent: {},
       custom_fields: custom,
     };
@@ -219,4 +220,57 @@ export async function importarContatos(formData: FormData): Promise<ResultadoImp
   try { await admin.rpc("pol_carimbar_zonas_leads", { p_org: orgId }); } catch { /* best-effort */ }
 
   return { ok: true, totalLinhas: rows.length, importados, duplicados, erros: erros.slice(0, 50) };
+}
+
+/** Quantos contatos vieram por planilha (pra confirmar antes de excluir). */
+export async function contarImportados(): Promise<{ ok: true; total: number } | { ok: false; erro: string }> {
+  const user = await requireAuth();
+  const org = await resolveActiveOrg(user);
+  if (!org) return { ok: false, erro: "Sessão inválida." };
+  if (ROLE_RANK[org.role] < ROLE_RANK.agent) return { ok: false, erro: "Sem permissão." };
+  const admin = createAdminClient();
+  const { count, error } = await admin
+    .from("contacts")
+    .select("id", { count: "exact", head: true })
+    .eq("organization_id", org.orgId)
+    .eq("source", "importacao_planilha");
+  if (error) return { ok: false, erro: error.message };
+  return { ok: true, total: count ?? 0 };
+}
+
+/**
+ * Exclui os contatos que ENTRARAM POR PLANILHA (source = importacao_planilha) +
+ * seus vínculos eleitorais. Serve pra limpar e reimportar durante os testes.
+ * Requer Gerente/Admin (é destrutivo). Não toca em contatos de outra origem.
+ */
+export async function excluirImportados(): Promise<{ ok: true; excluidos: number } | { ok: false; erro: string }> {
+  const user = await requireAuth();
+  const org = await resolveActiveOrg(user);
+  if (!org) return { ok: false, erro: "Sessão inválida." };
+  if (ROLE_RANK[org.role] < ROLE_RANK.manager) return { ok: false, erro: "Sem permissão (requer Gerente ou Administrador)." };
+  const admin = createAdminClient();
+  const orgId = org.orgId;
+
+  const ids: string[] = [];
+  for (let de = 0; de < 100_000; de += 1000) {
+    const { data, error } = await admin
+      .from("contacts").select("id")
+      .eq("organization_id", orgId).eq("source", "importacao_planilha")
+      .range(de, de + 999);
+    if (error) return { ok: false, erro: error.message };
+    const rows = (data ?? []) as { id: string }[];
+    ids.push(...rows.map((r) => r.id));
+    if (rows.length < 1000) break;
+  }
+  if (!ids.length) return { ok: true, excluidos: 0 };
+
+  let excluidos = 0;
+  for (let i = 0; i < ids.length; i += 300) {
+    const chunk = ids.slice(i, i + 300);
+    await admin.from("pol_leads").delete().eq("organization_id", orgId).in("contact_id", chunk);
+    const { error } = await admin.from("contacts").delete().eq("organization_id", orgId).in("id", chunk);
+    if (error) return { ok: false, erro: `Apaguei ${excluidos}, mas parei: ${error.message}` };
+    excluidos += chunk.length;
+  }
+  return { ok: true, excluidos };
 }
