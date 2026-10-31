@@ -180,7 +180,7 @@ export default function OpiniaoPublicaClient({ config, resumo, mencoes }: { conf
             <div className="mb-4 flex items-center justify-between">
               <h2 className="text-sm font-bold" style={{ color: "var(--color-text)" }}>Pulso da cobertura</h2>
               <div className="flex items-center gap-3 text-[11px]" style={{ color: "var(--color-text-subtle)" }}>
-                <Leg cor="#D7F36A" t="cobertura" /><Leg cor={SENT.positivo.cor} t="positivo" /><Leg cor={SENT.negativo.cor} t="negativo" />
+                <Leg cor="#D7F36A" t="volume" linha /><Leg cor={SENT.positivo.cor} t="dia positivo" /><Leg cor={SENT.negativo.cor} t="dia negativo" />
               </div>
             </div>
             <PulsoArea dados={resumo.porDia} />
@@ -275,8 +275,15 @@ function Campo({ label, hint, children }: { label: string; hint?: string; childr
     </label>
   );
 }
-function Leg({ cor, t }: { cor: string; t: string }) {
-  return <span className="inline-flex items-center gap-1"><span className="inline-block h-2 w-2 rounded-full" style={{ background: cor }} aria-hidden />{t}</span>;
+function Leg({ cor, t, linha }: { cor: string; t: string; linha?: boolean }) {
+  return (
+    <span className="inline-flex items-center gap-1.5">
+      {linha
+        ? <span className="inline-block" style={{ width: 16, height: 2.5, borderRadius: 2, background: cor, boxShadow: `0 0 6px ${cor}` }} aria-hidden />
+        : <span className="inline-block h-2 w-2 rounded-full" style={{ background: cor }} aria-hidden />}
+      {t}
+    </span>
+  );
 }
 function StatSent({ tipo, n, total, icone }: { tipo: keyof typeof SENT; n: number; total: number; icone: React.ReactNode }) {
   const s = SENT[tipo];
@@ -311,6 +318,7 @@ function smoothPath(pts: [number, number][]): string {
  * positivo, vermelho = mais negativo, cinza = neutro). Bater o olho e entender.
  */
 function PulsoArea({ dados }: { dados: { dia: string; total: number; pos: number; neg: number }[] }) {
+  const [hover, setHover] = useState<number | null>(null);
   if (dados.length === 0) return <p className="text-xs" style={{ color: "var(--color-text-subtle)" }}>Sem série ainda.</p>;
   const W = 720, H = 150, padX = 12, padTop = 16, padBot = 26;
   const max = Math.max(...dados.map((d) => d.total), 1);
@@ -322,31 +330,58 @@ function PulsoArea({ dados }: { dados: { dia: string; total: number; pos: number
   const area = `${linha} L ${X(n - 1)} ${H - padBot} L ${X(0)} ${H - padBot} Z`;
   const corDia = (d: { pos: number; neg: number }) => (d.pos > d.neg ? SENT.positivo.cor : d.neg > d.pos ? SENT.negativo.cor : SENT.neutro.cor);
   const passo = Math.max(1, Math.ceil(n / 7));
+  function onMove(e: { currentTarget: SVGSVGElement; clientX: number }) {
+    const rect = e.currentTarget.getBoundingClientRect();
+    if (rect.width === 0) return;
+    const vx = ((e.clientX - rect.left) / rect.width) * W;
+    let best = 0, bd = Infinity;
+    for (let i = 0; i < n; i++) { const dx = Math.abs(X(i) - vx); if (dx < bd) { bd = dx; best = i; } }
+    setHover(best);
+  }
+  const hd = hover != null ? dados[hover] : null;
   return (
-    <svg viewBox={`0 0 ${W} ${H}`} width="100%" height={H} preserveAspectRatio="none" role="img" aria-label="Pulso da cobertura por dia">
-      <defs>
-        <linearGradient id="pulsoFill" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor="rgba(215,243,106,0.32)" />
-          <stop offset="100%" stopColor="rgba(215,243,106,0)" />
-        </linearGradient>
-        <filter id="pulsoGlow" x="-10%" y="-60%" width="120%" height="220%">
-          <feGaussianBlur stdDeviation="3.2" result="b" />
-          <feMerge><feMergeNode in="b" /><feMergeNode in="SourceGraphic" /></feMerge>
-        </filter>
-      </defs>
-      <path d={area} fill="url(#pulsoFill)" />
-      <path d={linha} fill="none" stroke="#D7F36A" strokeWidth={2.5} strokeLinecap="round" filter="url(#pulsoGlow)" />
-      {dados.map((d, i) => (
-        <g key={d.dia}>
-          <circle cx={X(i)} cy={Y(d.total)} r={3.5} fill={corDia(d)} stroke="#0C0E13" strokeWidth={1.5}>
-            <title>{`${d.dia.slice(8, 10)}/${d.dia.slice(5, 7)}: ${d.total} menções (${d.pos}+ / ${d.neg}−)`}</title>
-          </circle>
-          {i % passo === 0 && (
-            <text x={X(i)} y={H - 8} fontSize="9" fill="var(--color-text-subtle)" textAnchor="middle">{d.dia.slice(8, 10)}/{d.dia.slice(5, 7)}</text>
-          )}
-        </g>
-      ))}
-    </svg>
+    <div style={{ position: "relative" }}>
+      <svg viewBox={`0 0 ${W} ${H}`} width="100%" height={H} preserveAspectRatio="none" role="img" aria-label="Pulso da cobertura por dia" onMouseMove={onMove} onMouseLeave={() => setHover(null)} style={{ cursor: "crosshair", display: "block" }}>
+        <defs>
+          <linearGradient id="pulsoFill" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor="rgba(215,243,106,0.32)" />
+            <stop offset="100%" stopColor="rgba(215,243,106,0)" />
+          </linearGradient>
+          <filter id="pulsoGlow" x="-10%" y="-60%" width="120%" height="220%">
+            <feGaussianBlur stdDeviation="3.2" result="b" />
+            <feMerge><feMergeNode in="b" /><feMergeNode in="SourceGraphic" /></feMerge>
+          </filter>
+        </defs>
+        <path d={area} fill="url(#pulsoFill)" />
+        <path d={linha} fill="none" stroke="#D7F36A" strokeWidth={2.5} strokeLinecap="round" filter="url(#pulsoGlow)" />
+        {hover != null && (
+          <line x1={X(hover)} y1={padTop - 8} x2={X(hover)} y2={H - padBot} stroke="rgba(215,243,106,0.4)" strokeWidth={1} strokeDasharray="3 3" />
+        )}
+        {dados.map((d, i) => (
+          <g key={d.dia}>
+            <circle cx={X(i)} cy={Y(d.total)} r={hover === i ? 5.5 : 3.5} fill={corDia(d)} stroke="#0C0E13" strokeWidth={1.5} style={{ transition: "r .1s ease" }} />
+            {i % passo === 0 && (
+              <text x={X(i)} y={H - 8} fontSize="9" fill="var(--color-text-subtle)" textAnchor="middle">{d.dia.slice(8, 10)}/{d.dia.slice(5, 7)}</text>
+            )}
+          </g>
+        ))}
+      </svg>
+      {hd && (
+        <div
+          style={{
+            position: "absolute", left: `${(X(hover!) / W) * 100}%`, top: Y(hd.total) - 12,
+            transform: "translate(-50%, -100%)", pointerEvents: "none", zIndex: 5,
+            background: "rgba(12,14,19,0.97)", border: "1px solid rgba(215,243,106,0.4)", borderRadius: 9,
+            padding: "6px 10px", whiteSpace: "nowrap", boxShadow: "0 10px 28px rgba(0,0,0,0.55)",
+          }}
+        >
+          <div style={{ fontSize: 11, fontWeight: 700, color: "#F4F6FA" }}>{hd.dia.slice(8, 10)}/{hd.dia.slice(5, 7)}</div>
+          <div style={{ fontSize: 10, color: "var(--color-text-muted)" }}>
+            {hd.total} menç. · <span style={{ color: SENT.positivo.cor }}>{hd.pos}+</span> <span style={{ color: SENT.negativo.cor }}>{hd.neg}−</span>
+          </div>
+        </div>
+      )}
+    </div>
   );
 }
 
