@@ -19,7 +19,7 @@ import {
 } from "lucide-react";
 
 import { CommandHero } from "@/components/politico/command-hero";
-import { salvarSetupDoMandato, adiarSetupDoMandato } from "@/app/actions/politico/salvarSetupDoMandato";
+import { salvarSetupDoMandato } from "@/app/actions/politico/salvarSetupDoMandato";
 
 type TipoMandato = "vereador" | "prefeito" | "dep_estadual" | "dep_federal";
 
@@ -106,12 +106,6 @@ export default function SetupWizard({ inicial }: { inicial: { nome: string; carg
     setConcluido(true);
   }
 
-  async function adiar() {
-    setSalvando(true);
-    await adiarSetupDoMandato();
-    router.push("/app/politico");
-  }
-
   if (concluido) {
     return (
       <div className="mx-auto max-w-[760px] px-4 py-7">
@@ -150,16 +144,16 @@ export default function SetupWizard({ inicial }: { inicial: { nome: string; carg
         subtitulo="Em poucos passos simples, deixamos o sistema pronto para o seu mandato. A sua equipe só preenche; a inteligência monta o resto."
       />
 
-      {/* Stepper */}
-      <div className="wr-card p-4 sm:p-5">
-        <div className="flex items-center gap-2 overflow-x-auto">
+      {/* Stepper — bolinhas e rótulos maiores (estavam pequenos no celular). */}
+      <div className="wr-card p-5">
+        <div className="flex items-center gap-2.5 overflow-x-auto">
           {PASSOS.map((p, i) => {
             const feito = i < passo;
             const atual = i === passo;
             return (
-              <div key={p} className="flex items-center gap-2 shrink-0">
+              <div key={p} className="flex items-center gap-2.5 shrink-0">
                 <span
-                  className="flex h-8 w-8 items-center justify-center rounded-full text-sm font-bold transition-colors"
+                  className="flex h-11 w-11 items-center justify-center rounded-full text-[17px] font-bold transition-colors"
                   style={
                     feito
                       ? { background: "#D7F36A", color: "#16181D" }
@@ -168,12 +162,12 @@ export default function SetupWizard({ inicial }: { inicial: { nome: string; carg
                         : { background: "var(--color-surface-elevated)", color: "var(--color-text-subtle)" }
                   }
                 >
-                  {feito ? <Check size={16} /> : i + 1}
+                  {feito ? <Check size={20} /> : i + 1}
                 </span>
-                <span className="text-[13px] font-medium whitespace-nowrap" style={{ color: atual ? "var(--color-text)" : "var(--color-text-subtle)" }}>
+                <span className="text-[15px] font-semibold whitespace-nowrap" style={{ color: atual ? "var(--color-text)" : "var(--color-text-subtle)" }}>
                   {p}
                 </span>
-                {i < ultimo && <span className="mx-1 h-px w-6" style={{ background: "var(--color-border)" }} />}
+                {i < ultimo && <span className="mx-1.5 h-px w-7" style={{ background: "var(--color-border)" }} />}
               </div>
             );
           })}
@@ -371,18 +365,6 @@ export default function SetupWizard({ inicial }: { inicial: { nome: string; carg
       {erro && (
         <p className="text-center text-sm font-medium" style={{ color: "#F87171" }}>{erro}</p>
       )}
-
-      <p className="text-center">
-        <button
-          type="button"
-          onClick={adiar}
-          disabled={salvando}
-          className="text-[12px] underline transition-opacity hover:opacity-80 disabled:opacity-50"
-          style={{ color: "var(--color-text-subtle)" }}
-        >
-          Fazer isso depois
-        </button>
-      </p>
     </div>
   );
 }

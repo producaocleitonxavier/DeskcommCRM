@@ -159,6 +159,10 @@ export function interfaceTemDestino(
 export function homeDaInterface(raw: unknown, platform: boolean, role: Role | null): string {
   const visible = destinosDaInterface(raw, platform, role);
   return (
+    // "Hoje" (central de comando, /app/politico) é a PRIMEIRA tela do produto
+    // político — é onde o mandato começa o dia e faz a configuração. Só cai no
+    // Inbox se "Hoje" não estiver visível (ex.: instalação comercial genérica).
+    visible.find((d) => d.href === "/app/politico")?.href ??
     visible.find((d) => d.href === "/app/inbox")?.href ??
     visible.find((d) => !essencial(d, role, platform))?.href ??
     "/app/settings/profile"
