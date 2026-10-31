@@ -9,6 +9,7 @@
  */
 
 import { generateText } from "ai";
+import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -168,38 +169,44 @@ async function importarComentariosIg(db: Awaited<ReturnType<typeof createClient>
 
 // ── Atualização (ingestão + classificação) ──────────────────────────────────
 
-export async function atualizarMencoes(): Promise<{ ok: boolean; novas: number; erro?: string }> {
-  const user = await requireAuth();
-  const org = await resolveActiveOrg(user);
-  if (!org) return { ok: false, novas: 0, erro: "Sessão inválida." };
-  const cfg = await obterConfigMonitor();
-  if (cfg.termosNome.length === 0 && !cfg.cidade && cfg.temas.length === 0) {
-    return { ok: false, novas: 0, erro: "Configure ao menos um termo (nome, cidade ou tema) antes de atualizar." };
-  }
-  const db = await createClient();
+/** Lê a config de monitoramento de uma org via admin (uso em cron, sem sessão). */
+export async function lerConfigMonitorAdmin(admin: SupabaseClient, orgId: string): Promise<MonitorConfig> {
+  const { data } = await admin.from("intel_monitor_config").select("*").eq("organization_id", orgId).maybeSingle();
+  const c = data as { termos_nome?: string[]; cidade?: string | null; bairros?: string[]; temas?: string[] } | null;
+  return { termosNome: c?.termos_nome ?? [], cidade: c?.cidade ?? null, bairros: c?.bairros ?? [], temas: c?.temas ?? [] };
+}
 
-  // Instagram: importa comentários já recebidos (vazio até conectar o IG).
-  const igLinhas = await importarComentariosIg(db, org.orgId, cfg);
+/** Orgs com monitoramento configurado — o cron semanal itera sobre elas. */
+export async function orgsComMonitor(admin: SupabaseClient): Promise<string[]> {
+  const { data } = await admin.from("intel_monitor_config").select("organization_id, termos_nome, cidade, temas").limit(5000);
+  const rows = (data ?? []) as { organization_id: string; termos_nome: string[] | null; cidade: string | null; temas: string[] | null }[];
+  return rows
+    .filter((r) => (r.termos_nome?.length ?? 0) > 0 || (r.cidade ?? "").trim().length > 0 || (r.temas?.length ?? 0) > 0)
+    .map((r) => r.organization_id);
+}
 
-  // Monta as buscas: nome do candidato; cada tema combinado com a cidade; e
-  // FONTES LOCAIS por bairro (hiperlocal) — a notícia de bairro que a busca ampla
-  // não traz, essencial pro mandato regional. Nome e temas vêm primeiro (prioridade).
+/**
+ * NÚCLEO da escuta por org (SEM sessão): ingestão (imprensa RSS + comentários IG)
+ * + classificação por IA + motor de sinais. Usado pela ação de sessão
+ * (atualizarMencoes) E pelo CRON semanal. Usa o admin client, filtrando sempre
+ * por organization_id. Mantém o cap de 14 buscas (nome + temas + bairros).
+ */
+export async function atualizarMencoesDaOrg(admin: SupabaseClient, orgId: string, cfg: MonitorConfig): Promise<{ novas: number }> {
+  const igLinhas = await importarComentariosIg(admin, orgId, cfg);
+
   const buscas: { q: string; termo: string }[] = [];
   for (const nome of cfg.termosNome) buscas.push({ q: `"${nome}"`, termo: nome });
   if (cfg.cidade) {
     for (const tema of cfg.temas) buscas.push({ q: `${tema} ${cfg.cidade}`, termo: tema });
     if (cfg.temas.length === 0) buscas.push({ q: cfg.cidade, termo: cfg.cidade });
-    // Bairro + cidade: capta dor/entrega hiperlocal (obra, violência, enchente no bairro X).
     for (const bairro of cfg.bairros.slice(0, 6)) buscas.push({ q: `"${bairro}" ${cfg.cidade}`, termo: bairro });
   }
-  if (buscas.length === 0) return { ok: false, novas: 0, erro: "Nada para buscar." };
+  if (buscas.length === 0 && igLinhas.length === 0) return { novas: 0 };
 
-  // Busca RSS (em paralelo, cap de 14 buscas por atualização — cobre nome+temas+bairros).
   const lotes = await Promise.all(buscas.slice(0, 14).map((b) => buscarNoticias(b.q).then((itens) => itens.map((i) => ({ ...i, termo: b.termo })))));
   const itens = lotes.flat();
 
-  // Dedupe contra o que já existe (urls recentes da org).
-  const { data: existentes } = await db.from("intel_mentions").select("url").eq("organization_id", org.orgId).order("created_at", { ascending: false }).limit(2000);
+  const { data: existentes } = await admin.from("intel_mentions").select("url").eq("organization_id", orgId).order("created_at", { ascending: false }).limit(2000);
   const urlsExistentes = new Set(((existentes ?? []) as { url: string | null }[]).map((r) => r.url).filter(Boolean));
 
   const bairrosLower = cfg.bairros.map((b) => b.toLowerCase());
@@ -210,39 +217,37 @@ export async function atualizarMencoes(): Promise<{ ok: boolean; novas: number; 
     vistosAgora.add(it.url);
     const tl = it.titulo.toLowerCase();
     const bairro = cfg.bairros.find((_, idx) => tl.includes(bairrosLower[idx]!)) ?? null;
-    novos.push({
-      organization_id: org.orgId,
-      canal: "imprensa",
-      fonte: it.fonte,
-      titulo: it.titulo,
-      url: it.url,
-      publicado_em: it.publicadoEm,
-      municipio: cfg.cidade,
-      bairro,
-      termo: it.termo,
-      processado: false,
-    });
+    novos.push({ organization_id: orgId, canal: "imprensa", fonte: it.fonte, titulo: it.titulo, url: it.url, publicado_em: it.publicadoEm, municipio: cfg.cidade, bairro, termo: it.termo, processado: false });
   }
   let linhasPress: { id: string; titulo: string }[] = [];
   if (novos.length > 0) {
-    const { data: inseridas } = await db.from("intel_mentions").insert(novos).select("id, titulo");
+    const { data: inseridas } = await admin.from("intel_mentions").insert(novos).select("id, titulo");
     linhasPress = (inseridas ?? []) as { id: string; titulo: string }[];
   }
 
   const todas = [...linhasPress, ...igLinhas];
-  if (todas.length === 0) return { ok: true, novas: 0 };
+  if (todas.length === 0) return { novas: 0 };
 
-  // Classifica sentimento/tópico via IA (imprensa + comentários do Instagram).
-  await classificar(org.orgId, todas.map((l) => ({ id: l.id, titulo: l.titulo })), cfg);
-
-  // Motor de sinais: a escuta vira Alertas + Decisão + sinais de Adversário.
-  await gerarSinaisDaOpiniao(db, org.orgId);
-  await gerarSinaisAdversarios(db, org.orgId);
-
-  return { ok: true, novas: todas.length };
+  await classificar(admin, orgId, todas.map((l) => ({ id: l.id, titulo: l.titulo })), cfg);
+  await gerarSinaisDaOpiniao(admin, orgId);
+  await gerarSinaisAdversarios(admin, orgId);
+  return { novas: todas.length };
 }
 
-async function classificar(orgId: string, itens: { id: string; titulo: string }[], cfg: MonitorConfig) {
+export async function atualizarMencoes(): Promise<{ ok: boolean; novas: number; erro?: string }> {
+  const user = await requireAuth();
+  const org = await resolveActiveOrg(user);
+  if (!org) return { ok: false, novas: 0, erro: "Sessão inválida." };
+  const admin = createAdminClient();
+  const cfg = await lerConfigMonitorAdmin(admin, org.orgId);
+  if (cfg.termosNome.length === 0 && !cfg.cidade && cfg.temas.length === 0) {
+    return { ok: false, novas: 0, erro: "Configure ao menos um termo (nome, cidade ou tema) antes de atualizar." };
+  }
+  const { novas } = await atualizarMencoesDaOrg(admin, org.orgId, cfg);
+  return { ok: true, novas };
+}
+
+async function classificar(admin: SupabaseClient, orgId: string, itens: { id: string; titulo: string }[], cfg: MonitorConfig) {
   if (itens.length === 0) return;
   const cerebro = await cerebroDaOrg(createAdminClient(), orgId);
   if ("erro" in cerebro) return; // sem IA: menções ficam sem sentimento (não bloqueia)
@@ -260,13 +265,12 @@ async function classificar(orgId: string, itens: { id: string; titulo: string }[
     const ini = text.indexOf("["); const fim = text.lastIndexOf("]");
     if (ini < 0 || fim <= ini) return;
     const arr = JSON.parse(text.slice(ini, fim + 1)) as { i: number; sentimento?: string; polaridade?: number; topico?: string }[];
-    const db = await createClient();
     for (const r of arr) {
       const it = itens[r.i];
       if (!it) continue;
       const sent = ["positivo", "neutro", "negativo"].includes(String(r.sentimento)) ? String(r.sentimento) : "neutro";
       const pol = typeof r.polaridade === "number" ? Math.max(-1, Math.min(1, r.polaridade)) : 0;
-      await db.from("intel_mentions").update({ sentimento: sent, polaridade: pol, topico: (r.topico ?? "").slice(0, 40) || null, processado: true }).eq("id", it.id).eq("organization_id", orgId);
+      await admin.from("intel_mentions").update({ sentimento: sent, polaridade: pol, topico: (r.topico ?? "").slice(0, 40) || null, processado: true }).eq("id", it.id).eq("organization_id", orgId);
     }
   } catch {
     /* classificação é best-effort */
@@ -278,14 +282,14 @@ export async function reavaliarSentimento(limite = 40): Promise<{ ok: boolean; n
   const user = await requireAuth();
   const org = await resolveActiveOrg(user);
   if (!org) return { ok: false, n: 0, erro: "Sessão inválida." };
-  const cfg = await obterConfigMonitor();
-  const db = await createClient();
-  const { data } = await db.from("intel_mentions").select("id, titulo").eq("organization_id", org.orgId).order("publicado_em", { ascending: false, nullsFirst: false }).limit(limite);
+  const admin = createAdminClient();
+  const cfg = await lerConfigMonitorAdmin(admin, org.orgId);
+  const { data } = await admin.from("intel_mentions").select("id, titulo").eq("organization_id", org.orgId).order("publicado_em", { ascending: false, nullsFirst: false }).limit(limite);
   const itens = ((data ?? []) as { id: string; titulo: string | null }[]).filter((r) => r.titulo).map((r) => ({ id: r.id, titulo: r.titulo as string }));
   if (itens.length === 0) return { ok: true, n: 0 };
-  await classificar(org.orgId, itens, cfg);
-  await gerarSinaisDaOpiniao(db, org.orgId);
-  await gerarSinaisAdversarios(db, org.orgId);
+  await classificar(admin, org.orgId, itens, cfg);
+  await gerarSinaisDaOpiniao(admin, org.orgId);
+  await gerarSinaisAdversarios(admin, org.orgId);
   return { ok: true, n: itens.length };
 }
 

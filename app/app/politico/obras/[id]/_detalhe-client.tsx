@@ -65,7 +65,7 @@ export default function ObraDetalhe({ data }: { data: ObraDetalheData }) {
   const [vistorias, setVistorias] = useState<VistoriaObra[]>(data.vistorias);
   const [fotos, setFotos] = useState<FotoObra[]>(data.fotos);
   const [salvando, setSalvando] = useState(false);
-  const st = STATUS[obra.status] ?? STATUS.planejada;
+  const st = STATUS[obra.status] ?? STATUS.planejada!;
 
   async function mudarStatus(para: string) {
     setSalvando(true);
@@ -251,7 +251,7 @@ function DadosCard({ obra, emendas, onSalvar }: { obra: Obra; emendas: ObraDetal
     setSalv(true);
     const patch: Record<string, unknown> = {
       objeto: f.objeto || null, orgao_responsavel: f.orgao_responsavel || null, empresa_nome: f.empresa_nome || null, empresa_cnpj: f.empresa_cnpj || null,
-      numero_referencia: f.numero_referencia || null, valor_cents: reaisParaCents(f.valor),
+      numero_referencia: f.numero_referencia || null, valor_cents: reaisParaCents(f.valor ?? ""),
       fonte_recurso: f.fonte_recurso || null, emenda_id: f.emenda_id || null, data_prevista: f.data_prevista || null,
       responsavel_interno: f.responsavel_interno || null, observacoes: f.observacoes || null,
       visibilidade: f.visibilidade === "publica" ? "publica" : "restrita", updated_at: new Date().toISOString(),

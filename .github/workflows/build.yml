@@ -1,0 +1,32 @@
+name: build
+
+# Gate de BUILD de produção — o que o `ci.yml` (typecheck/lint/testes) NÃO cobria.
+# Motivo: um `export const` num arquivo "use server" passa no typecheck mas DERRUBA
+# o `pnpm build` (Turbopack), e deploys silenciosamente serviam código antigo.
+# Este job roda exatamente o `pnpm build` do Dockerfile, com os mesmos placeholders
+# NEXT_PUBLIC_* (a imagem de produção também builda com placeholders).
+on:
+  pull_request:
+  push:
+    branches: [main, "feat/warroom-2.0-instagram-automation"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  next-build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+      - uses: ./.github/actions/preparar-node
+        timeout-minutes: 5
+      - name: next build (pega quebras que o typecheck não vê)
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: https://placeholder.supabase.co
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: placeholder-anon-key
+          NEXT_PUBLIC_APP_URL: https://placeholder.invalid
+          NEXT_PUBLIC_ADMIN_URL: https://placeholder.invalid
+          NEXT_TELEMETRY_DISABLED: "1"
+        run: pnpm build

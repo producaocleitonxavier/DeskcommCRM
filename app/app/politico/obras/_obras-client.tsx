@@ -105,7 +105,7 @@ export default function ObrasClient({ obras, executivo, eleicoes, mandatoInicial
       ) : (
         <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
           {filtradas.map((o) => {
-            const st = STATUS[o.status] ?? STATUS.planejada;
+            const st = STATUS[o.status] ?? STATUS.planejada!;
             return (
               <Link key={o.id} href={`/app/politico/obras/${o.id}`}
                 className="wr-card block p-4 transition-colors hover:border-[rgba(215,243,106,0.4)]">

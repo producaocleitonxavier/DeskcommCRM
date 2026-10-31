@@ -222,8 +222,11 @@ export default async function CaptacaoInstagramPage() {
   const porEstagio: Record<string, Card[]> = {};
   for (const e of estagios) porEstagio[e.slug] = [];
   for (let i = 0; i < contatos.length; i++) {
-    const estagio = (contatos[i].custom_fields?.["captacao_estagio"] as string) ?? "interagiu";
-    (porEstagio[estagio] ?? (porEstagio.interagiu ||= [])).push(cards[i]);
+    const c = contatos[i];
+    const card = cards[i];
+    if (!c || !card) continue;
+    const estagio = (c.custom_fields?.["captacao_estagio"] as string) ?? "interagiu";
+    (porEstagio[estagio] ?? (porEstagio.interagiu ||= [])).push(card);
   }
 
   const total = cards.length;
