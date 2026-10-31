@@ -43,3 +43,29 @@
 		reverse_proxy app:3000
 	}
 }
+
+# ── STAGING / HOMOLOGAÇÃO ─────────────────────────────────────────────────────
+# Ambiente de ensaio na MESMA VPS, mas aponta pro container ISOLADO `app_staging`
+# (Supabase próprio, filas dedicadas, SEM worker/WAHA). TLS automático igual ao
+# site de produção. Ver docker-compose.staging.yml.
+homologacao.warromcleitonxavier.cloud {
+	encode gzip
+
+	route {
+		# Webhook global do WAHA fechado (staging nem roda WAHA; defensivo, igual produção).
+		@waha_global path /api/v1/webhooks/waha
+		respond @waha_global 403
+
+		# Runner de agente de IA pode levar ~5min — timeout estendido nessa rota.
+		@agentrun path /api/internal/agents/run*
+		reverse_proxy @agentrun app_staging:3000 {
+			transport http {
+				read_timeout 320s
+				write_timeout 320s
+			}
+		}
+
+		# Todo o resto do app de teste.
+		reverse_proxy app_staging:3000
+	}
+}
