@@ -103,6 +103,17 @@ export async function importarContatos(formData: FormData): Promise<ResultadoImp
   // Índices já mapeados pra algum campo → o resto vira "extra" (nada se perde).
   const mapeados = new Set(Object.values(mapa).filter((v): v is number => typeof v === "number"));
 
+  // Base de municípios (nome normalizado → {uf, nome oficial}) pra RECONHECER
+  // cidade que veio no campo errado (bairro/complemento) e pra preencher o UF a
+  // partir da cidade. Lê uma vez; a planilha pode ter milhares de linhas.
+  const municipios = new Map<string, { uf: string; nome: string }>();
+  {
+    const { data } = await admin.from("intel_municipios").select("nome, uf");
+    for (const m of (data ?? []) as { nome: string; uf: string }[]) {
+      if (m.nome) municipios.set(normalizarCabecalho(m.nome), { uf: m.uf, nome: m.nome });
+    }
+  }
+
   const lote = Date.now().toString(36); // carimbo deste lote (pra rastrear/desfazer)
   let importados = 0;
   let duplicados = 0;
@@ -140,16 +151,30 @@ export async function importarContatos(formData: FormData): Promise<ResultadoImp
     let bairro = col(linha, "bairro");
     const logradouro = col(linha, "endereco");
     const numero = col(linha, "numero");
-    const complemento = col(linha, "complemento");
+    let complemento = col(linha, "complemento");
     const cepRaw = col(linha, "cep");
-    // INTELIGÊNCIA: se o Estado não veio numa coluna própria, mas o Bairro ou a
-    // Cidade É na verdade um estado ("MG", "Minas Gerais"), reconhece e move pro
-    // lugar certo — limpando o campo errado. Conserta planilha bagunçada.
+    // INTELIGÊNCIA 1 — ESTADO por sigla/nome ("MG"/"Minas Gerais") no Bairro ou
+    // Cidade, quando não veio em coluna própria: move pro lugar certo e limpa.
     if (!estado) {
       const ufB = ufDeTexto(bairro);
       const ufC = ufDeTexto(cidade);
       if (ufB) { estado = ufB; bairro = ""; }
       else if (ufC) { estado = ufC; cidade = ""; }
+    }
+    // INTELIGÊNCIA 2 — CIDADE que caiu no campo errado (Bairro/Complemento):
+    // reconhece pela base de municípios, move pra Cidade (nome oficial) e
+    // preenche o UF. Conserta "Contagem" no complemento, por exemplo.
+    if (!cidade) {
+      const mB = bairro ? municipios.get(normalizarCabecalho(bairro)) : undefined;
+      const mC = complemento ? municipios.get(normalizarCabecalho(complemento)) : undefined;
+      if (mB) { cidade = mB.nome; bairro = ""; if (!estado) estado = mB.uf; }
+      else if (mC) { cidade = mC.nome; complemento = ""; if (!estado) estado = mC.uf; }
+    }
+    // INTELIGÊNCIA 3 — UF a partir da Cidade ("Belo Horizonte" → MG): completa o
+    // estado de todo mundo, mesmo sem coluna de UF na planilha. Normaliza o nome.
+    if (cidade) {
+      const m = municipios.get(normalizarCabecalho(cidade));
+      if (m) { cidade = m.nome; if (!estado) estado = m.uf; }
     }
     if (cidade) endereco.cidade = cidade;
     if (estado) endereco.estado = estado.toUpperCase().slice(0, 2);
