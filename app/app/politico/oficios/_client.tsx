@@ -39,7 +39,7 @@ export default function OficiosClient({
     new Date(iso).toLocaleDateString("pt-BR", { day: "2-digit", month: "short", year: "numeric" });
 
   return (
-    <div className="mx-auto max-w-[860px] space-y-5 px-4 py-7" style={{ background: "var(--color-bg)" }}>
+    <div className="gip-ambient-bg mx-auto max-w-[860px] space-y-5 px-4 py-7">
       <CommandHero
         eyebrow="Gabinete"
         titulo="Ofícios"
@@ -74,8 +74,7 @@ export default function OficiosClient({
             <li key={o.demandaId}>
               <Link
                 href={`/app/politico/demandas/${o.demandaId}`}
-                className="flex items-start gap-3 rounded-xl p-4 transition-colors hover:bg-[var(--color-surface-elevated)]"
-                style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)" }}
+                className="gip-glass gip-glass-hover flex items-start gap-3 p-4"
               >
                 <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg" style={{ background: "rgba(215,243,106,0.12)", color: "#D7F36A" }} aria-hidden>
                   <FileText className="h-5 w-5" />

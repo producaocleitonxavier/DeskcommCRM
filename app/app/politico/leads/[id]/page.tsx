@@ -101,13 +101,13 @@ function etapaCor(value: string): string {
 
 function etapaPillEstilo(value: string): { bg: string; color: string } {
   const mapa: Record<string, { bg: string; color: string }> = {
-    novo_cadastro: { bg: "#EEF0FB", color: "#3B4280" },
-    simpatizante: { bg: "#DDE1F7", color: "#2F3DA8" },
-    apoiador: { bg: "#B4BCF0", color: "#1E2A80" },
-    militante: { bg: "#4352C4", color: "#FFFFFF" },
-    voto_certo: { bg: "#26318F", color: "#FFFFFF" },
+    novo_cadastro: { bg: "rgba(129,140,248,0.16)", color: "#A5B4FC" },
+    simpatizante: { bg: "rgba(99,102,241,0.20)", color: "#C7D2FE" },
+    apoiador: { bg: "rgba(79,70,229,0.24)", color: "#C7D2FE" },
+    militante: { bg: "rgba(67,56,202,0.32)", color: "#E0E7FF" },
+    voto_certo: { bg: "rgba(67,56,202,0.44)", color: "#FFFFFF" },
   };
-  return mapa[value] ?? { bg: "#EEF0FB", color: "#3B4280" };
+  return mapa[value] ?? { bg: "rgba(129,140,248,0.16)", color: "#A5B4FC" };
 }
 
 function tempLabel(temp: string): string {
@@ -117,11 +117,11 @@ function tempLabel(temp: string): string {
 
 function tempEstilo(temp: string): { bg: string; color: string } {
   const m: Record<string, { bg: string; color: string }> = {
-    frio: { bg: "#E4E7F8", color: "#2F3DA8" },
-    morno: { bg: "#FCF1DC", color: "#8A5A10" },
-    quente: { bg: "#FBE4E2", color: "#A3302A" },
+    frio: { bg: "rgba(96,165,250,0.16)", color: "#93C5FD" },
+    morno: { bg: "rgba(217,164,75,0.18)", color: "#E4B96E" },
+    quente: { bg: "rgba(239,68,68,0.18)", color: "#FCA5A5" },
   };
-  return m[temp] ?? { bg: "#F0F0EB", color: "var(--color-text-muted)" };
+  return m[temp] ?? { bg: "rgba(255,255,255,0.08)", color: "var(--color-text-muted)" };
 }
 
 function formatarData(data: string): string {
@@ -308,7 +308,7 @@ function InfoCard({ titulo, children }: { titulo: string; children: React.ReactN
     <div className="gip-glass gip-glass-hover p-5">
       <h3
         className="text-[11px] font-semibold uppercase tracking-[.08em] mb-3"
-        style={{ color: "var(--color-text-subtle)" }}
+        style={{ color: "var(--color-text-muted)" }}
       >
         {titulo}
       </h3>
@@ -318,12 +318,12 @@ function InfoCard({ titulo, children }: { titulo: string; children: React.ReactN
 }
 
 function InfoRow({ label, value }: { label: string; value: React.ReactNode }) {
+  // Esconde linhas vazias (evita blocos cheios de "—").
+  if (value === null || value === undefined || value === "" || value === false) return null;
   return (
     <div className="flex justify-between items-start py-1.5 text-sm">
       <span className="font-semibold" style={{ color: "var(--color-text)" }}>{label}</span>
-      <span className="text-right font-bold" style={{ color: "var(--color-text)" }}>
-        {value || <span style={{ color: "var(--color-text-subtle)" }}>—</span>}
-      </span>
+      <span className="text-right font-bold" style={{ color: "var(--color-text)" }}>{value}</span>
     </div>
   );
 }
@@ -527,11 +527,13 @@ export default async function FichaPage({
             </InfoCard>
           )}
 
-          <InfoCard titulo="Comunidade & mobilização">
-            <InfoRow label="Papel comunitário" value={lead.community_role} />
-            <InfoRow label="Potencial multiplicador" value={lead.leader_potential ? "Sim" : null} />
-            <InfoRow label="Mobilizador" value={mobilizadorNome} />
-          </InfoCard>
+          {(lead.community_role || lead.leader_potential || mobilizadorNome) && (
+            <InfoCard titulo="Comunidade & mobilização">
+              <InfoRow label="Papel comunitário" value={lead.community_role} />
+              <InfoRow label="Potencial multiplicador" value={lead.leader_potential ? "Sim" : null} />
+              <InfoRow label="Mobilizador" value={mobilizadorNome} />
+            </InfoCard>
+          )}
 
           {temRelacionamento && (
             <InfoCard titulo="Relacionamento">
@@ -577,15 +579,18 @@ export default async function FichaPage({
           <div className="gip-glass gip-glass-hover p-5">
             <h3 className="text-[11px] font-semibold uppercase tracking-[.08em] mb-3" style={{ color: "var(--color-text-muted)" }}>Indicadores</h3>
             <div className="grid grid-cols-2 gap-3">
-              <div>
-                <div className="font-heading text-2xl font-bold tabular-nums leading-none">{lead.political_score}</div>
-                <div className="mt-1 text-xs text-muted-foreground">Pontuação política</div>
+              <div className="rounded-xl p-3" style={{ background: "color-mix(in srgb, var(--color-text) 4%, transparent)", border: "1px solid color-mix(in srgb, var(--color-text) 8%, transparent)" }}>
+                <div className="font-heading text-2xl font-bold tabular-nums leading-none" style={{ color: "var(--color-text)" }}>{lead.political_score}</div>
+                <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full" style={{ background: "color-mix(in srgb, var(--color-text) 8%, transparent)" }}>
+                  <div className="h-full rounded-full" style={{ width: `${Math.min(Math.max(lead.political_score, 0), 100)}%`, minWidth: lead.political_score > 0 ? 6 : 0, background: "linear-gradient(90deg, color-mix(in srgb, var(--color-accent) 55%, transparent), var(--color-accent))", boxShadow: "0 0 10px color-mix(in srgb, var(--color-accent) 45%, transparent)" }} />
+                </div>
+                <div className="mt-1.5 text-xs" style={{ color: "var(--color-text-muted)" }}>Pontuação política</div>
               </div>
-              <div>
-                <span className="inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold" style={{ background: tempS.bg, color: tempS.color }}>
+              <div className="rounded-xl p-3" style={{ background: "color-mix(in srgb, var(--color-text) 4%, transparent)", border: "1px solid color-mix(in srgb, var(--color-text) 8%, transparent)" }}>
+                <span className="inline-flex items-center rounded-full px-2.5 py-1 text-xs font-bold" style={{ background: tempS.bg, color: tempS.color }}>
                   {tempLabel(lead.temperature)}
                 </span>
-                <div className="mt-1.5 text-xs text-muted-foreground">Temperatura</div>
+                <div className="mt-2 text-xs" style={{ color: "var(--color-text-muted)" }}>Temperatura</div>
               </div>
             </div>
             <div className="mt-3 border-t pt-3 text-sm" style={{ borderColor: "var(--color-border)" }}>

@@ -211,7 +211,7 @@ export default function NovaDemandaForm({ assessores }: NovaDemandaFormProps) {
   }
 
   return (
-    <div className="mx-auto max-w-[760px] px-4 py-7 space-y-5" style={{ background: "var(--color-bg)" }}>
+    <div className="gip-ambient-bg mx-auto max-w-[760px] px-4 py-7 space-y-5">
       <CommandHero
         eyebrow="Gabinete · Demandas"
         titulo="Nova demanda"
@@ -221,7 +221,7 @@ export default function NovaDemandaForm({ assessores }: NovaDemandaFormProps) {
 
       <form onSubmit={salvar} className="space-y-5">
         {/* Cidadão */}
-        <section className="wr-card p-5 sm:p-6">
+        <section className="gip-glass p-5 sm:p-6">
           <Label obrig>Cidadão (demandante)</Label>
           {contato ? (
             <div
@@ -322,7 +322,7 @@ export default function NovaDemandaForm({ assessores }: NovaDemandaFormProps) {
         </section>
 
         {/* Dados da demanda */}
-        <section className="wr-card space-y-4 p-5 sm:p-6">
+        <section className="gip-glass space-y-4 p-5 sm:p-6">
           <div>
             <Label obrig>Tipo de demanda</Label>
             <select value={tipo} onChange={(e) => setTipo(e.target.value)} className="wr-input w-full">
@@ -429,7 +429,7 @@ export default function NovaDemandaForm({ assessores }: NovaDemandaFormProps) {
         </section>
 
         {/* Anexos */}
-        <section className="wr-card space-y-3 p-5 sm:p-6">
+        <section className="gip-glass space-y-3 p-5 sm:p-6">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <Label>Anexos</Label>
             <button type="button" onClick={() => arquivoRef.current?.click()} className="wr-btn inline-flex items-center gap-1.5">

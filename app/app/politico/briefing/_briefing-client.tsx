@@ -237,10 +237,10 @@ export default function BriefingClient({ eleicoes, municipios }: { eleicoes: Ele
         </button>
       </div>
 
-      {erro && <div className="wr-card p-4 text-sm" style={{ color: "#E08079" }}>{erro}</div>}
+      {erro && <div className="gip-glass p-4 text-sm" style={{ color: "#E08079" }}>{erro}</div>}
 
       {dossie && (
-        <section className="wr-card p-6" id="dossie-impressao">
+        <section className="gip-glass p-6" id="dossie-impressao">
           <div className="mb-4 flex items-center justify-between gap-3 border-b pb-3" style={{ borderColor: "var(--color-border)" }}>
             <div className="flex items-center gap-2.5">
               {/* eslint-disable-next-line @next/next/no-img-element */}

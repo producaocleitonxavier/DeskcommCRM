@@ -140,14 +140,14 @@ export default function DetalheCompromissoClient({ compromisso, territorios, lid
         : [{ label: "Reabrir", novo: "agendado" }];
 
   return (
-    <div className="mx-auto max-w-[820px] px-4 py-7 space-y-5" style={{ background: "var(--color-bg)" }}>
+    <div className="gip-ambient-bg mx-auto max-w-[820px] px-4 py-7 space-y-5">
       <div>
         <Link href="/app/politico/agenda" className="inline-flex items-center gap-1 text-sm transition-colors" style={{ color: "var(--color-text-muted)" }}>
           <ArrowLeft className="h-4 w-4" aria-hidden /> Agenda
         </Link>
       </div>
 
-      <header className="wr-card p-6 sm:p-7">
+      <header className="gip-glass p-6 sm:p-7">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div className="min-w-0">
             <span className="inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold" style={{ background: sc.bg, color: sc.color }}>
@@ -183,7 +183,7 @@ export default function DetalheCompromissoClient({ compromisso, territorios, lid
 
       {erro && <div role="alert" className="rounded-xl px-4 py-3 text-sm" style={{ background: "#FBE4E2", color: "#A3302A" }}>{erro}</div>}
 
-      <section className="wr-card p-6 sm:p-7">
+      <section className="gip-glass p-6 sm:p-7">
         {editando ? (
           <div className="space-y-4">
             <Campo label="Título"><input type="text" value={titulo} onChange={(e) => setTitulo(e.target.value)} className="wr-input w-full" /></Campo>

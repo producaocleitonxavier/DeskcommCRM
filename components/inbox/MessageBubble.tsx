@@ -227,6 +227,16 @@ export function MessageBubble({
         // classe utilitária entrava na conta — foi assim que o painel flutuante
         // fez a spec achar que havia mensagem onde não havia (issue #1318).
         data-testid="message-bubble"
+        style={
+          !isOutbound && !isBareSticker
+            ? {
+                background: "color-mix(in srgb, var(--color-surface-elevated) 55%, transparent)",
+                border: "1px solid color-mix(in srgb, var(--color-text) 9%, transparent)",
+                backdropFilter: "blur(10px)",
+                WebkitBackdropFilter: "blur(10px)",
+              }
+            : undefined
+        }
         className={cn(
           "relative max-w-[75%] min-w-0 text-sm",
           isBareSticker
@@ -236,7 +246,7 @@ export function MessageBubble({
                 temMenu && "pr-8",
                 isOutbound
                   ? "rounded-br-sm bg-primary text-primary-foreground"
-                  : "rounded-bl-sm bg-muted text-foreground",
+                  : "rounded-bl-sm text-foreground",
               ),
           isFailed && "border border-destructive",
           // A marca da busca é ANEL, não cor de fundo: o fundo já diz de quem é

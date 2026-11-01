@@ -140,7 +140,7 @@ export default function BoletimClient({
   }
 
   return (
-    <div className="mx-auto max-w-[960px] px-4 py-7 space-y-5" style={{ background: "var(--color-bg)" }}>
+    <div className="gip-ambient-bg mx-auto max-w-[960px] px-4 py-7 space-y-5">
       <CommandHero
         eyebrow="Inteligência · Boletim"
         titulo="Boletim Semanal"
@@ -154,8 +154,8 @@ export default function BoletimClient({
 
       {/* Edições anteriores — o cron de segunda grava cada semana aqui. */}
       {hist.length > 0 && (
-        <div className="wr-card p-4">
-          <p className="mb-3 inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-wide" style={{ color: "var(--color-text-subtle)" }}>
+        <div className="gip-glass p-4">
+          <p className="mb-3 inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-wide" style={{ color: "var(--color-text-muted)" }}>
             <History size={14} /> Edições anteriores
           </p>
           <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
@@ -190,7 +190,7 @@ export default function BoletimClient({
       )}
 
       {!bol && (
-        <div className="wr-card p-7 text-center">
+        <div className="gip-glass p-7 text-center">
           <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-2xl" style={{ background: "rgba(215,243,106,0.18)", color: "#5C7F23" }}>
             <Newspaper size={24} />
           </div>
@@ -207,7 +207,7 @@ export default function BoletimClient({
       )}
 
       {bol && (
-        <section className="wr-card p-6" id="boletim">
+        <section className="gip-glass p-6" id="boletim">
           {/* Cabeçalho marca GIP */}
           <div className="mb-4 flex items-center justify-between gap-3 border-b pb-3" style={{ borderColor: "var(--color-border)" }}>
             <div className="flex items-center gap-2.5">
@@ -241,7 +241,7 @@ export default function BoletimClient({
 
           {/* Sentimento + KPIs */}
           <div className="mb-5 grid gap-3 sm:grid-cols-4">
-            <div className="wr-card p-4 sm:col-span-1" style={{ background: "var(--color-surface-elevated)" }}>
+            <div className="rounded-2xl p-4 sm:col-span-1" style={{ background: "color-mix(in srgb, var(--color-text) 4%, transparent)", border: "1px solid color-mix(in srgb, var(--color-text) 8%, transparent)" }}>
               <p className="text-[10px] font-bold uppercase tracking-wide" style={{ color: "var(--color-text-subtle)" }}>Sentimento</p>
               <div className="mt-1 flex items-baseline gap-1.5">
                 <span className="font-heading text-3xl font-black tabular-nums" style={{ color: bol.sentimento.indice >= 0 ? VERDE : VERMELHO }}>
@@ -260,7 +260,7 @@ export default function BoletimClient({
 
           {/* MÍDIA × POVO — a justaposição que só nós temos */}
           <div className="mb-5 grid gap-3 lg:grid-cols-2">
-            <div className="wr-card p-4" style={{ background: "var(--color-surface-elevated)" }}>
+            <div className="rounded-2xl p-4" style={{ background: "color-mix(in srgb, var(--color-text) 4%, transparent)", border: "1px solid color-mix(in srgb, var(--color-text) 8%, transparent)" }}>
               <p className="mb-2.5 inline-flex items-center gap-1.5 text-xs font-bold" style={{ color: "var(--color-text)" }}>
                 <Newspaper size={14} style={{ color: "#3B7DC4" }} /> Na mídia <span className="font-normal" style={{ color: "var(--color-text-subtle)" }}>— o que falaram</span>
               </p>
@@ -278,7 +278,7 @@ export default function BoletimClient({
               ) : <p className="text-xs" style={{ color: "var(--color-text-subtle)" }}>Sem pautas captadas nesta semana.</p>}
             </div>
 
-            <div className="wr-card p-4" style={{ background: "var(--color-surface-elevated)" }}>
+            <div className="rounded-2xl p-4" style={{ background: "color-mix(in srgb, var(--color-text) 4%, transparent)", border: "1px solid color-mix(in srgb, var(--color-text) 8%, transparent)" }}>
               <p className="mb-2.5 inline-flex items-center gap-1.5 text-xs font-bold" style={{ color: "var(--color-text)" }}>
                 <HeartHandshake size={14} style={{ color: "#C2568C" }} /> Nas ruas <span className="font-normal" style={{ color: "var(--color-text-subtle)" }}>— o que o povo pediu</span>
               </p>
@@ -325,7 +325,7 @@ export default function BoletimClient({
 
           {/* Adversários + Ações */}
           <div className="grid gap-3 lg:grid-cols-2">
-            <div className="wr-card p-4" style={{ background: "var(--color-surface-elevated)" }}>
+            <div className="rounded-2xl p-4" style={{ background: "color-mix(in srgb, var(--color-text) 4%, transparent)", border: "1px solid color-mix(in srgb, var(--color-text) 8%, transparent)" }}>
               <p className="mb-2.5 inline-flex items-center gap-1.5 text-xs font-bold" style={{ color: "var(--color-text)" }}>
                 <Users size={14} style={{ color: "#A3302A" }} /> Radar de adversários
               </p>
@@ -343,7 +343,7 @@ export default function BoletimClient({
               ) : <p className="text-xs" style={{ color: "var(--color-text-subtle)" }}>Cadastre adversários na Opinião Pública para monitorar aqui.</p>}
             </div>
 
-            <div className="wr-card p-4" style={{ background: "var(--color-surface-elevated)" }}>
+            <div className="rounded-2xl p-4" style={{ background: "color-mix(in srgb, var(--color-text) 4%, transparent)", border: "1px solid color-mix(in srgb, var(--color-text) 8%, transparent)" }}>
               <p className="mb-2.5 inline-flex items-center gap-1.5 text-xs font-bold" style={{ color: "var(--color-text)" }}>
                 <Lightbulb size={14} style={{ color: "#C9A23A" }} /> Ações da semana
               </p>
@@ -383,7 +383,7 @@ function Variacao({ atual, anterior }: { atual: number; anterior: number }) {
 
 function Kpi({ rotulo, valor, cor }: { rotulo: string; valor: number; cor: string }) {
   return (
-    <div className="wr-card p-4" style={{ background: "var(--color-surface-elevated)" }}>
+    <div className="rounded-2xl p-4" style={{ background: "color-mix(in srgb, var(--color-text) 4%, transparent)", border: "1px solid color-mix(in srgb, var(--color-text) 8%, transparent)" }}>
       <p className="text-[10px] font-bold uppercase tracking-wide" style={{ color: "var(--color-text-subtle)" }}>{rotulo}</p>
       <p className="mt-1 font-heading text-3xl font-black tabular-nums" style={{ color: cor }}>{valor}</p>
     </div>

@@ -40,7 +40,7 @@ export default async function ObrasPage() {
   const executivo = /prefeit|governad|vice/.test(cargo);
 
   return (
-    <div className="mx-auto max-w-[1140px] space-y-6 px-4 py-7" style={{ background: "var(--color-bg)" }}>
+    <div className="gip-ambient-bg mx-auto max-w-[1140px] space-y-6 px-4 py-7">
       <CommandHero
         eyebrow="Gabinete · Território"
         titulo="Obras & Fiscalização"

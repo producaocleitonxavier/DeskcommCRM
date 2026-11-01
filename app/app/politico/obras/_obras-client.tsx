@@ -99,7 +99,7 @@ export default function ObrasClient({ obras, executivo, eleicoes, mandatoInicial
 
       {/* Lista */}
       {filtradas.length === 0 ? (
-        <div className="wr-card p-12 text-center text-sm" style={{ color: "var(--color-text-subtle)" }}>
+        <div className="gip-glass p-12 text-center text-sm" style={{ color: "var(--color-text-subtle)" }}>
           {obras.length === 0 ? "Nenhuma obra cadastrada ainda. Clique em “Nova” para começar." : "Nenhuma obra para esse filtro."}
         </div>
       ) : (
@@ -108,7 +108,7 @@ export default function ObrasClient({ obras, executivo, eleicoes, mandatoInicial
             const st = STATUS[o.status] ?? STATUS.planejada!;
             return (
               <Link key={o.id} href={`/app/politico/obras/${o.id}`}
-                className="wr-card block p-4 transition-colors hover:border-[rgba(215,243,106,0.4)]">
+                className="gip-glass gip-glass-hover block p-4">
                 <div className="flex items-start justify-between gap-2">
                   <div className="flex items-center gap-2 text-xs font-semibold" style={{ color: o.natureza === "execucao" ? "#7da9bf" : "#D7F36A" }}>
                     {o.natureza === "execucao" ? <HardHat className="h-3.5 w-3.5" aria-hidden /> : <ShieldCheck className="h-3.5 w-3.5" aria-hidden />}

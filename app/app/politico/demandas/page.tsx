@@ -65,14 +65,14 @@ function estadoLabel(estado: string): string {
 
 function estadoEstilo(estado: string): { bg: string; color: string } {
   const mapa: Record<string, { bg: string; color: string }> = {
-    aberta: { bg: "#F0F0EB", color: "var(--color-text-muted)" },
-    em_atendimento: { bg: "#E4E7F8", color: "#2F3DA8" },
-    encaminhada: { bg: "#F0E7FB", color: "#7C3AED" },
-    aguardando_cliente: { bg: "#FCF1DC", color: "#8A5A10" },
-    resolvida: { bg: "#E2F5EC", color: "#17784F" },
-    encerrada: { bg: "#F0F0EB", color: "var(--color-text-subtle)" },
+    aberta: { bg: "rgba(245,158,11,0.15)", color: "#E4B96E" },
+    em_atendimento: { bg: "rgba(129,140,248,0.16)", color: "#A5B4FC" },
+    encaminhada: { bg: "rgba(167,139,250,0.16)", color: "#C4B5FD" },
+    aguardando_cliente: { bg: "rgba(217,164,75,0.16)", color: "#E4B96E" },
+    resolvida: { bg: "rgba(94,195,148,0.16)", color: "#7AD4AB" },
+    encerrada: { bg: "rgba(255,255,255,0.07)", color: "var(--color-text-muted)" },
   };
-  return mapa[estado] ?? { bg: "#F0F0EB", color: "var(--color-text-muted)" };
+  return mapa[estado] ?? { bg: "rgba(255,255,255,0.07)", color: "var(--color-text-muted)" };
 }
 
 function prioridadeLabel(prioridade: string | null): string | null {
@@ -88,8 +88,8 @@ function prioridadeLabel(prioridade: string | null): string | null {
 function prioridadeEstilo(prioridade: string | null): { bg: string; color: string } | null {
   if (!prioridade || prioridade === "normal" || prioridade === "baixa") return null;
   const mapa: Record<string, { bg: string; color: string }> = {
-    alta: { bg: "#FCF1DC", color: "#8A5A10" },
-    urgente: { bg: "#FBE4E2", color: "#A3302A" },
+    alta: { bg: "rgba(217,164,75,0.14)", color: "#D9A44B" },
+    urgente: { bg: "rgba(245,158,11,0.18)", color: "#F0A742" },
   };
   return mapa[prioridade] ?? null;
 }
@@ -325,9 +325,9 @@ export default async function GabinetePage({
   }
 
   return (
-    <div className="mx-auto max-w-[1140px] px-4 py-7 space-y-[18px]">
+    <div className="gip-ambient-bg mx-auto max-w-[1140px] px-4 py-7 space-y-[18px]">
       {/* ── Header card ─────────────────────────────────────────── */}
-      <header className="wr-card p-6 sm:p-7 flex flex-wrap items-center justify-between gap-4">
+      <header className="gip-glass p-6 sm:p-7 flex flex-wrap items-center justify-between gap-4">
         <div>
           <h1 className="font-heading text-[36px] font-bold leading-tight">Gabinete</h1>
           <p className="mt-1.5 text-base" style={{ color: "var(--color-text-muted)" }}>
@@ -361,7 +361,7 @@ export default async function GabinetePage({
           />
 
           {/* Demandas table */}
-          <section aria-label="Lista de demandas" className="wr-card pt-2 pb-0 px-0">
+          <section aria-label="Lista de demandas" className="gip-glass pt-2 pb-0 px-0">
             {/* Alternador de visão: fila de trabalho vs. o que a IA orientou */}
             {temAuto && (
               <div className="flex flex-wrap items-center gap-2 px-4 pt-3.5">
@@ -440,8 +440,8 @@ export default async function GabinetePage({
                       {["Demanda", "Tipo", "Órgão destino", "Status", "Visita", "Prioridade"].map((col) => (
                         <th
                           key={col}
-                          className="text-left font-medium text-[13px] px-4 py-3 whitespace-nowrap border-b"
-                          style={{ color: "var(--color-text-subtle)", borderColor: "var(--color-border)" }}
+                          className="text-left font-semibold text-[11px] uppercase tracking-wide px-4 py-3 whitespace-nowrap border-b"
+                          style={{ color: "var(--color-text-muted)", borderColor: "color-mix(in srgb, var(--color-text) 7%, transparent)" }}
                         >
                           {col}
                         </th>
@@ -453,7 +453,6 @@ export default async function GabinetePage({
                       const diasPrazo = diasParaPrazo(d.prazo_em); // data da VISITA (informativo)
                       const prazoInfo = prazoDeAtendimento(d.aberta_em, d.pol_prazo_dias);
                       const atrasada = prazoInfo.atrasada && !["resolvida", "encerrada"].includes(d.estado);
-                      const urgente = d.pol_prioridade === "urgente";
                       const pLabel = prioridadeLabel(d.pol_prioridade);
                       const pEstilo = prioridadeEstilo(d.pol_prioridade);
                       const temIA = !!d.pol_encaminhamento_ia;
@@ -461,11 +460,8 @@ export default async function GabinetePage({
                       return (
                         <tr
                           key={d.id}
-                          className="group transition-colors hover:bg-[var(--color-surface-elevated)]"
-                          style={{
-                            borderBottom: "1px solid var(--color-border)",
-                            ...((atrasada || urgente) ? { background: "rgba(239,68,68,0.08)" } : {}),
-                          }}
+                          className="group transition-colors hover:bg-white/[0.04]"
+                          style={{ borderBottom: "1px solid color-mix(in srgb, var(--color-text) 7%, transparent)" }}
                         >
                           <td className="px-4 py-3.5 max-w-[280px]">
                             <div className="flex items-center gap-2">
@@ -487,7 +483,7 @@ export default async function GabinetePage({
                               {d.pol_autoatendimento && (
                                 <span
                                   className="inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold whitespace-nowrap"
-                                  style={{ background: "#E7EEF8", color: "#3B5B8C" }}
+                                  style={{ background: "rgba(96,165,250,0.15)", color: "#93B4EA" }}
                                   title="O cidadão foi orientado a resolver pelo link da Prefeitura. Registro de inteligência — não é trabalho do gabinete."
                                 >
                                   ✨ autoatendimento
@@ -507,7 +503,7 @@ export default async function GabinetePage({
                               {atrasada && (
                                 <span
                                   className="inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-bold"
-                                  style={{ background: "#FBE4E2", color: "#A3302A" }}
+                                  style={{ background: "rgba(239,68,68,0.16)", color: "#F87171" }}
                                   title={`Passou do prazo acordado (${d.pol_prazo_dias ?? 30} dias)`}
                                 >
                                   Atrasada {Math.abs(prazoInfo.diasRestantes)}d
@@ -519,9 +515,7 @@ export default async function GabinetePage({
                             {d.prazo_em ? (
                               <span
                                 className="text-sm tabular-nums"
-                                style={{
-                                  color: diasPrazo !== null && diasPrazo <= 3 ? "#8A5A10" : "#4A4F59",
-                                }}
+                                style={{ color: "var(--color-text-muted)" }}
                               >
                                 {formatarData(d.prazo_em)}
                                 {diasPrazo !== null && !["resolvida", "encerrada"].includes(d.estado) && (
@@ -561,7 +555,7 @@ export default async function GabinetePage({
             {/* Pagination */}
             <div
               className="flex flex-wrap justify-between items-center gap-3 px-4 py-3.5 text-[13px]"
-              style={{ color: "var(--color-text-subtle)", borderTop: "1px solid var(--color-border)" }}
+              style={{ color: "var(--color-text-subtle)", borderTop: "1px solid color-mix(in srgb, var(--color-text) 7%, transparent)" }}
             >
               <span>
                 Mostrando {demandas.length} de {total.toLocaleString("pt-BR")}

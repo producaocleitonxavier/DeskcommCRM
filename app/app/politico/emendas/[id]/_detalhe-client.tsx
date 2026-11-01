@@ -251,14 +251,14 @@ export default function DetalheEmendaClient({ emenda, liderancas, peso, mandatoN
           : null;
 
   return (
-    <div className="mx-auto max-w-[900px] px-4 py-7 space-y-5" style={{ background: "var(--color-bg)" }}>
+    <div className="gip-ambient-bg mx-auto max-w-[900px] px-4 py-7 space-y-5">
       <div>
         <Link href="/app/politico/emendas" className="inline-flex items-center gap-1 text-sm transition-colors" style={{ color: "var(--color-text-muted)" }}>
           <ArrowLeft className="h-4 w-4" aria-hidden /> Emendas
         </Link>
       </div>
 
-      <header className="wr-card p-6 sm:p-7">
+      <header className="gip-glass p-6 sm:p-7">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div className="min-w-0">
             <div className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--color-text-subtle)" }}>
@@ -362,7 +362,7 @@ export default function DetalheEmendaClient({ emenda, liderancas, peso, mandatoN
       )}
 
       {peso && (peso.meusVotos > 0 || peso.leads > 0) && (
-        <section className="wr-card p-5" style={{ background: "linear-gradient(180deg, rgba(215,243,106,0.06), transparent)" }}>
+        <section className="gip-glass p-5" style={{ background: "linear-gradient(180deg, rgba(215,243,106,0.06), transparent)" }}>
           <h2 className="font-heading text-base font-bold" style={{ color: "var(--color-text)" }}>Você investiu onde te elegeu?</h2>
           <p className="mb-3 text-xs" style={{ color: "var(--color-text-subtle)" }}>
             O que {mandatoNome || "você"} fez e tem no bairro <strong style={{ color: "var(--color-text)" }}>{emenda.bairro || "—"}</strong> — o retorno eleitoral deste recurso.
@@ -376,7 +376,7 @@ export default function DetalheEmendaClient({ emenda, liderancas, peso, mandatoN
       )}
 
       {responsavelContato && (
-        <section className="wr-card flex flex-wrap items-center justify-between gap-3 p-5">
+        <section className="gip-glass flex flex-wrap items-center justify-between gap-3 p-5">
           <div>
             <p className="text-xs font-semibold uppercase tracking-wide" style={{ color: "var(--color-text-subtle)" }}>Responsável pela emenda</p>
             <p className="mt-0.5 text-base font-semibold" style={{ color: "var(--color-text)" }}>{responsavelContato.nome ?? "—"}</p>
@@ -388,7 +388,7 @@ export default function DetalheEmendaClient({ emenda, liderancas, peso, mandatoN
 
       <CaptacaoEmendaCard emendaId={e.id} beneficiarios={beneficiariosCaptados} vozArmada={vozArmada} politicoNome={politicoNome} />
 
-      <section className="wr-card p-6 sm:p-7">
+      <section className="gip-glass p-6 sm:p-7">
         {editando ? (
           <div className="space-y-4">
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -465,7 +465,7 @@ function CaptacaoEmendaCard({ emendaId, beneficiarios, vozArmada, politicoNome }
   async function copiar() { try { await navigator.clipboard.writeText(link); setCopiado(true); setTimeout(() => setCopiado(false), 2000); } catch { /* ignore */ } }
   async function ver() { if (verando) { setVerando(false); return; } setVerando(true); if (lista === null) { setCarregando(true); setLista(await listarBeneficiariosEmenda(emendaId)); setCarregando(false); } }
   return (
-    <section className="wr-card p-5">
+    <section className="gip-glass p-5">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-2.5">
           <Users className="h-5 w-5 shrink-0" aria-hidden style={{ color: "#D7F36A" }} />

@@ -71,7 +71,7 @@ export default function EmendasClient({ kpis, valorPorArea, emendas, ehAdmin }: 
   const coresPilulaPdf: Record<string, string> = Object.fromEntries(Object.values(STATUS).map((s) => [s.label, s.fg]));
 
   return (
-    <div className="mx-auto max-w-[1140px] px-4 py-7 space-y-6" style={{ background: "var(--color-bg)" }}>
+    <div className="gip-ambient-bg mx-auto max-w-[1140px] px-4 py-7 space-y-6">
       <CommandHero
         eyebrow="Gabinete · Emendas"
         titulo="Emendas Parlamentares"
@@ -143,7 +143,7 @@ export default function EmendasClient({ kpis, valorPorArea, emendas, ehAdmin }: 
               const st = STATUS[e.status] ?? { label: e.status, bg: "#F0F0EB", fg: "#5B606B" };
               const destino = e.municipio || e.entidade || "—";
               return (
-                <Link key={e.id} href={`/app/politico/emendas/${e.id}`} className="wr-card flex flex-col gap-2.5 p-5 transition-shadow duration-200 hover:shadow-md">
+                <Link key={e.id} href={`/app/politico/emendas/${e.id}`} className="gip-glass gip-glass-hover flex flex-col gap-2.5 p-5">
                   <div className="flex items-start justify-between gap-2">
                     <div className="min-w-0">
                       <div className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--color-text-subtle)" }}>

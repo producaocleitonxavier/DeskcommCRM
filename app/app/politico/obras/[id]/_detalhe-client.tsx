@@ -86,13 +86,13 @@ export default function ObraDetalhe({ data }: { data: ObraDetalheData }) {
   const str = (k: string) => (obra[k] as string | null) ?? "";
 
   return (
-    <div className="mx-auto max-w-[920px] space-y-5 px-4 py-7" style={{ background: "var(--color-bg)" }}>
+    <div className="gip-ambient-bg mx-auto max-w-[920px] space-y-5 px-4 py-7">
       <Link href="/app/politico/obras" className="inline-flex items-center gap-1.5 text-sm" style={{ color: "var(--color-text-muted)" }}>
         <ArrowLeft className="h-4 w-4" aria-hidden /> Obras & Fiscalização
       </Link>
 
       {/* Cabeçalho */}
-      <section className="wr-card p-5">
+      <section className="gip-glass p-5">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div className="min-w-0">
             <div className="flex items-center gap-2 text-xs font-semibold" style={{ color: obra.natureza === "execucao" ? "#7da9bf" : "#D7F36A" }}>
@@ -125,7 +125,7 @@ export default function ObraDetalhe({ data }: { data: ObraDetalheData }) {
 
       {/* Peso eleitoral do território — "você investiu onde te elegeu?" */}
       {data.peso && (data.peso.meusVotos > 0 || data.peso.leads > 0) && (
-        <section className="wr-card p-5" style={{ background: "linear-gradient(180deg, rgba(215,243,106,0.06), transparent)" }}>
+        <section className="gip-glass p-5" style={{ background: "linear-gradient(180deg, rgba(215,243,106,0.06), transparent)" }}>
           <div className="mb-2 flex items-center gap-2">
             <MapPin className="h-4 w-4" aria-hidden style={{ color: "#D7F36A" }} />
             <h2 className="font-heading text-base font-bold" style={{ color: "var(--color-text)" }}>Peso eleitoral do território</h2>
@@ -173,7 +173,7 @@ function CaptacaoObraCard({ obraId, beneficiarios, vozArmada, politicoNome }: { 
     if (lista === null) { setCarregando(true); setLista(await listarBeneficiariosObra(obraId)); setCarregando(false); }
   }
   return (
-    <section className="wr-card p-5">
+    <section className="gip-glass p-5">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-2.5">
           <Users className="h-5 w-5 shrink-0" aria-hidden style={{ color: "#D7F36A" }} />
@@ -264,7 +264,7 @@ function DadosCard({ obra, emendas, onSalvar }: { obra: Obra; emendas: ObraDetal
   const Info = ({ l, v }: { l: string; v: string }) => v ? <div><div className="text-[11px]" style={{ color: "var(--color-text-subtle)" }}>{l}</div><div className="text-sm" style={{ color: "var(--color-text)" }}>{v}</div></div> : null;
 
   return (
-    <section className="wr-card p-5">
+    <section className="gip-glass p-5">
       <div className="mb-3 flex items-center justify-between">
         <h2 className="font-heading text-base font-bold" style={{ color: "var(--color-text)" }}>Dados</h2>
         {!editando && <button type="button" onClick={() => setEditando(true)} className="inline-flex items-center gap-1 text-xs" style={{ color: "var(--color-text-muted)" }}><Pencil className="h-3.5 w-3.5" aria-hidden /> Editar</button>}
@@ -333,7 +333,7 @@ function VistoriasCard({ obraId, vistorias, onMudou, onPercentual }: { obraId: s
   }
 
   return (
-    <section className="wr-card p-5">
+    <section className="gip-glass p-5">
       <div className="mb-3 flex items-center justify-between">
         <h2 className="flex items-center gap-2 font-heading text-base font-bold" style={{ color: "var(--color-text)" }}><ClipboardCheck className="h-4 w-4" aria-hidden style={{ color: "#D7F36A" }} /> Vistorias</h2>
         {!aberto && <button type="button" onClick={() => setAberto(true)} className="inline-flex items-center gap-1 rounded-full px-3 py-1.5 text-xs font-semibold" style={{ background: "#D7F36A", color: "#16181D" }}><Plus className="h-3.5 w-3.5" aria-hidden /> Registrar vistoria</button>}
@@ -416,7 +416,7 @@ function FotosCard({ obraId, fotos, onMudou }: { obraId: string; fotos: FotoObra
   }
 
   return (
-    <section className="wr-card p-5">
+    <section className="gip-glass p-5">
       <h2 className="mb-3 flex items-center gap-2 font-heading text-base font-bold" style={{ color: "var(--color-text)" }}><Camera className="h-4 w-4" aria-hidden style={{ color: "#D7F36A" }} /> Fotos & evidências</h2>
       <div className="mb-3 flex flex-wrap items-center gap-2">
         <input className="wr-input flex-1" placeholder="Legenda (opcional)" value={legenda} onChange={(e) => setLegenda(e.target.value)} style={{ minWidth: 180 }} />

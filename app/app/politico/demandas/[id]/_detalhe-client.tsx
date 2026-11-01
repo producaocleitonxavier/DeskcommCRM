@@ -262,7 +262,7 @@ export default function DetalheDemandaClient({ demanda, assessores, eventos, voz
   const ec = ESTADO_COR[d.estado] ?? ESTADO_COR.aberta!;
 
   return (
-    <div className="mx-auto max-w-[860px] px-4 py-7 space-y-5" style={{ background: "var(--color-bg)" }}>
+    <div className="gip-ambient-bg mx-auto max-w-[860px] px-4 py-7 space-y-5">
       <div>
         <Link href="/app/politico/demandas" className="inline-flex items-center gap-1 text-sm transition-colors" style={{ color: "var(--color-text-muted)" }}>
           <ArrowLeft className="h-4 w-4" aria-hidden /> Demandas
@@ -270,7 +270,7 @@ export default function DetalheDemandaClient({ demanda, assessores, eventos, voz
       </div>
 
       {/* Cabeçalho */}
-      <header className="wr-card overflow-hidden p-6 sm:p-7">
+      <header className="gip-glass overflow-hidden p-6 sm:p-7">
         {/* Faixa tactical (assinatura Centro de Comando) */}
         <div
           className="-mx-6 -mt-6 mb-5 px-6 py-2.5 sm:-mx-7 sm:-mt-7 sm:px-7"
@@ -408,7 +408,7 @@ export default function DetalheDemandaClient({ demanda, assessores, eventos, voz
       )}
 
       {/* Campos */}
-      <section className="wr-card p-6 sm:p-7">
+      <section className="gip-glass p-6 sm:p-7">
         {editando ? (
           <div className="space-y-4">
             <Campo label="Tipo de demanda">
@@ -512,7 +512,7 @@ export default function DetalheDemandaClient({ demanda, assessores, eventos, voz
       </section>
 
       {/* Encaminhamento (+ IA no próximo passo) */}
-      <section className="wr-card p-6 sm:p-7">
+      <section className="gip-glass p-6 sm:p-7">
         <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
           <h2 className="font-heading text-base font-bold" style={{ color: "var(--color-text)" }}>Encaminhamento ao órgão</h2>
           <div className="flex flex-wrap items-center gap-2">
@@ -686,7 +686,7 @@ function LinhaDoTempo({ aberturaISO, eventos }: { aberturaISO: string; eventos: 
   ].sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
 
   return (
-    <section className="wr-card p-6 sm:p-7">
+    <section className="gip-glass p-6 sm:p-7">
       <h2 className="mb-4 font-heading text-base font-bold" style={{ color: "var(--color-text)" }}>Histórico do atendimento</h2>
       <ol className="space-y-0">
         {itens.map((e, i) => {
@@ -728,8 +728,8 @@ function Campo({ label, children }: { label: string; children: React.ReactNode }
 function Info({ label, valor }: { label: string; valor: string }) {
   return (
     <div>
-      <dt className="text-xs font-medium" style={{ color: "var(--color-text-subtle)" }}>{label}</dt>
-      <dd className="mt-0.5 text-sm font-medium" style={{ color: "var(--color-text)" }}>{valor}</dd>
+      <dt className="text-xs font-semibold" style={{ color: "var(--color-text-muted)" }}>{label}</dt>
+      <dd className="mt-0.5 text-sm font-bold" style={{ color: "var(--color-text)" }}>{valor}</dd>
     </div>
   );
 }

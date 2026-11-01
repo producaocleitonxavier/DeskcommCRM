@@ -91,7 +91,7 @@ export default function AgendaClient({ compromissos }: AgendaClientProps) {
   const rotuloSemana = `${semana[0]!.toLocaleDateString("pt-BR", { day: "2-digit", month: "short" })} – ${semana[6]!.toLocaleDateString("pt-BR", { day: "2-digit", month: "short" })}`;
 
   return (
-    <div className="mx-auto max-w-[1140px] px-4 py-7 space-y-6" style={{ background: "var(--color-bg)" }}>
+    <div className="gip-ambient-bg mx-auto max-w-[1140px] px-4 py-7 space-y-6">
       <CommandHero
         eyebrow="Gabinete · Agenda"
         titulo="Agenda"
@@ -107,7 +107,7 @@ export default function AgendaClient({ compromissos }: AgendaClientProps) {
       </section>
 
       {/* Faixa de semana */}
-      <section className="wr-card p-4 sm:p-5">
+      <section className="gip-glass p-4 sm:p-5">
         <div className="mb-3 flex items-center justify-between">
           <button type="button" onClick={() => setOffset((o) => o - 1)} className="inline-flex h-9 w-9 items-center justify-center rounded-full" style={{ background: "var(--color-surface-elevated)", color: "var(--color-text-muted)" }} aria-label="Semana anterior">
             <ChevronLeft className="h-4 w-4" aria-hidden />
@@ -150,7 +150,7 @@ export default function AgendaClient({ compromissos }: AgendaClientProps) {
           {new Date(selecionado + "T12:00:00").toLocaleDateString("pt-BR", { weekday: "long", day: "2-digit", month: "long" })}
         </h2>
         {doDia.length === 0 ? (
-          <div className="wr-card p-10 text-center">
+          <div className="gip-glass p-10 text-center">
             <p className="text-sm" style={{ color: "var(--color-text-subtle)" }}>Nenhum compromisso neste dia.</p>
           </div>
         ) : (
@@ -164,7 +164,7 @@ export default function AgendaClient({ compromissos }: AgendaClientProps) {
                   (c.data_fim ? ` – ${new Date(c.data_fim).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}` : "");
               const localTxt = [c.local, c.municipio].filter(Boolean).join(" · ");
               return (
-                <Link key={c.id} href={`/app/politico/agenda/${c.id}`} className="wr-card flex items-center gap-4 p-4 transition-shadow duration-200 hover:shadow-md">
+                <Link key={c.id} href={`/app/politico/agenda/${c.id}`} className="gip-glass gip-glass-hover flex items-center gap-4 p-4">
                   <div className="w-24 shrink-0 text-sm font-semibold tabular-nums" style={{ color: "var(--color-text)" }}>{hora}</div>
                   <div className="min-w-0 flex-1">
                     <div className="truncate font-semibold" style={{ color: "var(--color-text)" }}>{c.titulo}</div>
