@@ -82,7 +82,9 @@ export default function OpiniaoPublicaClient({ config, resumo, mencoes }: { conf
   }
 
   return (
-    <div className="mx-auto max-w-[1040px] px-4 py-7 space-y-4">
+    <div className="relative isolate mx-auto max-w-[1040px] px-4 py-7">
+      <div aria-hidden className="pointer-events-none absolute inset-0 -z-10 gip-ambient-layer" />
+      <div className="space-y-4">
       {/* Cabeçalho */}
       <header className="flex flex-wrap items-start justify-between gap-3">
         <div className="flex items-center gap-2.5">
@@ -112,11 +114,11 @@ export default function OpiniaoPublicaClient({ config, resumo, mencoes }: { conf
         </div>
       </header>
 
-      {msg && <div className="gip-glasspx-4 py-2.5 text-sm" style={{ color: "var(--color-text-muted)" }}>{msg}</div>}
+      {msg && <div className="gip-glass px-4 py-2.5 text-sm" style={{ color: "var(--color-text-muted)" }}>{msg}</div>}
 
       {/* Config de termos */}
       {cfgAberto && (
-        <section className="gip-glassp-5 space-y-4">
+        <section className="gip-glass p-5 space-y-4">
           <h2 className="text-sm font-bold" style={{ color: "var(--color-text)" }}>O que monitorar</h2>
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <Campo label="Nome(s) do candidato / mandato" hint="separe por vírgula"><input value={nome} onChange={(e) => setNome(e.target.value)} placeholder="Cleiton Xavier, @cleitonxavier" className="wr-input w-full" /></Campo>
@@ -132,7 +134,7 @@ export default function OpiniaoPublicaClient({ config, resumo, mencoes }: { conf
       )}
 
       {resumo.total === 0 ? (
-        <div className="gip-glassp-10 text-center">
+        <div className="gip-glass p-10 text-center">
           <RadioTower className="mx-auto h-8 w-8" style={{ color: "var(--color-text-subtle)" }} aria-hidden />
           <p className="mt-3 text-sm" style={{ color: "var(--color-text-subtle)" }}>
             {temConfig ? 'Nenhuma menção ainda. Clique em "Atualizar" para captar a imprensa agora.' : "Configure os termos acima para começar a escutar."}
@@ -141,7 +143,7 @@ export default function OpiniaoPublicaClient({ config, resumo, mencoes }: { conf
       ) : (
         <>
           {/* HERO de sentimento */}
-          <section className="gip-glassoverflow-hidden p-0">
+          <section className="gip-glass overflow-hidden p-0">
             <div className="grid grid-cols-1 gap-0 md:grid-cols-[320px_1fr]">
               {/* Índice */}
               <div className="flex flex-col justify-center gap-3 p-6" style={{ background: "linear-gradient(145deg, rgba(215,243,106,0.06), transparent)", borderRight: "1px solid var(--color-border)" }}>
@@ -176,7 +178,7 @@ export default function OpiniaoPublicaClient({ config, resumo, mencoes }: { conf
           </section>
 
           {/* Pulso */}
-          <section className="gip-glassp-6">
+          <section className="gip-glass p-6">
             <div className="mb-4 flex items-center justify-between">
               <h2 className="text-sm font-bold" style={{ color: "var(--color-text)" }}>Pulso da cobertura</h2>
               <div className="flex items-center gap-3 text-[11px]" style={{ color: "var(--color-text-subtle)" }}>
@@ -188,11 +190,11 @@ export default function OpiniaoPublicaClient({ config, resumo, mencoes }: { conf
 
           {/* Pautas + origem */}
           <section className="grid grid-cols-1 gap-4 sm:grid-cols-5">
-            <div className="gip-glassp-5 sm:col-span-3">
+            <div className="gip-glass gip-glass-hover p-5 sm:col-span-3">
               <div className="mb-3 flex items-center gap-1.5 text-sm font-bold" style={{ color: "var(--color-text)" }}><Flame className="h-4 w-4" style={{ color: "#F59E0B" }} aria-hidden /> Pautas quentes</div>
               {resumo.topicos.length === 0 ? <p className="text-xs" style={{ color: "var(--color-text-subtle)" }}>Classificando…</p> : (
                 <div className="flex flex-col gap-2">
-                  {resumo.topicos.map((t) => {
+                  {resumo.topicos.map((t, i) => {
                     const neg = t.polaridadeMedia < -0.15, pos = t.polaridadeMedia > 0.15;
                     const cor = neg ? SENT.negativo.cor : pos ? SENT.positivo.cor : SENT.neutro.cor;
                     const Icone = neg ? TrendingDown : pos ? TrendingUp : Minus;
@@ -200,7 +202,7 @@ export default function OpiniaoPublicaClient({ config, resumo, mencoes }: { conf
                     return (
                       <div key={t.topico} className="flex items-center gap-3">
                         <span className="flex w-28 shrink-0 items-center gap-1.5 text-sm capitalize" style={{ color: "var(--color-text)" }}><Icone className="h-3.5 w-3.5 shrink-0" style={{ color: cor }} aria-hidden />{t.topico}</span>
-                        <div className="h-2 flex-1 overflow-hidden rounded-full" style={{ background: "rgba(255,255,255,0.05)" }}><div className="h-full rounded-full" style={{ width: `${w}%`, background: cor, opacity: 0.8 }} /></div>
+                        <div className="h-2 flex-1 overflow-hidden rounded-full" style={{ background: "color-mix(in srgb, var(--color-text) 8%, transparent)" }}><div className="h-full rounded-full" style={{ width: `${w}%`, background: cor, transformOrigin: "left", animation: `gip-bar-grow 0.7s cubic-bezier(0.16,1,0.3,1) ${(i * 0.05).toFixed(2)}s both`, boxShadow: `0 0 10px color-mix(in srgb, ${cor} 45%, transparent)` }} /></div>
                         <span className="w-6 shrink-0 text-right text-xs tabular-nums" style={{ color: "var(--color-text-subtle)" }}>{t.total}</span>
                       </div>
                     );
@@ -208,14 +210,14 @@ export default function OpiniaoPublicaClient({ config, resumo, mencoes }: { conf
                 </div>
               )}
             </div>
-            <div className="gip-glassp-5 sm:col-span-2">
+            <div className="gip-glass gip-glass-hover p-5 sm:col-span-2">
               <div className="mb-3 text-sm font-bold" style={{ color: "var(--color-text)" }}>Origem</div>
               <div className="flex flex-col gap-2.5">
-                {resumo.porCanal.map((c) => (
+                {resumo.porCanal.map((c, i) => (
                   <div key={c.canal} className="flex items-center justify-between gap-2">
                     <span className="text-sm capitalize" style={{ color: "var(--color-text)" }}>{c.canal}</span>
                     <div className="flex items-center gap-2">
-                      <div className="h-2 w-20 overflow-hidden rounded-full" style={{ background: "rgba(255,255,255,0.05)" }}><div className="h-full rounded-full" style={{ width: `${pct(c.total, resumo.total)}%`, background: "#60A5FA" }} /></div>
+                      <div className="h-2 w-20 overflow-hidden rounded-full" style={{ background: "color-mix(in srgb, var(--color-text) 8%, transparent)" }}><div className="h-full rounded-full" style={{ width: `${pct(c.total, resumo.total)}%`, background: "#60A5FA", transformOrigin: "left", animation: `gip-bar-grow 0.7s cubic-bezier(0.16,1,0.3,1) ${(i * 0.06).toFixed(2)}s both`, boxShadow: "0 0 10px rgba(96,165,250,0.5)" }} /></div>
                       <span className="w-10 text-right text-xs tabular-nums" style={{ color: "var(--color-text-subtle)" }}>{pct(c.total, resumo.total)}%</span>
                     </div>
                   </div>
@@ -225,7 +227,7 @@ export default function OpiniaoPublicaClient({ config, resumo, mencoes }: { conf
           </section>
 
           {/* Feed — cards (estilo premium, limitado para não poluir) */}
-          <section className="gip-glassp-5">
+          <section className="gip-glass p-5">
             <div className="mb-3 flex items-center justify-between">
               <h2 className="text-sm font-bold" style={{ color: "var(--color-text)" }}>Menções recentes</h2>
               <span className="text-[11px]" style={{ color: "var(--color-text-subtle)" }}>as {Math.min(mencoes.length, 15)} mais recentes</span>
@@ -263,6 +265,7 @@ export default function OpiniaoPublicaClient({ config, resumo, mencoes }: { conf
           </section>
         </>
       )}
+      </div>
     </div>
   );
 }

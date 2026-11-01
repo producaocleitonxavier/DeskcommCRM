@@ -181,15 +181,15 @@ export default async function ResultadosPage({ params }: { params: Promise<{ id:
                   return (
                     <details key={r.id} className="group rounded-2xl" style={{ background: "color-mix(in srgb, var(--color-text) 4%, transparent)", border: "1px solid color-mix(in srgb, var(--color-text) 8%, transparent)" }}>
                       <summary className="flex cursor-pointer list-none items-center justify-between gap-2 px-4 py-3 text-[13px]" style={{ color: "var(--color-text)" }}>
-                        <span className="min-w-0 truncate font-medium">{c?.nome || `Resposta #${total - idx}`}{c?.telefone ? <span className="font-normal" style={{ color: "var(--color-text-subtle)" }}> · {c.telefone}</span> : null}</span>
+                        <span className="min-w-0 truncate font-semibold">{c?.nome || `Resposta #${total - idx}`}{c?.telefone ? <span className="font-normal" style={{ color: "var(--color-text-subtle)" }}> · {c.telefone}</span> : null}</span>
                         <span className="shrink-0 tabular-nums text-[11px]" style={{ color: "var(--color-text-subtle)" }}>{respondidas}/{perguntas.length} · {fmtData(r.created_at)}</span>
                       </summary>
                       <div className="space-y-2.5 px-4 pb-3.5 pt-1" style={{ borderTop: "1px solid color-mix(in srgb, var(--color-text) 7%, transparent)" }}>
-                        <p className="pt-2 text-[11px]" style={{ color: "var(--color-text-subtle)" }}>📍 {local}</p>
+                        <p className="pt-2 text-[11px] font-semibold" style={{ color: "var(--color-text-muted)" }}>📍 {local}</p>
                         {perguntas.map((p) => (
                           <div key={p.id}>
-                            <p className="text-[11px]" style={{ color: "var(--color-text-subtle)" }}>{p.question}</p>
-                            <p className="text-[13.5px] font-semibold leading-snug" style={{ color: "var(--color-text)" }}>{formatarValor(r.answers[p.id], p.response_type)}</p>
+                            <p className="text-[11px] font-semibold" style={{ color: "var(--color-text)" }}>{p.question}</p>
+                            <p className="text-[13.5px] font-bold leading-snug" style={{ color: "var(--color-text)" }}>{formatarValor(r.answers[p.id], p.response_type)}</p>
                           </div>
                         ))}
                       </div>
