@@ -30,7 +30,7 @@ import type { MetricasHoje, GabineteHoje, FilaDeAcao } from "./page";
 
 // Hexes do funil (espelham --wr-funnel-1..5) — Recharts aplica fill como
 // atributo SVG, onde var(--x) não é confiável.
-const FUNIL_HEX = ["#C9CEF3", "#9AA5EA", "#6B79DD", "#4352C4", "#26318F"];
+const FUNIL_HEX = ["#A5B4FC", "#818CF8", "#6366F1", "#4F46E5", "#4338CA"];
 
 type Tipo = "risk" | "warn" | "ok";
 

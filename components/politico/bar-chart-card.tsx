@@ -11,6 +11,7 @@ import {
   BarChart,
   CartesianGrid,
   Cell,
+  LabelList,
   ResponsiveContainer,
   Tooltip,
   XAxis,
@@ -92,7 +93,7 @@ export function BarChartCard({ title, data, height = 280, horizontal = false, cl
           />
           {horizontal ? (
             <>
-              <XAxis type="number" tick={eixoTick} tickLine={false} axisLine={{ stroke: "var(--color-border)" }} />
+              <XAxis type="number" tick={eixoTick} tickLine={false} axisLine={{ stroke: "rgba(255,255,255,0.08)" }} allowDecimals={false} />
               <YAxis
                 type="category"
                 dataKey="name"
@@ -108,9 +109,9 @@ export function BarChartCard({ title, data, height = 280, horizontal = false, cl
                 dataKey="name"
                 tick={eixoTick}
                 tickLine={false}
-                axisLine={{ stroke: "var(--color-border)" }}
+                axisLine={{ stroke: "rgba(255,255,255,0.08)" }}
               />
-              <YAxis tick={eixoTick} tickLine={false} axisLine={false} width={40} />
+              <YAxis tick={eixoTick} tickLine={false} axisLine={false} width={40} allowDecimals={false} />
             </>
           )}
           <Tooltip content={<ChartTooltip />} cursor={{ fill: "rgba(255,255,255,0.05)" }} />
@@ -118,6 +119,13 @@ export function BarChartCard({ title, data, height = 280, horizontal = false, cl
             {data.map((d, i) => (
               <Cell key={`cell-${i}`} fill={`url(#${gid}-${i})`} stroke={d.fill ?? COR_PADRAO} strokeOpacity={0.35} strokeWidth={1} />
             ))}
+            <LabelList
+              dataKey="value"
+              position={horizontal ? "right" : "top"}
+              offset={8}
+              style={{ fill: "var(--color-text)", fontSize: 12, fontWeight: 700 }}
+              formatter={(v: number) => (v > 0 ? v.toLocaleString("pt-BR") : "")}
+            />
           </Bar>
         </BarChart>
       </ResponsiveContainer>
