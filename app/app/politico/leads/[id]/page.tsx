@@ -320,8 +320,8 @@ function InfoCard({ titulo, children }: { titulo: string; children: React.ReactN
 function InfoRow({ label, value }: { label: string; value: React.ReactNode }) {
   return (
     <div className="flex justify-between items-start py-1.5 text-sm">
-      <span style={{ color: "var(--color-text-subtle)" }}>{label}</span>
-      <span className="text-right font-medium" style={{ color: "var(--color-text)" }}>
+      <span className="font-semibold" style={{ color: "var(--color-text)" }}>{label}</span>
+      <span className="text-right font-bold" style={{ color: "var(--color-text)" }}>
         {value || <span style={{ color: "var(--color-text-subtle)" }}>—</span>}
       </span>
     </div>
@@ -549,7 +549,7 @@ export default async function FichaPage({
         <div className="space-y-4">
           {/* Ações rápidas */}
           <div className="gip-glass p-5">
-            <h3 className="text-[11px] font-semibold uppercase tracking-[.08em] mb-3" style={{ color: "var(--color-text-subtle)" }}>Ações rápidas</h3>
+            <h3 className="text-[11px] font-semibold uppercase tracking-[.08em] mb-3" style={{ color: "var(--color-text-muted)" }}>Ações rápidas</h3>
             <div className="flex flex-col gap-2.5">
               {whatsDigits && (
                 <a href={`https://wa.me/${whatsDigits}`} target="_blank" rel="noopener noreferrer" className="wr-btn w-full justify-center">
@@ -575,7 +575,7 @@ export default async function FichaPage({
 
           {/* KPIs do contato */}
           <div className="gip-glass gip-glass-hover p-5">
-            <h3 className="text-[11px] font-semibold uppercase tracking-[.08em] mb-3" style={{ color: "var(--color-text-subtle)" }}>Indicadores</h3>
+            <h3 className="text-[11px] font-semibold uppercase tracking-[.08em] mb-3" style={{ color: "var(--color-text-muted)" }}>Indicadores</h3>
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <div className="font-heading text-2xl font-bold tabular-nums leading-none">{lead.political_score}</div>
@@ -596,7 +596,7 @@ export default async function FichaPage({
 
           {/* Funil visual */}
           <div className="gip-glass gip-glass-hover p-5">
-            <h3 className="text-[11px] font-semibold uppercase tracking-[.08em] mb-3" style={{ color: "var(--color-text-subtle)" }}>Nível no funil</h3>
+            <h3 className="text-[11px] font-semibold uppercase tracking-[.08em] mb-3" style={{ color: "var(--color-text-muted)" }}>Nível no funil</h3>
             <div className="flex items-center justify-between">
               <EtapaPill value={lead.support_level} />
               <span className="text-[11px]" style={{ color: "var(--color-text-subtle)" }}>Etapa {etapaIdx(lead.support_level) + 1} de {ETAPAS_FUNIL.length}</span>
@@ -609,7 +609,7 @@ export default async function FichaPage({
           {/* Tags */}
           {contact.tags && contact.tags.length > 0 && (
             <div className="gip-glass gip-glass-hover p-5">
-              <h3 className="text-[11px] font-semibold uppercase tracking-[.08em] mb-3" style={{ color: "var(--color-text-subtle)" }}>Tags</h3>
+              <h3 className="text-[11px] font-semibold uppercase tracking-[.08em] mb-3" style={{ color: "var(--color-text-muted)" }}>Tags</h3>
               <div className="flex flex-wrap gap-1.5">
                 {contact.tags.map((tag) => (
                   <span key={tag} className="inline-flex items-center rounded-full px-2.5 py-0.5 text-[11px] font-medium" style={{ background: "var(--color-surface-elevated)", color: "var(--color-text-muted)" }}>

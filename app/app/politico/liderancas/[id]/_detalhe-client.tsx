@@ -403,8 +403,8 @@ function Campo({ label, children }: { label: string; children: React.ReactNode }
 function Info({ label, valor }: { label: string; valor: string }) {
   return (
     <div>
-      <dt className="text-xs font-medium" style={{ color: "var(--color-text-subtle)" }}>{label}</dt>
-      <dd className="mt-0.5 text-sm font-medium" style={{ color: "var(--color-text)" }}>{valor}</dd>
+      <dt className="text-xs font-semibold" style={{ color: "var(--color-text-muted)" }}>{label}</dt>
+      <dd className="mt-0.5 text-sm font-bold" style={{ color: "var(--color-text)" }}>{valor}</dd>
     </div>
   );
 }

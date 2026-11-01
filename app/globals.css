@@ -669,15 +669,16 @@
    * + rim superior mais brilhante, e blur menor (13) — lê como vidro limpo, não
    * vidro jateado. Precisa de algo colorido atrás (gip-ambient-bg) para brilhar. */
   background:
-    linear-gradient(135deg, color-mix(in srgb, var(--color-text) 11%, transparent), transparent 40%),
-    color-mix(in srgb, var(--color-surface-elevated) 62%, transparent);
-  border: 1px solid color-mix(in srgb, var(--color-text) 16%, transparent);
+    linear-gradient(135deg, color-mix(in srgb, var(--color-text) 13%, transparent), transparent 42%),
+    radial-gradient(120% 100% at 0% 0%, color-mix(in srgb, var(--color-text) 6%, transparent), transparent 55%),
+    color-mix(in srgb, var(--color-surface-elevated) 60%, transparent);
+  border: 1px solid color-mix(in srgb, var(--color-text) 18%, transparent);
   border-radius: var(--wr-card-radius);
   box-shadow:
-    0 20px 48px -20px rgba(0, 0, 0, 0.6),
-    inset 0 1px 0 color-mix(in srgb, var(--color-text) 24%, transparent);
-  backdrop-filter: blur(13px) saturate(165%);
-  -webkit-backdrop-filter: blur(13px) saturate(165%);
+    0 20px 48px -20px rgba(0, 0, 0, 0.62),
+    inset 0 1px 0 color-mix(in srgb, var(--color-text) 26%, transparent);
+  backdrop-filter: blur(14px) saturate(160%);
+  -webkit-backdrop-filter: blur(14px) saturate(160%);
   transition: border-color var(--duration-base) var(--ease-out), box-shadow var(--duration-base) var(--ease-out), transform var(--duration-base) var(--ease-out);
 }
 
@@ -686,17 +687,17 @@
 /* (1) Como camada absoluta -z-10 dentro de um container `relative isolate`. */
 .gip-ambient-layer {
   background:
-    radial-gradient(52% 38% at 10% 0%, color-mix(in srgb, var(--color-accent) 16%, transparent), transparent 72%),
-    radial-gradient(46% 42% at 100% 8%, color-mix(in srgb, #60A5FA 17%, transparent), transparent 72%),
-    radial-gradient(60% 55% at 50% 110%, color-mix(in srgb, #7C5CF6 11%, transparent), transparent 70%);
+    radial-gradient(85% 50% at 50% -12%, color-mix(in srgb, #6E8BFF 9%, transparent), transparent 60%),
+    radial-gradient(48% 40% at 100% 112%, color-mix(in srgb, #7C5CF6 7%, transparent), transparent 70%);
 }
 /* (2) Direto no fundo da raiz da página (os glows ficam ATRÁS dos cards, então o
- * backdrop-filter do vidro os capta). Substitui `background: var(--color-bg)`. */
+ * backdrop-filter do vidro os capta). Substitui `background: var(--color-bg)`.
+ * Frio e discreto: um sopro de luz azulado no topo + violeta tênue embaixo —
+ * SEM lima (lima sobre o preto vira oliva/"lodo"). */
 .gip-ambient-bg {
   background:
-    radial-gradient(50% 38% at 6% 0%, color-mix(in srgb, var(--color-accent) 14%, transparent), transparent 70%),
-    radial-gradient(44% 40% at 100% 4%, color-mix(in srgb, #60A5FA 15%, transparent), transparent 70%),
-    radial-gradient(58% 52% at 50% 108%, color-mix(in srgb, #7C5CF6 10%, transparent), transparent 68%),
+    radial-gradient(90% 55% at 50% -15%, color-mix(in srgb, #6E8BFF 8%, transparent), transparent 58%),
+    radial-gradient(50% 42% at 100% 114%, color-mix(in srgb, #7C5CF6 6%, transparent), transparent 70%),
     var(--color-bg);
 }
 @utility gip-glass-hover {

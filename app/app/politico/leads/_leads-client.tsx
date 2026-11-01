@@ -288,8 +288,8 @@ export default function LeadsClient({ leads, total, contagens, cidades, mapaResu
                       {iniciais(nome)}
                     </span>
                     <div className="min-w-0 flex-1">
-                      <div className="truncate font-semibold leading-tight">{nome}</div>
-                      <div className="truncate text-xs text-muted-foreground">
+                      <div className="truncate font-bold leading-tight" style={{ color: "var(--color-text)" }}>{nome}</div>
+                      <div className="truncate text-xs font-medium" style={{ color: "var(--color-text-muted)" }}>
                         {lead.contacts?.phone_number ?? "sem telefone"}
                       </div>
                     </div>
