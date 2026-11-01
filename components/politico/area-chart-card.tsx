@@ -30,6 +30,11 @@ export interface AreaChartCardProps {
   color?: string;
   height?: number;
   className?: string;
+  /** Rótulo do número-resumo mostrado no cabeçalho (default "no período"). */
+  resumoLabel?: string;
+  /** Mostra o total do período em destaque no cabeçalho (default true). Didático:
+   *  bater o olho e ver o número sem precisar de hover. */
+  mostrarTotal?: boolean;
 }
 
 interface TooltipProps {
@@ -61,14 +66,29 @@ export function AreaChartCard({
   color = "#C4E64A",
   height = 280,
   className,
+  resumoLabel = "no período",
+  mostrarTotal = true,
 }: AreaChartCardProps) {
   const uid = useId().replace(/[:]/g, "");
   const gradId = `area-grad-${uid}`;
   const glowId = `area-glow-${uid}`;
+  const total = data.reduce((s, d) => s + (Number(d.value) || 0), 0);
 
   return (
     <div className={cn("gip-glass p-6", className)}>
-      <h3 className="mb-4 font-heading text-base font-bold" style={{ color: "var(--color-text)" }}>{title}</h3>
+      <div className="mb-4 flex items-end justify-between gap-3">
+        <h3 className="font-heading text-base font-bold" style={{ color: "var(--color-text)" }}>{title}</h3>
+        {mostrarTotal && (
+          <div className="shrink-0 text-right leading-none">
+            <div className="font-heading text-2xl font-bold tabular-nums" style={{ color }}>
+              {total.toLocaleString("pt-BR")}
+            </div>
+            <div className="mt-1 text-[10px] font-semibold uppercase tracking-wide" style={{ color: "var(--color-text-subtle)" }}>
+              {resumoLabel}
+            </div>
+          </div>
+        )}
+      </div>
       <ResponsiveContainer width="100%" height={height}>
         <AreaChart data={data} margin={{ top: 6, right: 8, left: -8, bottom: 0 }}>
           <defs>
