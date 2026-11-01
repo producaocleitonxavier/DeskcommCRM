@@ -187,7 +187,7 @@ export default function HojeClient({
               </Link>
               {[
                 { href: "/app/politico/demandas", label: "Demandas" },
-                { href: "/app/politico/agenda", label: "Agenda" },
+                { href: "/app/agenda", label: "Agenda" },
                 { href: "/app/politico/liderancas/novo", label: "Nova liderança" },
               ].map((a) => (
                 <Link
@@ -304,7 +304,7 @@ export default function HojeClient({
               </span>
               <h2 className="font-heading text-base font-bold" style={{ color: "var(--color-text)" }}>Agenda de hoje</h2>
             </div>
-            <Link href="/app/politico/agenda" className="text-xs font-medium" style={{ color: "var(--color-text-muted)" }}>ver tudo</Link>
+            <Link href="/app/agenda" className="text-xs font-medium" style={{ color: "var(--color-text-muted)" }}>ver tudo</Link>
           </div>
           {g.agenda.length === 0 ? (
             <p className="text-sm" style={{ color: "var(--color-text-subtle)" }}>Sem compromissos hoje.</p>
@@ -312,7 +312,7 @@ export default function HojeClient({
             <ul className="space-y-1.5">
               {g.agenda.map((c) => (
                 <li key={c.id}>
-                  <Link href={`/app/politico/agenda/${c.id}`} className="flex items-center gap-2 rounded-lg px-2 py-1.5 transition-colors hover:bg-[var(--color-surface-elevated)]">
+                  <Link href="/app/agenda" className="flex items-center gap-2 rounded-lg px-2 py-1.5 transition-colors hover:bg-[var(--color-surface-elevated)]">
                     <span className="shrink-0 text-xs font-semibold tabular-nums" style={{ color: "var(--color-text-muted)", minWidth: 42 }}>
                       {c.diaInteiro ? "dia" : horaDe(c.dataISO)}
                     </span>

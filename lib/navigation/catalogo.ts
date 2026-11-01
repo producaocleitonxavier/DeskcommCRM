@@ -212,23 +212,18 @@ export const NAV_CATALOG = [
     sidebar: true,
   },
   {
-    // Entra em "atendimento", e não em "organizacao", porque a Agenda é onde o
-    // dia acontece e não onde ele se configura: quem atende abre isto de manhã
-    // junto com o Inbox. Os TIPOS de agendamento — que são configuração de
-    // verdade — foram para Configurações, como este comentário previa: ver
-    // `/app/settings/tenant/agenda` no grupo "organizacao".
-    //
-    // ⚠️ ESTA FRASE ESTAVA VENCIDA: dizia "a disponibilidade ainda não tem tela",
-    // e tem — é a aba "Atendimento" de `/app/team`, com editor de fuso e janelas
-    // (`app/app/team/_components/AttendantsClient.tsx`). Ela chegou a custar uma
-    // investigação inteira: quem leu isto aqui concluiu que faltava construir a
-    // tela, quando o que faltava era o CAMINHO até ela. O aviso da Agenda agora
-    // aponta para `/app/team?aba=atendimento`.
+    // Fica no GABINETE (pedido do cliente): é a agenda do mandato que o time
+    // inteiro consulta — visitas, compromissos do político, o que está
+    // acontecendo — e é a que sincroniza com o Google Agenda. Abre junto com o
+    // resto do dia do gabinete. Os TIPOS de agendamento (configuração de
+    // verdade) seguem em Configurações: `/app/settings/tenant/agenda` no grupo
+    // "organizacao". A disponibilidade do atendente está na aba "Atendimento" de
+    // `/app/team` (`/app/team?aba=atendimento`).
     href: "/app/agenda",
     label: "Agenda",
-    description: "O que está marcado, com quem, e quem atende — seu e da equipe.",
+    description: "O que está marcado, com quem, e quem atende — do político e da equipe. Sincroniza com o Google Agenda.",
     icon: "CalendarBlank",
-    group: "atendimento",
+    group: "gabinete",
     sidebar: true,
   },
   {
@@ -1146,19 +1141,6 @@ export const NAV_CATALOG = [
     label: "Obras & Fiscalização",
     description: "Obras, serviços e contratos públicos por território — fiscalização (vistoria, checklist, fotos) ou execução (contrato, fornecedor, prazo).",
     icon: "Buildings",
-    group: "gabinete",
-    minRole: "agent",
-    sidebar: true,
-  },
-  {
-    href: "/app/politico/agenda",
-    // "Agenda do mandato" (não só "Agenda") para não colidir com a Agenda de
-    // ATENDIMENTO (/app/agenda, grupo atendimento). São ferramentas diferentes:
-    // esta é o diário de compromissos do mandato (reunião/visita/audiência, com
-    // território/liderança); a de atendimento é booking com disponibilidade/Google.
-    label: "Agenda do mandato",
-    description: "Agenda do mandato — reuniões, visitas, audiências, eventos e compromissos.",
-    icon: "CalendarBlank",
     group: "gabinete",
     minRole: "agent",
     sidebar: true,

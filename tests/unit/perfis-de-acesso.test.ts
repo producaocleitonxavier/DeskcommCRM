@@ -21,7 +21,7 @@ describe("PERFIS_DE_ACESSO", () => {
       false,
       "agent",
     ).map((d) => d.href);
-    for (const d of ["/app/politico/demandas", "/app/politico/leads", "/app/captacao-qr", "/app/politico/agenda", "/app/politico/liderancas", "/app/politico/locais"]) {
+    for (const d of ["/app/politico/demandas", "/app/politico/leads", "/app/captacao-qr", "/app/agenda", "/app/politico/liderancas", "/app/politico/locais"]) {
       expect(vis, `rua deveria ver ${d}`).toContain(d);
     }
     for (const d of ["/app/politico/emendas", "/app/politico/projetos-lei", "/app/politico/identidade", "/app/settings/billing", "/app/campaigns", "/app/metrics"]) {

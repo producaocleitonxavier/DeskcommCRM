@@ -68,8 +68,10 @@ const NAV_ALLOWLIST: Record<string, string> = {
     "sub-fluxo de nova liderança, alcançado pelo botão '+ Adicionar liderança' em /app/politico/liderancas",
   "/app/politico/projetos-lei/novo":
     "sub-fluxo de novo projeto de lei, alcançado pelo botão '+ Novo projeto' em /app/politico/projetos-lei",
+  "/app/politico/agenda":
+    "redirect para /app/agenda — a Agenda do mandato foi fundida na Agenda completa do Gabinete (uma agenda só, com Google, horários e vínculo do cidadão)",
   "/app/politico/agenda/novo":
-    "sub-fluxo de novo compromisso, alcançado pelo botão '+ Novo compromisso' em /app/politico/agenda",
+    "redirect para /app/agenda — criar compromisso passou para a Agenda completa do Gabinete",
   "/app/politico/pesquisas/nova":
     "sub-fluxo de nova pesquisa, alcançado pelo botão '+ Nova pesquisa' em /app/politico/pesquisas",
   "/app/politico/configuracao":

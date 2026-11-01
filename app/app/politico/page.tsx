@@ -103,14 +103,16 @@ async function buscarGabineteHoje(organizationId: string): Promise<GabineteHoje>
       .eq("pol_gabinete", true)
       .order("aberta_em", { ascending: false })
       .limit(2000),
+    // Agenda de HOJE: lê a Agenda base (calendar_appointments) — a "Agenda do
+    // mandato" (pol_agenda) foi fundida nela. Compromissos novos vivem aqui.
     db
-      .from("pol_agenda")
-      .select("id, titulo, data_inicio, dia_inteiro, local, status")
+      .from("calendar_appointments")
+      .select("id, title, starts_at, location_details, status")
       .eq("organization_id", organizationId)
-      .gte("data_inicio", hojeIni.toISOString())
-      .lt("data_inicio", hojeFim.toISOString())
-      .neq("status", "cancelado")
-      .order("data_inicio", { ascending: true })
+      .gte("starts_at", hojeIni.toISOString())
+      .lt("starts_at", hojeFim.toISOString())
+      .neq("status", "cancelled")
+      .order("starts_at", { ascending: true })
       .limit(12),
     db
       .from("pol_liderancas")
@@ -209,12 +211,13 @@ async function buscarGabineteHoje(organizationId: string): Promise<GabineteHoje>
     registradas14d.push({ name: `${String(ini.getDate()).padStart(2, "0")}/${String(ini.getMonth() + 1).padStart(2, "0")}`, value: count });
   }
 
-  const agenda = ((agendaRes.data ?? []) as { id: string; titulo: string; data_inicio: string; dia_inteiro: boolean; local: string | null }[]).map((a) => ({
+  const agenda = ((agendaRes.data ?? []) as { id: string; title: string; starts_at: string; location_details: string | null; status: string }[]).map((a) => ({
     id: a.id,
-    titulo: a.titulo,
-    dataISO: a.data_inicio,
-    diaInteiro: a.dia_inteiro,
-    local: a.local,
+    titulo: a.title,
+    dataISO: a.starts_at,
+    // calendar_appointments têm horário de início e fim — não há "dia inteiro".
+    diaInteiro: false,
+    local: a.location_details,
   }));
 
   const hojeM = agora.getMonth();
