@@ -69,7 +69,7 @@ export function FunnelBoard({ data, className, showConversion = true }: FunnelBo
   const maior = Math.max(...data.map((d) => d.value), 1);
 
   return (
-    <ul className={className ? `flex flex-col ${className}` : "flex flex-col"}>
+    <ul className={className ? `flex flex-col gap-1 ${className}` : "flex flex-col gap-1"}>
       {data.map((d, i) => {
         const anterior = i > 0 ? data[i - 1]!.value : null;
         const conv = anterior !== null && anterior > 0 ? pct(d.value, anterior) : null;
@@ -104,19 +104,26 @@ export function FunnelBoard({ data, className, showConversion = true }: FunnelBo
               return (
             <Wrapper
               {...wrapProps}
-              className={`group flex items-center gap-3 rounded-xl px-1 py-1 sm:gap-4 ${d.href ? "cursor-pointer transition-colors hover:bg-white/[0.045]" : ""}`}
+              className={`group flex items-center gap-3 rounded-2xl px-3 py-2.5 sm:gap-4 transition-colors ${d.href ? "cursor-pointer hover:bg-white/[0.05]" : ""}`}
+              style={{
+                background: "color-mix(in srgb, var(--color-text) 3.5%, transparent)",
+                border: "1px solid color-mix(in srgb, var(--color-text) 6%, transparent)",
+              }}
             >
-              {/* Rótulo do estágio */}
-              <div className="flex w-20 shrink-0 items-center gap-2 sm:w-32">
+              {/* Rótulo do estágio — badge numerado + nome */}
+              <div className="flex w-24 shrink-0 items-center gap-2.5 sm:w-36">
                 <span
-                  className="h-2.5 w-2.5 shrink-0 rounded-full"
+                  className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-[11px] font-bold tabular-nums"
                   style={{
-                    background: d.color,
-                    boxShadow: vazio ? "none" : `0 0 0 3px ${d.color}22`,
-                    opacity: vazio ? 0.4 : 1,
+                    background: vazio ? "color-mix(in srgb, var(--color-text) 6%, transparent)" : `${d.color}24`,
+                    color: vazio ? "var(--color-text-subtle, rgba(255,255,255,0.4))" : d.color,
+                    border: `1px solid ${vazio ? "color-mix(in srgb, var(--color-text) 10%, transparent)" : `${d.color}55`}`,
+                    boxShadow: vazio ? "none" : `0 0 12px -2px ${d.color}66`,
                   }}
                   aria-hidden
-                />
+                >
+                  {i + 1}
+                </span>
                 <span
                   className="truncate text-sm font-semibold"
                   style={{ color: vazio ? "var(--color-text-subtle, rgba(255,255,255,0.45))" : "var(--color-text, #E8E8E4)" }}
@@ -160,19 +167,22 @@ export function FunnelBoard({ data, className, showConversion = true }: FunnelBo
 
               {/* Métricas à direita. O valor aparece SEMPRE no mobile; no desktop,
                   só quando não coube dentro da barra (senão fica duplicado). */}
-              <div className="w-[76px] shrink-0 text-right sm:w-24">
+              <div className="flex w-[76px] shrink-0 flex-col items-end gap-1 sm:w-24">
                 <div
-                  className={`text-base font-bold leading-none tabular-nums ${valorDentro ? "sm:hidden" : ""}`}
+                  className={`text-lg font-bold leading-none tabular-nums ${valorDentro ? "sm:hidden" : ""}`}
                   style={{ color: vazio ? "var(--color-text-subtle, rgba(255,255,255,0.45))" : "var(--color-text, #E8E8E4)" }}
                 >
                   {d.value.toLocaleString("pt-BR")}
                 </div>
-                <div
-                  className="mt-1 text-xs tabular-nums"
-                  style={{ color: "var(--color-text-muted, rgba(255,255,255,0.55))" }}
+                <span
+                  className="inline-block rounded-full px-1.5 py-0.5 text-[10px] font-semibold tabular-nums"
+                  style={{
+                    background: vazio ? "color-mix(in srgb, var(--color-text) 6%, transparent)" : `${d.color}1f`,
+                    color: vazio ? "var(--color-text-subtle, rgba(255,255,255,0.5))" : "var(--color-text-muted, rgba(255,255,255,0.78))",
+                  }}
                 >
                   {fmtPct(share)}
-                </div>
+                </span>
               </div>
 
               {/* Seta de drill-down — aparece no hover quando a linha é clicável */}
