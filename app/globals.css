@@ -674,16 +674,16 @@
    * contorno interno (diferencia do hero, que usa borda lima cheia). Mais
    * transparente e menos fosco. */
   background:
-    radial-gradient(65% 55% at 100% 0%, color-mix(in srgb, var(--color-accent) 11%, transparent), transparent 55%),
-    linear-gradient(135deg, color-mix(in srgb, var(--color-text) 11%, transparent), transparent 44%),
-    color-mix(in srgb, var(--color-surface-elevated) 44%, transparent);
-  border: 1px solid color-mix(in srgb, var(--color-text) 8%, transparent);
+    radial-gradient(70% 60% at 100% 0%, color-mix(in srgb, var(--color-accent) 6%, transparent), transparent 58%),
+    linear-gradient(150deg, color-mix(in srgb, var(--color-text) 8%, transparent), transparent 46%),
+    color-mix(in srgb, var(--color-surface-elevated) 46%, transparent);
+  border: 1px solid color-mix(in srgb, var(--color-text) 10%, transparent);
   border-radius: var(--wr-card-radius);
   box-shadow:
-    0 22px 52px -22px rgba(0, 0, 0, 0.62),
-    inset 0 1px 0 color-mix(in srgb, var(--color-text) 28%, transparent);
-  backdrop-filter: blur(15px) saturate(175%);
-  -webkit-backdrop-filter: blur(15px) saturate(175%);
+    0 24px 60px -28px rgba(0, 0, 0, 0.5),
+    inset 0 1px 0 color-mix(in srgb, var(--color-text) 18%, transparent);
+  backdrop-filter: blur(16px) saturate(150%);
+  -webkit-backdrop-filter: blur(16px) saturate(150%);
   transition: border-color var(--duration-base) var(--ease-out), box-shadow var(--duration-base) var(--ease-out), transform var(--duration-base) var(--ease-out);
 }
 
@@ -696,11 +696,11 @@
   inset: 0;
   border-radius: inherit;
   padding: 1px;
-  background: linear-gradient(135deg,
-    color-mix(in srgb, var(--color-text) 34%, transparent) 0%,
-    color-mix(in srgb, var(--color-text) 6%, transparent) 38%,
-    transparent 64%,
-    color-mix(in srgb, var(--color-accent) 20%, transparent) 100%);
+  background: linear-gradient(150deg,
+    color-mix(in srgb, var(--color-text) 18%, transparent) 0%,
+    color-mix(in srgb, var(--color-text) 4%, transparent) 42%,
+    transparent 70%,
+    color-mix(in srgb, var(--color-accent) 9%, transparent) 100%);
   -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
   -webkit-mask-composite: xor;
   mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
@@ -730,12 +730,11 @@
   cursor: default;
 }
 .gip-glass-hover:hover {
-  border-color: color-mix(in srgb, var(--color-accent) 45%, transparent);
+  border-color: color-mix(in srgb, var(--color-accent) 30%, transparent);
   box-shadow:
-    0 30px 64px -24px rgba(0, 0, 0, 0.66),
-    0 0 0 1px color-mix(in srgb, var(--color-accent) 22%, transparent),
-    inset 0 1px 0 color-mix(in srgb, var(--color-text) 30%, transparent),
-    inset 0 0 0 1px color-mix(in srgb, var(--color-accent) 10%, transparent);
+    0 30px 70px -30px rgba(0, 0, 0, 0.55),
+    0 0 0 1px color-mix(in srgb, var(--color-accent) 13%, transparent),
+    inset 0 1px 0 color-mix(in srgb, var(--color-text) 20%, transparent);
   transform: translateY(-1px);
 }
 
