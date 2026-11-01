@@ -358,9 +358,18 @@ export function ChatThread({
         )}
 
         {groups.map((g) => (
-          <div key={g.key} className="space-y-1">
-            <div className="sticky top-0 z-10 flex justify-center py-1">
-              <span className="rounded-full bg-background/80 px-2.5 py-0.5 text-[11px] font-medium text-muted-foreground backdrop-blur">
+          <div key={g.key} className="space-y-1 pt-2">
+            <div className="sticky top-0 z-10 flex justify-center py-2">
+              {/* Separador de data como pílula de VIDRO (borda suave + brilho no
+                  topo), no mesmo idioma das bolhas. */}
+              <span
+                className="rounded-full px-3 py-1 text-[11px] font-semibold text-foreground/80 backdrop-blur-md"
+                style={{
+                  background: "color-mix(in srgb, var(--color-surface-elevated) 55%, transparent)",
+                  border: "1px solid color-mix(in srgb, var(--color-text) 10%, transparent)",
+                  boxShadow: "inset 0 1px 0 color-mix(in srgb, var(--color-text) 12%, transparent)",
+                }}
+              >
                 {dayLabel(g.date, t, localeDaData)}
               </span>
             </div>
