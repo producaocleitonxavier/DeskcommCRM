@@ -38,7 +38,7 @@ const METAS_DEF: { chave: "demandas" | "oficios" | "obras" | "base"; label: stri
 ];
 
 const LEITURA_ESTILO: Record<Leitura, { rotulo: string; bg: string; cor: string }> = {
-  oportunidade: { rotulo: "🎯 Oportunidade", bg: "rgba(215,243,106,0.18)", cor: "#5E7A10" },
+  oportunidade: { rotulo: "🎯 Oportunidade", bg: "rgba(215,243,106,0.18)", cor: "var(--color-accent)" },
   fortaleza: { rotulo: "💪 Fortaleza", bg: "rgba(23,120,79,0.12)", cor: "#17784F" },
   acompanhar: { rotulo: "Acompanhar", bg: "var(--color-surface-elevated)", cor: "var(--color-text-muted)" },
 };
