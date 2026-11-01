@@ -228,14 +228,21 @@ export function MessageBubble({
         // fez a spec achar que havia mensagem onde não havia (issue #1318).
         data-testid="message-bubble"
         style={
-          !isOutbound && !isBareSticker
-            ? {
-                background: "color-mix(in srgb, var(--color-surface-elevated) 55%, transparent)",
-                border: "1px solid color-mix(in srgb, var(--color-text) 9%, transparent)",
-                backdropFilter: "blur(10px)",
-                WebkitBackdropFilter: "blur(10px)",
-              }
-            : undefined
+          isBareSticker
+            ? undefined
+            : isOutbound
+              ? {
+                  background: "color-mix(in srgb, var(--color-accent) 20%, transparent)",
+                  border: "1px solid color-mix(in srgb, var(--color-accent) 32%, transparent)",
+                  backdropFilter: "blur(10px)",
+                  WebkitBackdropFilter: "blur(10px)",
+                }
+              : {
+                  background: "color-mix(in srgb, var(--color-surface-elevated) 55%, transparent)",
+                  border: "1px solid color-mix(in srgb, var(--color-text) 9%, transparent)",
+                  backdropFilter: "blur(10px)",
+                  WebkitBackdropFilter: "blur(10px)",
+                }
         }
         className={cn(
           "relative max-w-[75%] min-w-0 text-sm",
@@ -245,7 +252,7 @@ export function MessageBubble({
                 "rounded-2xl px-3 py-2 shadow-sm",
                 temMenu && "pr-8",
                 isOutbound
-                  ? "rounded-br-sm bg-primary text-primary-foreground"
+                  ? "rounded-br-sm text-foreground"
                   : "rounded-bl-sm text-foreground",
               ),
           isFailed && "border border-destructive",
@@ -262,7 +269,7 @@ export function MessageBubble({
                 className={cn(
                   "absolute right-1 top-1 z-10 rounded-md p-0.5 transition-opacity focus-visible:outline-2 focus-visible:outline-offset-1",
                   "opacity-100 [@media(hover:hover)]:opacity-0 [@media(hover:hover)]:group-hover:opacity-100 focus-visible:opacity-100 data-[state=open]:opacity-100",
-                  isOutbound ? "text-primary-foreground hover:bg-primary-foreground/15" : "text-muted-foreground hover:bg-background/70",
+                  isOutbound ? "text-muted-foreground hover:bg-white/10" : "text-muted-foreground hover:bg-background/70",
                 )}>
                 <CaretDown size={16} weight="bold" aria-hidden />
               </button>
@@ -429,7 +436,7 @@ export function MessageBubble({
         <div
           className={cn(
             "mt-1 flex items-center justify-end gap-1 text-[10px]",
-            isOutbound ? "text-primary-foreground" : "text-muted-foreground",
+            isOutbound ? "text-muted-foreground" : "text-muted-foreground",
           )}
         >
           {editada && (
