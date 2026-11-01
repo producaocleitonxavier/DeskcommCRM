@@ -207,7 +207,7 @@ export default function LocalDetalheClient({
   const localImo = [local.bairro, local.cidade, local.uf].filter(Boolean).join(" · ");
 
   return (
-    <div className="mx-auto max-w-[960px] px-4 py-7 space-y-6" style={{ background: "var(--color-bg)" }}>
+    <div className="gip-ambient-bg mx-auto max-w-[960px] px-4 py-7 space-y-6">
       <div>
         <Link href="/app/politico/locais" className="inline-flex items-center gap-1 text-sm transition-colors" style={{ color: "var(--color-text-muted)" }}>
           <ArrowLeft className="h-4 w-4" aria-hidden /> Locais & Eventos
@@ -237,7 +237,7 @@ export default function LocalDetalheClient({
       </section>
 
       {/* Cadastrar pessoa */}
-      <section className="wr-card space-y-4 p-5 sm:p-6">
+      <section className="gip-glass space-y-4 p-5 sm:p-6">
         <h2 className="flex items-center gap-2 font-heading text-lg font-bold"><UserPlus className="h-5 w-5" style={{ color: "var(--color-accent)" }} aria-hidden /> Cadastrar pessoa</h2>
         {eventos.length === 0 ? (
           <p className="text-sm" style={{ color: "var(--color-text-muted)" }}>
@@ -261,7 +261,7 @@ export default function LocalDetalheClient({
       </section>
 
       {/* Eventos */}
-      <section className="wr-card space-y-4 p-5 sm:p-6">
+      <section className="gip-glass space-y-4 p-5 sm:p-6">
         <div className="flex items-center justify-between gap-2">
           <h2 className="flex items-center gap-2 font-heading text-lg font-bold"><CalendarCheck className="h-5 w-5" style={{ color: "var(--color-accent)" }} aria-hidden /> Eventos neste local</h2>
           <button type="button" onClick={() => setAbrirEvento((v) => !v)} className="wr-btn inline-flex items-center gap-1.5 text-sm"><CalendarPlus className="h-4 w-4" aria-hidden /> Novo evento</button>
@@ -324,7 +324,7 @@ export default function LocalDetalheClient({
       </section>
 
       {/* Pessoas cadastradas */}
-      <section className="wr-card space-y-4 p-5 sm:p-6">
+      <section className="gip-glass space-y-4 p-5 sm:p-6">
         <h2 className="flex items-center gap-2 font-heading text-lg font-bold"><Users className="h-5 w-5" style={{ color: "var(--color-accent)" }} aria-hidden /> Pessoas cadastradas ({pessoas.length})</h2>
         {pessoas.length === 0 ? (
           <p className="text-sm" style={{ color: "var(--color-text-muted)" }}>Nenhuma pessoa cadastrada ainda. Use o formulário acima.</p>

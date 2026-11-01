@@ -49,7 +49,7 @@ export default function TransparenciaClient({ config }: { config: PortalConfig }
   }
 
   return (
-    <div className="mx-auto max-w-[840px] px-4 py-7 space-y-5">
+    <div className="gip-ambient-bg mx-auto max-w-[840px] px-4 py-7 space-y-5">
       <header>
         <div className="flex items-center gap-2.5">
           <span className="flex h-10 w-10 items-center justify-center rounded-full" style={{ background: "rgba(215,243,106,0.16)", color: "#7E8F2B" }} aria-hidden>
@@ -63,7 +63,7 @@ export default function TransparenciaClient({ config }: { config: PortalConfig }
       </header>
 
       {/* Liga/desliga + link */}
-      <section className="wr-card p-6">
+      <section className="gip-glass p-6">
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div className="min-w-0">
             <h2 className="font-heading text-base font-bold" style={{ color: "var(--color-text)" }}>
@@ -109,7 +109,7 @@ export default function TransparenciaClient({ config }: { config: PortalConfig }
 
       {/* O que está público */}
       <section className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-        <div className="wr-card p-5">
+        <div className="gip-glass p-5">
           <div className="flex items-center gap-2.5">
             <span className="flex h-9 w-9 items-center justify-center rounded-full" style={{ background: "rgba(245,158,11,0.16)", color: "#B45309" }} aria-hidden>
               <Building2 style={{ width: 18, height: 18 }} />
@@ -125,7 +125,7 @@ export default function TransparenciaClient({ config }: { config: PortalConfig }
           <Link href="/app/politico/obras" className="mt-2 inline-block text-xs font-semibold" style={{ color: "#4352C4" }}>Ir para Obras →</Link>
         </div>
 
-        <div className="wr-card p-5">
+        <div className="gip-glass p-5">
           <div className="flex items-center gap-2.5">
             <span className="flex h-9 w-9 items-center justify-center rounded-full" style={{ background: "rgba(215,243,106,0.18)", color: "#7E8F2B" }} aria-hidden>
               <HandCoins style={{ width: 18, height: 18 }} />
@@ -149,7 +149,7 @@ export default function TransparenciaClient({ config }: { config: PortalConfig }
       )}
 
       {/* Privacidade */}
-      <section className="wr-card p-5">
+      <section className="gip-glass p-5">
         <div className="flex items-start gap-2.5">
           <ShieldCheck className="h-5 w-5 shrink-0" style={{ color: "#17784F" }} aria-hidden />
           <p className="text-xs" style={{ color: "var(--color-text-subtle)" }}>

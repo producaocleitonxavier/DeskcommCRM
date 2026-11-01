@@ -26,14 +26,14 @@ export default async function ComparativoPage() {
   const [eleicoes, municipios] = await Promise.all([listarEleicoes(), listarMunicipiosRaioX()]);
 
   return (
-    <div className="mx-auto max-w-[1140px] space-y-6 px-4 py-7" style={{ background: "var(--color-bg)" }}>
+    <div className="gip-ambient-bg mx-auto max-w-[1140px] space-y-6 px-4 py-7">
       <CommandHero
         eyebrow="Inteligência · TSE"
         titulo="Arena Comparativa"
         subtitulo="Compare candidatos lado a lado — quem é forte onde, por bairro, local de votação, zona e seção."
       />
       {eleicoes.length === 0 ? (
-        <div className="wr-card p-12 text-center">
+        <div className="gip-glass p-12 text-center">
           <p className="text-sm" style={{ color: "var(--color-text-subtle)" }}>
             Dados eleitorais ainda não carregados nesta instalação.
           </p>

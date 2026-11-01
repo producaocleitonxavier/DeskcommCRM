@@ -116,15 +116,15 @@ export default function ProjecaoClient({ eleicoes, municipios }: { eleicoes: Ele
       </div>
 
       {!munTse ? (
-        <div className="wr-card p-10 text-center text-sm" style={{ color: "rgba(255,255,255,0.6)" }}>
+        <div className="gip-glass p-10 text-center text-sm" style={{ color: "rgba(255,255,255,0.6)" }}>
           Selecione um município para ver a projeção por {unidade}.
         </div>
       ) : emRegional && dadosReg && dadosReg.regioes.length === 0 ? (
-        <div className="wr-card p-10 text-center text-sm" style={{ color: "rgba(255,255,255,0.6)" }}>
+        <div className="gip-glass p-10 text-center text-sm" style={{ color: "rgba(255,255,255,0.6)" }}>
           {carregando ? "Carregando…" : `O mapa de regionais ainda não cobre ${munNome}. Use “Agrupar por: zona”. (Disponível hoje em Belo Horizonte e Contagem.)`}
         </div>
       ) : !resumoAtivo || itens.length === 0 ? (
-        <div className="wr-card p-10 text-center text-sm" style={{ color: "rgba(255,255,255,0.6)" }}>
+        <div className="gip-glass p-10 text-center text-sm" style={{ color: "rgba(255,255,255,0.6)" }}>
           {carregando ? "Carregando…" : "Sem dados de votação para esse município."}
         </div>
       ) : (
@@ -138,7 +138,7 @@ export default function ProjecaoClient({ eleicoes, municipios }: { eleicoes: Ele
           </div>
 
           {/* Tabela por zona/regional */}
-          <section className="wr-card p-0">
+          <section className="gip-glass p-0">
             <div className="flex items-center gap-2 px-5 pt-4 pb-2">
               <TrendingUp className="h-4 w-4" aria-hidden style={{ color: "#D7F36A" }} />
               <h3 className="font-heading text-base font-bold" style={{ color: "#fff" }}>Projeção por {unidade} — {munNome}</h3>
@@ -197,7 +197,7 @@ export default function ProjecaoClient({ eleicoes, municipios }: { eleicoes: Ele
           </section>
 
           {/* Leitura estratégica (IA) — onde focar */}
-          <section className="wr-card p-5">
+          <section className="gip-glass p-5">
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div className="flex items-center gap-2.5">
                 <Sparkles className="h-5 w-5 shrink-0" style={{ color: "#D7F36A" }} aria-hidden />

@@ -42,7 +42,7 @@ function scoreCor(score: number | null): string {
 
 export default function MotorViralClient({ kpis, serieSemanal, conteudos, pagina, totalPaginas }: MotorViralClientProps) {
   return (
-    <div className="mx-auto max-w-[1140px] px-4 py-7 space-y-6" style={{ background: "var(--color-bg)" }}>
+    <div className="gip-ambient-bg mx-auto max-w-[1140px] px-4 py-7 space-y-6">
       <CommandHero
         eyebrow="Engajamento"
         titulo="Motor Viral"
@@ -69,7 +69,7 @@ export default function MotorViralClient({ kpis, serieSemanal, conteudos, pagina
 
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {conteudos.map((c) => (
-              <div key={c.id} className="wr-card flex flex-col gap-3 p-5 transition-shadow duration-200 hover:shadow-md">
+              <div key={c.id} className="gip-glass gip-glass-hover flex flex-col gap-3 p-5">
                 <div>
                   <h3 className="font-semibold leading-snug">{c.title}</h3>
                   <p className="mt-0.5 text-sm text-muted-foreground line-clamp-1">{c.topic}</p>

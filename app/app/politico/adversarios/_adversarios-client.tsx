@@ -48,7 +48,7 @@ export interface AdversariosClientProps {
 
 export default function AdversariosClient({ kpis, comparativo, adversarios }: AdversariosClientProps) {
   return (
-    <div className="mx-auto max-w-[1140px] px-4 py-7 space-y-6" style={{ background: "var(--color-bg)" }}>
+    <div className="gip-ambient-bg mx-auto max-w-[1140px] px-4 py-7 space-y-6">
       <CommandHero eyebrow="Inteligência" titulo="Adversários" subtitulo="Oposição monitorada em 3 frentes — força eleitoral (TSE), mídia e digital." />
 
       <section className="grid grid-cols-1 gap-4 sm:grid-cols-3">
@@ -73,7 +73,7 @@ export default function AdversariosClient({ kpis, comparativo, adversarios }: Ad
             {adversarios.map((a) => {
               const r = RISCO[a.riskLevel] ?? RISCO.low!;
               return (
-                <div key={a.id} className="wr-card flex flex-col gap-3 p-5 transition-shadow duration-200 hover:shadow-md">
+                <div key={a.id} className="gip-glass gip-glass-hover flex flex-col gap-3 p-5">
                   <div className="flex items-center gap-3">
                     <span
                       className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-sm font-bold text-white"

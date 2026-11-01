@@ -101,7 +101,7 @@ export default function ImportarClient() {
   const reconhecidos = CAMPOS_NA_ORDEM.filter((c) => mapCampo(c) != null).length;
 
   return (
-    <div className="mx-auto max-w-[960px] space-y-5 px-4 py-7" style={{ background: "var(--color-bg)" }}>
+    <div className="gip-ambient-bg mx-auto max-w-[960px] space-y-5 px-4 py-7">
       <CommandHero
         eyebrow="Pessoas · Importação inteligente"
         titulo="Importar lista"
@@ -116,19 +116,19 @@ export default function ImportarClient() {
       />
 
       {erro && (
-        <div className="wr-card flex items-center gap-2 p-3 text-sm" style={{ borderColor: "rgba(248,113,113,0.5)", color: "#F87171" }}>
+        <div className="gip-glass flex items-center gap-2 p-3 text-sm" style={{ borderColor: "rgba(248,113,113,0.5)", color: "#F87171" }}>
           <AlertTriangle size={16} /> {erro}
         </div>
       )}
       {aviso && (
-        <div className="wr-card flex items-center gap-2 p-3 text-sm" style={{ borderColor: "rgba(92,127,35,0.5)", color: "#8AA62E" }}>
+        <div className="gip-glass flex items-center gap-2 p-3 text-sm" style={{ borderColor: "rgba(92,127,35,0.5)", color: "#8AA62E" }}>
           <CheckCircle2 size={16} /> {aviso}
         </div>
       )}
 
       {/* ETAPA 1 — upload */}
       {etapa === "upload" && (
-        <div className="wr-card p-8 text-center">
+        <div className="gip-glass p-8 text-center">
           <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-2xl" style={{ background: "rgba(215,243,106,0.16)", color: "#8AA62E" }}>
             <FileSpreadsheet size={26} />
           </div>
@@ -156,7 +156,7 @@ export default function ImportarClient() {
       {/* ETAPA 2 — conferir o mapeamento */}
       {etapa === "mapear" && preview && (
         <>
-          <div className="wr-card p-4" style={{ border: "1px solid rgba(92,127,35,0.4)", background: "rgba(215,243,106,0.06)" }}>
+          <div className="gip-glass p-4" style={{ border: "1px solid rgba(92,127,35,0.4)", background: "rgba(215,243,106,0.06)" }}>
             <p className="inline-flex items-center gap-1.5 text-sm font-bold" style={{ color: "#5C7F23" }}>
               <Sparkles size={15} /> O sistema entendeu {reconhecidos} coluna(s) sozinho.
             </p>
@@ -166,7 +166,7 @@ export default function ImportarClient() {
             </p>
           </div>
 
-          <div className="wr-card p-5">
+          <div className="gip-glass p-5">
             <p className="mb-3 text-xs font-bold uppercase tracking-wide" style={{ color: "var(--color-text-subtle)" }}>Conferir colunas</p>
             <div className="grid gap-3 sm:grid-cols-2">
               {CAMPOS_NA_ORDEM.map((campo) => (
@@ -189,7 +189,7 @@ export default function ImportarClient() {
           </div>
 
           {/* Amostra */}
-          <div className="wr-card p-5">
+          <div className="gip-glass p-5">
             <p className="mb-3 text-xs font-bold uppercase tracking-wide" style={{ color: "var(--color-text-subtle)" }}>Amostra (primeiras linhas)</p>
             <div className="overflow-x-auto">
               <table className="w-full text-[12px]">
@@ -223,21 +223,21 @@ export default function ImportarClient() {
 
       {/* ETAPA 3 — resultado */}
       {etapa === "resultado" && relatorio && (
-        <div className="wr-card p-6 text-center">
+        <div className="gip-glass p-6 text-center">
           <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-full" style={{ background: "rgba(215,243,106,0.16)", color: "#8AA62E" }}>
             <CheckCircle2 size={28} />
           </div>
           <h2 className="font-heading text-2xl font-bold" style={{ color: "var(--color-text)" }}>Importação concluída!</h2>
           <div className="mx-auto mt-5 grid max-w-md grid-cols-3 gap-3">
-            <div className="wr-card p-3" style={{ background: "var(--color-surface-elevated)" }}>
+            <div className="gip-glass p-3" style={{ background: "var(--color-surface-elevated)" }}>
               <p className="font-heading text-2xl font-black" style={{ color: "#17784F" }}>{relatorio.importados}</p>
               <p className="text-[11px]" style={{ color: "var(--color-text-subtle)" }}>importados</p>
             </div>
-            <div className="wr-card p-3" style={{ background: "var(--color-surface-elevated)" }}>
+            <div className="gip-glass p-3" style={{ background: "var(--color-surface-elevated)" }}>
               <p className="font-heading text-2xl font-black" style={{ color: "#92600A" }}>{relatorio.duplicados}</p>
               <p className="text-[11px]" style={{ color: "var(--color-text-subtle)" }}>já existiam</p>
             </div>
-            <div className="wr-card p-3" style={{ background: "var(--color-surface-elevated)" }}>
+            <div className="gip-glass p-3" style={{ background: "var(--color-surface-elevated)" }}>
               <p className="font-heading text-2xl font-black" style={{ color: relatorio.erros.length ? "#A3302A" : "var(--color-text)" }}>{relatorio.erros.length}</p>
               <p className="text-[11px]" style={{ color: "var(--color-text-subtle)" }}>com problema</p>
             </div>
@@ -264,7 +264,7 @@ export default function ImportarClient() {
       )}
 
       {/* Limpar importados — pra testar à vontade (importar → desfazer → reimportar). */}
-      <div className="wr-card flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between" style={{ border: "1px solid rgba(163,48,42,0.25)" }}>
+      <div className="gip-glass flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between" style={{ border: "1px solid rgba(163,48,42,0.25)" }}>
         <div>
           <p className="text-sm font-bold" style={{ color: "var(--color-text)" }}>Limpar contatos importados</p>
           <p className="text-[12px]" style={{ color: "var(--color-text-subtle)" }}>

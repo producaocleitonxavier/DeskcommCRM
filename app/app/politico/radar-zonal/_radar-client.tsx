@@ -96,12 +96,12 @@ export default function RadarClient({ eleicoes, municipios }: { eleicoes: Eleica
       </div>
 
       {!munTse ? (
-        <div className="wr-card p-10 text-center text-sm" style={{ color: "var(--color-text-subtle)" }}>
+        <div className="gip-glass p-10 text-center text-sm" style={{ color: "var(--color-text-subtle)" }}>
           Selecione um município para abrir o radar.
         </div>
       ) : !cand ? (
         /* Escolher candidato */
-        <section className="wr-card overflow-hidden p-0">
+        <section className="gip-glass overflow-hidden p-0">
           <div className="px-5 pt-4 pb-2">
             <h3 className="font-heading text-base font-bold" style={{ color: "var(--color-text)" }}>Candidatos — {munNome}</h3>
             <p className="text-xs" style={{ color: "var(--color-text-subtle)" }}>Clique para abrir o radar por zona</p>
@@ -152,7 +152,7 @@ export default function RadarClient({ eleicoes, municipios }: { eleicoes: Eleica
 
           <div className="grid grid-cols-1 gap-4 lg:grid-cols-[1.4fr_1fr]">
             {/* Grid de zonas */}
-            <section className="wr-card p-4 sm:p-5">
+            <section className="gip-glass p-4 sm:p-5">
               <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
                 <h3 className="font-heading text-base font-bold" style={{ color: "var(--color-text)" }}>Força por zona</h3>
                 <div className="flex flex-wrap gap-2 text-[10px]">
@@ -183,7 +183,7 @@ export default function RadarClient({ eleicoes, municipios }: { eleicoes: Eleica
             </section>
 
             {/* Detalhe da zona */}
-            <section className="wr-card flex flex-col p-0">
+            <section className="gip-glass flex flex-col p-0">
               {!zonaAtual ? (
                 <div className="flex flex-1 items-center justify-center p-10 text-center text-sm" style={{ color: "var(--color-text-subtle)" }}>
                   Clique numa zona para ver bairros, locais de votação e a sua base ali.

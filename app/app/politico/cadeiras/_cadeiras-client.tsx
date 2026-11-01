@@ -120,7 +120,7 @@ export default function CadeirasClient({ eleicoes, municipios }: { eleicoes: Ele
   const maxCad = alocEfetiva ? Math.max(...alocEfetiva.partidos.map((p) => p.cadeiras), 1) : 1;
 
   return (
-    <div className="mx-auto max-w-[1040px] px-4 py-7 space-y-4">
+    <div className="gip-ambient-bg mx-auto max-w-[1040px] px-4 py-7 space-y-4">
       <header className="flex items-center gap-2.5">
         <span className="flex h-10 w-10 items-center justify-center rounded-xl" style={{ background: "rgba(215,243,106,0.16)", color: "#7E8F2B" }} aria-hidden><Landmark className="h-5 w-5" /></span>
         <div>
@@ -130,7 +130,7 @@ export default function CadeirasClient({ eleicoes, municipios }: { eleicoes: Ele
       </header>
 
       {/* Seletores */}
-      <section className="wr-card p-5">
+      <section className="gip-glass p-5">
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <label className="block">
             <span className="mb-1.5 block text-xs font-semibold" style={{ color: "var(--color-text-subtle)" }}>Eleição</span>
@@ -151,11 +151,11 @@ export default function CadeirasClient({ eleicoes, municipios }: { eleicoes: Ele
         </div>
       </section>
 
-      {carregando && <div className="wr-card p-6 text-center text-sm" style={{ color: "var(--color-text-subtle)" }}>Calculando o quociente…</div>}
+      {carregando && <div className="gip-glass p-6 text-center text-sm" style={{ color: "var(--color-text-subtle)" }}>Calculando o quociente…</div>}
 
       {!carregando && alocEfetiva && dados && (
         alocEfetiva.seats === 0 || alocEfetiva.qe === 0 ? (
-          <div className="wr-card p-6 text-sm" style={{ color: "var(--color-text-subtle)" }}>Sem dados suficientes para este recorte.</div>
+          <div className="gip-glass p-6 text-sm" style={{ color: "var(--color-text-subtle)" }}>Sem dados suficientes para este recorte.</div>
         ) : (
           <>
             {/* KPIs do quociente */}
@@ -172,7 +172,7 @@ export default function CadeirasClient({ eleicoes, municipios }: { eleicoes: Ele
             </div>
 
             {/* Simulador por candidato */}
-            <section className="wr-card p-5">
+            <section className="gip-glass p-5">
               <div className="mb-3 flex items-center gap-1.5 text-sm font-bold" style={{ color: "var(--color-text)" }}><Target className="h-4 w-4" style={{ color: "#D7F36A" }} aria-hidden /> Simule o seu candidato</div>
               <div className="relative">
                 <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2" style={{ color: "var(--color-text-subtle)" }} aria-hidden />
@@ -227,7 +227,7 @@ export default function CadeirasClient({ eleicoes, municipios }: { eleicoes: Ele
             </section>
 
             {/* Composição por partido */}
-            <section className="wr-card p-5">
+            <section className="gip-glass p-5">
               <h2 className="mb-3 text-sm font-bold" style={{ color: "var(--color-text)" }}>Composição projetada</h2>
               <div className="flex flex-col gap-2">
                 {alocEfetiva.partidos.filter((p) => p.cadeiras > 0 || p.votos >= alocEfetiva.qe * 0.5).slice(0, 14).map((p, i) => {
@@ -252,7 +252,7 @@ export default function CadeirasClient({ eleicoes, municipios }: { eleicoes: Ele
       )}
 
       {!carregando && !dados && (
-        <div className="wr-card p-10 text-center text-sm" style={{ color: "var(--color-text-subtle)" }}>
+        <div className="gip-glass p-10 text-center text-sm" style={{ color: "var(--color-text-subtle)" }}>
           Escolha uma eleição proporcional{precisaMunicipio ? " e o município" : ""} para projetar as cadeiras.
         </div>
       )}

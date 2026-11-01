@@ -125,7 +125,7 @@ export default function AlertasClient({ alertas, filtros, criticosAtivos }: Aler
   }
 
   return (
-    <div className="mx-auto max-w-[1140px] px-4 py-7 space-y-6" style={{ background: "var(--color-bg)" }}>
+    <div className="gip-ambient-bg mx-auto max-w-[1140px] px-4 py-7 space-y-6">
       <CommandHero
         eyebrow="GIP · Monitoramento"
         titulo="Central de Alertas"
@@ -144,7 +144,7 @@ export default function AlertasClient({ alertas, filtros, criticosAtivos }: Aler
       />
 
       {/* ── Filtros ─────────────────────────────────────────────── */}
-      <div className="wr-card space-y-3 p-4 sm:p-5">
+      <div className="gip-glass space-y-3 p-4 sm:p-5">
         <div className="flex flex-wrap items-center gap-2">
           <span className="mr-1 text-xs font-medium" style={{ color: "var(--color-text-subtle)" }}>Status:</span>
           <Pill ativo={!filtros.status} alvo={href({ status: "" })}>Todos</Pill>
@@ -191,7 +191,7 @@ export default function AlertasClient({ alertas, filtros, criticosAtivos }: Aler
             return (
               <div
                 key={a.id}
-                className="wr-card p-5 transition-shadow duration-200 hover:shadow-md"
+                className="gip-glass gip-glass-hover p-5"
                 style={{ borderLeft: `4px solid ${cfg.border}` }}
               >
                 <div className="flex items-start gap-3">

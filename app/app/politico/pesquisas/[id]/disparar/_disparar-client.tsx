@@ -103,7 +103,7 @@ export default function DispararClient({ surveyId, titulo, numPerguntas, nomeMan
     `rounded-lg px-3 py-2 text-sm font-medium transition-colors ${ativo ? "" : ""}`;
 
   return (
-    <div className="mx-auto max-w-[760px] px-4 py-7 space-y-5" style={{ background: "var(--color-bg)" }}>
+    <div className="gip-ambient-bg mx-auto max-w-[760px] px-4 py-7 space-y-5">
       <CommandHero
         eyebrow="Inteligência · Pesquisa"
         titulo="Disparar pesquisa"
@@ -112,13 +112,13 @@ export default function DispararClient({ surveyId, titulo, numPerguntas, nomeMan
       />
 
       {semPergunta ? (
-        <div className="wr-card p-5 text-sm" style={{ color: "var(--color-text-muted)" }}>
+        <div className="gip-glass p-5 text-sm" style={{ color: "var(--color-text-muted)" }}>
           Esta pesquisa ainda não tem perguntas.{" "}
           <Link href={`/app/politico/pesquisas/${surveyId}/editar`} className="font-semibold underline">Monte as perguntas</Link> antes de disparar.
         </div>
       ) : (
         <>
-          <div className="wr-card space-y-4 p-5">
+          <div className="gip-glass space-y-4 p-5">
             <p className="text-sm font-semibold">1. Quem vai receber</p>
             <div>
               <p className="mb-1.5 text-xs font-medium" style={{ color: "var(--color-text-subtle)" }}>Nível no funil</p>
@@ -207,7 +207,7 @@ export default function DispararClient({ surveyId, titulo, numPerguntas, nomeMan
             </div>
           </div>
 
-          <div className="wr-card space-y-3 p-5">
+          <div className="gip-glass space-y-3 p-5">
             <p className="text-sm font-semibold">2. A mensagem</p>
             <p className="text-xs" style={{ color: "var(--color-text-subtle)" }}>
               Use <code>{"{{primeiro_nome}}"}</code> e <code>{VARIAVEL_LINK}</code> (o link único de cada pessoa) — são trocados automaticamente.
@@ -219,7 +219,7 @@ export default function DispararClient({ surveyId, titulo, numPerguntas, nomeMan
           </div>
 
           {precisaTse && (
-            <div className="wr-card space-y-2 p-5" style={{ border: "1px solid rgba(224,128,121,0.4)" }}>
+            <div className="gip-glass space-y-2 p-5" style={{ border: "1px solid rgba(224,128,121,0.4)" }}>
               <p className="flex items-center gap-2 text-sm font-semibold" style={{ color: "#A3302A" }}><ShieldAlert className="h-4 w-4" /> Intenção de voto — confirmação</p>
               <label className="flex items-start gap-2 text-sm">
                 <input type="checkbox" checked={confirmaTse} onChange={(e) => setConfirmaTse(e.target.checked)} className="mt-1" />

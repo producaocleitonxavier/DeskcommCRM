@@ -199,13 +199,13 @@ export default function ComparativoClient({ eleicoes, municipios }: { eleicoes: 
       </div>
 
       {!munTse ? (
-        <div className="wr-card p-10 text-center text-sm" style={{ color: "var(--color-text-subtle)" }}>
+        <div className="gip-glass p-10 text-center text-sm" style={{ color: "var(--color-text-subtle)" }}>
           Selecione um município para montar a comparação.
         </div>
       ) : (
         <div className="grid grid-cols-1 gap-4 lg:grid-cols-[1fr_1.6fr]">
           {/* Escolher candidatos */}
-          <section className="wr-card flex flex-col p-0">
+          <section className="gip-glass flex flex-col p-0">
             <div className="px-5 pt-4 pb-2">
               <h3 className="font-heading text-base font-bold" style={{ color: "var(--color-text)" }}>Candidatos — {munNome}</h3>
               <p className="text-xs" style={{ color: "var(--color-text-subtle)" }}>Clique para comparar (até {maxCand})</p>
@@ -234,7 +234,7 @@ export default function ComparativoClient({ eleicoes, municipios }: { eleicoes: 
           </section>
 
           {/* Comparação */}
-          <section className="wr-card flex flex-col p-0">
+          <section className="gip-glass flex flex-col p-0">
             {sel.length < 2 ? (
               <div className="flex flex-1 items-center justify-center p-10 text-center text-sm" style={{ color: "var(--color-text-subtle)" }}>
                 <div>
@@ -338,7 +338,7 @@ export default function ComparativoClient({ eleicoes, municipios }: { eleicoes: 
 
       {/* Leitura estratégica (IA) — ancorada nos números em tela. Fim da página. */}
       {munTse && sel.length >= 2 && (
-        <section className="wr-card p-5">
+        <section className="gip-glass p-5">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div className="flex items-center gap-2.5">
               <Sparkles className="h-5 w-5 shrink-0" style={{ color: "#D7F36A" }} aria-hidden />

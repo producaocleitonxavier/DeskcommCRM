@@ -57,7 +57,7 @@ export default function DashboardClient({ dash, funil, calls }: DashboardClientP
   const [invisivelAberto, setInvisivelAberto] = useState(true);
 
   return (
-    <div className="mx-auto max-w-[1140px] px-4 py-7 space-y-6" style={{ background: "var(--color-bg)" }}>
+    <div className="gip-ambient-bg mx-auto max-w-[1140px] px-4 py-7 space-y-6">
       {/* ── 1. Header ───────────────────────────────────────────── */}
       <div>
         <Link
@@ -106,7 +106,7 @@ export default function DashboardClient({ dash, funil, calls }: DashboardClientP
 
           {/* ── 3. Funil político ───────────────────────────────── */}
           {funil && funil.funil_total > 0 && (
-            <section className="wr-card p-6 sm:p-7">
+            <section className="gip-glass p-6 sm:p-7">
               <div className="mb-2 flex flex-wrap items-end justify-between gap-3">
                 <SectionHeader title="Funil Político" subtitle="Distribuição da base pelos estágios" />
                 <div className="flex flex-wrap gap-2">
@@ -169,7 +169,7 @@ export default function DashboardClient({ dash, funil, calls }: DashboardClientP
 
           {/* ── 5. Fila de ligações (detalhada) ─────────────────── */}
           {calls && calls.total_chamadas > 0 && (
-            <section className="wr-card p-6 sm:p-7">
+            <section className="gip-glass p-6 sm:p-7">
               <SectionHeader title="Fila de Ligações" subtitle="Resultado das chamadas da operação" className="mb-5" />
               <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
                 <KpiCard label="Total de chamadas" valor={calls.total_chamadas} icone={Phone} />
@@ -190,7 +190,7 @@ export default function DashboardClient({ dash, funil, calls }: DashboardClientP
 
           {/* ── 6. Funil invisível (colapsável) ─────────────────── */}
           {funil && funil.invisivel_total > 0 && (
-            <section className="wr-card p-6 sm:p-7">
+            <section className="gip-glass p-6 sm:p-7">
               <button
                 type="button"
                 onClick={() => setInvisivelAberto((v) => !v)}

@@ -56,7 +56,7 @@ function data(d: string | null): string {
 
 export default function ProjetosClient({ kpis, projetos, ehAdmin }: ProjetosClientProps) {
   return (
-    <div className="mx-auto max-w-[1140px] px-4 py-7 space-y-6" style={{ background: "var(--color-bg)" }}>
+    <div className="gip-ambient-bg mx-auto max-w-[1140px] px-4 py-7 space-y-6">
       <CommandHero
         eyebrow="Gabinete · Projetos de Lei"
         titulo="Projetos de Lei"
@@ -125,7 +125,7 @@ export default function ProjetosClient({ kpis, projetos, ehAdmin }: ProjetosClie
           {projetos.map((p) => {
             const st = STATUS[p.status] ?? { label: p.status, bg: "#F0F0EB", fg: "#5B606B" };
             return (
-              <Link key={p.id} href={`/app/politico/projetos-lei/${p.id}`} className="wr-card block p-5 transition-shadow duration-200 hover:shadow-md" style={{ borderLeft: `4px solid ${st.fg}` }}>
+              <Link key={p.id} href={`/app/politico/projetos-lei/${p.id}`} className="gip-glass gip-glass-hover block p-5" style={{ borderLeft: `4px solid ${st.fg}` }}>
                 <div className="flex items-start justify-between gap-2">
                   <div className="min-w-0">
                     <div className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--color-text-subtle)" }}>

@@ -37,7 +37,7 @@ export default function NovaPesquisaClient() {
   }
 
   return (
-    <div className="mx-auto max-w-[760px] px-4 py-7 space-y-6" style={{ background: "var(--color-bg)" }}>
+    <div className="gip-ambient-bg mx-auto max-w-[760px] px-4 py-7 space-y-6">
       <CommandHero
         eyebrow="Inteligência · Pesquisa"
         titulo="Nova pesquisa"
@@ -45,7 +45,7 @@ export default function NovaPesquisaClient() {
         acoes={[{ href: "/app/politico/pesquisas", label: "← Pesquisas" }]}
       />
 
-      <div className="wr-card space-y-5 p-5 sm:p-6">
+      <div className="gip-glass space-y-5 p-5 sm:p-6">
         <div>
           <label className="mb-1.5 block text-sm font-medium">Título da pesquisa</label>
           <input

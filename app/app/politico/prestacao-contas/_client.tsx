@@ -92,7 +92,7 @@ export default function PrestacaoContasClient({ dados, ondeInvestir, ehAdmin }: 
   }
 
   return (
-    <div className="mx-auto max-w-[1140px] space-y-[18px] px-4 py-7">
+    <div className="gip-ambient-bg mx-auto max-w-[1140px] space-y-[18px] px-4 py-7">
       <CommandHero
         eyebrow="Gabinete · Prestação de Contas"
         titulo="Painel do Mandato"
@@ -142,7 +142,7 @@ export default function PrestacaoContasClient({ dados, ondeInvestir, ehAdmin }: 
       </div>
 
       {/* Metas do mandato */}
-      <section className="wr-card p-6">
+      <section className="gip-glass p-6">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <div className="flex items-center gap-2">
             <Target size={18} style={{ color: "#8AA62E" }} />
@@ -230,7 +230,7 @@ export default function PrestacaoContasClient({ dados, ondeInvestir, ehAdmin }: 
       </section>
 
       {/* Onde investir (inteligência preditiva: demandas × votos por bairro) */}
-      <section className="wr-card p-6">
+      <section className="gip-glass p-6">
         <div className="flex items-center gap-2">
           <TrendingUp size={18} style={{ color: "#8AA62E" }} />
           <h2 className="font-heading text-xl font-bold leading-tight">Onde investir</h2>
@@ -274,7 +274,7 @@ export default function PrestacaoContasClient({ dados, ondeInvestir, ehAdmin }: 
 
       <div className="grid gap-[18px] lg:grid-cols-2">
         {/* Evolução */}
-        <section className="wr-card p-6">
+        <section className="gip-glass p-6">
           <h2 className="font-heading text-xl font-bold leading-tight">Demandas resolvidas por mês</h2>
           <p className="mt-1 text-sm" style={{ color: "var(--color-text-muted)" }}>Últimos 6 meses.</p>
           <div className="mt-5 flex items-end justify-between gap-2" style={{ height: 160 }}>
@@ -292,7 +292,7 @@ export default function PrestacaoContasClient({ dados, ondeInvestir, ehAdmin }: 
         </section>
 
         {/* Top bairros */}
-        <section className="wr-card p-6">
+        <section className="gip-glass p-6">
           <div className="flex items-center gap-2">
             <MapPin size={18} style={{ color: "#8AA62E" }} />
             <h2 className="font-heading text-xl font-bold leading-tight">Onde o trabalho aconteceu</h2>

@@ -75,7 +75,7 @@ export default function LocaisClient({ locais, kpis }: LocaisClientProps) {
   );
 
   return (
-    <div className="mx-auto max-w-[1140px] px-4 py-7 space-y-6" style={{ background: "var(--color-bg)" }}>
+    <div className="gip-ambient-bg mx-auto max-w-[1140px] px-4 py-7 space-y-6">
       <CommandHero
         eyebrow="Gabinete · Eventos"
         titulo="Locais & Eventos"
@@ -136,7 +136,7 @@ export default function LocaisClient({ locais, kpis }: LocaisClientProps) {
                 <Link
                   key={l.id}
                   href={`/app/politico/locais/${l.id}`}
-                  className="wr-card flex flex-col gap-3 p-5 transition-shadow duration-200 hover:shadow-md"
+                  className="gip-glass gip-glass-hover flex flex-col gap-3 p-5"
                   style={{ opacity: l.ativo ? 1 : 0.6 }}
                 >
                   <div className="flex items-start gap-3">

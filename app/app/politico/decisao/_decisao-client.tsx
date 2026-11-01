@@ -57,7 +57,7 @@ export interface DecisaoClientProps {
 
 export default function DecisaoClient({ kpis, sinais, alertas }: DecisaoClientProps) {
   return (
-    <div className="mx-auto max-w-[1140px] px-4 py-7 space-y-6" style={{ background: "var(--color-bg)" }}>
+    <div className="gip-ambient-bg mx-auto max-w-[1140px] px-4 py-7 space-y-6">
       <CommandHero eyebrow="Inteligência" titulo="Central de Decisões" subtitulo="Sinais estratégicos e ações recomendadas por IA." />
 
       <section className="grid grid-cols-2 gap-4 lg:grid-cols-4">
@@ -74,7 +74,7 @@ export default function DecisaoClient({ kpis, sinais, alertas }: DecisaoClientPr
             {alertas.map((a) => {
               const sev = SEVERIDADE[a.severity] ?? SEVERIDADE.medium!;
               return (
-                <Link key={a.id} href="/app/politico/alertas" className="wr-card flex items-start gap-3 p-4 transition-shadow duration-200 hover:shadow-md">
+                <Link key={a.id} href="/app/politico/alertas" className="gip-glass gip-glass-hover flex items-start gap-3 p-4">
                   <div className="min-w-0 flex-1">
                     <div className="flex flex-wrap items-center gap-2">
                       <h3 className="truncate font-semibold">{a.title}</h3>
@@ -104,7 +104,7 @@ export default function DecisaoClient({ kpis, sinais, alertas }: DecisaoClientPr
             {sinais.map((s) => {
               const sev = SEVERIDADE[s.severity] ?? SEVERIDADE.medium!;
               return (
-                <div key={s.id} className="wr-card p-5" style={{ borderLeft: `4px solid ${sev.border}` }}>
+                <div key={s.id} className="gip-glass p-5" style={{ borderLeft: `4px solid ${sev.border}` }}>
                   <div className="flex flex-wrap items-center gap-2">
                     <h3 className="font-semibold">{s.title}</h3>
                     <span className="rounded-full px-2 py-0.5 text-[11px] font-semibold" style={{ background: sev.bg, color: sev.fg }}>

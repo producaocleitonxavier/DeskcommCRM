@@ -108,8 +108,8 @@ export default function SetupWizard({ inicial }: { inicial: { nome: string; carg
 
   if (concluido) {
     return (
-      <div className="mx-auto max-w-[760px] px-4 py-7">
-        <div className="wr-card p-8 text-center sm:p-10">
+      <div className="gip-ambient-bg mx-auto max-w-[760px] px-4 py-7">
+        <div className="gip-glass p-8 text-center sm:p-10">
           <span className="mx-auto flex h-16 w-16 items-center justify-center rounded-full" style={{ background: "rgba(215,243,106,0.14)", color: "#8AA62E" }}>
             <PartyPopper size={30} />
           </span>
@@ -137,7 +137,7 @@ export default function SetupWizard({ inicial }: { inicial: { nome: string; carg
   }
 
   return (
-    <div className="mx-auto max-w-[900px] space-y-[18px] px-4 py-7">
+    <div className="gip-ambient-bg mx-auto max-w-[900px] space-y-[18px] px-4 py-7">
       <CommandHero
         eyebrow="Gabinete · Configuração"
         titulo="Configuração do Mandato"
@@ -145,7 +145,7 @@ export default function SetupWizard({ inicial }: { inicial: { nome: string; carg
       />
 
       {/* Stepper — bolinhas e rótulos maiores (estavam pequenos no celular). */}
-      <div className="wr-card p-5">
+      <div className="gip-glass p-5">
         <div className="flex items-center gap-2.5 overflow-x-auto">
           {PASSOS.map((p, i) => {
             const feito = i < passo;
@@ -175,7 +175,7 @@ export default function SetupWizard({ inicial }: { inicial: { nome: string; carg
       </div>
 
       {/* Conteúdo do passo */}
-      <div className="wr-card p-6 sm:p-7 min-h-[320px]">
+      <div className="gip-glass p-6 sm:p-7 min-h-[320px]">
         {passo === 0 && (
           <div>
             <h2 className="font-heading text-[22px] font-bold">Qual é o seu mandato?</h2>

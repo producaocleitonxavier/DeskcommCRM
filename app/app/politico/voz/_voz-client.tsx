@@ -237,11 +237,11 @@ export default function VozClient({ inicial }: { inicial: Inicial }) {
     });
   }
 
-  const card = "wr-card p-5 sm:p-6";
+  const card = "gip-glass p-5 sm:p-6";
   const label = "mb-1.5 block text-xs font-semibold uppercase tracking-wide";
 
   return (
-    <div className="mx-auto max-w-[760px] space-y-[18px] px-4 py-7" style={{ background: "var(--color-bg)" }}>
+    <div className="gip-ambient-bg mx-auto max-w-[760px] space-y-[18px] px-4 py-7">
       <CommandHero
         eyebrow="Gabinete · Fase 2"
         titulo="Voz do Mandato"

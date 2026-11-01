@@ -93,7 +93,7 @@ export default async function RadarZonalPage({ searchParams }: { searchParams: P
   ];
 
   return (
-    <div className="mx-auto max-w-[1140px] space-y-6 px-4 py-7" style={{ background: "var(--color-bg)" }}>
+    <div className="gip-ambient-bg mx-auto max-w-[1140px] space-y-6 px-4 py-7">
       <CommandHero
         eyebrow="Inteligência · TSE + CRM"
         titulo="Radar Zonal"
@@ -115,7 +115,7 @@ export default async function RadarZonalPage({ searchParams }: { searchParams: P
       />
 
       {eleicoes.length === 0 ? (
-        <div className="wr-card p-12 text-center">
+        <div className="gip-glass p-12 text-center">
           <p className="text-sm" style={{ color: "var(--color-text-subtle)" }}>Dados eleitorais ainda não carregados nesta instalação.</p>
         </div>
       ) : view === "radar" ? (
@@ -132,7 +132,7 @@ export default async function RadarZonalPage({ searchParams }: { searchParams: P
             </p>
           </div>
           {cidades.length === 0 ? (
-            <div className="wr-card p-12 text-center">
+            <div className="gip-glass p-12 text-center">
               <p className="text-sm" style={{ color: "var(--color-text-subtle)" }}>Nenhuma cidade localizada ainda. Vincule os contatos a municípios com latitude e longitude.</p>
             </div>
           ) : (

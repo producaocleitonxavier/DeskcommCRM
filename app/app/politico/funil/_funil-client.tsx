@@ -80,7 +80,7 @@ export default function FunilClient({
   });
 
   return (
-    <div className="mx-auto max-w-[1140px] px-4 py-7 space-y-6" style={{ background: "var(--color-bg)" }}>
+    <div className="gip-ambient-bg mx-auto max-w-[1140px] px-4 py-7 space-y-6">
       <CommandHero
         eyebrow="Comando · Funil"
         titulo="Funil Político"
@@ -90,7 +90,7 @@ export default function FunilClient({
 
       {/* ── Funil hero + conversões ─────────────────────────────── */}
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-[2fr_1fr]">
-        <section className="wr-card p-6 sm:p-7">
+        <section className="gip-glass p-6 sm:p-7">
           <div className="mb-5 flex items-center justify-between gap-2">
             <h2 className="font-heading text-base font-bold">Distribuição por estágio</h2>
             <span className="text-xs" style={{ color: "var(--color-text-subtle)" }}>clique num estágio para ver as pessoas →</span>
@@ -98,7 +98,7 @@ export default function FunilClient({
           <FunnelBoard data={heroData} showConversion={false} />
         </section>
 
-        <section className="wr-card p-6 sm:p-7">
+        <section className="gip-glass p-6 sm:p-7">
           <h2 className="mb-4 font-heading text-base font-bold">Conversão entre níveis</h2>
           <div className="space-y-3">
             {conversoes.map((c, i) => (
@@ -121,7 +121,7 @@ export default function FunilClient({
       </div>
 
       {/* ── Temperatura (clicável → filtra as pessoas) ──────────── */}
-      <section className="wr-card p-6 sm:p-7">
+      <section className="gip-glass p-6 sm:p-7">
         <div className="mb-4 flex items-center justify-between gap-2">
           <h2 className="font-heading text-base font-bold">Temperatura da base</h2>
           <span className="text-xs" style={{ color: "var(--color-text-subtle)" }}>o quanto cada pessoa já se aproximou</span>
@@ -166,7 +166,7 @@ export default function FunilClient({
       </section>
 
       {/* ── Multiplicadores (quem TROUXE gente — o ouro) ────────── */}
-      <section className="wr-card p-6 sm:p-7">
+      <section className="gip-glass p-6 sm:p-7">
         <div className="mb-4 flex items-center justify-between gap-2">
           <h2 className="font-heading text-base font-bold">🏆 Multiplicadores</h2>
           <span className="text-xs" style={{ color: "var(--color-text-subtle)" }}>quem mais traz e alcança gente</span>
@@ -213,7 +213,7 @@ export default function FunilClient({
       </section>
 
       {/* ── Transições recentes ─────────────────────────────────── */}
-      <section className="wr-card overflow-hidden p-0">
+      <section className="gip-glass overflow-hidden p-0">
         <div className="px-6 py-4">
           <h2 className="font-heading text-base font-bold">Transições recentes</h2>
           <p className="mt-0.5 text-sm text-muted-foreground">Últimas {transicoes.length} mudanças de nível</p>

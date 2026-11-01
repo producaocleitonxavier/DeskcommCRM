@@ -63,7 +63,7 @@ export default function MateriaisClient({ materiais }: MateriaisClientProps) {
   };
 
   return (
-    <div className="mx-auto max-w-[1140px] px-4 py-7 space-y-6" style={{ background: "var(--color-bg)" }}>
+    <div className="gip-ambient-bg mx-auto max-w-[1140px] px-4 py-7 space-y-6">
       <CommandHero
         eyebrow="Gabinete · Biblioteca"
         titulo="Biblioteca de Materiais"
@@ -120,7 +120,7 @@ export default function MateriaisClient({ materiais }: MateriaisClientProps) {
               return (
                 <div
                   key={m.id}
-                  className="wr-card flex flex-col overflow-hidden p-0 transition-shadow duration-200 hover:shadow-md"
+                  className="gip-glass gip-glass-hover flex flex-col overflow-hidden p-0"
                   style={{ opacity: m.ativo ? 1 : 0.6 }}
                 >
                   {/* Capa */}

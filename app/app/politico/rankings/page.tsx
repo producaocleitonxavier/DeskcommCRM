@@ -117,7 +117,7 @@ export default async function RankingsPage({
   const { cidades, liderancas } = await buscarRankings(org.orgId, tab);
 
   return (
-    <div className="mx-auto max-w-[1140px] px-4 py-7 space-y-6" style={{ background: "var(--color-bg)" }}>
+    <div className="gip-ambient-bg mx-auto max-w-[1140px] px-4 py-7 space-y-6">
       <CommandHero eyebrow="Território" titulo="Rankings" subtitulo="Cidades por desempenho e lideranças por mobilização." />
 
       {/* Tabs */}
@@ -130,11 +130,11 @@ export default async function RankingsPage({
       {tab === "cidades" && (
         <>
           {cidades.length === 0 ? (
-            <div className="wr-card p-8 text-center text-sm text-muted-foreground">
+            <div className="gip-glass p-8 text-center text-sm text-muted-foreground">
               Nenhuma cidade no ranking. Cadastre territorios do tipo cidade.
             </div>
           ) : (
-            <div className="wr-card overflow-x-auto">
+            <div className="gip-glass overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b text-left text-xs text-muted-foreground">
@@ -182,11 +182,11 @@ export default async function RankingsPage({
       {tab === "liderancas" && (
         <>
           {liderancas.length === 0 ? (
-            <div className="wr-card p-8 text-center text-sm text-muted-foreground">
+            <div className="gip-glass p-8 text-center text-sm text-muted-foreground">
               Nenhuma liderança encontrada. Marque contatos como líder potencial ou atribua papel na comunidade.
             </div>
           ) : (
-            <div className="wr-card overflow-x-auto">
+            <div className="gip-glass overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b text-left text-xs text-muted-foreground">

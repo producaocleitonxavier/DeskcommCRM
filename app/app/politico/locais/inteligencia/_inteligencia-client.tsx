@@ -66,7 +66,7 @@ export default function InteligenciaClient({ kpis, zonas, topLocais, meses }: In
   const dadosMeses = meses.map((m) => ({ name: m.mes, value: m.eventos }));
 
   return (
-    <div className="mx-auto max-w-[1140px] space-y-6 px-4 py-7" style={{ background: "var(--color-bg)" }}>
+    <div className="gip-ambient-bg mx-auto max-w-[1140px] space-y-6 px-4 py-7">
       <CommandHero
         eyebrow="Gabinete · Eventos"
         titulo="Inteligência de Eventos"
@@ -102,8 +102,8 @@ export default function InteligenciaClient({ kpis, zonas, topLocais, meses }: In
           <BarChartCard title="Cadência de eventos (últimos 12 meses)" data={dadosMeses} height={240} />
 
           {/* Tabela detalhada por zona */}
-          <div className="wr-card-dark p-6">
-            <h3 className="mb-4 font-heading text-base font-bold">Território por zona</h3>
+          <div className="gip-glass p-6">
+            <h3 className="mb-4 font-heading text-base font-bold" style={{ color: "var(--color-text)" }}>Território por zona</h3>
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
@@ -138,8 +138,8 @@ export default function InteligenciaClient({ kpis, zonas, topLocais, meses }: In
           </div>
 
           {/* Ranking de locais (lista) */}
-          <div className="wr-card-dark p-6">
-            <h3 className="mb-4 font-heading text-base font-bold">Ranking de locais por público</h3>
+          <div className="gip-glass p-6">
+            <h3 className="mb-4 font-heading text-base font-bold" style={{ color: "var(--color-text)" }}>Ranking de locais por público</h3>
             <ul className="space-y-2">
               {topLocais.map((l, i) => (
                 <li key={l.id}>

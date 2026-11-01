@@ -107,7 +107,7 @@ export default async function EventosPage({
   const eventos = await buscarEventos(org.orgId, filtroStatus || undefined, filtroType || undefined);
 
   return (
-    <div className="mx-auto max-w-5xl space-y-[18px] px-4 py-7" style={{ background: "var(--color-bg)" }}>
+    <div className="gip-ambient-bg mx-auto max-w-5xl space-y-[18px] px-4 py-7">
       <CommandHero
         eyebrow="Gabinete · Campanha"
         titulo="Eventos"
@@ -127,7 +127,7 @@ export default async function EventosPage({
       </div>
 
       {/* Filtros */}
-      <div className="wr-card space-y-3 p-4">
+      <div className="gip-glass space-y-3 p-4">
         <div className="flex flex-wrap items-center gap-2">
           <span className="mr-1 text-xs font-semibold uppercase tracking-wide" style={{ color: "var(--color-text-subtle)" }}>Situação</span>
           <FilterLink href={buildHref("", filtroType)} label="Todos" active={!filtroStatus} />
@@ -146,13 +146,13 @@ export default async function EventosPage({
 
       {/* Cards */}
       {eventos.length === 0 ? (
-        <div className="wr-card py-12 text-center text-sm" style={{ color: "var(--color-text-muted)" }}>
+        <div className="gip-glass py-12 text-center text-sm" style={{ color: "var(--color-text-muted)" }}>
           Nenhum evento encontrado.
         </div>
       ) : (
         <div className="grid gap-3.5 sm:grid-cols-2">
           {eventos.map((e) => (
-            <div key={e.id} className="wr-card flex flex-col gap-3 p-5">
+            <div key={e.id} className="gip-glass gip-glass-hover flex flex-col gap-3 p-5">
               <div className="flex items-start justify-between gap-2">
                 <h2 className="font-heading font-bold leading-snug" style={{ color: "var(--color-text)" }}>{e.title}</h2>
                 <StatusBadge status={e.status} />

@@ -56,7 +56,7 @@ export default function AdversariosGestao({ adversarios, sinais }: { adversarios
   return (
     <div className="mx-auto max-w-[1040px] px-4 space-y-4">
       {/* Cadastro */}
-      <section className="wr-card p-5">
+      <section className="gip-glass p-5">
         <div className="mb-3 flex items-center gap-1.5 text-sm font-bold" style={{ color: "var(--color-text)" }}>
           <Swords className="h-4 w-4" style={{ color: "#F87171" }} aria-hidden /> Meus adversários
         </div>
@@ -91,7 +91,7 @@ export default function AdversariosGestao({ adversarios, sinais }: { adversarios
 
       {/* Sinais */}
       {sinais.length > 0 && (
-        <section className="wr-card p-5">
+        <section className="gip-glass p-5">
           <div className="mb-3 text-sm font-bold" style={{ color: "var(--color-text)" }}>Sinais recentes (menções a adversários)</div>
           <ul className="flex flex-col gap-2">
             {sinais.map((s) => {

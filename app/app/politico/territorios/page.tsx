@@ -105,20 +105,20 @@ export default async function TerritoriosPage({
   const eleitoradoTotal = territorios.reduce((s, t) => s + (t.electorate ?? 0), 0);
 
   return (
-    <div className="mx-auto max-w-[1140px] px-4 py-7 space-y-6" style={{ background: "var(--color-bg)" }}>
+    <div className="gip-ambient-bg mx-auto max-w-[1140px] px-4 py-7 space-y-6">
       <CommandHero eyebrow="Território" titulo="Territórios" subtitulo={`${territorios.length} território(s) gerenciado(s)`} />
 
       {/* Resumo */}
       <section className="grid grid-cols-3 gap-4">
-        <div className="wr-card p-5">
+        <div className="gip-glass p-5">
           <div className="font-heading text-2xl font-bold tabular-nums">{territorios.length.toLocaleString("pt-BR")}</div>
           <div className="mt-1 text-sm text-muted-foreground">Territórios</div>
         </div>
-        <div className="wr-card p-5">
+        <div className="gip-glass p-5">
           <div className="font-heading text-2xl font-bold tabular-nums">{cobertos.toLocaleString("pt-BR")}</div>
           <div className="mt-1 text-sm text-muted-foreground">Cobertos</div>
         </div>
-        <div className="wr-card p-5">
+        <div className="gip-glass p-5">
           <div className="font-heading text-2xl font-bold tabular-nums">{eleitoradoTotal.toLocaleString("pt-BR")}</div>
           <div className="mt-1 text-sm text-muted-foreground">Eleitorado total</div>
         </div>
@@ -149,7 +149,7 @@ export default async function TerritoriosPage({
 
       {/* Cards */}
       {territorios.length === 0 ? (
-        <div className="wr-card p-12 text-center text-sm text-muted-foreground">
+        <div className="gip-glass p-12 text-center text-sm text-muted-foreground">
           Nenhum território encontrado.
         </div>
       ) : (
@@ -161,7 +161,7 @@ export default async function TerritoriosPage({
               <Link
                 key={t.id}
                 href={`/app/politico/territorios/${t.id}`}
-                className="wr-card flex flex-col gap-3 p-5 transition-shadow duration-200 hover:shadow-md"
+                className="gip-glass gip-glass-hover flex flex-col gap-3 p-5"
               >
                 <div className="flex items-start justify-between gap-2">
                   <h2 className="font-semibold leading-snug">{t.name}</h2>

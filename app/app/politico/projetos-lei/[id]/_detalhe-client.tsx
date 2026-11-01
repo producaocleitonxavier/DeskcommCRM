@@ -176,14 +176,14 @@ export default function DetalheProjetoClient({ projeto }: { projeto: ProjetoDeta
   const podeAvancar = idx >= 0 && idx < FLOW.length - 1;
 
   return (
-    <div className="mx-auto max-w-[900px] px-4 py-7 space-y-5" style={{ background: "var(--color-bg)" }}>
+    <div className="gip-ambient-bg mx-auto max-w-[900px] px-4 py-7 space-y-5">
       <div>
         <Link href="/app/politico/projetos-lei" className="inline-flex items-center gap-1 text-sm transition-colors" style={{ color: "var(--color-text-muted)" }}>
           <ArrowLeft className="h-4 w-4" aria-hidden /> Projetos de Lei
         </Link>
       </div>
 
-      <header className="wr-card p-6 sm:p-7">
+      <header className="gip-glass p-6 sm:p-7">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div className="min-w-0">
             <div className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--color-text-subtle)" }}>
@@ -245,7 +245,7 @@ export default function DetalheProjetoClient({ projeto }: { projeto: ProjetoDeta
 
       {erro && <div role="alert" className="rounded-xl px-4 py-3 text-sm" style={{ background: "#FBE4E2", color: "#A3302A" }}>{erro}</div>}
 
-      <section className="wr-card p-6 sm:p-7">
+      <section className="gip-glass p-6 sm:p-7">
         {editando ? (
           <div className="space-y-4">
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">

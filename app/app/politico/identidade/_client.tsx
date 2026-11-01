@@ -141,7 +141,7 @@ export default function IdentidadeClient({ inicial }: { inicial: IdentidadeGabin
   }
 
   return (
-    <div className="mx-auto max-w-[760px] px-4 py-7 space-y-5" style={{ background: "var(--color-bg)" }}>
+    <div className="gip-ambient-bg mx-auto max-w-[760px] px-4 py-7 space-y-5">
       <CommandHero
         eyebrow="Gabinete · Identidade"
         titulo="Identidade do gabinete"
@@ -153,7 +153,7 @@ export default function IdentidadeClient({ inicial }: { inicial: IdentidadeGabin
       {okMsg && <div className="rounded-xl px-4 py-3 text-sm" style={{ background: "rgba(34,197,94,0.14)", color: "#22C55E" }}>Identidade salva.</div>}
 
       {/* Dados do parlamentar */}
-      <section className="wr-card space-y-4 p-5 sm:p-6">
+      <section className="gip-glass space-y-4 p-5 sm:p-6">
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <Campo label="Nome do parlamentar" dica="Nome completo, como assina os ofícios">
             <input type="text" value={nome} onChange={(e) => setNome(e.target.value)} className="wr-input w-full" placeholder="Nome que aparece no timbre" />
@@ -212,7 +212,7 @@ export default function IdentidadeClient({ inicial }: { inicial: IdentidadeGabin
       />
 
       {/* Margens do texto sobre o timbrado — cada diagramação é diferente */}
-      <section className="wr-card space-y-3 p-5 sm:p-6">
+      <section className="gip-glass space-y-3 p-5 sm:p-6">
         <div>
           <h2 className="font-heading text-base font-bold" style={{ color: "var(--color-text)" }}>Margens do texto no timbrado (mm)</h2>
           <p className="mt-0.5 text-xs" style={{ color: "var(--color-text-subtle)" }}>
@@ -239,7 +239,7 @@ export default function IdentidadeClient({ inicial }: { inicial: IdentidadeGabin
       </section>
 
       {/* Estilo do ofício — cada gabinete monta de um jeito (define 1x) */}
-      <section className="wr-card space-y-4 p-5 sm:p-6">
+      <section className="gip-glass space-y-4 p-5 sm:p-6">
         <div>
           <h2 className="font-heading text-base font-bold" style={{ color: "var(--color-text)" }}>Estilo do ofício</h2>
           <p className="mt-0.5 text-xs" style={{ color: "var(--color-text-subtle)" }}>
@@ -339,7 +339,7 @@ function ImagemCard({
   alturaPreview: number;
 }) {
   return (
-    <section className="wr-card space-y-3 p-5 sm:p-6">
+    <section className="gip-glass space-y-3 p-5 sm:p-6">
       <div>
         <h2 className="font-heading text-base font-bold" style={{ color: "var(--color-text)" }}>{titulo}</h2>
         <p className="mt-0.5 text-xs" style={{ color: "var(--color-text-subtle)" }}>{dica}</p>

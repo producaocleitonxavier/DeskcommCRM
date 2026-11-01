@@ -58,7 +58,7 @@ export default function TerritorioClient({
       <section className="grid grid-cols-1 gap-4 lg:grid-cols-[1.7fr_1fr]">
         <MapaEleitoralHero pontos={cidades} />
 
-        <div className="wr-card flex min-h-0 flex-col p-5">
+        <div className="gip-glass flex min-h-0 flex-col p-5">
           <h2 className="font-heading text-base font-bold" style={{ color: "var(--color-text)" }}>
             Onde somos fortes
           </h2>
@@ -98,7 +98,7 @@ export default function TerritorioClient({
       </section>
 
       {/* ── Tabela: todas as cidades ──────────────────────────── */}
-      <section aria-label="Todas as cidades" className="wr-card overflow-hidden p-0">
+      <section aria-label="Todas as cidades" className="gip-glass overflow-hidden p-0">
         <div className="flex items-center justify-between px-5 pt-4 pb-3">
           <h2 className="font-heading text-base font-bold" style={{ color: "var(--color-text)" }}>
             Todas as cidades

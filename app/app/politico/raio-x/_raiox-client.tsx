@@ -176,7 +176,7 @@ export default function RaioXClient({ eleicoes, municipios: municipiosLista }: {
 
         <div className="grid grid-cols-1 gap-4 lg:grid-cols-[1fr_1.3fr]">
           {/* Municípios */}
-          <section className="wr-card flex flex-col p-0">
+          <section className="gip-glass flex flex-col p-0">
             <div className="flex items-center justify-between px-5 pt-4 pb-2">
               <h3 className="font-heading text-base font-bold" style={{ color: "var(--color-text)" }}>Municípios</h3>
               <span className="text-xs" style={{ color: "var(--color-text-subtle)" }}>{municipios.length} com voto</span>
@@ -185,7 +185,7 @@ export default function RaioXClient({ eleicoes, municipios: municipiosLista }: {
           </section>
 
           {/* Drill dentro do município */}
-          <section className="wr-card flex flex-col p-0">
+          <section className="gip-glass flex flex-col p-0">
             {munSel ? (
               <>
                 <div className="flex flex-wrap items-center justify-between gap-2 px-5 pt-4 pb-2">
@@ -240,7 +240,7 @@ export default function RaioXClient({ eleicoes, municipios: municipiosLista }: {
         {carregandoLista && <Loader2 className="mb-2 h-4 w-4 animate-spin" aria-hidden style={{ color: "var(--color-text-subtle)" }} />}
       </div>
 
-      <section className="wr-card overflow-hidden p-0">
+      <section className="gip-glass overflow-hidden p-0">
         <div className="flex items-center justify-between px-5 pt-4 pb-2">
           <h3 className="font-heading text-base font-bold" style={{ color: "var(--color-text)" }}>
             <Trophy className="mr-1 inline h-4 w-4" aria-hidden style={{ color: "#D7F36A" }} />

@@ -103,7 +103,7 @@ export default function NarrativasClient({ temMandato, mandatoNome, electionId, 
   }
 
   return (
-    <div className="mx-auto max-w-[1040px] px-4 py-7 space-y-5">
+    <div className="gip-ambient-bg mx-auto max-w-[1040px] px-4 py-7 space-y-5">
       {/* Cabeçalho */}
       <header>
         <div className="flex items-center gap-2.5">
@@ -118,14 +118,14 @@ export default function NarrativasClient({ temMandato, mandatoNome, electionId, 
       </header>
 
       {!temMandato ? (
-        <div className="wr-card p-6 text-sm" style={{ color: "var(--color-text-muted)" }}>
+        <div className="gip-glass p-6 text-sm" style={{ color: "var(--color-text-muted)" }}>
           Para gerar narrativas, primeiro vincule o seu candidato do TSE em{" "}
           <Link href="/app/politico/obras" className="font-semibold" style={{ color: "#4352C4" }}>Obras › Meu mandato</Link>. É daí que vem o voto do seu território.
         </div>
       ) : (
         <>
           {/* Seletores */}
-          <section className="wr-card p-5">
+          <section className="gip-glass p-5">
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-[1fr_1fr_auto] sm:items-end">
               <label className="block">
                 <span className="mb-1.5 block text-xs font-semibold" style={{ color: "var(--color-text-subtle)" }}>Município</span>
@@ -154,15 +154,15 @@ export default function NarrativasClient({ temMandato, mandatoNome, electionId, 
             {mandatoNome && <p className="mt-2 text-xs" style={{ color: "var(--color-text-subtle)" }}>Mandato: <strong style={{ color: "var(--color-text-muted)" }}>{mandatoNome}</strong> · o voto do território vem dele (TSE); a base vem do seu CRM.</p>}
           </section>
 
-          {erro && <div className="wr-card p-4 text-sm" style={{ color: "#E08079" }}>{erro}</div>}
+          {erro && <div className="gip-glass p-4 text-sm" style={{ color: "#E08079" }}>{erro}</div>}
 
           {(gerando || abrindo) && !narrativa && (
-            <div className="wr-card p-6 text-center text-sm" style={{ color: "var(--color-text-subtle)" }}>Lendo o território e escrevendo a narrativa…</div>
+            <div className="gip-glass p-6 text-center text-sm" style={{ color: "var(--color-text-subtle)" }}>Lendo o território e escrevendo a narrativa…</div>
           )}
 
           {/* Narrativa */}
           {narrativa && (
-            <section className="wr-card p-6 space-y-5">
+            <section className="gip-glass p-6 space-y-5">
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div>
                   <div className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider" style={{ color: "#7E8F2B" }}>
@@ -206,7 +206,7 @@ export default function NarrativasClient({ temMandato, mandatoNome, electionId, 
 
           {/* Histórico */}
           {hist.length > 0 && (
-            <section className="wr-card p-5">
+            <section className="gip-glass p-5">
               <h3 className="mb-3 text-[11px] font-semibold uppercase tracking-[.08em]" style={{ color: "var(--color-text-subtle)" }}>Narrativas recentes</h3>
               <ul className="divide-y" style={{ borderColor: "var(--color-border)" }}>
                 {hist.map((h) => (
