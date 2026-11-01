@@ -232,16 +232,22 @@ export function MessageBubble({
             ? undefined
             : isOutbound
               ? {
-                  background: "color-mix(in srgb, var(--color-accent) 20%, transparent)",
-                  border: "1px solid color-mix(in srgb, var(--color-accent) 32%, transparent)",
-                  backdropFilter: "blur(10px)",
-                  WebkitBackdropFilter: "blur(10px)",
+                  // VOCÊ (gabinete) — vidro na tinta da marca (quente).
+                  background:
+                    "color-mix(in srgb, var(--color-accent) 18%, color-mix(in srgb, var(--color-surface-elevated) 55%, transparent))",
+                  border: "1px solid color-mix(in srgb, var(--color-accent) 34%, transparent)",
+                  boxShadow: "inset 0 1px 0 color-mix(in srgb, var(--color-text) 16%, transparent)",
+                  backdropFilter: "blur(12px) saturate(140%)",
+                  WebkitBackdropFilter: "blur(12px) saturate(140%)",
                 }
               : {
-                  background: "color-mix(in srgb, var(--color-surface-elevated) 55%, transparent)",
-                  border: "1px solid color-mix(in srgb, var(--color-text) 9%, transparent)",
-                  backdropFilter: "blur(10px)",
-                  WebkitBackdropFilter: "blur(10px)",
+                  // CIDADÃO — vidro AZUL (frio), distinto da marca.
+                  background:
+                    "color-mix(in srgb, #5B8DEF 15%, color-mix(in srgb, var(--color-surface-elevated) 58%, transparent))",
+                  border: "1px solid color-mix(in srgb, #5B8DEF 30%, transparent)",
+                  boxShadow: "inset 0 1px 0 color-mix(in srgb, var(--color-text) 14%, transparent)",
+                  backdropFilter: "blur(12px) saturate(140%)",
+                  WebkitBackdropFilter: "blur(12px) saturate(140%)",
                 }
         }
         className={cn(
