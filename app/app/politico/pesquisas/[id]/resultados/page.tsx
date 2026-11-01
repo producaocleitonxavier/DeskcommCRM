@@ -90,7 +90,7 @@ export default async function ResultadosPage({ params }: { params: Promise<{ id:
   const fmtData = (iso: string) => { try { return new Date(iso).toLocaleDateString("pt-BR", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" }); } catch { return ""; } };
 
   return (
-    <div className="mx-auto max-w-[900px] px-4 py-7 space-y-5" style={{ background: "var(--color-bg)" }}>
+    <div className="mx-auto max-w-[940px] px-4 py-7 space-y-6" style={{ background: "var(--color-bg)" }}>
       <CommandHero
         eyebrow="Inteligência · Pesquisa"
         titulo={s.title}
@@ -99,39 +99,40 @@ export default async function ResultadosPage({ params }: { params: Promise<{ id:
       />
 
       {temIntencao && (
-        <div className="flex items-start gap-2 rounded-lg p-3 text-[12px]" style={{ background: "rgba(224,128,121,0.10)", border: "1px solid rgba(224,128,121,0.30)", color: "#A3302A" }}>
-          <span><strong>Intenção de voto — uso interno.</strong> Estes números servem para sentir a base. Para <strong>divulgar publicamente</strong>, a pesquisa precisa de registro no TSE (metodologia).</span>
+        <div className="gip-glass flex items-start gap-2 p-3.5 text-[12px]" style={{ color: "var(--color-text-muted)" }}>
+          <span style={{ color: "var(--color-error-fg)" }}>▍</span>
+          <span><strong style={{ color: "var(--color-text)" }}>Intenção de voto — uso interno.</strong> Estes números servem para sentir a base. Para <strong style={{ color: "var(--color-text)" }}>divulgar publicamente</strong>, a pesquisa precisa de registro no TSE (metodologia).</span>
         </div>
       )}
 
-      {/* KPIs */}
+      {/* KPIs — tiles de vidro espelhados */}
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-        <Kpi rotulo="Respostas" valor={String(total)} />
+        <Kpi rotulo="Respostas" valor={String(total)} destaque />
         <Kpi rotulo="Completas" valor={String(completas)} />
         <Kpi rotulo="Perguntas" valor={String(perguntas.length)} />
         <Kpi rotulo="Cidades" valor={String(cidadeMap.size)} />
       </div>
 
       {total === 0 ? (
-        <div className="wr-card p-8 text-center text-sm" style={{ color: "var(--color-text-subtle)" }}>
+        <div className="gip-glass p-10 text-center text-sm" style={{ color: "var(--color-text-muted)" }}>
           Ainda não há respostas. Compartilhe o link público (ou dispare pela aba Disparar) e os resultados aparecem aqui em tempo real.
         </div>
       ) : (
         <>
           {/* Agregado por pergunta */}
-          <div className="space-y-3">
+          <div className="space-y-4">
             {perguntas.map((p, i) => {
               const tema = temaPesquisaDe(p.theme);
               const valores = respostas.map((r) => r.answers[p.id]).filter((v) => v != null && v !== "");
               return (
-                <div key={p.id} className="wr-card p-4 sm:p-5">
-                  <div className="mb-3 flex items-start gap-3">
-                    <span className="flex h-8 w-8 shrink-0 items-center justify-center" style={{ borderRadius: 8, background: `${tema.cor}22`, color: tema.cor }}>
-                      <tema.Icon size={16} strokeWidth={2} />
+                <div key={p.id} className="gip-glass gip-glass-hover p-5 sm:p-6">
+                  <div className="mb-4 flex items-start gap-3">
+                    <span className="flex h-9 w-9 shrink-0 items-center justify-center" style={{ borderRadius: 12, background: `color-mix(in srgb, ${tema.cor} 18%, transparent)`, color: tema.cor, border: `1px solid color-mix(in srgb, ${tema.cor} 30%, transparent)` }}>
+                      <tema.Icon size={17} strokeWidth={2} />
                     </span>
                     <div className="min-w-0 flex-1">
-                      <p className="text-sm font-semibold" style={{ color: "var(--color-text)" }}>{i + 1}. {p.question}</p>
-                      <p className="text-[11px]" style={{ color: "var(--color-text-subtle)" }}>{valores.length} resposta{valores.length !== 1 ? "s" : ""}</p>
+                      <p className="text-[15px] font-semibold leading-snug" style={{ color: "var(--color-text)" }}>{p.question}</p>
+                      <p className="mt-0.5 text-[11px] uppercase tracking-wide" style={{ color: "var(--color-text-subtle)" }}>Pergunta {i + 1} · {valores.length} resposta{valores.length !== 1 ? "s" : ""}</p>
                     </div>
                   </div>
                   <AgregadoPergunta pergunta={p} valores={valores} />
@@ -140,12 +141,12 @@ export default async function ResultadosPage({ params }: { params: Promise<{ id:
             })}
           </div>
 
-          {/* Território + individuais */}
-          <div className="grid gap-3 lg:grid-cols-2">
+          {/* Território + individuais — par espelhado */}
+          <div className="grid gap-4 lg:grid-cols-2">
             {topCidades.length > 0 && (
-              <div className="wr-card p-4 sm:p-5">
-                <p className="mb-3 text-xs font-semibold uppercase tracking-wide" style={{ color: "var(--color-text-subtle)" }}>De onde falam</p>
-                <div className="space-y-2">
+              <div className="gip-glass gip-glass-hover p-5 sm:p-6">
+                <p className="mb-4 text-[11px] font-semibold uppercase tracking-[0.08em]" style={{ color: "var(--color-text-subtle)" }}>De onde falam</p>
+                <div className="space-y-3.5">
                   {topCidades.map(([cidade, n]) => (
                     <Barra key={cidade} rotulo={cidade} n={n} total={total} cor={temaS.cor} />
                   ))}
@@ -153,21 +154,21 @@ export default async function ResultadosPage({ params }: { params: Promise<{ id:
               </div>
             )}
 
-            <div className="wr-card p-4 sm:p-5">
-              <p className="mb-3 text-xs font-semibold uppercase tracking-wide" style={{ color: "var(--color-text-subtle)" }}>Respostas individuais</p>
+            <div className="gip-glass gip-glass-hover p-5 sm:p-6">
+              <p className="mb-4 text-[11px] font-semibold uppercase tracking-[0.08em]" style={{ color: "var(--color-text-subtle)" }}>Respostas individuais</p>
               <div className="space-y-2">
                 {respostas.slice(0, 200).map((r, idx) => {
                   const respondidas = perguntas.filter((p) => r.answers[p.id] != null && r.answers[p.id] !== "").length;
                   const c = r.contactId ? contatoPorId.get(r.contactId) : null;
                   const local = [c?.bairro, r.city, r.state].filter(Boolean).join(" · ") || "Local não informado";
                   return (
-                    <details key={r.id} className="rounded-lg" style={{ background: "var(--color-surface-elevated)", border: "1px solid var(--color-border)" }}>
-                      <summary className="flex cursor-pointer items-center justify-between gap-2 px-3 py-2 text-[12px]" style={{ color: "var(--color-text)" }}>
+                    <details key={r.id} className="group rounded-2xl" style={{ background: "color-mix(in srgb, var(--color-text) 4%, transparent)", border: "1px solid color-mix(in srgb, var(--color-text) 8%, transparent)" }}>
+                      <summary className="flex cursor-pointer list-none items-center justify-between gap-2 px-4 py-3 text-[13px]" style={{ color: "var(--color-text)" }}>
                         <span className="min-w-0 truncate font-medium">{c?.nome || `Resposta #${total - idx}`}{c?.telefone ? <span className="font-normal" style={{ color: "var(--color-text-subtle)" }}> · {c.telefone}</span> : null}</span>
-                        <span className="shrink-0" style={{ color: "var(--color-text-subtle)" }}>{respondidas}/{perguntas.length} · {fmtData(r.created_at)}</span>
+                        <span className="shrink-0 tabular-nums text-[11px]" style={{ color: "var(--color-text-subtle)" }}>{respondidas}/{perguntas.length} · {fmtData(r.created_at)}</span>
                       </summary>
-                      <div className="space-y-2 border-t px-3 py-2.5" style={{ borderColor: "var(--color-border)" }}>
-                        <p className="text-[11px]" style={{ color: "var(--color-text-subtle)" }}>📍 {local}</p>
+                      <div className="space-y-2.5 px-4 pb-3.5 pt-1" style={{ borderTop: "1px solid color-mix(in srgb, var(--color-text) 7%, transparent)" }}>
+                        <p className="pt-2 text-[11px]" style={{ color: "var(--color-text-subtle)" }}>📍 {local}</p>
                         {perguntas.map((p) => (
                           <div key={p.id}>
                             <p className="text-[11px]" style={{ color: "var(--color-text-subtle)" }}>{p.question}</p>
@@ -194,11 +195,11 @@ function formatarValor(v: unknown, tipo: Tipo): string {
   return String(v);
 }
 
-function Kpi({ rotulo, valor }: { rotulo: string; valor: string }) {
+function Kpi({ rotulo, valor, destaque = false }: { rotulo: string; valor: string; destaque?: boolean }) {
   return (
-    <div className="wr-card p-3.5 text-center">
-      <p className="text-2xl font-bold tabular-nums" style={{ color: "var(--color-text)" }}>{valor}</p>
-      <p className="text-[11px] uppercase tracking-wide" style={{ color: "var(--color-text-subtle)" }}>{rotulo}</p>
+    <div className="gip-glass p-4 text-center">
+      <p className="text-[28px] font-bold leading-none tabular-nums" style={{ color: destaque ? "var(--color-accent)" : "var(--color-text)" }}>{valor}</p>
+      <p className="mt-2 text-[10px] font-semibold uppercase tracking-[0.1em]" style={{ color: "var(--color-text-subtle)" }}>{rotulo}</p>
     </div>
   );
 }
@@ -207,12 +208,14 @@ function Barra({ rotulo, n, total, cor }: { rotulo: string; n: number; total: nu
   const pct = total > 0 ? Math.round((n / total) * 100) : 0;
   return (
     <div>
-      <div className="mb-1 flex items-center justify-between text-[12px]">
+      <div className="mb-1.5 flex items-center justify-between text-[12px]">
         <span className="truncate pr-2" style={{ color: "var(--color-text)" }}>{rotulo}</span>
-        <span className="shrink-0 tabular-nums font-semibold" style={{ color: "var(--color-text-muted)" }}>{n} · {pct}%</span>
+        <span className="shrink-0 tabular-nums" style={{ color: "var(--color-text-muted)" }}>
+          <span className="font-semibold" style={{ color: "var(--color-text)" }}>{pct}%</span> <span style={{ color: "var(--color-text-subtle)" }}>· {n}</span>
+        </span>
       </div>
-      <div style={{ height: 7, borderRadius: 4, background: "var(--color-surface-2, rgba(128,128,128,0.15))" }}>
-        <div style={{ height: 7, borderRadius: 4, width: `${pct}%`, background: cor, minWidth: n > 0 ? 4 : 0 }} />
+      <div style={{ height: 8, borderRadius: 999, background: "color-mix(in srgb, var(--color-text) 8%, transparent)", overflow: "hidden" }}>
+        <div style={{ height: 8, borderRadius: 999, width: `${pct}%`, minWidth: n > 0 ? 6 : 0, background: `linear-gradient(90deg, color-mix(in srgb, ${cor} 55%, transparent), ${cor})`, boxShadow: `0 0 12px color-mix(in srgb, ${cor} 45%, transparent)` }} />
       </div>
     </div>
   );

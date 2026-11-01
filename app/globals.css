@@ -656,6 +656,37 @@
   border-radius: var(--wr-card-radius);
   box-shadow: var(--wr-card-shadow);
 }
+
+/* ---- gip-glass — "card espelhado" (vidro) ----------------------------------
+ * Card translúcido com um brilho de reflexo no topo (o "espelho") e desfoque
+ * do que está atrás. Adapta-se SOZINHO ao tema: usa color-mix sobre os tokens
+ * de cor (--color-text / --color-surface-elevated), então o mesmo código fica
+ * claro-sobre-escuro no tema escuro e discreto no tema claro — sem plumbing em
+ * dois blocos de tema. Pensado para virar o card padrão do sistema. */
+@utility gip-glass {
+  position: relative;
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--color-text) 8%, transparent), transparent 42%),
+    color-mix(in srgb, var(--color-surface-elevated) 80%, transparent);
+  border: 1px solid color-mix(in srgb, var(--color-text) 10%, transparent);
+  border-radius: var(--wr-card-radius);
+  box-shadow:
+    0 18px 44px -18px rgba(0, 0, 0, 0.55),
+    inset 0 1px 0 color-mix(in srgb, var(--color-text) 12%, transparent);
+  backdrop-filter: blur(16px) saturate(140%);
+  -webkit-backdrop-filter: blur(16px) saturate(140%);
+  transition: border-color var(--duration-base) var(--ease-out), box-shadow var(--duration-base) var(--ease-out), transform var(--duration-base) var(--ease-out);
+}
+@utility gip-glass-hover {
+  cursor: default;
+}
+.gip-glass-hover:hover {
+  border-color: color-mix(in srgb, var(--color-accent) 40%, transparent);
+  box-shadow:
+    0 24px 56px -20px rgba(0, 0, 0, 0.6),
+    0 0 0 1px color-mix(in srgb, var(--color-accent) 18%, transparent),
+    inset 0 1px 0 color-mix(in srgb, var(--color-text) 14%, transparent);
+}
 @utility wr-btn {
   min-height: var(--wr-btn-min-h);
   border-radius: var(--wr-btn-radius);
