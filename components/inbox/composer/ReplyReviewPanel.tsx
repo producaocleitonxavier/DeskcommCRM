@@ -106,7 +106,13 @@ export function ReplyReviewPanel({
   };
   return (
     <section
-      className="mb-3 space-y-2 rounded-md border bg-muted/30 p-3"
+      className="mb-3 space-y-2 rounded-xl border p-3"
+      style={{
+        background: "color-mix(in srgb, var(--color-surface-elevated) 55%, transparent)",
+        borderColor: "color-mix(in srgb, var(--color-text) 10%, transparent)",
+        backdropFilter: "blur(8px)",
+        WebkitBackdropFilter: "blur(8px)",
+      }}
       aria-label={t("Assistência do agente")}
     >
       <div className="flex flex-wrap items-center justify-between gap-2">

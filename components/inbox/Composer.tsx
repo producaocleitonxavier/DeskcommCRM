@@ -418,9 +418,21 @@ export const Composer = forwardRef<ComposerHandle, Props>(function Composer(
     <>
       <div
         className={cn(
-          "relative border-t border-border bg-background px-3 py-2",
+          "relative border-t px-3 py-2",
+          // Modo NOTA fica em âmbar sólido de propósito: é o sinal "só o time vê".
+          // Glassificar apagaria esse aviso — por isso o vidro é só no modo resposta.
           mode === "note" && "border-warning/40 bg-warning-bg",
         )}
+        style={
+          mode === "note"
+            ? undefined
+            : {
+                background: "color-mix(in srgb, var(--color-surface-elevated) 45%, transparent)",
+                backdropFilter: "blur(14px) saturate(140%)",
+                WebkitBackdropFilter: "blur(14px) saturate(140%)",
+                borderColor: "color-mix(in srgb, var(--color-text) 8%, transparent)",
+              }
+        }
       >
         {mode === "reply" && (
           <ReplyReviewPanel conversationId={conversationId} disabled={isDisabled} />
@@ -600,9 +612,11 @@ export const Composer = forwardRef<ComposerHandle, Props>(function Composer(
                 ? t("Enter salva a nota · Shift+Enter quebra linha")
                 : t("Enter envia · Shift+Enter quebra linha")
             }
+            // wr-textarea = campo premium (vidro translúcido + foco lima), o mesmo
+            // padrão dos forms. `!resize-none` vence o resize:vertical da utilidade
+            // porque aqui a altura é automática (autoresize, teto de 160px).
             className={cn(
-              "max-h-40 min-h-9 flex-1 resize-none rounded-md border border-input bg-background px-3 py-2 text-sm",
-              "placeholder:text-muted-foreground focus:ring-1 focus:ring-ring focus:outline-hidden",
+              "wr-textarea max-h-40 min-h-9 flex-1 !resize-none text-sm",
             )}
             disabled={mode === "note" ? isDisabled : respostaBarrada}
             aria-label={t("Mensagem")}
