@@ -162,7 +162,13 @@ export interface StorageLeve {
 }
 
 export function chaveDaFaixa(faixa: FaixaId): string {
-  return `inbox:divisorias:${faixa}`;
+  // `v2`: zera as larguras arrastadas que ficaram salvas de antes. Larguras em
+  // PIXEL não encolhem quando a pessoa dá zoom (80%→100%): a lista/ficha
+  // arrastadas largas continuavam largas e espremiam a conversa no 100%. Subir a
+  // versão descarta o salvo e devolve o padrão generoso (conversa pega a maior
+  // parte); quem quiser, arrasta de novo. O salvo antigo (`v1`) fica órfão e é
+  // só ignorado.
+  return `inbox:divisorias:v2:${faixa}`;
 }
 
 /**

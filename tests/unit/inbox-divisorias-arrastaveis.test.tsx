@@ -90,7 +90,7 @@ import {
   type StorageLeve,
 } from "@/lib/inbox/larguras-do-inbox";
 
-const CHAVE_XL = "inbox:divisorias:xl";
+const CHAVE_XL = "inbox:divisorias:v2:xl";
 
 /** Storage em memória: mesma semântica, sem depender do jsdom. */
 function storageFalso(inicial: Record<string, string> = {}): StorageLeve & {
@@ -169,7 +169,7 @@ describe("a regra pura — limites, piso da conversa e memória por faixa", () =
     gravarLarguras(storage, "md", { lista: 500, ficha: 300 });
     gravarLarguras(storage, "2xl", { lista: 340, ficha: 400 });
 
-    expect(chaveDaFaixa("md")).toBe("inbox:divisorias:md");
+    expect(chaveDaFaixa("md")).toBe("inbox:divisorias:v2:md");
     expect(lerLarguras(storage, "md")).toEqual({ lista: 500, ficha: 300 });
     expect(lerLarguras(storage, "2xl")).toEqual({ lista: 340, ficha: 400 });
     // A faixa sem nada salvo devolve `null` — o layout interpreta como CSS.
@@ -179,12 +179,12 @@ describe("a regra pura — limites, piso da conversa e memória por faixa", () =
   });
 
   it("chave corrompida, tipo errado ou fora dos limites não entra sem tratamento", () => {
-    expect(lerLarguras(storageFalso({ "inbox:divisorias:xl": "{quebrado" }), "xl")).toBeNull();
+    expect(lerLarguras(storageFalso({ "inbox:divisorias:v2:xl": "{quebrado" }), "xl")).toBeNull();
     expect(
-      lerLarguras(storageFalso({ "inbox:divisorias:xl": '{"lista":"500","ficha":300}' }), "xl"),
+      lerLarguras(storageFalso({ "inbox:divisorias:v2:xl": '{"lista":"500","ficha":300}' }), "xl"),
     ).toBeNull();
     expect(
-      lerLarguras(storageFalso({ "inbox:divisorias:xl": '{"lista":100,"ficha":50}' }), "xl"),
+      lerLarguras(storageFalso({ "inbox:divisorias:v2:xl": '{"lista":100,"ficha":50}' }), "xl"),
     ).toEqual({ lista: LIMITES_LISTA.min, ficha: LIMITES_FICHA.min });
     expect(lerLarguras(null, "xl")).toBeNull();
   });
