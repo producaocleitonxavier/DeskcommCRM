@@ -112,7 +112,7 @@ export function FunnelBoard({ data, className, showConversion = true }: FunnelBo
               }}
             >
               {/* Rótulo do estágio — badge numerado + nome */}
-              <div className="flex w-24 shrink-0 items-center gap-2.5 sm:w-36">
+              <div className="flex w-32 shrink-0 items-center gap-2.5 sm:w-36">
                 <span
                   className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-[11px] font-bold tabular-nums"
                   style={{
@@ -126,7 +126,7 @@ export function FunnelBoard({ data, className, showConversion = true }: FunnelBo
                   {i + 1}
                 </span>
                 <span
-                  className="truncate text-sm font-semibold"
+                  className="text-sm font-semibold leading-tight"
                   style={{ color: vazio ? "var(--color-text-subtle, rgba(255,255,255,0.45))" : "var(--color-text, #E8E8E4)" }}
                 >
                   {d.label}
