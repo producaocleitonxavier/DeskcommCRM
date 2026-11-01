@@ -664,14 +664,14 @@ export function CRMSidePanel({ conversation }: Props) {
 
   if (!conversation) {
     return (
-      <aside className="flex h-full items-center justify-center border-l border-border p-4 text-center text-xs text-muted-foreground">
+      <aside className="flex h-full items-center justify-center p-4 text-center text-xs text-muted-foreground" style={{ borderLeft: "1px solid color-mix(in srgb, var(--color-text) 8%, transparent)" }}>
         {t("Selecione uma conversa para ver detalhes do contato.")}
       </aside>
     );
   }
 
   return (
-    <aside className="flex h-full flex-col gap-4 overflow-y-auto border-l border-border bg-background p-4">
+    <aside className="flex h-full flex-col gap-4 overflow-y-auto p-4" style={{ background: "color-mix(in srgb, var(--color-surface-elevated) 40%, transparent)", backdropFilter: "blur(12px)", WebkitBackdropFilter: "blur(12px)", borderLeft: "1px solid color-mix(in srgb, var(--color-text) 8%, transparent)" }}>
       <section>
         <h3 className="text-xs font-semibold text-text">
           {t("Contato")}

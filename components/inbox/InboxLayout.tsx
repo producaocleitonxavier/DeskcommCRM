@@ -624,9 +624,15 @@ export function InboxLayout({ initialSelectedId = null, rascunho = null }: Inbox
       */}
       <div
         className={cn(
-          "h-full min-h-0 flex-col border-r border-border md:flex",
+          "h-full min-h-0 flex-col md:flex",
           colunas.lista,
         )}
+        style={{
+          background: "color-mix(in srgb, var(--color-surface-elevated) 40%, transparent)",
+          backdropFilter: "blur(12px)",
+          WebkitBackdropFilter: "blur(12px)",
+          borderRight: "1px solid color-mix(in srgb, var(--color-text) 8%, transparent)",
+        }}
       >
         <InboxFilters value={filterValue} onChange={setFilterValue} />
         <div className="min-h-0 flex-1 overflow-hidden">
