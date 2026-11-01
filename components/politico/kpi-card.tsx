@@ -5,10 +5,33 @@
  * Design System War Room 2.0 (globals.css): wr-card, tokens accent, font-heading.
  */
 
+import { useEffect, useState } from "react";
 import type { LucideIcon } from "lucide-react";
 import { ArrowDown, ArrowUp } from "lucide-react";
 
 import { cn } from "@/lib/utils";
+
+/** Conta de 0 até o alvo ao montar (ease-out). Respeita prefers-reduced-motion. */
+function useCountUp(target: number, run: boolean): number {
+  const [val, setVal] = useState(run ? 0 : target);
+  useEffect(() => {
+    if (!run) { setVal(target); return; }
+    const reduz = typeof window !== "undefined" && window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+    if (reduz || target === 0) { setVal(target); return; }
+    let raf = 0;
+    const dur = 900;
+    const t0 = performance.now();
+    const tick = (t: number) => {
+      const p = Math.min((t - t0) / dur, 1);
+      const eased = 1 - Math.pow(1 - p, 3);
+      setVal(Math.round(target * eased));
+      if (p < 1) raf = requestAnimationFrame(tick);
+    };
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+  }, [target, run]);
+  return val;
+}
 
 export interface KpiCardProps {
   label: string;
@@ -33,6 +56,8 @@ export function KpiCard({ label, valor, icone: Icone, variacao, cor, sufixo, var
   const temVariacao = typeof variacao === "number" && Number.isFinite(variacao);
   const subiu = (variacao ?? 0) >= 0;
   const escuro = variant === "dark";
+  const isNum = typeof valor === "number";
+  const contado = useCountUp(isNum ? (valor as number) : 0, isNum);
 
   return (
     <div className={cn(escuro ? "wr-card-accent" : "gip-glass gip-glass-hover", "p-6", className)}>
@@ -42,7 +67,7 @@ export function KpiCard({ label, valor, icone: Icone, variacao, cor, sufixo, var
             className={cn("wr-kpi-value text-3xl leading-none")}
             style={cor ? { color: cor, textShadow: "none" } : undefined}
           >
-            {typeof valor === "number" ? valor.toLocaleString("pt-BR") : valor}
+            {isNum ? contado.toLocaleString("pt-BR") : valor}
             {sufixo && <span className="ml-0.5 text-lg font-semibold">{sufixo}</span>}
           </div>
           <div className="mt-2 text-sm" style={{ color: "var(--color-text-muted)" }}>

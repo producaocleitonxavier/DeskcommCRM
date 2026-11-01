@@ -748,8 +748,21 @@
 @keyframes gip-fade-up { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
 @keyframes gip-bar-grow { from { transform: scaleX(0); } to { transform: scaleX(1); } }
 
+/* Entrada escalonada: anima cada filho direto do container em sequência (ar de
+ * produto caro ao abrir). Aplicar `gip-stagger` no container. */
+.gip-stagger > * { animation: gip-fade-up 0.5s var(--ease-out-slow) both; }
+.gip-stagger > *:nth-child(1) { animation-delay: 0.02s; }
+.gip-stagger > *:nth-child(2) { animation-delay: 0.08s; }
+.gip-stagger > *:nth-child(3) { animation-delay: 0.14s; }
+.gip-stagger > *:nth-child(4) { animation-delay: 0.20s; }
+.gip-stagger > *:nth-child(5) { animation-delay: 0.26s; }
+.gip-stagger > *:nth-child(6) { animation-delay: 0.32s; }
+.gip-stagger > *:nth-child(7) { animation-delay: 0.38s; }
+.gip-stagger > *:nth-child(n+8) { animation-delay: 0.44s; }
+
 @media (prefers-reduced-motion: reduce) {
   [class*="gip-anim"], .gip-draw, .gip-area-anim, .gip-dot-anim { animation: none !important; }
+  .gip-stagger > * { animation: none !important; }
 }
 @utility wr-btn {
   min-height: var(--wr-btn-min-h);

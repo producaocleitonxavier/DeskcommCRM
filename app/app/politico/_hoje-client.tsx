@@ -150,7 +150,7 @@ export default function HojeClient({
   const registradasData = g.registradas14d;
 
   return (
-    <div className="gip-ambient-bg mx-auto max-w-[1140px] px-4 py-7 space-y-6">
+    <div className="gip-ambient-bg gip-stagger mx-auto max-w-[1140px] px-4 py-7 space-y-6">
       {/* ── 1. Centro de Comando (hero tático) ──────────────────── */}
       <header
         className="wr-card relative overflow-hidden p-6 sm:p-8"
