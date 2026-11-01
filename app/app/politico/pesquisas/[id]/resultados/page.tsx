@@ -172,7 +172,7 @@ export default async function ResultadosPage({ params }: { params: Promise<{ id:
                         {perguntas.map((p) => (
                           <div key={p.id}>
                             <p className="text-[11px]" style={{ color: "var(--color-text-subtle)" }}>{p.question}</p>
-                            <p className="text-[13px]" style={{ color: "var(--color-text)" }}>{formatarValor(r.answers[p.id], p.response_type)}</p>
+                            <p className="text-[13.5px] font-semibold leading-snug" style={{ color: "var(--color-text)" }}>{formatarValor(r.answers[p.id], p.response_type)}</p>
                           </div>
                         ))}
                       </div>
