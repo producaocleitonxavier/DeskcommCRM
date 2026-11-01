@@ -5830,6 +5830,7 @@ export const DICIONARIO: Traducoes = {
   "Não entrou": { es: "No entró" },
   "Criar/mover lead no funil": { es: "Crear/mover lead en el embudo" },
   "Enviar mensagem no WhatsApp": { es: "Enviar mensaje por WhatsApp" },
+  "Enviar recado em áudio (Voz do Mandato)": { es: "Enviar mensaje de audio (Voz del Mandato)" },
   "Adicionar tag": { es: "Agregar etiqueta" },
   "Atribuir a um atendente": { es: "Asignar a un asesor" },
   "Avisar outro sistema (webhook)": { es: "Avisar a otro sistema (webhook)" },

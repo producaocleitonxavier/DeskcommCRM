@@ -9,6 +9,7 @@ export type ActionType =
   | "create_or_move_lead"
   | "send_whatsapp_message"
   | "send_ai_message"
+  | "send_voice_recado"
   | "add_tag"
   | "assign_owner"
   | "call_webhook"
@@ -63,6 +64,7 @@ export const ACTION_LABELS: Record<ActionType, string> = {
   create_or_move_lead: "Criar/mover lead no funil",
   send_whatsapp_message: "Enviar mensagem no WhatsApp",
   send_ai_message: "Mensagem escrita pela IA",
+  send_voice_recado: "Enviar recado em áudio (Voz do Mandato)",
   add_tag: "Adicionar tag",
   assign_owner: "Atribuir a um atendente",
   call_webhook: "Avisar outro sistema (webhook)",

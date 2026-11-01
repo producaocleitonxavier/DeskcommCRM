@@ -21,13 +21,9 @@ import { sendMessageHandler } from "@/app/api/v1/messages/_handler";
 import { gerarOficioDemanda } from "@/app/actions/politico/gerarOficio";
 import { ApiError } from "@/lib/api/types";
 import { avisoDeResolucaoLigado } from "@/lib/politico/aviso-de-resolucao";
-import { lerVozConfig, vozArmada } from "@/lib/voz/config";
-import { gerarAudio } from "@/lib/voz/elevenlabs";
-import { lerVozSpeed, lerRotuloNoAudio } from "@/lib/voz/velocidade";
-import { scriptRecado, AVISO_IA_TEXTO, type MomentoVoz } from "@/lib/voz/recado";
+import { enviarRecadoDeVozNaConversa } from "@/lib/voz/enviar-recado";
+import type { MomentoVoz } from "@/lib/voz/recado";
 import { lerIdentidadeDoMandato } from "@/lib/politico/identidade-do-mandato";
-import { dentroDoBlackout } from "@/lib/voz/blackout";
-import { mp3ParaNotaDeVoz, VOICE_MIME } from "@/lib/messaging/media/voice-transcode";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { SendMessageInput } from "@/lib/schemas";
 
@@ -272,53 +268,23 @@ async function enviarRecadoDeVoz(args: {
   idioma: "es" | "pt-BR" | undefined;
 }): Promise<AudioRecadoStatus> {
   const { db, admin, orgId, userId, conversationId, demandaId, momento, primeiroNome, idioma } = args;
-  try {
-    const cfg = await lerVozConfig(db, orgId);
-    if (!vozArmada(cfg) || !cfg.voiceId) return "voz_desarmada";
-    if (dentroDoBlackout()) return "blackout";
+  // Toda a geração+envio do áudio vive no helper compartilhado (`lib/voz/enviar-recado.ts`),
+  // o MESMO que a automação `send_voice_recado` usa. Aqui fica só o que é do
+  // ciclo da demanda: o nome de quem fala e o registro do evento.
+  const idMandato = await lerIdentidadeDoMandato(db, orgId);
+  const status = await enviarRecadoDeVozNaConversa({
+    db,
+    admin,
+    orgId,
+    conversationId,
+    momento,
+    primeiroNome: primeiroNome || null,
+    nomeParlamentar: idMandato.nomeParlamentar,
+    // Envio manual (botão): actor é o usuário; sem throttle de automação.
+    sendMeta: { organization_id: orgId, actor: { type: "user", id: userId }, idioma },
+  });
 
-    const { data: orgRow } = await db.from("organizations").select("settings").eq("id", orgId).maybeSingle();
-    const velocidade = lerVozSpeed(orgRow?.settings);
-    // Fora de campanha (padrão): áudio limpo + aviso de IA em texto. Campanha: falado.
-    const rotuloNoAudio = lerRotuloNoAudio(orgRow?.settings);
-
-    const idMandato = await lerIdentidadeDoMandato(db, orgId);
-    const texto = scriptRecado({ momento, primeiroNome: primeiroNome || null, nomeParlamentar: idMandato.nomeParlamentar, incluirAvisoIA: rotuloNoAudio });
-    const r = await gerarAudio(cfg.voiceId, texto, velocidade);
-    if (!r.ok) return "falha";
-
-    const ogg = await mp3ParaNotaDeVoz(Buffer.from(r.audio));
-    if (!ogg) return "falha";
-
-    const waPath = `${orgId}/${conversationId}/recado-voz-${Date.now()}.ogg`;
-    const up = await admin.storage
-      .from("whatsapp-media")
-      .upload(waPath, ogg.buffer, { contentType: VOICE_MIME, upsert: true });
-    if (up.error) return "falha";
-
-    if (!rotuloNoAudio) {
-      try {
-        await sendMessageHandler(
-          db,
-          { organization_id: orgId, actor: { type: "user", id: userId }, requestId: randomUUID(), idioma },
-          { conversation_id: conversationId, type: "text", body: AVISO_IA_TEXTO },
-        );
-      } catch { /* rótulo-texto best-effort; o áudio é o que importa */ }
-    }
-
-    const input: SendMessageInput = {
-      conversation_id: conversationId,
-      type: "audio",
-      media_storage_path: waPath,
-      media_mime: VOICE_MIME,
-      media_size_bytes: ogg.buffer.length,
-    };
-    await sendMessageHandler(
-      db,
-      { organization_id: orgId, actor: { type: "user", id: userId }, requestId: randomUUID(), idioma },
-      input,
-    );
-
+  if (status === "enviado") {
     await db.from("pol_demanda_eventos").insert({
       organization_id: orgId,
       demanda_id: demandaId,
@@ -326,10 +292,8 @@ async function enviarRecadoDeVoz(args: {
       descricao: "Recado em áudio na voz do Mandato enviado",
       created_by: userId,
     });
-    return "enviado";
-  } catch {
-    return "falha";
   }
+  return status;
 }
 
 /**

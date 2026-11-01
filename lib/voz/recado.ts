@@ -11,7 +11,7 @@
  * chama pode desligar explicitamente (Fase B, quando houver a regra por período).
  */
 
-export type MomentoVoz = "resolucao" | "encaminhamento";
+export type MomentoVoz = "resolucao" | "encaminhamento" | "aniversario";
 
 export const AVISO_IA_FALADO =
   "Ah, este áudio foi gerado com apoio de inteligência artificial, com a minha voz e a minha autorização.";
@@ -49,25 +49,37 @@ function saudacao(primeiroNome: string | null): string {
 /** Monta o roteiro falado do recado. Sempre termina com um fecho caloroso e,
  * por padrão, com o aviso de IA. */
 export function scriptRecado(opts: OpcoesRecado): string {
-  const ini = saudacao(opts.primeiroNome);
-  const assunto = (opts.assuntoCurto ?? "").trim();
-  const sobre = assunto ? ` sobre ${assunto}` : "";
   // Apresentação parametrizada: "Aqui é <nome>." Sem nome configurado, o áudio
-  // simplesmente não se apresenta (jamais inventa um nome).
+  // simplesmente não se apresenta (jamais inventa um nome). SEM o artigo "o/a"
+  // de propósito: as frases são neutras de gênero (ver identidade-do-mandato.ts).
   const nome = (opts.nomeParlamentar ?? "").trim();
   const intro = nome ? `Aqui é ${nome}. ` : "";
 
   let corpo: string;
-  if (opts.momento === "resolucao") {
+  if (opts.momento === "aniversario") {
+    // Felicitação de aniversário — abertura própria ("Feliz aniversário, <nome>!"),
+    // em vez do "Olá" dos outros momentos. Sem promessa, sem política: só o afeto.
+    const n = (opts.primeiroNome ?? "").trim();
+    const abertura = n ? `Feliz aniversário, ${n}!` : "Feliz aniversário!";
     corpo =
-      `${ini} ${intro}` +
-      `Passando pra te dar uma boa notícia: o seu pedido${sobre} foi resolvido. ` +
-      `Agradeço muito a sua confiança, e conte sempre com o nosso gabinete. Um grande abraço!`;
+      `${abertura} ${intro}` +
+      `Passando aqui pra desejar um feliz aniversário, com muita saúde, paz e prosperidade pra sua vida. ` +
+      `Que Deus continue abençoando a sua vida e a de seus familiares. Conte sempre comigo. Um forte abraço!`;
   } else {
-    corpo =
-      `${ini} ${intro}` +
-      `Passando pra te avisar que o seu pedido${sobre} já foi encaminhado pro órgão responsável. ` +
-      `Assim que tiver novidade, eu te retorno. Pode contar comigo e com o nosso gabinete. Um abraço!`;
+    const ini = saudacao(opts.primeiroNome);
+    const assunto = (opts.assuntoCurto ?? "").trim();
+    const sobre = assunto ? ` sobre ${assunto}` : "";
+    if (opts.momento === "resolucao") {
+      corpo =
+        `${ini} ${intro}` +
+        `Passando pra te dar uma boa notícia: o seu pedido${sobre} foi resolvido. ` +
+        `Agradeço muito a sua confiança, e conte sempre com o nosso gabinete. Um grande abraço!`;
+    } else {
+      corpo =
+        `${ini} ${intro}` +
+        `Passando pra te avisar que o seu pedido${sobre} já foi encaminhado pro órgão responsável. ` +
+        `Assim que tiver novidade, eu te retorno. Pode contar comigo e com o nosso gabinete. Um abraço!`;
+    }
   }
 
   const incluirAviso = opts.incluirAvisoIA !== false;
