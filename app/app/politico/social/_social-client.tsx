@@ -112,11 +112,11 @@ export default function OpiniaoPublicaClient({ config, resumo, mencoes }: { conf
         </div>
       </header>
 
-      {msg && <div className="wr-card px-4 py-2.5 text-sm" style={{ color: "var(--color-text-muted)" }}>{msg}</div>}
+      {msg && <div className="gip-glasspx-4 py-2.5 text-sm" style={{ color: "var(--color-text-muted)" }}>{msg}</div>}
 
       {/* Config de termos */}
       {cfgAberto && (
-        <section className="wr-card p-5 space-y-4">
+        <section className="gip-glassp-5 space-y-4">
           <h2 className="text-sm font-bold" style={{ color: "var(--color-text)" }}>O que monitorar</h2>
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <Campo label="Nome(s) do candidato / mandato" hint="separe por vírgula"><input value={nome} onChange={(e) => setNome(e.target.value)} placeholder="Cleiton Xavier, @cleitonxavier" className="wr-input w-full" /></Campo>
@@ -132,7 +132,7 @@ export default function OpiniaoPublicaClient({ config, resumo, mencoes }: { conf
       )}
 
       {resumo.total === 0 ? (
-        <div className="wr-card p-10 text-center">
+        <div className="gip-glassp-10 text-center">
           <RadioTower className="mx-auto h-8 w-8" style={{ color: "var(--color-text-subtle)" }} aria-hidden />
           <p className="mt-3 text-sm" style={{ color: "var(--color-text-subtle)" }}>
             {temConfig ? 'Nenhuma menção ainda. Clique em "Atualizar" para captar a imprensa agora.' : "Configure os termos acima para começar a escutar."}
@@ -141,7 +141,7 @@ export default function OpiniaoPublicaClient({ config, resumo, mencoes }: { conf
       ) : (
         <>
           {/* HERO de sentimento */}
-          <section className="wr-card overflow-hidden p-0">
+          <section className="gip-glassoverflow-hidden p-0">
             <div className="grid grid-cols-1 gap-0 md:grid-cols-[320px_1fr]">
               {/* Índice */}
               <div className="flex flex-col justify-center gap-3 p-6" style={{ background: "linear-gradient(145deg, rgba(215,243,106,0.06), transparent)", borderRight: "1px solid var(--color-border)" }}>
@@ -176,7 +176,7 @@ export default function OpiniaoPublicaClient({ config, resumo, mencoes }: { conf
           </section>
 
           {/* Pulso */}
-          <section className="wr-card p-6">
+          <section className="gip-glassp-6">
             <div className="mb-4 flex items-center justify-between">
               <h2 className="text-sm font-bold" style={{ color: "var(--color-text)" }}>Pulso da cobertura</h2>
               <div className="flex items-center gap-3 text-[11px]" style={{ color: "var(--color-text-subtle)" }}>
@@ -188,7 +188,7 @@ export default function OpiniaoPublicaClient({ config, resumo, mencoes }: { conf
 
           {/* Pautas + origem */}
           <section className="grid grid-cols-1 gap-4 sm:grid-cols-5">
-            <div className="wr-card p-5 sm:col-span-3">
+            <div className="gip-glassp-5 sm:col-span-3">
               <div className="mb-3 flex items-center gap-1.5 text-sm font-bold" style={{ color: "var(--color-text)" }}><Flame className="h-4 w-4" style={{ color: "#F59E0B" }} aria-hidden /> Pautas quentes</div>
               {resumo.topicos.length === 0 ? <p className="text-xs" style={{ color: "var(--color-text-subtle)" }}>Classificando…</p> : (
                 <div className="flex flex-col gap-2">
@@ -208,7 +208,7 @@ export default function OpiniaoPublicaClient({ config, resumo, mencoes }: { conf
                 </div>
               )}
             </div>
-            <div className="wr-card p-5 sm:col-span-2">
+            <div className="gip-glassp-5 sm:col-span-2">
               <div className="mb-3 text-sm font-bold" style={{ color: "var(--color-text)" }}>Origem</div>
               <div className="flex flex-col gap-2.5">
                 {resumo.porCanal.map((c) => (
@@ -225,7 +225,7 @@ export default function OpiniaoPublicaClient({ config, resumo, mencoes }: { conf
           </section>
 
           {/* Feed — cards (estilo premium, limitado para não poluir) */}
-          <section className="wr-card p-5">
+          <section className="gip-glassp-5">
             <div className="mb-3 flex items-center justify-between">
               <h2 className="text-sm font-bold" style={{ color: "var(--color-text)" }}>Menções recentes</h2>
               <span className="text-[11px]" style={{ color: "var(--color-text-subtle)" }}>as {Math.min(mencoes.length, 15)} mais recentes</span>
@@ -352,14 +352,14 @@ function PulsoArea({ dados }: { dados: { dia: string; total: number; pos: number
             <feMerge><feMergeNode in="b" /><feMergeNode in="SourceGraphic" /></feMerge>
           </filter>
         </defs>
-        <path d={area} fill="url(#pulsoFill)" />
-        <path d={linha} fill="none" stroke="#D7F36A" strokeWidth={2.5} strokeLinecap="round" filter="url(#pulsoGlow)" />
+        <path d={area} fill="url(#pulsoFill)" style={{ opacity: 0, animation: "gip-area-in 0.9s ease 0.3s forwards" }} />
+        <path d={linha} pathLength={1} fill="none" stroke="#D7F36A" strokeWidth={2.5} strokeLinecap="round" filter="url(#pulsoGlow)" style={{ strokeDasharray: 1, strokeDashoffset: 1, animation: "gip-draw-line 1.3s cubic-bezier(0.16,1,0.3,1) forwards" }} />
         {hover != null && (
           <line x1={X(hover)} y1={padTop - 8} x2={X(hover)} y2={H - padBot} stroke="rgba(215,243,106,0.4)" strokeWidth={1} strokeDasharray="3 3" />
         )}
         {dados.map((d, i) => (
           <g key={d.dia}>
-            <circle cx={X(i)} cy={Y(d.total)} r={hover === i ? 5.5 : 3.5} fill={corDia(d)} stroke="#0C0E13" strokeWidth={1.5} style={{ transition: "r .1s ease" }} />
+            <circle cx={X(i)} cy={Y(d.total)} r={hover === i ? 5.5 : 3.5} fill={corDia(d)} stroke="#0C0E13" strokeWidth={1.5} style={{ transition: "r .1s ease", opacity: 0, animation: `gip-area-in 0.4s ease ${(0.35 + (i / Math.max(n - 1, 1)) * 1.0).toFixed(2)}s forwards` }} />
             {i % passo === 0 && (
               <text x={X(i)} y={H - 8} fontSize="9" fill="var(--color-text-subtle)" textAnchor="middle">{d.dia.slice(8, 10)}/{d.dia.slice(5, 7)}</text>
             )}

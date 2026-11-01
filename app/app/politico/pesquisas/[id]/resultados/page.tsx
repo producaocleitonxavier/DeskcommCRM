@@ -67,8 +67,16 @@ export default async function ResultadosPage({ params }: { params: Promise<{ id:
     contactId: (r.contact_id as string | null) ?? null,
   }));
 
+  // "Respondidas" = quem de fato respondeu (tem resposta ou foi concluída). Um
+  // DISPARO de pesquisa pré-cria uma linha vazia por destinatário (reserva do
+  // link), e essas reservas NÃO são respostas — contá-las inflava o número
+  // (ex.: "501 respostas" quando só 1 pessoa respondeu). A tela conta só estas.
+  const respondidas = respostas.filter((r) => r.completed || (r.answers && Object.keys(r.answers).length > 0));
+  const enviadas = respostas.length; // inclui as reservas de disparo ainda não respondidas
+  const aguardando = enviadas - respondidas.length; // enviados que ainda não responderam
+
   // Identidade de quem respondeu (a pesquisa captura nome/WhatsApp/bairro no contato).
-  const contactIds = [...new Set(respostas.map((r) => r.contactId).filter((x): x is string => !!x))];
+  const contactIds = [...new Set(respondidas.map((r) => r.contactId).filter((x): x is string => !!x))];
   const contatoPorId = new Map<string, { nome: string | null; telefone: string | null; bairro: string | null }>();
   if (contactIds.length) {
     const { data: cs } = await db.from("contacts").select("id, name, phone_number, custom_fields").in("id", contactIds).eq("organization_id", org.orgId);
@@ -77,14 +85,15 @@ export default async function ResultadosPage({ params }: { params: Promise<{ id:
     }
   }
 
-  const total = respostas.length;
-  const completas = respostas.filter((r) => r.completed).length;
+  const total = respondidas.length;
+  const completas = respondidas.filter((r) => r.completed).length;
+  const taxaResposta = enviadas > 0 ? Math.round((total / enviadas) * 100) : 0;
   const temaS = temaPesquisaDe(s.theme);
   const temIntencao = s.theme === "intencao_voto" || perguntas.some((p) => p.theme === "intencao_voto");
 
   // Top cidades
   const cidadeMap = new Map<string, number>();
-  for (const r of respostas) { const c = (r.city ?? "").trim(); if (c) cidadeMap.set(c, (cidadeMap.get(c) ?? 0) + 1); }
+  for (const r of respondidas) { const c = (r.city ?? "").trim(); if (c) cidadeMap.set(c, (cidadeMap.get(c) ?? 0) + 1); }
   const topCidades = [...cidadeMap.entries()].sort((a, b) => b[1] - a[1]).slice(0, 5);
 
   const fmtData = (iso: string) => { try { return new Date(iso).toLocaleDateString("pt-BR", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" }); } catch { return ""; } };
@@ -113,9 +122,17 @@ export default async function ResultadosPage({ params }: { params: Promise<{ id:
         <Kpi rotulo="Cidades" valor={String(cidadeMap.size)} />
       </div>
 
+      {aguardando > 0 && (
+        <p className="-mt-2 px-1 text-[12px]" style={{ color: "var(--color-text-subtle)" }}>
+          Disparo: <strong style={{ color: "var(--color-text-muted)" }}>{enviadas}</strong> enviada{enviadas !== 1 ? "s" : ""} · <strong style={{ color: "var(--color-text)" }}>{total}</strong> respondida{total !== 1 ? "s" : ""} <span style={{ color: "var(--color-accent)" }}>({taxaResposta}%)</span> · {aguardando} aguardando resposta
+        </p>
+      )}
+
       {total === 0 ? (
         <div className="gip-glass p-10 text-center text-sm" style={{ color: "var(--color-text-muted)" }}>
-          Ainda não há respostas. Compartilhe o link público (ou dispare pela aba Disparar) e os resultados aparecem aqui em tempo real.
+          {enviadas > 0
+            ? `Você já enviou para ${enviadas} ${enviadas !== 1 ? "pessoas" : "pessoa"}, mas ninguém respondeu ainda. As respostas aparecem aqui em tempo real assim que chegarem.`
+            : "Ainda não há respostas. Compartilhe o link público (ou dispare pela aba Disparar) e os resultados aparecem aqui em tempo real."}
         </div>
       ) : (
         <>
@@ -123,7 +140,7 @@ export default async function ResultadosPage({ params }: { params: Promise<{ id:
           <div className="space-y-4">
             {perguntas.map((p, i) => {
               const tema = temaPesquisaDe(p.theme);
-              const valores = respostas.map((r) => r.answers[p.id]).filter((v) => v != null && v !== "");
+              const valores = respondidas.map((r) => r.answers[p.id]).filter((v) => v != null && v !== "");
               return (
                 <div key={p.id} className="gip-glass gip-glass-hover p-5 sm:p-6">
                   <div className="mb-4 flex items-start gap-3">
@@ -157,7 +174,7 @@ export default async function ResultadosPage({ params }: { params: Promise<{ id:
             <div className="gip-glass gip-glass-hover p-5 sm:p-6">
               <p className="mb-4 text-[11px] font-semibold uppercase tracking-[0.08em]" style={{ color: "var(--color-text-subtle)" }}>Respostas individuais</p>
               <div className="space-y-2">
-                {respostas.slice(0, 200).map((r, idx) => {
+                {respondidas.slice(0, 200).map((r, idx) => {
                   const respondidas = perguntas.filter((p) => r.answers[p.id] != null && r.answers[p.id] !== "").length;
                   const c = r.contactId ? contatoPorId.get(r.contactId) : null;
                   const local = [c?.bairro, r.city, r.state].filter(Boolean).join(" · ") || "Local não informado";

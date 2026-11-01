@@ -687,6 +687,20 @@
     0 0 0 1px color-mix(in srgb, var(--color-accent) 18%, transparent),
     inset 0 1px 0 color-mix(in srgb, var(--color-text) 14%, transparent);
 }
+
+/* ---- Animações GIP (entrada de gráfico/cards) -----------------------------
+ * Usadas no gráfico de pulso (linha que se desenha, área que sobe, pontos que
+ * aparecem em sequência) e em entradas suaves de card. Determinísticas, só CSS.
+ * A linha usa pathLength=1 no SVG, então o traço vai de 1 → 0 em qualquer escala. */
+@keyframes gip-draw-line { from { stroke-dashoffset: 1; } to { stroke-dashoffset: 0; } }
+@keyframes gip-area-in { from { opacity: 0; } to { opacity: 1; } }
+@keyframes gip-dot-in { from { opacity: 0; transform: scale(0.2); } to { opacity: 1; transform: scale(1); } }
+@keyframes gip-fade-up { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes gip-bar-grow { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+
+@media (prefers-reduced-motion: reduce) {
+  [class*="gip-anim"], .gip-draw, .gip-area-anim, .gip-dot-anim { animation: none !important; }
+}
 @utility wr-btn {
   min-height: var(--wr-btn-min-h);
   border-radius: var(--wr-btn-radius);
