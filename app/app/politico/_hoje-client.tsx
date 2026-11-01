@@ -86,18 +86,33 @@ function GaugeResolucao({ pct, resolvidas, total }: { pct: number; resolvidas: n
     <div className="flex items-center gap-4">
       <div className="relative" style={{ width: size, height: size }}>
         <svg width={size} height={size}>
-          <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="rgba(255,255,255,0.1)" strokeWidth={stroke} />
+          <defs>
+            <linearGradient id="gaugeGrad" x1="0" y1="0" x2="1" y2="1">
+              <stop offset="0%" stopColor="#E5F89E" />
+              <stop offset="100%" stopColor="#9fd30f" />
+            </linearGradient>
+            <filter id="gaugeGlow" x="-50%" y="-50%" width="200%" height="200%">
+              <feGaussianBlur stdDeviation="3" result="b" />
+              <feMerge>
+                <feMergeNode in="b" />
+                <feMergeNode in="SourceGraphic" />
+              </feMerge>
+            </filter>
+          </defs>
+          <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="rgba(255,255,255,0.08)" strokeWidth={stroke} />
           <circle
             cx={size / 2}
             cy={size / 2}
             r={r}
             fill="none"
-            stroke="#D7F36A"
+            stroke="url(#gaugeGrad)"
             strokeWidth={stroke}
             strokeLinecap="round"
             strokeDasharray={circ}
             strokeDashoffset={offset}
+            filter="url(#gaugeGlow)"
             transform={`rotate(-90 ${size / 2} ${size / 2})`}
+            style={{ transition: "stroke-dashoffset 1s cubic-bezier(0.16,1,0.3,1)" }}
           />
         </svg>
         <div className="absolute inset-0 flex flex-col items-center justify-center">
@@ -135,7 +150,7 @@ export default function HojeClient({
   const registradasData = g.registradas14d;
 
   return (
-    <div className="mx-auto max-w-[1140px] px-4 py-7 space-y-6" style={{ background: "var(--color-bg)" }}>
+    <div className="gip-ambient-bg mx-auto max-w-[1140px] px-4 py-7 space-y-6">
       {/* ── 1. Centro de Comando (hero tático) ──────────────────── */}
       <header
         className="wr-card relative overflow-hidden p-6 sm:p-8"
@@ -196,7 +211,7 @@ export default function HojeClient({
           {filaAcao.rascunhosIA > 0 && (
             <Link
               href="/app/inbox"
-              className="wr-card flex items-center gap-3 p-4 transition-shadow hover:shadow-md"
+              className="gip-glass gip-glass-hover flex items-center gap-3 p-4"
             >
               <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl" style={{ background: "rgba(215,243,106,0.14)", color: "#9fd30f" }} aria-hidden>
                 <Sparkles className="h-5 w-5" />
@@ -214,7 +229,7 @@ export default function HojeClient({
           {filaAcao.disparosRascunho > 0 && (
             <Link
               href="/app/campaigns"
-              className="wr-card flex items-center gap-3 p-4 transition-shadow hover:shadow-md"
+              className="gip-glass gip-glass-hover flex items-center gap-3 p-4"
             >
               <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl" style={{ background: "rgba(59,130,246,0.14)", color: "#3B82F6" }} aria-hidden>
                 <Send className="h-5 w-5" />
@@ -232,7 +247,7 @@ export default function HojeClient({
           {filaAcao.leadsQuentesSemContato > 0 && (
             <Link
               href="/app/politico/leads"
-              className="wr-card flex items-center gap-3 p-4 transition-shadow hover:shadow-md"
+              className="gip-glass gip-glass-hover flex items-center gap-3 p-4"
             >
               <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl" style={{ background: "rgba(239,68,68,0.14)", color: "#F87171" }} aria-hidden>
                 <Flame className="h-5 w-5" />
@@ -253,7 +268,7 @@ export default function HojeClient({
       {/* ── 1b. No gabinete hoje ────────────────────────────────── */}
       <section aria-label="No gabinete hoje" className="grid grid-cols-1 gap-4 lg:grid-cols-3">
         {/* Precisam de atenção */}
-        <div className="wr-card p-5 sm:p-6">
+        <div className="gip-glass p-5 sm:p-6">
           <div className="mb-3 flex items-center gap-2">
             <span className="flex h-8 w-8 items-center justify-center rounded-full" style={{ background: "#FBE4E2", color: "#A3302A" }} aria-hidden>
               <AlertTriangle className="h-4 w-4" />
@@ -281,7 +296,7 @@ export default function HojeClient({
         </div>
 
         {/* Agenda de hoje */}
-        <div className="wr-card p-5 sm:p-6">
+        <div className="gip-glass p-5 sm:p-6">
           <div className="mb-3 flex items-center justify-between gap-2">
             <div className="flex items-center gap-2">
               <span className="flex h-8 w-8 items-center justify-center rounded-full" style={{ background: "rgba(59,130,246,0.14)", color: "#3B82F6" }} aria-hidden>
@@ -313,7 +328,7 @@ export default function HojeClient({
         </div>
 
         {/* Aniversariantes */}
-        <div className="wr-card p-5 sm:p-6">
+        <div className="gip-glass p-5 sm:p-6">
           <div className="mb-3 flex items-center gap-2">
             <span className="flex h-8 w-8 items-center justify-center rounded-full" style={{ background: "rgba(215,243,106,0.18)", color: "#7E8F2B" }} aria-hidden>
               <Gift className="h-4 w-4" />
@@ -339,7 +354,7 @@ export default function HojeClient({
 
       {/* ── 1c. Obras que pedem ação (só quando há) ─────────────── */}
       {g.obras.length > 0 && (
-        <section aria-label="Obras que pedem ação" className="wr-card p-5 sm:p-6">
+        <section aria-label="Obras que pedem ação" className="gip-glass p-5 sm:p-6">
           <div className="mb-3 flex items-center justify-between gap-2">
             <div className="flex items-center gap-2">
               <span className="flex h-8 w-8 items-center justify-center rounded-full" style={{ background: "rgba(245,158,11,0.16)", color: "#B45309" }} aria-hidden>
@@ -382,7 +397,7 @@ export default function HojeClient({
       </section>
 
       {/* ── 3. Funil de atendimento (ciclo da demanda) ──────────── */}
-      <section className="wr-card p-6 sm:p-7">
+      <section className="gip-glass p-6 sm:p-7">
         <SectionHeader
           title="Funil de atendimento"
           subtitle="O caminho de cada demanda até a resolução"

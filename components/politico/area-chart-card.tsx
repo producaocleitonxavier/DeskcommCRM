@@ -62,39 +62,53 @@ export function AreaChartCard({
   height = 280,
   className,
 }: AreaChartCardProps) {
-  const gradId = `area-grad-${useId().replace(/[:]/g, "")}`;
+  const uid = useId().replace(/[:]/g, "");
+  const gradId = `area-grad-${uid}`;
+  const glowId = `area-glow-${uid}`;
 
   return (
-    <div className={cn("wr-card-dark p-6", className)}>
-      <h3 className="mb-4 font-heading text-base font-bold">{title}</h3>
+    <div className={cn("gip-glass p-6", className)}>
+      <h3 className="mb-4 font-heading text-base font-bold" style={{ color: "var(--color-text)" }}>{title}</h3>
       <ResponsiveContainer width="100%" height={height}>
-        <AreaChart data={data} margin={{ top: 4, right: 8, left: -8, bottom: 0 }}>
+        <AreaChart data={data} margin={{ top: 6, right: 8, left: -8, bottom: 0 }}>
           <defs>
             <linearGradient id={gradId} x1="0" y1="0" x2="0" y2="1">
-              <stop offset="5%" stopColor={color} stopOpacity={0.35} />
-              <stop offset="95%" stopColor={color} stopOpacity={0} />
+              <stop offset="0%" stopColor={color} stopOpacity={0.45} />
+              <stop offset="55%" stopColor={color} stopOpacity={0.12} />
+              <stop offset="100%" stopColor={color} stopOpacity={0} />
             </linearGradient>
+            <filter id={glowId} x="-20%" y="-60%" width="140%" height="220%">
+              <feGaussianBlur stdDeviation="3.5" result="b" />
+              <feMerge>
+                <feMergeNode in="b" />
+                <feMergeNode in="SourceGraphic" />
+              </feMerge>
+            </filter>
           </defs>
-          <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" vertical={false} />
+          <CartesianGrid strokeDasharray="4 4" stroke="rgba(255,255,255,0.05)" vertical={false} />
           <XAxis
             dataKey="name"
             tick={{ fontSize: 12, fill: "var(--color-text-subtle)" }}
             tickLine={false}
-            axisLine={{ stroke: "var(--color-border)" }}
+            axisLine={{ stroke: "rgba(255,255,255,0.08)" }}
           />
           <YAxis
             tick={{ fontSize: 12, fill: "var(--color-text-subtle)" }}
             tickLine={false}
             axisLine={false}
             width={40}
+            allowDecimals={false}
           />
-          <Tooltip content={<ChartTooltip />} cursor={{ stroke: "var(--color-border)" }} />
+          <Tooltip content={<ChartTooltip />} cursor={{ stroke: color, strokeOpacity: 0.35, strokeWidth: 1 }} />
           <Area
             type="monotone"
             dataKey="value"
             stroke={color}
-            strokeWidth={2}
+            strokeWidth={2.5}
             fill={`url(#${gradId})`}
+            filter={`url(#${glowId})`}
+            dot={false}
+            activeDot={{ r: 4.5, fill: color, stroke: "#0A0C10", strokeWidth: 2 }}
           />
         </AreaChart>
       </ResponsiveContainer>

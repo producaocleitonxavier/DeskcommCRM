@@ -5,6 +5,7 @@
  * Aceita cor por barra via `fill` (ex.: temperatura — vermelho/amarelo/azul).
  */
 
+import { useId } from "react";
 import {
   Bar,
   BarChart,
@@ -61,19 +62,31 @@ function ChartTooltip({ active, label, payload }: TooltipProps) {
 
 export function BarChartCard({ title, data, height = 280, horizontal = false, className }: BarChartCardProps) {
   const eixoTick = { fontSize: 12, fill: "var(--color-text-subtle)" };
+  const gid = `bar-grad-${useId().replace(/[:]/g, "")}`;
 
   return (
-    <div className={cn("wr-card-dark p-6", className)}>
-      <h3 className="mb-4 font-heading text-base font-bold">{title}</h3>
+    <div className={cn("gip-glass p-6", className)}>
+      <h3 className="mb-4 font-heading text-base font-bold" style={{ color: "var(--color-text)" }}>{title}</h3>
       <ResponsiveContainer width="100%" height={height}>
         <BarChart
           data={data}
           layout={horizontal ? "vertical" : "horizontal"}
           margin={{ top: 4, right: 12, left: horizontal ? 8 : -8, bottom: 0 }}
         >
+          <defs>
+            {data.map((d, i) => {
+              const c = d.fill ?? COR_PADRAO;
+              return (
+                <linearGradient key={i} id={`${gid}-${i}`} x1="0" y1="0" x2={horizontal ? "1" : "0"} y2={horizontal ? "0" : "1"}>
+                  <stop offset="0%" stopColor={c} stopOpacity={0.95} />
+                  <stop offset="100%" stopColor={c} stopOpacity={0.4} />
+                </linearGradient>
+              );
+            })}
+          </defs>
           <CartesianGrid
-            strokeDasharray="3 3"
-            stroke="var(--color-border)"
+            strokeDasharray="4 4"
+            stroke="rgba(255,255,255,0.05)"
             horizontal={!horizontal}
             vertical={horizontal}
           />
@@ -100,10 +113,10 @@ export function BarChartCard({ title, data, height = 280, horizontal = false, cl
               <YAxis tick={eixoTick} tickLine={false} axisLine={false} width={40} />
             </>
           )}
-          <Tooltip content={<ChartTooltip />} cursor={{ fill: "rgba(215,243,106,0.1)" }} />
-          <Bar dataKey="value" radius={horizontal ? [0, 8, 8, 0] : [8, 8, 0, 0]}>
+          <Tooltip content={<ChartTooltip />} cursor={{ fill: "rgba(255,255,255,0.05)" }} />
+          <Bar dataKey="value" radius={horizontal ? [0, 8, 8, 0] : [8, 8, 0, 0]} maxBarSize={64}>
             {data.map((d, i) => (
-              <Cell key={`cell-${i}`} fill={d.fill ?? COR_PADRAO} />
+              <Cell key={`cell-${i}`} fill={`url(#${gid}-${i})`} stroke={d.fill ?? COR_PADRAO} strokeOpacity={0.35} strokeWidth={1} />
             ))}
           </Bar>
         </BarChart>

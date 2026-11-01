@@ -35,7 +35,7 @@ export function KpiCard({ label, valor, icone: Icone, variacao, cor, sufixo, var
   const escuro = variant === "dark";
 
   return (
-    <div className={cn(escuro ? "wr-card-accent" : "wr-card-dark", "p-6", className)}>
+    <div className={cn(escuro ? "wr-card-accent" : "gip-glass gip-glass-hover", "p-6", className)}>
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <div
