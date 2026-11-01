@@ -31,8 +31,11 @@ import { CommandHero } from "@/components/politico/command-hero";
 import { EmptyState } from "@/components/politico/empty-state";
 import type { CallQueueStatus, DashboardData, FunilKpis } from "./page";
 
-// Hexes do funil (espelham --wr-funnel-1..5).
-const FUNIL_HEX = ["#C9CEF3", "#9AA5EA", "#6B79DD", "#4352C4", "#26318F"];
+// Uma COR DISTINTA por tipo de público (novo cadastro → voto certo): a mesma
+// paleta pinta o funil E a pizza "Distribuição por Nível", então a cor vira a
+// identidade de cada nível. Antes eram 5 tons de índigo quase iguais — não
+// diferenciavam o público. Progressão fria→quente→conquista, vívida no escuro.
+const FUNIL_HEX = ["#60A5FA", "#22D3EE", "#A78BFA", "#F59E0B", "#34D399"];
 // Gradiente de 6 passos (claro → escuro) para o funil invisível.
 const INVISIVEL_HEX = ["#DCE0F7", "#B4BCF0", "#8A95E6", "#6372DD", "#4352C4", "#26318F"];
 
