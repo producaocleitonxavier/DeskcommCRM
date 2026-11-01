@@ -50,6 +50,7 @@ interface PolLead {
   territory_id: string | null;
   pol_obra_id: string | null;
   pol_emenda_id: string | null;
+  pol_lideranca_id: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -223,6 +224,21 @@ async function buscarLead(organizationId: string, leadId: string) {
     }
   }
 
+  // Procedência por LIDERANÇA: quem se cadastrou pelo link de captação de uma
+  // liderança entra com pol_lideranca_id. A origem real é a liderança (ex.:
+  // "Liderança · GIP"), não o genérico "Formulário".
+  let origemLideranca: { id: string; nome: string } | null = null;
+  if (pl.pol_lideranca_id) {
+    const { data: lid } = await db
+      .from("pol_liderancas")
+      .select("id, nome, apelido")
+      .eq("organization_id", organizationId)
+      .eq("id", pl.pol_lideranca_id)
+      .maybeSingle();
+    const l = lid as { id: string; nome: string | null; apelido: string | null } | null;
+    if (l) origemLideranca = { id: l.id, nome: (l.apelido || l.nome || "Liderança").trim() };
+  }
+
   // Linha do tempo 360°: tudo que o cidadão viveu com o gabinete (origem,
   // demandas, ofícios, avisos, graduações) num feed único.
   const eventos360 = await buscarLinhaDoTempo(organizationId, pl.contact_id);
@@ -234,6 +250,7 @@ async function buscarLead(organizationId: string, leadId: string) {
     eventos360,
     mobilizadorNome,
     origemCaptacao,
+    origemLideranca,
   };
 }
 
@@ -288,7 +305,7 @@ function FunilProgresso({ current }: { current: string }) {
 
 function InfoCard({ titulo, children }: { titulo: string; children: React.ReactNode }) {
   return (
-    <div className="wr-card wr-hover p-5">
+    <div className="gip-glass gip-glass-hover p-5">
       <h3
         className="text-[11px] font-semibold uppercase tracking-[.08em] mb-3"
         style={{ color: "var(--color-text-subtle)" }}
@@ -328,7 +345,7 @@ export default async function FichaPage({
 
   if (!dados) notFound();
 
-  const { lead, contact, eventos360, mobilizadorNome, origemCaptacao } = dados;
+  const { lead, contact, eventos360, mobilizadorNome, origemCaptacao, origemLideranca } = dados;
 
   // Vídeos da biblioteca (posts do IG) para gerar o link pessoal de divulgação.
   const dbVideos = await createClient();
@@ -381,7 +398,7 @@ export default async function FichaPage({
       {/* ── Aviso: descadastrada (opt-out) ──────────────────────── */}
       {contact.is_blocked && (
         <div
-          className="wr-card p-4 flex items-start gap-3"
+          className="gip-glass p-4 flex items-start gap-3"
           style={{ background: "#FBE4E2", borderColor: "#F3C9C5" }}
           role="status"
         >
@@ -397,7 +414,7 @@ export default async function FichaPage({
       )}
 
       {/* ── Header card ─────────────────────────────────────────── */}
-      <header className="wr-card p-6 sm:p-7">
+      <header className="gip-glass p-6 sm:p-7">
         <div className="flex flex-wrap items-start gap-5">
           {/* Avatar */}
           <div
@@ -460,7 +477,23 @@ export default async function FichaPage({
             <InfoRow label="Bairro" value={bairroContato} />
             <InfoRow label="Nascimento" value={contact.birthdate ? formatarData(contact.birthdate) : null} />
             <InfoRow label="Profissão" value={profissaoContato} />
-            <InfoRow label="Origem" value={sourceLabel(contact.source)} />
+            <InfoRow
+              label="Origem"
+              value={
+                origemLideranca ? (
+                  <Link
+                    href={`/app/politico/liderancas/${origemLideranca.id}`}
+                    className="inline-flex items-center gap-1 hover:opacity-70 transition-opacity"
+                    style={{ color: "#8AA0E8" }}
+                  >
+                    <span className="truncate max-w-[220px]">Liderança · {origemLideranca.nome}</span>
+                    <ArrowUpRight style={{ width: 13, height: 13 }} className="shrink-0" />
+                  </Link>
+                ) : (
+                  sourceLabel(contact.source)
+                )
+              }
+            />
             {origemCaptacao && (
               <InfoRow
                 label="Captado via"
@@ -515,7 +548,7 @@ export default async function FichaPage({
         {/* Coluna direita (1/3): ações, KPIs, funil, tags */}
         <div className="space-y-4">
           {/* Ações rápidas */}
-          <div className="wr-card p-5">
+          <div className="gip-glass p-5">
             <h3 className="text-[11px] font-semibold uppercase tracking-[.08em] mb-3" style={{ color: "var(--color-text-subtle)" }}>Ações rápidas</h3>
             <div className="flex flex-col gap-2.5">
               {whatsDigits && (
@@ -541,7 +574,7 @@ export default async function FichaPage({
           )}
 
           {/* KPIs do contato */}
-          <div className="wr-card wr-hover p-5">
+          <div className="gip-glass gip-glass-hover p-5">
             <h3 className="text-[11px] font-semibold uppercase tracking-[.08em] mb-3" style={{ color: "var(--color-text-subtle)" }}>Indicadores</h3>
             <div className="grid grid-cols-2 gap-3">
               <div>
@@ -562,7 +595,7 @@ export default async function FichaPage({
           </div>
 
           {/* Funil visual */}
-          <div className="wr-card wr-hover p-5">
+          <div className="gip-glass gip-glass-hover p-5">
             <h3 className="text-[11px] font-semibold uppercase tracking-[.08em] mb-3" style={{ color: "var(--color-text-subtle)" }}>Nível no funil</h3>
             <div className="flex items-center justify-between">
               <EtapaPill value={lead.support_level} />
@@ -575,7 +608,7 @@ export default async function FichaPage({
 
           {/* Tags */}
           {contact.tags && contact.tags.length > 0 && (
-            <div className="wr-card wr-hover p-5">
+            <div className="gip-glass gip-glass-hover p-5">
               <h3 className="text-[11px] font-semibold uppercase tracking-[.08em] mb-3" style={{ color: "var(--color-text-subtle)" }}>Tags</h3>
               <div className="flex flex-wrap gap-1.5">
                 {contact.tags.map((tag) => (

@@ -177,7 +177,7 @@ export default function LeadsClient({ leads, total, contagens, cidades, mapaResu
       )}
 
       {/* ── Filtros ─────────────────────────────────────────────── */}
-      <div className="wr-card space-y-4 p-4 sm:p-5">
+      <div className="gip-glass space-y-4 p-4 sm:p-5">
         {/* Busca */}
         <form action="/app/politico/leads" method="get">
           {filtros.etapa && <input type="hidden" name="etapa" value={filtros.etapa} />}
@@ -275,7 +275,7 @@ export default function LeadsClient({ leads, total, contagens, cidades, mapaResu
               const temp = TEMPS.find((t) => t.value === lead.temperature);
               const nome = lead.contacts?.name ?? "Sem nome";
               return (
-                <div key={lead.id} className="wr-card flex flex-col gap-3 p-5 transition-shadow duration-200 hover:shadow-md">
+                <div key={lead.id} className="gip-glass gip-glass-hover flex flex-col gap-3 p-5">
                   <div className="flex items-center gap-3">
                     <span
                       className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-sm font-bold"

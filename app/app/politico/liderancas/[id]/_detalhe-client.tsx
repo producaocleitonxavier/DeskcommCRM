@@ -186,7 +186,7 @@ export default function DetalheLiderancaClient({ lideranca, fotoUrl, territorios
         </Link>
       </div>
 
-      <header className="wr-card p-6 sm:p-7">
+      <header className="gip-glass p-6 sm:p-7">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div className="flex min-w-0 items-center gap-4">
             {/* Avatar com botão de trocar foto */}
@@ -293,7 +293,7 @@ export default function DetalheLiderancaClient({ lideranca, fotoUrl, territorios
         <div role="alert" className="rounded-xl px-4 py-3 text-sm" style={{ background: "#FBE4E2", color: "#A3302A" }}>{erro}</div>
       )}
 
-      <section className="wr-card p-6 sm:p-7">
+      <section className="gip-glass p-6 sm:p-7">
         {editando ? (
           <div className="space-y-4">
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">

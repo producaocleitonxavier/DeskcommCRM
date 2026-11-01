@@ -62,7 +62,7 @@ export default function VideoDivulgar({
     : null;
 
   return (
-    <div className="wr-card p-5">
+    <div className="gip-glass p-5">
       <h3 className="mb-1 flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-[.08em]" style={{ color: "var(--color-text-subtle)" }}>
         <Video className="h-3.5 w-3.5" aria-hidden /> Vídeo pra divulgar
       </h3>

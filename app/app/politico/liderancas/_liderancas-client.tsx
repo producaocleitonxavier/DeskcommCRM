@@ -218,7 +218,7 @@ export default function LiderancasClient({ liderancas }: LiderancasClientProps) 
               <SectionHeader title="Próximos aniversários" />
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
                 {aniversariantes.map(({ l, mes, dia }) => (
-                  <div key={l.id} className="wr-card flex items-center gap-3 p-4">
+                  <div key={l.id} className="gip-glass flex items-center gap-3 p-4">
                     <span
                       className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full"
                       style={{ background: "var(--color-accent-50)" }}
@@ -251,7 +251,7 @@ export default function LiderancasClient({ liderancas }: LiderancasClientProps) 
                 return (
                   <div
                     key={l.id}
-                    className="wr-card flex flex-col gap-4 p-5 transition-shadow duration-200 hover:shadow-md sm:flex-row sm:items-center"
+                    className="gip-glass gip-glass-hover flex flex-col gap-4 p-5 sm:flex-row sm:items-center"
                   >
                     <div className="flex min-w-0 flex-1 items-center gap-3">
                       {l.fotoUrl ? (
