@@ -668,18 +668,44 @@
   /* Menos "fosco": base mais translúcida (62%) + gloss diagonal no topo-esquerda
    * + rim superior mais brilhante, e blur menor (13) — lê como vidro limpo, não
    * vidro jateado. Precisa de algo colorido atrás (gip-ambient-bg) para brilhar. */
+  /* Linguagem do CommandHero (dark + brilho lima no canto + borda lima sutil),
+   * mas em VIDRO: base bem translúcida (vê-se o fundo), brilho lima no canto
+   * superior-direito como o blob do hero, gloss diagonal e um fio de luz lima no
+   * contorno interno (diferencia do hero, que usa borda lima cheia). Mais
+   * transparente e menos fosco. */
   background:
-    linear-gradient(135deg, color-mix(in srgb, var(--color-text) 13%, transparent), transparent 42%),
-    radial-gradient(120% 100% at 0% 0%, color-mix(in srgb, var(--color-text) 6%, transparent), transparent 55%),
-    color-mix(in srgb, var(--color-surface-elevated) 60%, transparent);
-  border: 1px solid color-mix(in srgb, var(--color-text) 18%, transparent);
+    radial-gradient(65% 55% at 100% 0%, color-mix(in srgb, var(--color-accent) 11%, transparent), transparent 55%),
+    linear-gradient(135deg, color-mix(in srgb, var(--color-text) 11%, transparent), transparent 44%),
+    color-mix(in srgb, var(--color-surface-elevated) 44%, transparent);
+  border: 1px solid color-mix(in srgb, var(--color-text) 8%, transparent);
   border-radius: var(--wr-card-radius);
   box-shadow:
-    0 20px 48px -20px rgba(0, 0, 0, 0.62),
-    inset 0 1px 0 color-mix(in srgb, var(--color-text) 26%, transparent);
-  backdrop-filter: blur(14px) saturate(160%);
-  -webkit-backdrop-filter: blur(14px) saturate(160%);
+    0 22px 52px -22px rgba(0, 0, 0, 0.62),
+    inset 0 1px 0 color-mix(in srgb, var(--color-text) 28%, transparent);
+  backdrop-filter: blur(15px) saturate(175%);
+  -webkit-backdrop-filter: blur(15px) saturate(175%);
   transition: border-color var(--duration-base) var(--ease-out), box-shadow var(--duration-base) var(--ease-out), transform var(--duration-base) var(--ease-out);
+}
+
+/* Borda refrativa em gradiente (o toque "pega a luz"): um anel de 1px que vai de
+ * branco no canto superior-esquerdo → quase nada → lima no inferior-direito.
+ * Técnica: gradiente preenchendo só o contorno, via máscara que exclui o miolo. */
+.gip-glass::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  padding: 1px;
+  background: linear-gradient(135deg,
+    color-mix(in srgb, var(--color-text) 34%, transparent) 0%,
+    color-mix(in srgb, var(--color-text) 6%, transparent) 38%,
+    transparent 64%,
+    color-mix(in srgb, var(--color-accent) 20%, transparent) 100%);
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  mask-composite: exclude;
+  pointer-events: none;
 }
 
 /* Fundo ambiente reutilizável: brilhos suaves atrás do conteúdo para o vidro
@@ -704,11 +730,13 @@
   cursor: default;
 }
 .gip-glass-hover:hover {
-  border-color: color-mix(in srgb, var(--color-accent) 40%, transparent);
+  border-color: color-mix(in srgb, var(--color-accent) 45%, transparent);
   box-shadow:
-    0 24px 56px -20px rgba(0, 0, 0, 0.6),
-    0 0 0 1px color-mix(in srgb, var(--color-accent) 18%, transparent),
-    inset 0 1px 0 color-mix(in srgb, var(--color-text) 14%, transparent);
+    0 30px 64px -24px rgba(0, 0, 0, 0.66),
+    0 0 0 1px color-mix(in srgb, var(--color-accent) 22%, transparent),
+    inset 0 1px 0 color-mix(in srgb, var(--color-text) 30%, transparent),
+    inset 0 0 0 1px color-mix(in srgb, var(--color-accent) 10%, transparent);
+  transform: translateY(-1px);
 }
 
 /* ---- Animações GIP (entrada de gráfico/cards) -----------------------------
