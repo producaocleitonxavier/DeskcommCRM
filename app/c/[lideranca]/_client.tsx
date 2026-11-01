@@ -81,8 +81,17 @@ export default function CaptacaoClient({
         {/* Topo: a IDENTIDADE DO POLÍTICO em primeiro plano */}
         <div className="mb-6 flex flex-col items-center text-center">
           {logoUrl ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src={logoUrl} alt={tituloPolitico} className="h-24 w-auto max-w-[260px] object-contain" />
+            // Caixa de tamanho fixo: a logo escala pra caber (object-contain),
+            // então QUALQUER imagem (quadrada, larga ou alta) fica com destaque
+            // consistente, sem depender das dimensões do arquivo enviado.
+            <div className="flex h-40 w-full items-center justify-center sm:h-48">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={logoUrl}
+                alt={tituloPolitico}
+                className="max-h-full w-auto max-w-[320px] object-contain drop-shadow-[0_8px_28px_rgba(0,0,0,0.55)]"
+              />
+            </div>
           ) : (
             <>
               <h2 className="font-heading text-2xl font-extrabold leading-tight sm:text-3xl" style={{ color: "#FFFFFF" }}>
