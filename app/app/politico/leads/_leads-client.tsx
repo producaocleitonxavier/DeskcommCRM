@@ -112,7 +112,7 @@ export default function LeadsClient({ leads, total, contagens, cidades, mapaResu
   }
 
   return (
-    <div className="mx-auto max-w-[1140px] px-4 py-7 space-y-6" style={{ background: "var(--color-bg)" }}>
+    <div className="gip-ambient-bg mx-auto max-w-[1140px] px-4 py-7 space-y-6">
       <CommandHero
         eyebrow="Comando · Pessoas"
         titulo="Pessoas"

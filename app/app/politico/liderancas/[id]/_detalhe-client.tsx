@@ -8,7 +8,7 @@
 import { useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, Camera, Check, Link2, Loader2, MessageCircle, Pencil, Trash2, X } from "lucide-react";
+import { ArrowLeft, ArrowUpRight, Camera, Check, Link2, Loader2, MessageCircle, Pencil, Trash2, X } from "lucide-react";
 
 import { atualizarRegistro, excluirRegistro } from "@/app/actions/politico/gabinete-actions";
 import { uploadFotoLideranca } from "@/lib/politico/foto-lideranca";
@@ -49,6 +49,7 @@ export interface Props {
   territorios: Opcao[];
   vozArmada?: boolean;
   politicoNome?: string | null;
+  indicadas?: { leadId: string; nome: string }[];
 }
 
 function iniciais(nome: string): string {
@@ -92,7 +93,7 @@ function fmtData(d: string | null): string {
   return new Date(d).toLocaleDateString("pt-BR", { day: "2-digit", month: "short", year: "numeric" });
 }
 
-export default function DetalheLiderancaClient({ lideranca, fotoUrl, territorios, vozArmada = false, politicoNome = null }: Props) {
+export default function DetalheLiderancaClient({ lideranca, fotoUrl, territorios, vozArmada = false, politicoNome = null, indicadas = [] }: Props) {
   const router = useRouter();
 
   const [l, setL] = useState<LiderancaDetalhe>(lideranca);
@@ -179,7 +180,7 @@ export default function DetalheLiderancaClient({ lideranca, fotoUrl, territorios
   const waLink = l.whatsapp ? `https://wa.me/${l.whatsapp.replace(/\D/g, "")}` : null;
 
   return (
-    <div className="mx-auto max-w-[860px] px-4 py-7 space-y-5" style={{ background: "var(--color-bg)" }}>
+    <div className="gip-ambient-bg mx-auto max-w-[860px] px-4 py-7 space-y-5">
       <div>
         <Link href="/app/politico/liderancas" className="inline-flex items-center gap-1 text-sm transition-colors" style={{ color: "var(--color-text-muted)" }}>
           <ArrowLeft className="h-4 w-4" aria-hidden /> Lideranças
@@ -361,6 +362,32 @@ export default function DetalheLiderancaClient({ lideranca, fotoUrl, territorios
           </dl>
         )}
       </section>
+
+      {indicadas.length > 0 && (
+        <section className="gip-glass p-6 sm:p-7">
+          <h2 className="mb-4 text-[11px] font-semibold uppercase tracking-[0.08em]" style={{ color: "var(--color-text-subtle)" }}>
+            Pessoas indicadas ({l.leads_mobilizados})
+          </h2>
+          <div className="flex flex-wrap gap-2">
+            {indicadas.map((p) => (
+              <Link
+                key={p.leadId}
+                href={`/app/politico/leads/${p.leadId}`}
+                className="inline-flex items-center gap-1 rounded-full px-3 py-1.5 text-sm font-medium transition-colors hover:opacity-80"
+                style={{ background: "color-mix(in srgb, var(--color-text) 7%, transparent)", border: "1px solid color-mix(in srgb, var(--color-text) 13%, transparent)", color: "var(--color-text)" }}
+              >
+                {p.nome}
+                <ArrowUpRight className="h-3.5 w-3.5 shrink-0" style={{ color: "var(--color-text-subtle)" }} aria-hidden />
+              </Link>
+            ))}
+          </div>
+          {l.leads_mobilizados > indicadas.length && (
+            <p className="mt-3 text-[11px]" style={{ color: "var(--color-text-subtle)" }}>
+              +{l.leads_mobilizados - indicadas.length} outra(s) na lista de Pessoas
+            </p>
+          )}
+        </section>
+      )}
     </div>
   );
 }

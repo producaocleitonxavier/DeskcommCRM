@@ -99,7 +99,7 @@ export default async function ResultadosPage({ params }: { params: Promise<{ id:
   const fmtData = (iso: string) => { try { return new Date(iso).toLocaleDateString("pt-BR", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" }); } catch { return ""; } };
 
   return (
-    <div className="mx-auto max-w-[940px] px-4 py-7 space-y-6" style={{ background: "var(--color-bg)" }}>
+    <div className="gip-ambient-bg mx-auto max-w-[940px] px-4 py-7 space-y-6">
       <CommandHero
         eyebrow="Inteligência · Pesquisa"
         titulo={s.title}

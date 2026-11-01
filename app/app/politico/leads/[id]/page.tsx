@@ -385,7 +385,7 @@ export default async function FichaPage({
   const whatsDigits = telefone.replace(/\D/g, "");
 
   return (
-    <div className="mx-auto max-w-[1140px] px-4 py-7 space-y-[18px]">
+    <div className="gip-ambient-bg mx-auto max-w-[1140px] px-4 py-7 space-y-[18px]">
       {/* ── Voltar ──────────────────────────────────────────────── */}
       <Link
         href="/app/politico/leads"
