@@ -88,6 +88,7 @@ export default function NovaDemandaForm({ assessores }: NovaDemandaFormProps) {
   const [bairro, setBairro] = useState("");
   const [assessorNome, setAssessorNome] = useState("");
   const [dataVisita, setDataVisita] = useState("");
+  const [prazoDias, setPrazoDias] = useState<string>("");
 
   // Anexos escolhidos (só vão para o servidor DEPOIS que a demanda é criada —
   // o arquivo precisa de um id de demanda no caminho do bucket).
@@ -180,6 +181,7 @@ export default function NovaDemandaForm({ assessores }: NovaDemandaFormProps) {
     if (numero.trim()) payload.pol_numero = numero.trim();
     if (bairro.trim()) payload.pol_bairro = bairro.trim();
     if (dataVisita) payload.prazo_em = new Date(dataVisita + "T12:00:00").toISOString();
+    if (prazoDias && Number(prazoDias) > 0) payload.pol_prazo_dias = Math.round(Number(prazoDias));
 
     const res = await criarRegistro("demandas", payload);
     if (!res.ok) {
@@ -395,6 +397,34 @@ export default function NovaDemandaForm({ assessores }: NovaDemandaFormProps) {
               <Label>Data da visita</Label>
               <input type="date" value={dataVisita} onChange={(e) => setDataVisita(e.target.value)} className="wr-input w-full" />
             </div>
+          </div>
+
+          <div>
+            <Label>Prazo de atendimento</Label>
+            <div className="flex flex-wrap items-center gap-2">
+              {[30, 60, 90].map((n) => (
+                <button
+                  key={n}
+                  type="button"
+                  onClick={() => setPrazoDias(prazoDias === String(n) ? "" : String(n))}
+                  className="rounded-full px-3.5 py-1.5 text-xs font-bold transition"
+                  style={prazoDias === String(n) ? { background: "#D7F36A", color: "#16181D" } : { border: "1px solid var(--color-border)", color: "var(--color-text-muted)" }}
+                >
+                  {n} dias
+                </button>
+              ))}
+              <input
+                type="number"
+                min={1}
+                value={prazoDias}
+                onChange={(e) => setPrazoDias(e.target.value)}
+                placeholder="ou nº de dias"
+                className="wr-input w-32"
+              />
+            </div>
+            <p className="mt-1.5 text-xs" style={{ color: "var(--color-text-subtle)" }}>
+              Prazo que o órgão deu pra entregar (cada secretaria dá um). Padrão 30 dias — a demanda só fica <strong>Atrasada</strong> depois desse prazo.
+            </p>
           </div>
         </section>
 

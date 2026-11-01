@@ -42,6 +42,7 @@ interface Demanda {
   dono_kind: string | null;
   aberta_em: string;
   prazo_em: string | null;
+  pol_prazo_dias: number | null;
   desfecho: string | null;
   pol_autoatendimento?: boolean | null;
 }
@@ -100,6 +101,17 @@ function diasParaPrazo(prazo: string | null): number | null {
   return Math.ceil((prazoDt.getTime() - agora.getTime()) / 86400000);
 }
 
+/** Prazo de ATENDIMENTO (padrão 30 dias a partir da abertura; o responsável
+ * pode acordar 30/60/90…). "Atrasada" só conta a partir DESTE prazo — não da
+ * data da visita. */
+const PRAZO_PADRAO_DIAS = 30;
+function prazoDeAtendimento(abertaEm: string, prazoDias: number | null): { atrasada: boolean; diasRestantes: number } {
+  const dias = prazoDias && prazoDias > 0 ? prazoDias : PRAZO_PADRAO_DIAS;
+  const limite = new Date(new Date(abertaEm).getTime() + dias * 86400000);
+  const diasRestantes = Math.ceil((limite.getTime() - Date.now()) / 86400000);
+  return { atrasada: diasRestantes < 0, diasRestantes };
+}
+
 function formatarData(data: string): string {
   return new Date(data).toLocaleDateString("pt-BR", { day: "2-digit", month: "short" });
 }
@@ -131,7 +143,7 @@ async function buscarDemandas(
   const offset = (pagina - 1) * POR_PAGINA;
 
   const colunas =
-    "id, assunto, estado, origem, pol_tipo, pol_prioridade, pol_orgao_destino, pol_encaminhamento_ia, dono_kind, aberta_em, prazo_em, desfecho" +
+    "id, assunto, estado, origem, pol_tipo, pol_prioridade, pol_orgao_destino, pol_encaminhamento_ia, dono_kind, aberta_em, prazo_em, pol_prazo_dias, desfecho" +
     (opts.temAuto ? ", pol_autoatendimento" : "");
 
   let query = db
@@ -438,8 +450,9 @@ export default async function GabinetePage({
                   </thead>
                   <tbody>
                     {demandas.map((d) => {
-                      const diasPrazo = diasParaPrazo(d.prazo_em);
-                      const atrasada = diasPrazo !== null && diasPrazo < 0 && !["resolvida", "encerrada"].includes(d.estado);
+                      const diasPrazo = diasParaPrazo(d.prazo_em); // data da VISITA (informativo)
+                      const prazoInfo = prazoDeAtendimento(d.aberta_em, d.pol_prazo_dias);
+                      const atrasada = prazoInfo.atrasada && !["resolvida", "encerrada"].includes(d.estado);
                       const urgente = d.pol_prioridade === "urgente";
                       const pLabel = prioridadeLabel(d.pol_prioridade);
                       const pEstilo = prioridadeEstilo(d.pol_prioridade);
@@ -489,30 +502,31 @@ export default async function GabinetePage({
                             {d.pol_orgao_destino ?? "—"}
                           </td>
                           <td className="px-4 py-3.5 whitespace-nowrap">
-                            {atrasada ? (
-                              <span
-                                className="inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold"
-                                style={{ background: "#FBE4E2", color: "#A3302A" }}
-                              >
-                                Atrasada
-                              </span>
-                            ) : (
+                            <div className="flex flex-wrap items-center gap-1.5">
                               <StatusPill estado={d.estado} />
-                            )}
+                              {atrasada && (
+                                <span
+                                  className="inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-bold"
+                                  style={{ background: "#FBE4E2", color: "#A3302A" }}
+                                  title={`Passou do prazo acordado (${d.pol_prazo_dias ?? 30} dias)`}
+                                >
+                                  Atrasada {Math.abs(prazoInfo.diasRestantes)}d
+                                </span>
+                              )}
+                            </div>
                           </td>
                           <td className="px-4 py-3.5 whitespace-nowrap">
                             {d.prazo_em ? (
                               <span
                                 className="text-sm tabular-nums"
                                 style={{
-                                  color: atrasada ? "#A3302A" : diasPrazo !== null && diasPrazo <= 3 ? "#8A5A10" : "#4A4F59",
-                                  fontWeight: atrasada ? 600 : 400,
+                                  color: diasPrazo !== null && diasPrazo <= 3 ? "#8A5A10" : "#4A4F59",
                                 }}
                               >
                                 {formatarData(d.prazo_em)}
                                 {diasPrazo !== null && !["resolvida", "encerrada"].includes(d.estado) && (
                                   <span className="ml-1 text-xs">
-                                    {atrasada
+                                    {diasPrazo < 0
                                       ? `(${Math.abs(diasPrazo)}d atrás)`
                                       : diasPrazo === 0
                                         ? "(hoje)"

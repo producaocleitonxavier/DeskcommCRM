@@ -43,6 +43,7 @@ export interface DemandaDetalhe {
   pol_assessor_nome: string | null;
   aberta_em: string;
   prazo_em: string | null;
+  pol_prazo_dias: number | null;
   desfecho: string | null;
   fechada_em: string | null;
   created_at: string;
@@ -142,6 +143,7 @@ export default function DetalheDemandaClient({ demanda, assessores, eventos, voz
   const [prioridade, setPrioridade] = useState(d.pol_prioridade ?? "normal");
   const [orgao, setOrgao] = useState(d.pol_orgao_destino ?? "");
   const [prazo, setPrazo] = useState(paraInputDate(d.prazo_em));
+  const [prazoDias, setPrazoDias] = useState(d.pol_prazo_dias ? String(d.pol_prazo_dias) : "");
   const [municipio, setMunicipio] = useState(d.pol_municipio ?? "");
   const [assessorNome, setAssessorNome] = useState(
     d.pol_assessor_nome ?? (d.dono_kind === "humano" ? (assessores.find((a) => a.id === d.dono_user_id)?.nome ?? "") : ""),
@@ -187,6 +189,7 @@ export default function DetalheDemandaClient({ demanda, assessores, eventos, voz
       pol_oficio_destinatario: destinatarioOficio.trim() || null,
       pol_oficio_assunto: assuntoOficio.trim() || null,
       prazo_em: prazo ? new Date(prazo + "T12:00:00").toISOString() : null,
+      pol_prazo_dias: prazoDias && Number(prazoDias) > 0 ? Math.round(Number(prazoDias)) : null,
     };
     const ok = await persistir(campos, campos as Partial<DemandaDetalhe>);
     if (ok) setEditando(false);
@@ -435,6 +438,22 @@ export default function DetalheDemandaClient({ demanda, assessores, eventos, voz
               <Campo label="Data da visita">
                 <input type="date" value={prazo} onChange={(e) => setPrazo(e.target.value)} className="wr-input w-full" />
               </Campo>
+              <Campo label="Prazo de atendimento (padrão 30 dias)">
+                <div className="flex flex-wrap items-center gap-2">
+                  {[30, 60, 90].map((n) => (
+                    <button
+                      key={n}
+                      type="button"
+                      onClick={() => setPrazoDias(prazoDias === String(n) ? "" : String(n))}
+                      className="rounded-full px-3 py-1.5 text-xs font-bold transition"
+                      style={prazoDias === String(n) ? { background: "#D7F36A", color: "#16181D" } : { border: "1px solid var(--color-border)", color: "var(--color-text-muted)" }}
+                    >
+                      {n}d
+                    </button>
+                  ))}
+                  <input type="number" min={1} value={prazoDias} onChange={(e) => setPrazoDias(e.target.value)} placeholder="dias" className="wr-input w-24" />
+                </div>
+              </Campo>
               <Campo label="Município">
                 <input type="text" value={municipio} onChange={(e) => setMunicipio(e.target.value)} placeholder="Ex.: Belo Horizonte" className="wr-input w-full" />
               </Campo>
@@ -468,6 +487,7 @@ export default function DetalheDemandaClient({ demanda, assessores, eventos, voz
                   setPrioridade(d.pol_prioridade ?? "normal");
                   setOrgao(d.pol_orgao_destino ?? "");
                   setPrazo(paraInputDate(d.prazo_em));
+                  setPrazoDias(d.pol_prazo_dias ? String(d.pol_prazo_dias) : "");
                   setMunicipio(d.pol_municipio ?? "");
                   setAssessorNome(d.pol_assessor_nome ?? (d.dono_kind === "humano" ? (assessores.find((a) => a.id === d.dono_user_id)?.nome ?? "") : ""));
                 }}
@@ -483,6 +503,7 @@ export default function DetalheDemandaClient({ demanda, assessores, eventos, voz
             <Info label="Prioridade" valor={PRIORIDADES.find((p) => p.id === d.pol_prioridade)?.nome ?? "Normal"} />
             <Info label="Órgão de destino" valor={d.pol_orgao_destino ?? "—"} />
             <Info label="Data da visita" valor={fmtData(d.prazo_em)} />
+            <Info label="Prazo de atendimento" valor={d.pol_prazo_dias ? `${d.pol_prazo_dias} dias` : "30 dias (padrão)"} />
             <Info label="Município" valor={d.pol_municipio ?? "—"} />
             <Info label="Aberta em" valor={fmtData(d.aberta_em)} />
             <Info label="Responsável" valor={d.pol_assessor_nome ?? (d.dono_kind === "humano" ? nomeDe(assessores, d.dono_user_id) : "IA / triagem")} />
