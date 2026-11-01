@@ -83,17 +83,18 @@ export function FunnelBoard({ data, className, showConversion = true }: FunnelBo
           <li key={d.label}>
             {/* Chip de conversão entre o estágio anterior e este */}
             {showConversion && conv !== null && (
-              <div className="flex py-1.5 sm:pl-[136px]">
+              <div className="flex py-1.5 sm:pl-[164px]">
                 <span
-                  className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-semibold"
+                  className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-[11px]"
                   style={{
-                    background: "rgba(255,255,255,0.06)",
+                    background: "color-mix(in srgb, var(--color-accent) 12%, transparent)",
+                    border: "1px solid color-mix(in srgb, var(--color-accent) 22%, transparent)",
                     color: "var(--color-text-muted, rgba(255,255,255,0.6))",
                   }}
                 >
-                  <span className="leading-none opacity-70" aria-hidden>↓</span>
-                  <span className="tabular-nums">{fmtPct(conv)}</span>
-                  <span className="font-medium opacity-70">conversão</span>
+                  <span className="leading-none" aria-hidden style={{ color: "var(--color-accent)" }}>↓</span>
+                  <span className="tabular-nums font-bold" style={{ color: "var(--color-accent)" }}>{fmtPct(conv)}</span>
+                  <span className="font-medium opacity-80">conversão</span>
                 </span>
               </div>
             )}
