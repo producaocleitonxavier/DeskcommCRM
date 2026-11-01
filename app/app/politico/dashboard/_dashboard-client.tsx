@@ -55,6 +55,11 @@ function Badge({ children }: { children: React.ReactNode }) {
 
 export default function DashboardClient({ dash, funil, calls }: DashboardClientProps) {
   const [invisivelAberto, setInvisivelAberto] = useState(true);
+  // "Fila de Ligações" exige um serviço de call-center configurado. Sem chamadas
+  // reais o card ficava VAZIO no painel (parece quebrado, promete o que o
+  // gabinete não tem). Só mostra quando há atividade de ligações; senão as 3
+  // cartas restantes ocupam uma linha limpa de 3.
+  const mostrarFila = !!(calls && calls.total_chamadas > 0);
 
   return (
     <div className="gip-ambient-bg mx-auto max-w-[1140px] px-4 py-7 space-y-6">
@@ -127,8 +132,8 @@ export default function DashboardClient({ dash, funil, calls }: DashboardClientP
             </section>
           )}
 
-          {/* ── 4. Grid 2x2 de gráficos ─────────────────────────── */}
-          <section className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+          {/* ── 4. Grid de gráficos (2x2 com Fila; 3-em-linha sem) ── */}
+          <section className={`grid grid-cols-1 gap-4 ${mostrarFila ? "lg:grid-cols-2" : "lg:grid-cols-3"}`}>
             <PieChartCard
               title="Distribuição por Nível"
               data={[
@@ -157,14 +162,16 @@ export default function DashboardClient({ dash, funil, calls }: DashboardClientP
                 { name: "Adversários", value: dash.adversarios_ativos, fill: "#8B5CF6" },
               ]}
             />
-            <BarChartCard
-              title="Fila de Ligações"
-              data={[
-                { name: "Pendentes", value: calls?.pendentes ?? dash.ligacoes_pendentes, fill: "#F59E0B" },
-                { name: "Completadas", value: calls?.completadas ?? 0, fill: "#22C55E" },
-                { name: "Sem resposta", value: calls?.sem_resposta ?? 0, fill: "#EF4444" },
-              ]}
-            />
+            {mostrarFila && (
+              <BarChartCard
+                title="Fila de Ligações"
+                data={[
+                  { name: "Pendentes", value: calls?.pendentes ?? dash.ligacoes_pendentes, fill: "#F59E0B" },
+                  { name: "Completadas", value: calls?.completadas ?? 0, fill: "#22C55E" },
+                  { name: "Sem resposta", value: calls?.sem_resposta ?? 0, fill: "#EF4444" },
+                ]}
+              />
+            )}
           </section>
 
           {/* ── 5. Fila de ligações (detalhada) ─────────────────── */}
