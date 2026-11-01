@@ -234,17 +234,26 @@ export function ConversationListItem({
       data-conversation-id={conversation.id}
       onClick={() => onSelect(conversation.id)}
       className={cn(
-        "group relative flex w-full items-start gap-3 border-b border-border/70 px-3 py-2.5 text-left transition-colors hover:bg-surface-elevated",
-        "focus-visible:outline-hidden focus-visible:bg-surface-elevated",
-        isSelected && "bg-accent-50 hover:bg-accent-50",
+        "group gip-row relative mx-1.5 my-0.5 flex w-[calc(100%-0.75rem)] items-start gap-3 px-2.5 py-2.5 text-left",
+        "focus-visible:outline-hidden focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-accent/50",
       )}
+      // A linha SELECIONADA é vidro-marca (fundo tingido + anel interno). Inline
+      // porque style vence o :hover da classe — a selecionada fica estável sob o
+      // mouse, sem o antigo risquinho lateral brigando com a pílula.
+      style={
+        isSelected
+          ? {
+              background:
+                "color-mix(in srgb, var(--color-accent) 13%, color-mix(in srgb, var(--color-surface-elevated) 50%, transparent))",
+              boxShadow:
+                "inset 0 0 0 1px color-mix(in srgb, var(--color-accent) 34%, transparent), inset 0 1px 0 color-mix(in srgb, var(--color-text) 12%, transparent)",
+            }
+          : undefined
+      }
       aria-current={isSelected ? "true" : undefined}
     >
-      {isSelected && (
-        <span className="absolute inset-y-0 left-0 w-0.5 bg-accent" aria-hidden />
-      )}
       <div className="relative shrink-0">
-        <Avatar className="h-10 w-10">
+        <Avatar className="h-10 w-10 ring-1 ring-white/10">
           {/* Só monta a <img> quando existe arquivo: sem isso o browser pediria
               a rota para TODO contato da lista e levaria 404 em cada um sem
               foto — que é a maioria. O AvatarFallback do Radix já cobre o caso

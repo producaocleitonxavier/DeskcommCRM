@@ -332,12 +332,20 @@ export function MessageBubble({
         */}
         {citada && (
           <div
-            className={cn(
-              "mb-1 rounded-md border-l-2 px-2 py-1 text-xs",
+            className="mb-1 rounded-md border-l-2 px-2 py-1 text-xs"
+            // Mesmo vidro da bolha, por lado: marca quando é você, azul quando é
+            // o cidadão — o fio da citação fica coerente com a conversa.
+            style={
               isOutbound
-                ? "border-primary-foreground/50 bg-primary-foreground/10"
-                : "border-primary bg-background/60",
-            )}
+                ? {
+                    borderColor: "color-mix(in srgb, var(--color-accent) 55%, transparent)",
+                    background: "color-mix(in srgb, var(--color-accent) 12%, transparent)",
+                  }
+                : {
+                    borderColor: "color-mix(in srgb, #5B8DEF 60%, transparent)",
+                    background: "color-mix(in srgb, #5B8DEF 12%, transparent)",
+                  }
+            }
           >
             <div className="font-medium opacity-80">
               {citada.direction === "outbound" ? t("Você") : t("Cliente")}

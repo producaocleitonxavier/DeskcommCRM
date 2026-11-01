@@ -738,6 +738,19 @@
   transform: translateY(-1px);
 }
 
+/* ---- gip-row: linha de LISTA como pílula de vidro ------------------------
+ * Para a lista de conversas do inbox (e qualquer lista que queira o mesmo ar).
+ * Cantos arredondados + hover translúcido suave. A linha SELECIONADA leva um
+ * `style` inline de vidro-marca (fundo tingido + anel interno), que vence o
+ * hover por ser inline — então a selecionada fica estável mesmo sob o mouse. */
+@utility gip-row {
+  border-radius: 0.75rem;
+  transition: background-color 0.15s ease, box-shadow 0.15s ease;
+  &:hover {
+    background: color-mix(in srgb, var(--color-surface-elevated) 55%, transparent);
+  }
+}
+
 /* ---- Animações GIP (entrada de gráfico/cards) -----------------------------
  * Usadas no gráfico de pulso (linha que se desenha, área que sobe, pontos que
  * aparecem em sequência) e em entradas suaves de card. Determinísticas, só CSS.

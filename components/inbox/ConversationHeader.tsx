@@ -14,6 +14,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { JanelaSelo } from "@/components/inbox/JanelaSelo";
 import { ChannelLogo } from "@/components/inbox/ChannelLogo";
 import { Phone, ArrowRight, MagnifyingGlass } from "@/lib/ui/icons";
@@ -75,6 +76,15 @@ interface Props {
  * `t(STATUS_LABEL[status] ?? status)`, e um buraco imprime o token cru em inglês
  * no rosto do atendente. Vigiado pelo invariante de espelho.
  */
+/** Iniciais para o avatar do cabeçalho (mesma leitura da lista). */
+function iniciaisDoNome(nome: string | null | undefined): string {
+  const v = (nome ?? "").trim();
+  if (!v) return "?";
+  const p = v.split(/\s+/).filter(Boolean);
+  if (p.length === 1) return (p[0] ?? "").slice(0, 2).toUpperCase();
+  return ((p[0]?.[0] ?? "") + (p[p.length - 1]?.[0] ?? "")).toUpperCase();
+}
+
 const STATUS_LABEL: Record<string, string> = {
   open: "Aberta",
   pending: "Aberta",
@@ -209,11 +219,37 @@ export function ConversationHeader({
     // de antes (uma linha), e quando aperta a barra desce para a linha de baixo.
     // Nenhuma ação some — um menu "mais" esconderia o "Lembrar" que a spec
     // `canais-baseline` clica, e, pior, esconderia ação de quem atende.
-    <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border bg-background px-4 py-3">
+    <div
+      className="flex flex-wrap items-center justify-between gap-3 border-b px-4 py-3"
+      style={{
+        background: "color-mix(in srgb, var(--color-surface-elevated) 45%, transparent)",
+        backdropFilter: "blur(14px) saturate(140%)",
+        WebkitBackdropFilter: "blur(14px) saturate(140%)",
+        borderColor: "color-mix(in srgb, var(--color-text) 8%, transparent)",
+      }}
+    >
+      <div className="flex min-w-0 items-center gap-3">
+        {/* Avatar do contato — amarra o cabeçalho à lista e ao painel do CRM
+            (as três colunas passam a mostrar a mesma pessoa). O logo do canal
+            vai no cantinho, como na linha da lista. */}
+        <div className="relative shrink-0">
+          <Avatar className="h-10 w-10 ring-1 ring-white/10">
+            {c?.avatar_storage_path && !c?.is_anonymized ? (
+              <AvatarImage src={`/api/v1/contacts/${c.id}/avatar`} alt="" className="object-cover" />
+            ) : null}
+            <AvatarFallback className="bg-surface-elevated text-xs font-medium text-text-muted">
+              {iniciaisDoNome(displayName)}
+            </AvatarFallback>
+          </Avatar>
+          <ChannelLogo
+            channel={conversation.channel_sessions}
+            size={16}
+            className="absolute -bottom-1 -right-1 h-5 w-5 rounded-full bg-background ring-2 ring-background"
+          />
+        </div>
       <div className="min-w-0">
         <div className="flex min-w-0 items-center gap-1.5">
-          <ChannelLogo channel={conversation.channel_sessions} size={20} />
-          <h2 className="min-w-0 truncate text-sm font-semibold" title={displayName}>{displayName}</h2>
+          <h2 className="min-w-0 truncate text-sm font-semibold text-foreground" title={displayName}>{displayName}</h2>
           <Badge variant="outline" className="h-4 shrink-0 px-1.5 text-[10px]">
             {t(STATUS_LABEL[status] ?? status)}
           </Badge>
@@ -272,6 +308,7 @@ export function ConversationHeader({
             <Phone size={11} weight="regular" aria-hidden /> {phone}
           </p>
         )}
+      </div>
       </div>
 
       {/* `shrink-0` saiu daqui: era ele que impunha o piso de largura. Agora a
