@@ -38,8 +38,8 @@ export default async function LiderancaDetalhePage({
     db.from("pol_territories").select("id, name, state_code").eq("organization_id", org.orgId).order("name").limit(600),
     // Pessoas indicadas por esta liderança (quem entrou pelo link de captação) —
     // com nome, para listar e linkar na ficha. count = total.
-    db.from("pol_leads").select("id, contact_id, contacts(name)", { count: "exact" }).eq("organization_id", org.orgId).eq("pol_lideranca_id", id).order("created_at", { ascending: false }).limit(100),
-    db.from("pol_agenda").select("id", { count: "exact", head: true }).eq("organization_id", org.orgId).eq("lideranca_id", id).eq("tipo", "evento"),
+    db.from("pol_leads").select("id, contact_id, contacts!contact_id(name)", { count: "exact" }).eq("organization_id", org.orgId).eq("pol_lideranca_id", id).order("created_at", { ascending: false }).limit(100),
+    db.from("pol_events").select("id", { count: "exact", head: true }).eq("organization_id", org.orgId).eq("lideranca_id", id),
   ]);
 
   if (!lidRes.data) notFound();

@@ -49,6 +49,8 @@ export interface NovoLocalInput {
   publicoEstimado?: number;
   /** Material da Biblioteca a enviar (Fase 2C — ebook por evento). */
   materialId?: string;
+  /** Liderança responsável (quem organizou/trouxe) — alimenta o contador dela. */
+  liderancaId?: string;
 }
 
 /**
@@ -117,6 +119,7 @@ export async function criarLocalComEvento(dados: NovoLocalInput): Promise<AcaoRe
       eventoPayload.estimated_audience = dados.publicoEstimado;
     }
     if (dados.materialId) eventoPayload.material_id = dados.materialId;
+    if (dados.liderancaId) eventoPayload.lideranca_id = dados.liderancaId;
     // Se o evento falhar, o local já existe — não desfaz o cadastro do local.
     await db.from("pol_events").insert(eventoPayload);
   }
@@ -127,7 +130,7 @@ export async function criarLocalComEvento(dados: NovoLocalInput): Promise<AcaoRe
 /** Cria um evento (palestra/visita) ligado a um local existente. */
 export async function criarEventoNoLocal(
   localId: string,
-  dados: { tema?: string; tipoEvento?: string; data?: string; publicoEstimado?: number; materialId?: string },
+  dados: { tema?: string; tipoEvento?: string; data?: string; publicoEstimado?: number; materialId?: string; liderancaId?: string },
 ): Promise<AcaoResultado> {
   const org = await orgAtiva();
   if (!org) return { ok: false, erro: "Sessão ou organização inválida." };
@@ -159,6 +162,7 @@ export async function criarEventoNoLocal(
     eventoPayload.estimated_audience = dados.publicoEstimado;
   }
   if (dados.materialId) eventoPayload.material_id = dados.materialId;
+  if (dados.liderancaId) eventoPayload.lideranca_id = dados.liderancaId;
 
   const { data: ev, error } = await db.from("pol_events").insert(eventoPayload).select("id").maybeSingle();
   if (error) return { ok: false, erro: traduzErro(error) };

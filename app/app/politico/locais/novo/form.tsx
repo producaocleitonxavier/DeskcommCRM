@@ -18,6 +18,11 @@ export interface MaterialOpcao {
   titulo: string;
 }
 
+export interface LiderancaOpcao {
+  id: string;
+  nome: string;
+}
+
 interface Opcao {
   id: string;
   nome: string;
@@ -65,7 +70,7 @@ function Toggle({ on, set, label }: { on: boolean; set: (v: boolean) => void; la
   );
 }
 
-export default function NovoLocalForm({ materiais }: { materiais: MaterialOpcao[] }) {
+export default function NovoLocalForm({ materiais, liderancas }: { materiais: MaterialOpcao[]; liderancas: LiderancaOpcao[] }) {
   const router = useRouter();
 
   const [nome, setNome] = useState("");
@@ -84,6 +89,7 @@ export default function NovoLocalForm({ materiais }: { materiais: MaterialOpcao[
   const [data, setData] = useState("");
   const [publico, setPublico] = useState("");
   const [materialId, setMaterialId] = useState("");
+  const [liderancaId, setLiderancaId] = useState("");
 
   const [salvando, setSalvando] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
@@ -169,6 +175,7 @@ export default function NovoLocalForm({ materiais }: { materiais: MaterialOpcao[
       data,
       publicoEstimado: publico ? Number(publico) : undefined,
       materialId: materialId || undefined,
+      liderancaId: liderancaId || undefined,
     });
     if (!res.ok) {
       setSalvando(false);
@@ -239,6 +246,20 @@ export default function NovoLocalForm({ materiais }: { materiais: MaterialOpcao[
               <div><Label>Tipo de evento</Label><select value={tipoEvento} onChange={(e) => setTipoEvento(e.target.value)} className="wr-input w-full">{TIPOS_EVENTO.map((o) => <option key={o.id} value={o.id}>{o.nome}</option>)}</select></div>
               <div><Label>Data</Label><input type="date" value={data} onChange={(e) => setData(e.target.value)} className="wr-input w-full" /></div>
               <div><Label>Público estimado</Label><input type="number" min={0} value={publico} onChange={(e) => setPublico(e.target.value)} placeholder="Ex.: 200" className="wr-input w-full" /></div>
+              <div className="sm:col-span-2">
+                <Label>Liderança responsável</Label>
+                {liderancas.length === 0 ? (
+                  <p className="text-xs" style={{ color: "var(--color-text-subtle)" }}>Cadastre lideranças em Gabinete → Lideranças para creditar o evento a uma delas.</p>
+                ) : (
+                  <>
+                    <select value={liderancaId} onChange={(e) => setLiderancaId(e.target.value)} className="wr-input w-full">
+                      <option value="">Sem liderança (evento do gabinete)</option>
+                      {liderancas.map((l) => <option key={l.id} value={l.id}>{l.nome}</option>)}
+                    </select>
+                    <p className="mt-1.5 text-xs" style={{ color: "var(--color-text-subtle)" }}>Conta no painel de eventos da liderança escolhida.</p>
+                  </>
+                )}
+              </div>
               <div className="sm:col-span-2">
                 <Label>Ebook a enviar para quem se cadastrar</Label>
                 {materiais.length === 0 ? (
