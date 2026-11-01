@@ -64,7 +64,7 @@ function SecaoColapsavel({
 }) {
   const [aberto, setAberto] = useState(defaultOpen);
   return (
-    <section className="wr-card overflow-hidden">
+    <section className="gip-glass overflow-hidden">
       <button
         type="button"
         onClick={() => setAberto(!aberto)}
@@ -307,7 +307,7 @@ export default function NovoCadastroForm() {
   return (
     <form onSubmit={handleSubmit} className="space-y-[18px]">
       {/* ═══════════════════════ DADOS PESSOAIS ═══════════════════════════ */}
-      <section className="wr-card p-6 sm:p-7 space-y-5">
+      <section className="gip-glass p-6 sm:p-7 space-y-5">
         <h2 className="font-heading text-[18px] font-bold" style={{ color: "var(--color-text)" }}>
           Dados pessoais
         </h2>
@@ -395,7 +395,7 @@ export default function NovoCadastroForm() {
       </SecaoColapsavel>
 
       {/* ═══════════ CLASSIFICAÇÃO POLÍTICA ═══════════════════════════════ */}
-      <section className="wr-card p-6 sm:p-7 space-y-5">
+      <section className="gip-glass p-6 sm:p-7 space-y-5">
         <h2 className="font-heading text-[18px] font-bold" style={{ color: "var(--color-text)" }}>
           Classificação política
         </h2>
@@ -447,7 +447,7 @@ export default function NovoCadastroForm() {
       </SecaoColapsavel>
 
       {/* ═══════════ CONSENTIMENTO LGPD (rodapé, obrigatório) ═════════════ */}
-      <label className="wr-card p-5 sm:p-6 flex items-start gap-3 cursor-pointer select-none">
+      <label className="gip-glass p-5 sm:p-6 flex items-start gap-3 cursor-pointer select-none">
         <input type="checkbox" required checked={lgpdOk} onChange={(e) => setLgpdOk(e.target.checked)} className="mt-0.5 h-5 w-5 shrink-0 rounded accent-[#26318F]" />
         <span className="text-sm leading-relaxed" style={{ color: "var(--color-text-muted)" }}>
           A pessoa <strong style={{ color: "var(--color-text)" }}>autoriza o gabinete a entrar em contato</strong> (WhatsApp, ligação ou e-mail), conforme a Lei Geral de Proteção de Dados (LGPD — Lei nº 13.709/2018).
@@ -456,7 +456,7 @@ export default function NovoCadastroForm() {
 
       {/* ═══════════ ERRO ═════════════════════════════════════════════════ */}
       {erro && (
-        <div role="alert" className="wr-card p-4 text-sm font-semibold" style={{ background: "#FEE2E2", color: "#991B1B", borderColor: "#FECACA" }}>
+        <div role="alert" className="gip-glass p-4 text-sm font-semibold" style={{ background: "#FEE2E2", color: "#991B1B", borderColor: "#FECACA" }}>
           {erro}
         </div>
       )}

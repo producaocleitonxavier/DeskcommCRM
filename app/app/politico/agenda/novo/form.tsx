@@ -98,7 +98,7 @@ export default function NovoCompromissoForm({ territorios, liderancas }: NovoCom
   }
 
   return (
-    <div className="mx-auto max-w-[760px] px-4 py-7 space-y-5" style={{ background: "var(--color-bg)" }}>
+    <div className="gip-ambient-bg mx-auto max-w-[760px] px-4 py-7 space-y-5">
       <div>
         <Link href="/app/politico/agenda" className="inline-flex items-center gap-1 text-sm transition-colors" style={{ color: "var(--color-text-muted)" }}>
           <ArrowLeft className="h-4 w-4" aria-hidden /> Agenda
@@ -108,7 +108,7 @@ export default function NovoCompromissoForm({ territorios, liderancas }: NovoCom
       </div>
 
       <form onSubmit={salvar} className="space-y-5">
-        <section className="wr-card space-y-4 p-5 sm:p-6">
+        <section className="gip-glass space-y-4 p-5 sm:p-6">
           <div><Label obrig>Título</Label><input type="text" value={titulo} onChange={(e) => setTitulo(e.target.value)} className="wr-input w-full" /></div>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div><Label>Tipo</Label><select value={tipo} onChange={(e) => setTipo(e.target.value)} className="wr-input w-full">{TIPOS.map((o) => <option key={o.id} value={o.id}>{o.nome}</option>)}</select></div>

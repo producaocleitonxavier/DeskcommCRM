@@ -166,7 +166,7 @@ export default function EditorClient({
   }
 
   return (
-    <div className="mx-auto max-w-[860px] px-4 py-7 space-y-5" style={{ background: "var(--color-bg)" }}>
+    <div className="gip-ambient-bg mx-auto max-w-[860px] px-4 py-7 space-y-5">
       <CommandHero
         eyebrow="Inteligência · Pesquisa"
         titulo={titulo}
@@ -195,7 +195,7 @@ export default function EditorClient({
           const tema = temaPesquisaDe(pg.theme);
           const aberto = expandido === pg.id;
           return (
-            <div key={pg.id} className="wr-card overflow-hidden p-0">
+            <div key={pg.id} className="gip-glass overflow-hidden p-0">
               <div className="flex items-center gap-3 px-3.5 py-3 cursor-pointer" onClick={() => setExpandido(aberto ? null : pg.id)}>
                 <div className="flex flex-col items-center">
                   <button type="button" onClick={(e) => { e.stopPropagation(); mover(idx, -1); }} className="opacity-50 hover:opacity-100"><ChevronUp className="h-3.5 w-3.5" /></button>
@@ -275,7 +275,7 @@ export default function EditorClient({
         <button type="button" onClick={addBranco} className="flex items-center justify-center gap-2 rounded-2xl border-2 border-dashed py-4 text-sm font-bold" style={{ borderColor: "var(--color-border)", color: "var(--color-text-muted)" }}>
           <Plus className="h-4 w-4" /> Pergunta em branco
         </button>
-        <div className="wr-card overflow-hidden p-0">
+        <div className="gip-glass overflow-hidden p-0">
           <button type="button" onClick={() => setSugAberta((v) => !v)} className="flex w-full items-center justify-between px-4 py-3.5 text-sm font-semibold">
             <span className="inline-flex items-center gap-2"><Lightbulb className="h-4 w-4" style={{ color: "#D7B23A" }} /> Usar sugestão</span>
             <ChevronDown className="h-4 w-4 transition-transform" style={{ transform: sugAberta ? "rotate(180deg)" : "none" }} />

@@ -152,7 +152,7 @@ export default function NovaEmendaForm({ liderancas }: NovaEmendaFormProps) {
   }
 
   return (
-    <div className="mx-auto max-w-[820px] px-4 py-7 space-y-5" style={{ background: "var(--color-bg)" }}>
+    <div className="gip-ambient-bg mx-auto max-w-[820px] px-4 py-7 space-y-5">
       <div>
         <Link href="/app/politico/emendas" className="inline-flex items-center gap-1 text-sm transition-colors" style={{ color: "var(--color-text-muted)" }}>
           <ArrowLeft className="h-4 w-4" aria-hidden /> Emendas
@@ -164,7 +164,7 @@ export default function NovaEmendaForm({ liderancas }: NovaEmendaFormProps) {
       </div>
 
       <form onSubmit={salvar} className="space-y-5">
-        <section className="wr-card space-y-4 p-5 sm:p-6">
+        <section className="gip-glass space-y-4 p-5 sm:p-6">
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div>
               <Label>Nº da emenda</Label>
@@ -207,7 +207,7 @@ export default function NovaEmendaForm({ liderancas }: NovaEmendaFormProps) {
           </div>
         </section>
 
-        <section className="wr-card space-y-4 p-5 sm:p-6">
+        <section className="gip-glass space-y-4 p-5 sm:p-6">
           <h2 className="font-heading text-base font-bold" style={{ color: "var(--color-text)" }}>Destino</h2>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div>

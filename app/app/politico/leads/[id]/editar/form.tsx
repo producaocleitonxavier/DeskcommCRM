@@ -162,7 +162,7 @@ export default function EditarLeadForm({ inicial }: { inicial: LeadParaEdicao })
   return (
     <form onSubmit={handleSubmit} className="space-y-[18px]">
       {/* Dados pessoais */}
-      <section className="wr-card p-6 sm:p-7 space-y-5">
+      <section className="gip-glass p-6 sm:p-7 space-y-5">
         <h2 className="font-heading text-[18px] font-bold" style={{ color: "var(--color-text)" }}>Dados pessoais</h2>
         <label className="block space-y-1.5">
           <Label>Nome completo *</Label>
@@ -199,7 +199,7 @@ export default function EditarLeadForm({ inicial }: { inicial: LeadParaEdicao })
       </section>
 
       {/* Classificação política */}
-      <section className="wr-card p-6 sm:p-7 space-y-5">
+      <section className="gip-glass p-6 sm:p-7 space-y-5">
         <h2 className="font-heading text-[18px] font-bold" style={{ color: "var(--color-text)" }}>Classificação política</h2>
         <label className="block space-y-1.5">
           <Label>Etapa no funil</Label>
@@ -223,7 +223,7 @@ export default function EditarLeadForm({ inicial }: { inicial: LeadParaEdicao })
       </section>
 
       {erro && (
-        <div role="alert" className="wr-card p-4 text-sm font-semibold" style={{ background: "#FEE2E2", color: "#991B1B", borderColor: "#FECACA" }}>
+        <div role="alert" className="gip-glass p-4 text-sm font-semibold" style={{ background: "#FEE2E2", color: "#991B1B", borderColor: "#FECACA" }}>
           {erro}
         </div>
       )}

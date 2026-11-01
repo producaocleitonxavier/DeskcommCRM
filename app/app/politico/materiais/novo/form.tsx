@@ -89,7 +89,7 @@ export default function NovoMaterialForm() {
   }
 
   return (
-    <div className="mx-auto max-w-[820px] px-4 py-7 space-y-5" style={{ background: "var(--color-bg)" }}>
+    <div className="gip-ambient-bg mx-auto max-w-[820px] px-4 py-7 space-y-5">
       <div>
         <Link href="/app/politico/materiais" className="inline-flex items-center gap-1 text-sm transition-colors" style={{ color: "var(--color-text-muted)" }}>
           <ArrowLeft className="h-4 w-4" aria-hidden /> Biblioteca de Materiais
@@ -99,7 +99,7 @@ export default function NovoMaterialForm() {
       </div>
 
       <form onSubmit={salvar} className="space-y-5">
-        <section className="wr-card space-y-4 p-5 sm:p-6">
+        <section className="gip-glass space-y-4 p-5 sm:p-6">
           <div><Label obrig>Título</Label><input type="text" value={titulo} onChange={(e) => setTitulo(e.target.value)} placeholder="Ex.: Guia de Proteção Digital" className="wr-input w-full" /></div>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div><Label>Categoria (tema)</Label><input type="text" value={categoria} onChange={(e) => setCategoria(e.target.value)} placeholder="Ex.: Proteção Digital" className="wr-input w-full" /></div>
@@ -109,7 +109,7 @@ export default function NovoMaterialForm() {
           <div><Label>Descrição</Label><textarea value={descricao} onChange={(e) => setDescricao(e.target.value)} rows={3} placeholder="Do que o material trata, para quem serve." className="wr-input w-full" /></div>
         </section>
 
-        <section className="wr-card space-y-4 p-5 sm:p-6">
+        <section className="gip-glass space-y-4 p-5 sm:p-6">
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-[1fr_auto]">
             <div>
               <Label>Capa (URL da imagem)</Label>

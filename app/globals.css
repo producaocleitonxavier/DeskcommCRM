@@ -798,40 +798,48 @@
   /* Campos de formulário QUADRADOS (retangular, raio pequeno) — não pill. O pill
      cortava o texto em textareas no celular. Botões seguem pill (--wr-btn-radius). */
   border-radius: 10px;
-  border: 1px solid var(--color-border);
-  background: var(--color-surface);
+  border: 1px solid color-mix(in srgb, var(--color-text) 12%, transparent);
+  background: color-mix(in srgb, var(--color-surface-elevated) 70%, transparent);
   color: var(--color-text);
   font-family: var(--font-sans);
   font-size: 14px;
   padding: 0 16px;
   outline: none;
-  transition: border-color 0.15s;
+  transition: border-color 0.15s, box-shadow 0.15s, background 0.15s;
+  &:hover {
+    border-color: color-mix(in srgb, var(--color-text) 20%, transparent);
+  }
   &:focus {
-    border-color: #26318F;
-    box-shadow: 0 0 0 2px rgba(38, 49, 143, 0.15);
+    border-color: color-mix(in srgb, var(--color-accent) 60%, transparent);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-accent) 18%, transparent);
+    background: color-mix(in srgb, var(--color-surface-elevated) 88%, transparent);
   }
   &::placeholder {
-    color: #9A9D8F;
+    color: var(--color-text-subtle);
   }
 }
 @utility wr-textarea {
   width: 100%;
   border-radius: 12px;
-  border: 1px solid var(--color-border);
-  background: var(--color-surface);
+  border: 1px solid color-mix(in srgb, var(--color-text) 12%, transparent);
+  background: color-mix(in srgb, var(--color-surface-elevated) 70%, transparent);
   color: var(--color-text);
   font-family: var(--font-sans);
   font-size: 14px;
   padding: 12px 16px;
   outline: none;
   resize: vertical;
-  transition: border-color 0.15s;
+  transition: border-color 0.15s, box-shadow 0.15s, background 0.15s;
+  &:hover {
+    border-color: color-mix(in srgb, var(--color-text) 20%, transparent);
+  }
   &:focus {
-    border-color: #26318F;
-    box-shadow: 0 0 0 2px rgba(38, 49, 143, 0.15);
+    border-color: color-mix(in srgb, var(--color-accent) 60%, transparent);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-accent) 18%, transparent);
+    background: color-mix(in srgb, var(--color-surface-elevated) 88%, transparent);
   }
   &::placeholder {
-    color: #9A9D8F;
+    color: var(--color-text-subtle);
   }
 }
 

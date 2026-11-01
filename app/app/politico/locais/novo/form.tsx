@@ -187,7 +187,7 @@ export default function NovoLocalForm({ materiais, liderancas }: { materiais: Ma
   }
 
   return (
-    <div className="mx-auto max-w-[820px] px-4 py-7 space-y-5" style={{ background: "var(--color-bg)" }}>
+    <div className="gip-ambient-bg mx-auto max-w-[820px] px-4 py-7 space-y-5">
       <div>
         <Link href="/app/politico/locais" className="inline-flex items-center gap-1 text-sm transition-colors" style={{ color: "var(--color-text-muted)" }}>
           <ArrowLeft className="h-4 w-4" aria-hidden /> Locais & Eventos
@@ -197,7 +197,7 @@ export default function NovoLocalForm({ materiais, liderancas }: { materiais: Ma
       </div>
 
       <form onSubmit={salvar} className="space-y-5">
-        <section className="wr-card space-y-4 p-5 sm:p-6">
+        <section className="gip-glass space-y-4 p-5 sm:p-6">
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-[1fr_auto]">
             <div><Label obrig>Nome do local</Label><input type="text" value={nome} onChange={(e) => setNome(e.target.value)} placeholder="Ex.: Escola Municipal João XXIII" className="wr-input w-full" /></div>
             <div><Label>Tipo</Label><select value={tipo} onChange={(e) => setTipo(e.target.value)} className="wr-input w-full">{TIPOS.map((o) => <option key={o.id} value={o.id}>{o.nome}</option>)}</select></div>
@@ -238,7 +238,7 @@ export default function NovoLocalForm({ materiais, liderancas }: { materiais: Ma
           )}
         </section>
 
-        <section className="wr-card space-y-4 p-5 sm:p-6">
+        <section className="gip-glass space-y-4 p-5 sm:p-6">
           <Toggle on={comEvento} set={setComEvento} label="Já registrar a palestra / evento realizado aqui" />
           {comEvento && (
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">

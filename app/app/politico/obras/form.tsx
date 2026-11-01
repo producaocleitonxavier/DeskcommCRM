@@ -67,7 +67,7 @@ export default function ObraForm({ emendas, naturezaInicial }: { emendas: Emenda
   return (
     <div className="space-y-5">
       {/* Natureza */}
-      <section className="wr-card p-5">
+      <section className="gip-glass p-5">
         <Legenda titulo="Natureza" dica="Você fiscaliza o que o poder público faz, ou executa/gerencia o contrato?" />
         <div className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-2">
           <BotaoNatureza ativo={natureza === "fiscalizacao"} onClick={() => setNatureza("fiscalizacao")} icon={<ShieldCheck className="h-4 w-4" />} titulo="Fiscalização" desc="Acompanho e cobro (vistoria, checklist, foto)." />
@@ -76,7 +76,7 @@ export default function ObraForm({ emendas, naturezaInicial }: { emendas: Emenda
       </section>
 
       {/* O que é */}
-      <section className="wr-card space-y-3 p-5">
+      <section className="gip-glass space-y-3 p-5">
         <Legenda titulo="O que é" />
         <Campo label="Título *"><input className="wr-input w-full" value={f.titulo} onChange={set("titulo")} placeholder="Ex.: Reforma da UBS do bairro Jardim das Flores" /></Campo>
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
@@ -87,7 +87,7 @@ export default function ObraForm({ emendas, naturezaInicial }: { emendas: Emenda
       </section>
 
       {/* Responsável & recurso */}
-      <section className="wr-card space-y-3 p-5">
+      <section className="gip-glass space-y-3 p-5">
         <Legenda titulo="Responsável & recurso" dica="Quem executa e de onde vem o dinheiro." />
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <Campo label="Órgão responsável"><input className="wr-input w-full" value={f.orgao_responsavel} onChange={set("orgao_responsavel")} placeholder="Ex.: Secretaria de Obras" /></Campo>
@@ -111,7 +111,7 @@ export default function ObraForm({ emendas, naturezaInicial }: { emendas: Emenda
       </section>
 
       {/* Onde & quando */}
-      <section className="wr-card space-y-3 p-5">
+      <section className="gip-glass space-y-3 p-5">
         <Legenda titulo="Onde & quando" dica="O bairro liga a obra ao peso eleitoral do território." />
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <Campo label="Município"><input className="wr-input w-full" value={f.municipio} onChange={set("municipio")} /></Campo>
@@ -122,7 +122,7 @@ export default function ObraForm({ emendas, naturezaInicial }: { emendas: Emenda
       </section>
 
       {/* Gestão */}
-      <section className="wr-card space-y-3 p-5">
+      <section className="gip-glass space-y-3 p-5">
         <Legenda titulo="Gestão" />
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
           <Campo label="Status"><select className="wr-input w-full" value={f.status} onChange={set("status")}>{STATUSES.map(([v, l]) => <option key={v} value={v}>{l}</option>)}</select></Campo>
