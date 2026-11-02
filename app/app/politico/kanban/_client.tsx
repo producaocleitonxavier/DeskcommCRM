@@ -492,14 +492,45 @@ function DetalheDrawer({
                   />
                 </button>
                 {comoSobe && (
-                  <ul className="mt-1 space-y-1 rounded-xl p-3 text-[12px] text-text-muted" style={{ background: "color-mix(in srgb, var(--color-text) 5%, transparent)" }}>
-                    <li><strong className="text-foreground">Indicar alguém</strong> que se cadastra — +10 por pessoa (3 = Multiplicador na hora)</li>
-                    <li><strong className="text-foreground">Autorizar</strong> continuar recebendo — +10</li>
-                    <li><strong className="text-foreground">Cadastrar pelo QR</strong> — +6</li>
-                    <li><strong className="text-foreground">Responder</strong> uma mensagem — +5 <span className="text-text-subtle">(responder vale muito mais que receber)</span></li>
-                    <li><strong className="text-foreground">Receber</strong> um material — +1 <span className="text-text-subtle">(só receber nunca faz subir de etapa — tem que agir de volta)</span></li>
-                    <li className="pt-1 text-text-subtle">Régua: Simpatizante a partir de 5 · Apoiador 20 · Multiplicador 50 · Voto certo você marca à mão.</li>
-                  </ul>
+                  <div className="mt-1 space-y-2.5 rounded-xl p-3" style={{ background: "color-mix(in srgb, var(--color-text) 5%, transparent)" }}>
+                    <p className="text-[11px] font-medium uppercase tracking-wide text-text-subtle">
+                      O que a pessoa faz conta pontos
+                    </p>
+                    <div className="space-y-2">
+                      {[
+                        { acao: "Indicar alguém que se cadastra", obs: "por pessoa", pts: "+10" },
+                        { acao: "Autorizar continuar recebendo", obs: null, pts: "+10" },
+                        { acao: "Cadastrar pelo QR", obs: null, pts: "+6" },
+                        { acao: "Responder uma mensagem", obs: "vale muito mais que receber", pts: "+5" },
+                        { acao: "Receber um material", obs: "sozinho não faz subir de etapa", pts: "+1" },
+                      ].map((r) => (
+                        <div key={r.acao} className="flex items-center gap-3">
+                          <span className="flex-1 text-[12.5px] leading-snug text-foreground">
+                            {r.acao}
+                            {r.obs && <span className="block text-[11px] text-text-subtle">{r.obs}</span>}
+                          </span>
+                          <span
+                            className="shrink-0 rounded-md px-2 py-0.5 text-xs font-bold tabular-nums"
+                            style={{ background: "color-mix(in srgb, var(--color-accent) 16%, transparent)", color: "var(--color-accent)" }}
+                          >
+                            {r.pts}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                    <div
+                      className="flex items-start gap-2 rounded-lg p-2.5"
+                      style={{ background: "color-mix(in srgb, var(--color-accent) 13%, transparent)" }}
+                    >
+                      <span className="text-sm leading-none" aria-hidden>⭐</span>
+                      <span className="text-[12.5px] leading-snug text-foreground">
+                        Quem traz <strong>3 pessoas</strong> vira <strong>Multiplicador</strong> na hora — é o ouro da base.
+                      </span>
+                    </div>
+                    <p className="text-[11px] leading-snug text-text-subtle">
+                      O <strong className="font-semibold text-text-muted">Voto certo</strong> é você quem marca à mão.
+                    </p>
+                  </div>
                 )}
               </section>
 
