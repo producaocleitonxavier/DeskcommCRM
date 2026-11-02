@@ -3,7 +3,7 @@ import { redirect } from "next/navigation";
 
 import { requireAuth, resolveActiveOrg } from "@/lib/auth/server";
 import { createClient } from "@/lib/supabase/server";
-import { listarOrigensEGrupos } from "@/lib/politico/origens-grupos";
+import { listarOrigensEGrupos, conversaoDasOrigens } from "@/lib/politico/origens-grupos";
 import GruposOrigemClient from "./_client";
 
 export const dynamic = "force-dynamic";
@@ -15,7 +15,17 @@ export default async function GruposOrigemPage() {
   if (!org) redirect("/app/onboarding");
 
   const db = await createClient();
-  const { grupos, aClassificar, outrasPoucas } = await listarOrigensEGrupos(db, org.orgId);
+  const [{ grupos, aClassificar, outrasPoucas }, conversao] = await Promise.all([
+    listarOrigensEGrupos(db, org.orgId),
+    conversaoDasOrigens(db, org.orgId),
+  ]);
 
-  return <GruposOrigemClient grupos={grupos} aClassificar={aClassificar} outrasPoucas={outrasPoucas} />;
+  return (
+    <GruposOrigemClient
+      grupos={grupos}
+      aClassificar={aClassificar}
+      outrasPoucas={outrasPoucas}
+      conversao={conversao}
+    />
+  );
 }

@@ -18,23 +18,24 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { CaretDown, PencilSimple, Trash } from "@/lib/ui/icons";
+import { CaretDown, PencilSimple, Trash, TrendUp } from "@/lib/ui/icons";
 import {
   apagarGrupo,
   criarGrupo,
   moverOrigemParaGrupo,
   renomearGrupo,
 } from "@/app/actions/politico/grupos-origem-actions";
-import type { GrupoDeOrigem, OrigemComContagem } from "@/lib/politico/origens-grupos";
+import type { GrupoDeOrigem, OrigemComContagem, ConversaoOrigem } from "@/lib/politico/origens-grupos";
 import { corDoGrupo } from "@/lib/politico/rotulo-origem";
 
 interface Props {
   grupos: GrupoDeOrigem[];
   aClassificar: OrigemComContagem[];
   outrasPoucas: OrigemComContagem[];
+  conversao: ConversaoOrigem[];
 }
 
-export default function GruposOrigemClient({ grupos, aClassificar, outrasPoucas }: Props) {
+export default function GruposOrigemClient({ grupos, aClassificar, outrasPoucas, conversao }: Props) {
   const router = useRouter();
   const [ocupado, iniciar] = useTransition();
   const [novoNome, setNovoNome] = useState("");
@@ -149,6 +150,52 @@ export default function GruposOrigemClient({ grupos, aClassificar, outrasPoucas 
         titulo="Grupos de origem"
         subtitulo="Organize de onde seus contatos vieram em grupos do seu mandato. Cada mandato é diferente — arrume do seu jeito."
       />
+
+      {/* Onde investir — conversão por origem (inteligência de coorte) */}
+      {conversao.length > 0 && (
+        <div className="gip-glass p-4">
+          <div className="mb-1 flex items-center gap-2">
+            <TrendUp size={18} weight="bold" className="text-accent" aria-hidden />
+            <h2 className="text-base font-semibold text-foreground">Onde investir</h2>
+          </div>
+          <p className="mb-3 text-sm text-text-muted">
+            Quais origens mais viram apoiador — foque o próximo evento ou material nas que convertem.
+          </p>
+          <div className="space-y-2">
+            {conversao.slice(0, 8).map((o, i) => (
+              <div key={o.source} className="flex items-center gap-3">
+                <span
+                  className="w-32 shrink-0 truncate text-sm font-medium text-foreground sm:w-48"
+                  title={o.label}
+                >
+                  {o.label}
+                </span>
+                <div
+                  className="h-2.5 flex-1 overflow-hidden rounded-full"
+                  style={{ background: "color-mix(in srgb, var(--color-text) 8%, transparent)" }}
+                >
+                  <div
+                    className="h-full rounded-full"
+                    style={{
+                      width: `${Math.max(o.pct, 2)}%`,
+                      background:
+                        i === 0
+                          ? "var(--color-accent)"
+                          : "color-mix(in srgb, var(--color-accent) 45%, transparent)",
+                    }}
+                  />
+                </div>
+                <span className="w-28 shrink-0 text-right text-sm tabular-nums">
+                  <span className="font-bold text-foreground">{o.pct}%</span>{" "}
+                  <span className="text-text-subtle">
+                    · {o.convertidos}/{o.total}
+                  </span>
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Criar grupo */}
       <div className="gip-glass flex flex-col gap-3 p-4 sm:flex-row sm:items-center">

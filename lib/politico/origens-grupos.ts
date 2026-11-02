@@ -81,6 +81,47 @@ export interface OrigensEGrupos {
   outrasPoucas: OrigemComContagem[];
 }
 
+export interface ConversaoOrigem {
+  source: string;
+  label: string;
+  total: number;
+  convertidos: number;
+  /** % que virou apoiador+ (apoiador/militante/voto_certo), 0–100. */
+  pct: number;
+}
+
+/** Mínimo de pessoas pra uma origem entrar no ranking — abaixo disso o % é ruído. */
+const MIN_PARA_CONVERSAO = 5;
+
+/**
+ * "ONDE INVESTIR" — conversão por origem (quem virou apoiador+). Ranqueado do
+ * melhor pro pior: o gabinete vê de qual origem vale fazer o próximo evento/material.
+ */
+export async function conversaoDasOrigens(
+  db: SupabaseClient,
+  orgId: string,
+): Promise<ConversaoOrigem[]> {
+  const { data } = await db
+    .from("pol_vw_origem_conversao")
+    .select("source, total, convertidos")
+    .eq("organization_id", orgId);
+  const rows = (data ?? []) as { source: string; total: number; convertidos: number }[];
+  return rows
+    .filter((r) => !ORIGENS_OCULTAS.has(r.source) && Number(r.total) >= MIN_PARA_CONVERSAO)
+    .map((r) => {
+      const total = Number(r.total) || 0;
+      const convertidos = Number(r.convertidos) || 0;
+      return {
+        source: r.source,
+        label: humanizarOrigem(r.source),
+        total,
+        convertidos,
+        pct: total > 0 ? Math.round((convertidos / total) * 100) : 0,
+      };
+    })
+    .sort((a, b) => b.pct - a.pct || b.total - a.total);
+}
+
 export async function listarOrigensEGrupos(
   db: SupabaseClient,
   orgId: string,
