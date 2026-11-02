@@ -9,6 +9,7 @@
 
 import { redirect } from "next/navigation";
 import { requireAuth, resolveActiveOrg } from "@/lib/auth/server";
+import { roleAtLeast } from "@/lib/auth/types";
 import { CommandHero } from "@/components/politico/command-hero";
 import NovoCadastroForm from "./form";
 
@@ -18,6 +19,9 @@ export default async function NovoCadastroPage() {
   const user = await requireAuth();
   const org = await resolveActiveOrg(user);
   if (!org) redirect("/app/onboarding");
+  // Só político/admin classifica nos TOPOS do funil (Multiplicador/Voto certo).
+  // Assessor vai até Apoiador — não pode inflar a base com topos de opinião.
+  const podeTopoFunil = roleAtLeast(org.role, "admin");
 
   return (
     <div className="mx-auto max-w-[720px] space-y-[18px] px-4 py-7" style={{ background: "var(--color-bg)" }}>
@@ -27,7 +31,7 @@ export default async function NovoCadastroPage() {
         subtitulo="Preencha os dados para adicionar uma nova pessoa à base."
         acoes={[{ href: "/app/politico/leads", label: "← Pessoas" }]}
       />
-      <NovoCadastroForm />
+      <NovoCadastroForm podeTopoFunil={podeTopoFunil} />
     </div>
   );
 }

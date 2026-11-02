@@ -16,6 +16,7 @@ import { NextResponse, type NextRequest } from "next/server";
 
 import { ok, fail } from "@/lib/api/wrappers";
 import { requireRole } from "@/lib/auth/require-role";
+import { ROLE_RANK, type Role } from "@/lib/auth/types";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { requireSupportWrite } from "@/lib/impersonate/support";
 
@@ -142,12 +143,22 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     return fail("not_found", "Contato nao encontrado nesta organizacao", 404, { requestId });
   }
 
+  // Trava de integridade: só político/admin classifica nos TOPOS do funil
+  // (Multiplicador/Voto certo). Assessor (manager-) é clampado pra Apoiador — a
+  // opinião do assessor não pode fabricar topo falso e sujar a base (defesa em
+  // profundidade; o form já esconde as opções).
+  const ehAdmin = ROLE_RANK[authz.org.role as Role] >= ROLE_RANK.admin;
+  const supportLevelSeguro =
+    !ehAdmin && (parsed.data.support_level === "militante" || parsed.data.support_level === "voto_certo")
+      ? "apoiador"
+      : parsed.data.support_level;
+
   const { data: polLead, error } = await db
     .from("pol_leads")
     .insert({
       organization_id: orgId,
       contact_id: parsed.data.contact_id,
-      support_level: parsed.data.support_level,
+      support_level: supportLevelSeguro,
       temperature: parsed.data.temperature,
       zona_eleitoral: parsed.data.zona_eleitoral ?? null,
       secao_eleitoral: parsed.data.secao_eleitoral ?? null,

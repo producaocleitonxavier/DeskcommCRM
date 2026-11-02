@@ -136,7 +136,12 @@ function IconeProfissao() {
 
 /* ── form principal ────────────────────────────────────────────────────────── */
 
-export default function NovoCadastroForm() {
+export default function NovoCadastroForm({ podeTopoFunil = false }: { podeTopoFunil?: boolean }) {
+  // Assessor (não-admin) classifica só até Apoiador — Multiplicador é EARNED
+  // (quem traz gente) e Voto certo fica com o político/admin. Evita inflar a base.
+  const etapasVisiveis = podeTopoFunil
+    ? ETAPAS
+    : ETAPAS.filter((e) => e.value !== "militante" && e.value !== "voto_certo");
   const router = useRouter();
   const [salvando, setSalvando] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
@@ -403,15 +408,11 @@ export default function NovoCadastroForm() {
         <label className="block space-y-1.5">
           <Label>Etapa no funil</Label>
           <select value={etapa} onChange={(e) => setEtapa(e.target.value)} className="wr-input">
-            {ETAPAS.map((e) => (
+            {etapasVisiveis.map((e) => (
               <option key={e.value} value={e.value}>{e.label}</option>
             ))}
           </select>
         </label>
-
-        <p className="text-xs leading-relaxed" style={{ color: "var(--color-text-subtle)" }}>
-          A <strong style={{ color: "var(--color-text-muted)" }}>temperatura</strong> (frio/morno/quente) não é escolhida aqui — ela é medida ao longo da jornada, conforme a pessoa interage e se mostra adepta.
-        </p>
 
         <label className="block space-y-1.5">
           <Label>Papel na comunidade</Label>
