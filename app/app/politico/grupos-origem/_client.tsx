@@ -26,6 +26,7 @@ import {
   renomearGrupo,
 } from "@/app/actions/politico/grupos-origem-actions";
 import type { GrupoDeOrigem, OrigemComContagem } from "@/lib/politico/origens-grupos";
+import { corDoGrupo } from "@/lib/politico/rotulo-origem";
 
 interface Props {
   grupos: GrupoDeOrigem[];
@@ -160,8 +161,14 @@ export default function GruposOrigemClient({ grupos, aClassificar, outrasPoucas 
         </div>
       ) : (
         <div className="space-y-4">
-          {grupos.map((g) => (
-            <div key={g.id} className="gip-glass p-4">
+          {grupos.map((g, idx) => {
+            const cor = corDoGrupo(idx);
+            return (
+            <div
+              key={g.id}
+              className="gip-glass p-4"
+              style={{ borderLeft: `3px solid color-mix(in srgb, ${cor} 75%, transparent)` }}
+            >
               <div className="mb-3 flex items-center justify-between gap-2">
                 {editando === g.id ? (
                   <input
@@ -186,9 +193,13 @@ export default function GruposOrigemClient({ grupos, aClassificar, outrasPoucas 
                     }}
                     title="Clique para renomear"
                   >
+                    <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ background: cor }} aria-hidden />
                     {g.nome}
                     <PencilSimple size={14} className="text-text-muted opacity-0 transition-opacity group-hover:opacity-100" aria-hidden />
-                    <span className="rounded-full bg-white/10 px-2 text-xs font-medium text-text-muted">
+                    <span
+                      className="rounded-full px-2 text-xs font-semibold tabular-nums"
+                      style={{ background: `color-mix(in srgb, ${cor} 16%, transparent)`, color: cor }}
+                    >
                       {g.origens.length}
                     </span>
                   </button>
@@ -217,7 +228,8 @@ export default function GruposOrigemClient({ grupos, aClassificar, outrasPoucas 
                 </div>
               )}
             </div>
-          ))}
+            );
+          })}
 
           {/* A classificar */}
           {aClassificar.length > 0 && (

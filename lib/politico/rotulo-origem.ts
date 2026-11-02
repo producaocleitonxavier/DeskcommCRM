@@ -37,6 +37,20 @@ export const ORIGENS_OCULTAS = new Set<string>(["sistema", "form"]);
  */
 export const LIMIAR_POUCAS = 2;
 
+/**
+ * Paleta fria premium — dá IDENTIDADE a cada grupo de origem (um ponto + o total
+ * num badge da cor), como as etapas do funil. Determinística por índice: o mesmo
+ * grupo tem a mesma cor na tela de Grupos e no seletor de Disparos. "A classificar"
+ * e "Outras origens" ficam NEUTROS (cinza), pra os grupos do mandato saltarem.
+ */
+export const CORES_GRUPO = [
+  "#60A5FA", "#A78BFA", "#34D399", "#F59E0B", "#22D3EE", "#F472B6", "#818CF8", "#FB7185",
+] as const;
+
+export function corDoGrupo(index: number): string {
+  return CORES_GRUPO[((index % CORES_GRUPO.length) + CORES_GRUPO.length) % CORES_GRUPO.length]!;
+}
+
 /** Nome humano de uma origem — do mapa conhecido, ou humanizado por regra. */
 export function humanizarOrigem(v: string): string {
   return (

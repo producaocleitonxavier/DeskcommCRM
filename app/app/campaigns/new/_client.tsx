@@ -17,6 +17,7 @@ import { useCriarCampanha, usePreviaDaAudiencia } from "@/hooks/campanhas/useCam
 import { channelLabel, useChannelSessions } from "@/hooks/channels/useChannelSessions";
 import { useContactList } from "@/hooks/contacts/useContactList";
 import { rotuloDoContato } from "@/lib/contacts/rotulo-do-contato";
+import { corDoGrupo } from "@/lib/politico/rotulo-origem";
 import { useT } from "@/hooks/i18n/useT";
 import {
   Users,
@@ -164,7 +165,15 @@ export function NovaCampanha({
       const nome = o.grupo ?? t("A classificar");
       (m.get(nome) ?? m.set(nome, []).get(nome)!).push(o);
     }
-    return [...m.entries()].map(([nome, itens]) => ({ nome, itens }));
+    // Grupos DO MANDATO ganham cor (identidade); "A classificar" e "Outras origens"
+    // ficam neutros pra os grupos do cliente saltarem.
+    const neutros = new Set([t("A classificar"), "Outras origens"]);
+    let ci = 0;
+    return [...m.entries()].map(([nome, itens]) => ({
+      nome,
+      itens,
+      cor: neutros.has(nome) ? null : corDoGrupo(ci++),
+    }));
   }, [origens, t]);
 
   // Busca de cidade (até 459 na base): filtra por nome, sem acento, e mostra as 12
@@ -258,16 +267,35 @@ export function NovaCampanha({
                         ? {
                             background: "color-mix(in srgb, var(--color-surface-elevated) 35%, transparent)",
                             border: "1px solid color-mix(in srgb, var(--color-text) 7%, transparent)",
+                            borderLeft: grupo.cor
+                              ? `3px solid color-mix(in srgb, ${grupo.cor} 75%, transparent)`
+                              : "1px solid color-mix(in srgb, var(--color-text) 7%, transparent)",
                           }
                         : undefined
                     }
                   >
                     {multi && (
                       <div className="mb-2 flex items-center gap-2">
-                        <span className="text-xs font-semibold tracking-wide uppercase" style={{ color: "var(--color-text-muted)" }}>
+                        <span
+                          className="h-2 w-2 shrink-0 rounded-full"
+                          style={{ background: grupo.cor ?? "var(--color-text-subtle)" }}
+                          aria-hidden
+                        />
+                        <span
+                          className="text-sm font-semibold"
+                          style={{ color: grupo.cor ? "var(--color-text)" : "var(--color-text-muted)" }}
+                        >
                           {grupo.nome}
                         </span>
-                        <span className="rounded-full bg-accent-soft px-1.5 text-[11px] font-semibold tabular-nums text-accent">
+                        <span
+                          className="rounded-full px-1.5 text-[11px] font-semibold tabular-nums"
+                          style={{
+                            background: grupo.cor
+                              ? `color-mix(in srgb, ${grupo.cor} 16%, transparent)`
+                              : "rgba(255,255,255,0.08)",
+                            color: grupo.cor ?? "var(--color-text-muted)",
+                          }}
+                        >
                           {totalGrupo.toLocaleString("pt-BR")}
                         </span>
                       </div>
