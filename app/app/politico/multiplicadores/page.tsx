@@ -12,6 +12,7 @@ import { redirect } from "next/navigation";
 import { requireAuth, resolveActiveOrg } from "@/lib/auth/server";
 import { createClient } from "@/lib/supabase/server";
 import { listarMultiplicadores, sugestoesDeMultiplicador } from "@/lib/politico/multiplicadores";
+import { contarElegiveisParaConvite } from "@/lib/politico/divulgador";
 import { listarVideosDaBiblioteca } from "@/app/actions/politico/multiplicadores-envio-actions";
 import MultiplicadoresClient from "./_client";
 
@@ -26,10 +27,18 @@ export default async function MultiplicadoresPage() {
   const db = await createClient();
   const multiplicadores = await listarMultiplicadores(db, org.orgId);
   const jaNoCohort = new Set(multiplicadores.map((m) => m.contactId));
-  const [sugestoes, videos] = await Promise.all([
+  const [sugestoes, videos, elegiveis] = await Promise.all([
     sugestoesDeMultiplicador(db, org.orgId, jaNoCohort),
     listarVideosDaBiblioteca(),
+    contarElegiveisParaConvite(db, org.orgId),
   ]);
 
-  return <MultiplicadoresClient multiplicadores={multiplicadores} sugestoes={sugestoes} videos={videos} />;
+  return (
+    <MultiplicadoresClient
+      multiplicadores={multiplicadores}
+      sugestoes={sugestoes}
+      videos={videos}
+      elegiveis={elegiveis}
+    />
+  );
 }

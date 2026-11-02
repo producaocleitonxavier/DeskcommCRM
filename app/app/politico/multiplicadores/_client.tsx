@@ -14,7 +14,7 @@ import { toast } from "sonner";
 
 import { CommandHero } from "@/components/politico/command-hero";
 import { Button } from "@/components/ui/button";
-import { CheckCircle, MagnifyingGlass, PaperPlaneTilt, Plus, Trash, UserCircle } from "@/lib/ui/icons";
+import { CheckCircle, MagnifyingGlass, Megaphone, PaperPlaneTilt, Plus, Trash, UserCircle } from "@/lib/ui/icons";
 import {
   adicionarMultiplicador,
   removerMultiplicador,
@@ -25,6 +25,7 @@ import {
   enviarVideoAosMultiplicadores,
   type VideoDaBiblioteca,
 } from "@/app/actions/politico/multiplicadores-envio-actions";
+import { convidarDivulgadores } from "@/app/actions/politico/divulgador-actions";
 import type { MultiplicadorRow, SugestaoMultiplicador } from "@/lib/politico/multiplicadores";
 
 /** "há 3 dias", "hoje", "há 2 sem" — leitura rápida de recência. */
@@ -45,9 +46,10 @@ interface Props {
   multiplicadores: MultiplicadorRow[];
   sugestoes: SugestaoMultiplicador[];
   videos: VideoDaBiblioteca[];
+  elegiveis: number;
 }
 
-export default function MultiplicadoresClient({ multiplicadores, sugestoes, videos }: Props) {
+export default function MultiplicadoresClient({ multiplicadores, sugestoes, videos, elegiveis }: Props) {
   const router = useRouter();
   const [ocupado, iniciar] = useTransition();
   const [busca, setBusca] = useState("");
@@ -55,6 +57,26 @@ export default function MultiplicadoresClient({ multiplicadores, sugestoes, vide
   const [buscando, setBuscando] = useState(false);
   const [videoSel, setVideoSel] = useState("");
   const [enviando, setEnviando] = useState(false);
+  const [convidando, setConvidando] = useState(false);
+
+  function onConvidar() {
+    setConvidando(true);
+    iniciar(async () => {
+      try {
+        const r = await convidarDivulgadores();
+        if (!r.ok) {
+          toast.error(r.erro);
+          return;
+        }
+        const base = `Convite enviado para ${r.convidados} de ${r.total} apoiador${r.total === 1 ? "" : "es"}.`;
+        if (r.pulados.length > 0) toast.warning(`${base} ${r.pulados.length} pulado(s).`);
+        else toast.success(base);
+        router.refresh();
+      } finally {
+        setConvidando(false);
+      }
+    });
+  }
 
   function onEnviarVideo() {
     if (!videoSel) {
@@ -271,6 +293,30 @@ export default function MultiplicadoresClient({ multiplicadores, sugestoes, vide
         )}
         <p className="mt-2 text-[11px] text-text-subtle">
           Antes do go-live, só os números de teste recebem de fato — a trava de segurança continua valendo.
+        </p>
+      </div>
+
+      {/* Convidar apoiadores a serem divulgadores (porta do divulgador) */}
+      <div className="gip-glass p-4">
+        <div className="mb-1 flex items-center gap-2">
+          <Megaphone size={18} weight="bold" className="text-accent" aria-hidden />
+          <h2 className="text-base font-semibold text-foreground">Convidar apoiadores a serem divulgadores</h2>
+        </div>
+        <p className="mb-3 text-sm text-text-muted">
+          O sistema convida seus <strong className="font-semibold text-foreground">apoiadores</strong> a receberem conteúdos exclusivos e ajudar a espalhar. Quem responde <strong className="font-semibold text-foreground">SIM</strong> vira divulgador sozinho — e entra neste placar. <span className="text-text-subtle">(Só apoiador pra cima; não enche a base de quem não quer.)</span>
+        </p>
+        {elegiveis === 0 ? (
+          <p className="text-sm text-text-subtle">
+            Nenhum apoiador elegível agora. Conforme as pessoas se engajam e viram apoiadores, elas aparecem aqui pra convidar.
+          </p>
+        ) : (
+          <Button onClick={onConvidar} disabled={ocupado || convidando}>
+            <Megaphone size={15} weight="bold" aria-hidden />
+            Convidar {elegiveis} apoiador{elegiveis === 1 ? "" : "es"}
+          </Button>
+        )}
+        <p className="mt-2 text-[11px] text-text-subtle">
+          Antes do go-live, só os números de teste recebem o convite — a trava de segurança continua valendo.
         </p>
       </div>
 
