@@ -254,7 +254,7 @@ export default function MultiplicadoresClient({ multiplicadores, sugestoes, vide
               >
                 <p className="mb-1 text-[11px] font-medium uppercase tracking-wide text-text-subtle">Prévia da mensagem</p>
                 <p className="whitespace-pre-line text-foreground">
-                  {"Olá, [nome]! 👋 Saiu um conteúdo novo do nosso mandato.\n\nCompartilhe com a sua rede por ESTE link — ele é só seu: [link do vídeo dele]\n\nCada pessoa que abrir pelo seu link conta como alcance seu. Obrigado por multiplicar! 🙏"}
+                  {"Olá, [nome]! 👋 Saiu um conteúdo novo do nosso mandato.\n\nCompartilhe com a sua rede por ESTE link — ele é só seu: [link do vídeo dele]\n\nObrigado por multiplicar! 🙏"}
                 </p>
               </div>
             )}

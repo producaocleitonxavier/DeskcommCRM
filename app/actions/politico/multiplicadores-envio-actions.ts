@@ -66,7 +66,7 @@ function corpoDaMensagem(primeiroNome: string, url: string): string {
   return (
     `${ola} 👋 Saiu um conteúdo novo do nosso mandato.\n\n` +
     `Compartilhe com a sua rede por ESTE link — ele é *só seu*:\n${url}\n\n` +
-    `Cada pessoa que abrir pelo seu link conta como alcance seu. Obrigado por multiplicar! 🙏`
+    `Obrigado por multiplicar! 🙏`
   );
 }
 
