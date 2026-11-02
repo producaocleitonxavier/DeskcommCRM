@@ -171,6 +171,17 @@ export default function FunilClient({
           <h2 className="font-heading text-base font-bold">🏆 Multiplicadores</h2>
           <span className="text-xs" style={{ color: "var(--color-text-subtle)" }}>quem mais traz e alcança gente</span>
         </div>
+        {/* Explicador fixo: o cliente esquece como alguém "vira multiplicador". */}
+        <div
+          className="mb-4 rounded-xl p-3 text-[12.5px] leading-snug"
+          style={{ background: "color-mix(in srgb, var(--color-text) 5%, transparent)", color: "var(--color-text-muted)" }}
+        >
+          <strong style={{ color: "var(--color-text)" }}>Como alguém vira multiplicador:</strong>{" "}
+          <span className="whitespace-nowrap">① <strong style={{ color: "var(--color-text)" }}>indica</strong> alguém que se cadastra</span>{" "}
+          <span style={{ color: "var(--color-text-subtle)" }}>(pelo código/QR pessoal — o ouro)</span>, ou{" "}
+          <span className="whitespace-nowrap">② <strong style={{ color: "var(--color-text)" }}>compartilha o link pessoal</strong> de um vídeo</span>{" "}
+          e a rede abre. O sistema conta sozinho.
+        </div>
         {multiplicadores.length === 0 ? (
           <p className="text-sm" style={{ color: "var(--color-text-subtle)" }}>
             Ninguém indicou ainda. Quando alguém trouxer um novo cadastro, aparece aqui — o sinal mais forte do funil.
