@@ -123,7 +123,9 @@ export async function enviarVideoAosMultiplicadores(materialId: string): Promise
 
   for (const c of cohort) {
     const nome = (c.name ?? "Sem nome").trim();
-    const primeiroNome = nome.split(/\s+/)[0] ?? "";
+    // Saudação vem do nome CRU (não do fallback "Sem nome", senão vira "Olá, Sem!").
+    // Sem nome → primeiroNome vazio → "Olá!".
+    const primeiroNome = (c.name ?? "").trim().split(/\s+/)[0] ?? "";
     const phone = (c.phone_number ?? "").trim();
     if (!phone) {
       pulados.push({ nome, motivo: "sem telefone" });

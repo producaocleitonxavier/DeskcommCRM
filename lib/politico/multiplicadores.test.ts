@@ -21,11 +21,12 @@ function indsDe(mapa: Record<string, number>): { indicador_contact_id: string }[
 function alcDe(mapa: Record<string, number>): { contact_id: string; alcancou: number }[] {
   return Object.entries(mapa).map(([contact_id, alcancou]) => ({ contact_id, alcancou }));
 }
-function dbListar(cohort: Cohort[], inds: Record<string, number>, alc: Record<string, number>) {
+function dbListar(cohort: Cohort[], inds: Record<string, number>, alc: Record<string, number>, sharers: string[] = []) {
   return makeDb({
     contacts: () => ({ data: cohort }),
     pol_indicacoes: () => ({ data: indsDe(inds) }),
     __rpc: () => ({ data: alcDe(alc) }),
+    pol_video_shares: () => ({ data: sharers.map((id) => ({ sharer_contact_id: id })) }),
   }) as never;
 }
 function dbSugestoes(inds: Record<string, number>, alc: Record<string, number>, nomes: Record<string, string | null>) {
@@ -67,6 +68,40 @@ describe("listarMultiplicadores — cohort e zeros", () => {
     const iso = "2026-10-01T12:00:00.000Z";
     const r = await listarMultiplicadores(dbListar([{ id: "a", name: "Ana", last_activity_at: iso }], {}, {}), ORG);
     expect(r[0]!.ultimaAtividadeISO).toBe(iso);
+  });
+});
+
+describe("listarMultiplicadores — recebeuLink (já ganhou link pessoal de vídeo)", () => {
+  const cohort = [c("a", "Ana"), c("b", "Bruno"), c("x", "Xavier")];
+
+  it("quem tem share pessoal → recebeuLink true; os demais → false", async () => {
+    const r = await listarMultiplicadores(dbListar(cohort, {}, {}, ["a", "x"]), ORG);
+    const por = new Map(r.map((m) => [m.contactId, m.recebeuLink]));
+    expect(por.get("a")).toBe(true);
+    expect(por.get("x")).toBe(true);
+    expect(por.get("b")).toBe(false);
+  });
+
+  it("sem nenhum share → todos recebeuLink false", async () => {
+    const r = await listarMultiplicadores(dbListar(cohort, {}, {}, []), ORG);
+    expect(r.every((m) => m.recebeuLink === false)).toBe(true);
+  });
+
+  it("recebeuLink é independente de compartilhou (recebeu o link mas 0 alcance)", async () => {
+    const r = await listarMultiplicadores(dbListar([c("a", "Ana")], {}, {}, ["a"]), ORG);
+    expect(r[0]!.recebeuLink).toBe(true);
+    expect(r[0]!.compartilhou).toBe(false); // recebeu mas ninguém abriu ainda
+  });
+
+  it("share com sharer_contact_id nulo é ignorado (não marca ninguém)", async () => {
+    const db = makeDb({
+      contacts: () => ({ data: [c("a", "Ana")] }),
+      pol_indicacoes: () => ({ data: [] }),
+      __rpc: () => ({ data: [] }),
+      pol_video_shares: () => ({ data: [{ sharer_contact_id: null }] }),
+    }) as never;
+    const r = await listarMultiplicadores(db, ORG);
+    expect(r[0]!.recebeuLink).toBe(false);
   });
 });
 
