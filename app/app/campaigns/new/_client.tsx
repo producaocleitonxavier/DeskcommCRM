@@ -205,7 +205,7 @@ export function NovaCampanha({
   }
 
   return (
-    <div className="mx-auto max-w-[1100px] px-4 py-7" style={{ background: "var(--color-bg)" }}>
+    <div className="gip-ambient-bg mx-auto max-w-[1100px] px-4 py-7">
       <CommandHero
         eyebrow="Operação · Comunicação"
         titulo="Novo disparo"
@@ -216,7 +216,7 @@ export function NovaCampanha({
       <div className="mt-[18px] grid gap-6 lg:grid-cols-[minmax(0,1fr)_330px]">
         <div className="min-w-0 space-y-[18px]">
       {/* Nome */}
-      <section className="wr-card wr-anim-in p-5 sm:p-6" style={{ animationDelay: "0.02s" }}>
+      <section className="gip-glass wr-anim-in p-5 sm:p-6" style={{ animationDelay: "0.02s" }}>
         <label className="block space-y-2">
           <span className="font-heading text-[15px] font-bold" style={{ color: "var(--color-text)" }}>
             {t("Como você quer chamar este disparo?")}
@@ -245,28 +245,48 @@ export function NovaCampanha({
               {t("Nenhuma origem na base ainda.")}
             </p>
           ) : (
-            <div className="space-y-3">
-              {origensAgrupadas.map((grupo) => (
-                <div key={grupo.nome}>
-                  {origensAgrupadas.length > 1 && (
-                    <p className="mb-1.5 text-xs font-semibold tracking-wide uppercase" style={{ color: "var(--color-text-subtle)" }}>
-                      {grupo.nome}
-                    </p>
-                  )}
-                  <div className="flex flex-wrap gap-2">
-                    {grupo.itens.map((o) => (
-                      <Chip
-                        key={o.value}
-                        ativo={origensSel.includes(o.value)}
-                        onClick={() => setOrigensSel(alternar(origensSel, o.value))}
-                      >
-                        {o.label}
-                        <span className="ml-1 opacity-60">· {o.total.toLocaleString("pt-BR")}</span>
-                      </Chip>
-                    ))}
+            <div className="space-y-2.5">
+              {origensAgrupadas.map((grupo) => {
+                const totalGrupo = grupo.itens.reduce((s, o) => s + o.total, 0);
+                const multi = origensAgrupadas.length > 1;
+                return (
+                  <div
+                    key={grupo.nome}
+                    className={multi ? "rounded-xl p-3" : ""}
+                    style={
+                      multi
+                        ? {
+                            background: "color-mix(in srgb, var(--color-surface-elevated) 35%, transparent)",
+                            border: "1px solid color-mix(in srgb, var(--color-text) 7%, transparent)",
+                          }
+                        : undefined
+                    }
+                  >
+                    {multi && (
+                      <div className="mb-2 flex items-center gap-2">
+                        <span className="text-xs font-semibold tracking-wide uppercase" style={{ color: "var(--color-text-muted)" }}>
+                          {grupo.nome}
+                        </span>
+                        <span className="rounded-full bg-accent-soft px-1.5 text-[11px] font-semibold tabular-nums text-accent">
+                          {totalGrupo.toLocaleString("pt-BR")}
+                        </span>
+                      </div>
+                    )}
+                    <div className="flex flex-wrap gap-2">
+                      {grupo.itens.map((o) => (
+                        <Chip
+                          key={o.value}
+                          ativo={origensSel.includes(o.value)}
+                          onClick={() => setOrigensSel(alternar(origensSel, o.value))}
+                        >
+                          {o.label}
+                          <span className="ml-1 opacity-60">· {o.total.toLocaleString("pt-BR")}</span>
+                        </Chip>
+                      ))}
+                    </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </Campo>
@@ -546,7 +566,7 @@ export function NovaCampanha({
       </Passo>
 
       {/* Avançado */}
-      <section className="wr-card wr-anim-in p-5 sm:p-6" style={{ animationDelay: "0.22s" }}>
+      <section className="gip-glass wr-anim-in p-5 sm:p-6" style={{ animationDelay: "0.22s" }}>
         <button
           type="button"
           onClick={() => setAvancado((v) => !v)}
@@ -635,7 +655,7 @@ function Passo({
 }) {
   const t = useT();
   return (
-    <section className="wr-card wr-anim-in space-y-4 p-5 sm:p-6" style={{ animationDelay: atraso }}>
+    <section className="gip-glass wr-anim-in space-y-4 p-5 sm:p-6" style={{ animationDelay: atraso }}>
       <div className="flex items-center gap-3">
         <span
           className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full font-heading text-sm font-bold"
@@ -679,7 +699,13 @@ function Chip({ ativo, onClick, children }: { ativo: boolean; onClick: () => voi
       style={
         ativo
           ? { background: "var(--color-accent)", color: "#14181F", borderColor: "transparent" }
-          : { borderColor: "var(--color-border)", color: "var(--color-text-muted)" }
+          : {
+              background: "color-mix(in srgb, var(--color-surface-elevated) 55%, transparent)",
+              borderColor: "color-mix(in srgb, var(--color-text) 10%, transparent)",
+              color: "var(--color-text)",
+              backdropFilter: "blur(6px)",
+              WebkitBackdropFilter: "blur(6px)",
+            }
       }
     >
       {children}
