@@ -17,7 +17,7 @@ import { useCriarCampanha, usePreviaDaAudiencia } from "@/hooks/campanhas/useCam
 import { channelLabel, useChannelSessions } from "@/hooks/channels/useChannelSessions";
 import { useContactList } from "@/hooks/contacts/useContactList";
 import { rotuloDoContato } from "@/lib/contacts/rotulo-do-contato";
-import { corDoGrupo } from "@/lib/politico/rotulo-origem";
+import { corDoGrupo, corDaOrigem } from "@/lib/politico/rotulo-origem";
 import { useT } from "@/hooks/i18n/useT";
 import {
   Users,
@@ -307,6 +307,15 @@ export function NovaCampanha({
                           ativo={origensSel.includes(o.value)}
                           onClick={() => setOrigensSel(alternar(origensSel, o.value))}
                         >
+                          {/* Origem SOLTA (grupo neutro) ganha cor própria — mosaico pra
+                              base já organizada por origem. Agrupada usa a cor do painel. */}
+                          {grupo.cor === null && (
+                            <span
+                              className="mr-1.5 inline-block h-1.5 w-1.5 rounded-full align-middle"
+                              style={{ background: corDaOrigem(o.value) }}
+                              aria-hidden
+                            />
+                          )}
                           {o.label}
                           <span className="ml-1 opacity-60">· {o.total.toLocaleString("pt-BR")}</span>
                         </Chip>

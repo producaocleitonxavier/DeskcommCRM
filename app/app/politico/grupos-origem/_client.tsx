@@ -26,7 +26,7 @@ import {
   renomearGrupo,
 } from "@/app/actions/politico/grupos-origem-actions";
 import type { GrupoDeOrigem, OrigemComContagem, ConversaoOrigem } from "@/lib/politico/origens-grupos";
-import { corDoGrupo } from "@/lib/politico/rotulo-origem";
+import { corDoGrupo, corDaOrigem } from "@/lib/politico/rotulo-origem";
 
 interface Props {
   grupos: GrupoDeOrigem[];
@@ -118,6 +118,14 @@ export default function GruposOrigemClient({ grupos, aClassificar, outrasPoucas,
           border: "1px solid color-mix(in srgb, var(--color-text) 9%, transparent)",
         }}
       >
+        {/* Origem SOLTA ganha cor própria (mosaico); agrupada usa a cor do grupo. */}
+        {grupoAtual === null && (
+          <span
+            className="h-2 w-2 shrink-0 rounded-full"
+            style={{ background: corDaOrigem(origem.source) }}
+            aria-hidden
+          />
+        )}
         <span className="text-sm font-medium text-foreground">{origem.label}</span>
         <span className="rounded-full bg-accent-soft px-1.5 text-[11px] font-semibold tabular-nums text-accent">
           {origem.total.toLocaleString("pt-BR")}
@@ -162,13 +170,14 @@ export default function GruposOrigemClient({ grupos, aClassificar, outrasPoucas,
             Quais origens mais viram apoiador — foque o próximo evento ou material nas que convertem.
           </p>
           <div className="space-y-2">
-            {conversao.slice(0, 8).map((o, i) => (
+            {conversao.slice(0, 8).map((o) => (
               <div key={o.source} className="flex items-center gap-3">
                 <span
-                  className="w-32 shrink-0 truncate text-sm font-medium text-foreground sm:w-48"
+                  className="flex w-32 shrink-0 items-center gap-1.5 truncate text-sm font-medium text-foreground sm:w-48"
                   title={o.label}
                 >
-                  {o.label}
+                  <span className="h-2 w-2 shrink-0 rounded-full" style={{ background: corDaOrigem(o.source) }} aria-hidden />
+                  <span className="truncate">{o.label}</span>
                 </span>
                 <div
                   className="h-2.5 flex-1 overflow-hidden rounded-full"
@@ -176,13 +185,7 @@ export default function GruposOrigemClient({ grupos, aClassificar, outrasPoucas,
                 >
                   <div
                     className="h-full rounded-full"
-                    style={{
-                      width: `${Math.max(o.pct, 2)}%`,
-                      background:
-                        i === 0
-                          ? "var(--color-accent)"
-                          : "color-mix(in srgb, var(--color-accent) 45%, transparent)",
-                    }}
+                    style={{ width: `${Math.max(o.pct, 2)}%`, background: corDaOrigem(o.source) }}
                   />
                 </div>
                 <span className="w-28 shrink-0 text-right text-sm tabular-nums">

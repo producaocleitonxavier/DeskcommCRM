@@ -54,6 +54,19 @@ export function corDoGrupo(index: number): string {
   return CORES_GRUPO[((index % CORES_GRUPO.length) + CORES_GRUPO.length) % CORES_GRUPO.length]!;
 }
 
+/**
+ * Cor ESTÁVEL por ORIGEM (o mosaico também pra quem já vem organizado por origem,
+ * sem ter criado grupos — ex.: base do Cleiton com Palestras/Sindicato/Conselheiros).
+ * Hash do `source` → mesma paleta de contraste. Determinística: a origem tem a mesma
+ * cor na tela de Grupos, no Disparos e no card da Mobilização. (Origem DENTRO de um
+ * grupo usa a cor do GRUPO — a identidade passa a ser o grupo.)
+ */
+export function corDaOrigem(source: string): string {
+  let h = 0;
+  for (let i = 0; i < source.length; i++) h = (h * 31 + source.charCodeAt(i)) >>> 0;
+  return CORES_GRUPO[h % CORES_GRUPO.length]!;
+}
+
 /** Nome humano de uma origem — do mapa conhecido, ou humanizado por regra. */
 export function humanizarOrigem(v: string): string {
   const conhecido = ROTULO_ORIGEM[v];

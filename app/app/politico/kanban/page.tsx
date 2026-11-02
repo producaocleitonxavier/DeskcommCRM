@@ -12,7 +12,7 @@ import { redirect } from "next/navigation";
 
 import { requireAuth, resolveActiveOrg } from "@/lib/auth/server";
 import { createClient } from "@/lib/supabase/server";
-import { corDoGrupo, humanizarOrigem } from "@/lib/politico/rotulo-origem";
+import { corDoGrupo, corDaOrigem, humanizarOrigem } from "@/lib/politico/rotulo-origem";
 import KanbanClient, { type CardPessoa, type ColunaKanban, type GrupoChip } from "./_client";
 
 export const dynamic = "force-dynamic";
@@ -112,7 +112,8 @@ export default async function KanbanPage() {
         source,
         sourceLabel: source ? humanizarOrigem(source) : null,
         grupoNome: g?.nome ?? null,
-        grupoCor: g?.cor ?? null,
+        // Agrupada usa a cor do grupo; solta ganha a cor própria da origem (mosaico).
+        grupoCor: g?.cor ?? (source ? corDaOrigem(source) : null),
         cidade: l.territory_id ? (cidadePorTerritorio.get(l.territory_id) ?? null) : null,
         temperatura: (l.temperature ?? "frio") as string,
         score: Number(l.political_score) || 0,
