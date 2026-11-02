@@ -105,8 +105,9 @@ export function NovaCampanha({
 
   // O <main> do shell tem overflow-auto mas NÃO rola internamente (quem rola é o
   // documento), então position:sticky não ativa dentro dele. Seguimos o scroll à
-  // mão: o celular desliza por transform pra ficar sempre ~24px do topo, preso ao
-  // intervalo da coluna (aside esticada).
+  // mão: o celular desliza por transform pra ficar sempre ~88px do topo — ABAIXO
+  // da TopBar fixa (~56px) com uma folga de respiro, senão ele grudava atrás da
+  // barra quando a pessoa rolava. Preso ao intervalo da coluna (aside esticada).
   const asideRef = useRef<HTMLElement>(null);
   const phoneRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
@@ -119,7 +120,9 @@ export function NovaCampanha({
         return;
       }
       const r = aside.getBoundingClientRect();
-      const topDesejado = 24;
+      // 88 = TopBar fixa (~56px) + ~32px de respiro, pra o celular não grudar
+      // atrás da barra no scroll (pedido do cliente: "o celular precisa de respiro").
+      const topDesejado = 88;
       const maxShift = Math.max(0, aside.offsetHeight - phone.offsetHeight);
       const shift = Math.max(0, Math.min(topDesejado - r.top, maxShift));
       phone.style.transform = `translateY(${shift}px)`;
