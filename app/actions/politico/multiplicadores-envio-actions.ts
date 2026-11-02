@@ -40,7 +40,13 @@ export interface VideoDaBiblioteca {
   titulo: string;
 }
 
-/** Vídeos da biblioteca (posts do Instagram) que podem ser mandados aos multiplicadores. */
+/**
+ * Conteúdos do INSTAGRAM da biblioteca — só esses podem ser mandados aos
+ * multiplicadores (decisão do cliente): o compartilhamento é pra ESPALHAR post do
+ * IG (que tem prévia/capa e vira alcance). Ebook/enquete/PDF são pra ENVIAR 1:1 e
+ * construir relacionamento (descer no funil), não pra multiplicar. Filtra pela URL
+ * do Instagram, não pelo `tipo` (um reel pode estar como "video" ou "link").
+ */
 export async function listarVideosDaBiblioteca(): Promise<VideoDaBiblioteca[]> {
   const user = await requireAuth();
   const org = await resolveActiveOrg(user);
@@ -50,22 +56,27 @@ export async function listarVideosDaBiblioteca(): Promise<VideoDaBiblioteca[]> {
     .from("pol_materiais")
     .select("id, titulo")
     .eq("organization_id", org.orgId)
-    .eq("tipo", "video")
     .eq("ativo", true)
+    .ilike("url", "%instagram.com%")
     .order("created_at", { ascending: false })
     .limit(100);
   return ((data ?? []) as { id: string; titulo: string | null }[]).map((m) => ({
     id: m.id,
-    titulo: (m.titulo ?? "").trim() || "Vídeo sem título",
+    titulo: (m.titulo ?? "").trim() || "Conteúdo sem título",
   }));
 }
 
-/** A mensagem que cada multiplicador recebe, com o LINK PESSOAL dele. */
-function corpoDaMensagem(primeiroNome: string, url: string): string {
+/**
+ * INSTRUÇÃO (1ª mensagem) — separada do link de propósito: o assessor que não
+ * entende nada encaminharia a mensagem INTEIRA (com a instrução interna) pra
+ * rede dele. Mandando a instrução aqui e o LINK SOZINHO numa 2ª mensagem, ele só
+ * encaminha a de baixo (o link puro, que já traz a capa do Instagram).
+ */
+function corpoInstrucao(primeiroNome: string): string {
   const ola = primeiroNome ? `Olá, ${primeiroNome}!` : "Olá!";
   return (
     `${ola} 👋 Saiu um conteúdo novo do nosso mandato.\n\n` +
-    `Compartilhe com a sua rede por ESTE link — ele é *só seu*:\n${url}\n\n` +
+    `É só *encaminhar a mensagem abaixo* 👇 pra sua rede.\n\n` +
     `Obrigado por multiplicar! 🙏`
   );
 }
@@ -95,15 +106,16 @@ export async function enviarVideoAosMultiplicadores(materialId: string): Promise
   const mid = (materialId ?? "").trim();
   if (!mid) return { ok: false, erro: "Escolha um vídeo." };
 
-  // Confere que o vídeo é desta org (não dispara material alheio).
+  // Confere que o conteúdo é desta org e é do Instagram (não dispara material
+  // alheio nem material que não é pra espalhar). Mesmo critério de listarVideos.
   const { data: mat } = await admin
     .from("pol_materiais")
     .select("id")
     .eq("organization_id", org.orgId)
     .eq("id", mid)
-    .eq("tipo", "video")
+    .ilike("url", "%instagram.com%")
     .maybeSingle();
-  if (!mat) return { ok: false, erro: "Vídeo não encontrado nesta biblioteca." };
+  if (!mat) return { ok: false, erro: "Conteúdo do Instagram não encontrado nesta biblioteca." };
 
   // Cohort = contatos marcados como multiplicador.
   const { data: ctsData } = await db
@@ -168,12 +180,21 @@ export async function enviarVideoAosMultiplicadores(materialId: string): Promise
     }
     const url = urlDoVideoShare(shareId);
 
+    // DUAS mensagens: a instrução e, logo abaixo, o LINK SOZINHO — pra o assessor
+    // só encaminhar a de baixo (o link puro). A do link vai por último (fica
+    // embaixo na conversa = a natural pra encaminhar).
+    const base = { organization_id: org.orgId, actor: { type: "user" as const, id: user.id }, idioma: user.idioma };
     try {
-      await sendMessageHandler(
-        db,
-        { organization_id: org.orgId, actor: { type: "user", id: user.id }, requestId: randomUUID(), idioma: user.idioma },
-        { conversation_id: conversationId, type: "text", body: corpoDaMensagem(primeiroNome, url) },
-      );
+      await sendMessageHandler(db, { ...base, requestId: randomUUID() }, {
+        conversation_id: conversationId,
+        type: "text",
+        body: corpoInstrucao(primeiroNome),
+      });
+      await sendMessageHandler(db, { ...base, requestId: randomUUID() }, {
+        conversation_id: conversationId,
+        type: "text",
+        body: url,
+      });
       enviados += 1;
     } catch (e) {
       const msg = e instanceof ApiError ? e.message : e instanceof Error ? e.message : "falha no envio";

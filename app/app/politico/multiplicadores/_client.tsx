@@ -218,14 +218,14 @@ export default function MultiplicadoresClient({ multiplicadores, sugestoes, vide
       <div className="gip-glass p-4">
         <div className="mb-1 flex items-center gap-2">
           <PaperPlaneTilt size={18} weight="bold" className="text-accent" aria-hidden />
-          <h2 className="text-base font-semibold text-foreground">Enviar um vídeo aos multiplicadores</h2>
+          <h2 className="text-base font-semibold text-foreground">Enviar um conteúdo do Instagram aos multiplicadores</h2>
         </div>
         <p className="mb-3 text-sm text-text-muted">
-          O sistema manda, no privado de cada um, o <strong className="font-semibold text-foreground">link pessoal dele</strong> desse vídeo — pronto pra compartilhar. Cada abertura pelo link dele conta como alcance dele.
+          O sistema manda, no privado de cada um, o <strong className="font-semibold text-foreground">link pessoal dele</strong> desse conteúdo — pronto pra compartilhar. Cada abertura pelo link dele conta como alcance dele. <span className="text-text-subtle">(Só conteúdo do Instagram espalha; ebook/enquete/PDF são pra enviar e criar relacionamento.)</span>
         </p>
         {videos.length === 0 ? (
           <p className="text-sm text-text-subtle">
-            Nenhum vídeo na biblioteca ainda. Adicione um vídeo (post do Instagram) na biblioteca de materiais.
+            Nenhum conteúdo do Instagram na biblioteca ainda. Adicione um post/reel do Instagram na Biblioteca de Materiais.
           </p>
         ) : (
           <>
@@ -235,7 +235,7 @@ export default function MultiplicadoresClient({ multiplicadores, sugestoes, vide
                 value={videoSel}
                 onChange={(e) => setVideoSel(e.target.value)}
               >
-                <option value="">Escolha um vídeo…</option>
+                <option value="">Escolha um conteúdo do Instagram…</option>
                 {videos.map((v) => (
                   <option key={v.id} value={v.id}>
                     {v.titulo}
@@ -252,9 +252,18 @@ export default function MultiplicadoresClient({ multiplicadores, sugestoes, vide
                 className="mt-3 rounded-xl p-3 text-[12.5px]"
                 style={{ background: "color-mix(in srgb, var(--color-text) 5%, transparent)" }}
               >
-                <p className="mb-1 text-[11px] font-medium uppercase tracking-wide text-text-subtle">Prévia da mensagem</p>
+                <p className="mb-1 text-[11px] font-medium uppercase tracking-wide text-text-subtle">
+                  Prévia — vão 2 mensagens (pra ele só encaminhar o link)
+                </p>
                 <p className="whitespace-pre-line text-foreground">
-                  {"Olá, [nome]! 👋 Saiu um conteúdo novo do nosso mandato.\n\nCompartilhe com a sua rede por ESTE link — ele é só seu: [link do vídeo dele]\n\nObrigado por multiplicar! 🙏"}
+                  {"Olá, [nome]! 👋 Saiu um conteúdo novo do nosso mandato.\n\nÉ só encaminhar a mensagem abaixo 👇 pra sua rede.\n\nObrigado por multiplicar! 🙏"}
+                </p>
+                <p className="mt-2 mb-1 text-[11px] text-text-subtle">↓ 2ª mensagem — só o link (o que o assessor encaminha):</p>
+                <p
+                  className="rounded-lg px-2 py-1 font-medium text-foreground"
+                  style={{ background: "color-mix(in srgb, var(--color-accent) 12%, transparent)" }}
+                >
+                  [link do vídeo dele]
                 </p>
               </div>
             )}
