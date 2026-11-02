@@ -12,7 +12,7 @@ import { listarMultiplicadores, sugestoesDeMultiplicador } from "./multiplicador
 
 const ORG = "org-1";
 
-type Cohort = { id: string; name: string | null; last_activity_at?: string | null };
+type Cohort = { id: string; name: string | null; last_activity_at?: string | null; tags?: string[] };
 function indsDe(mapa: Record<string, number>): { indicador_contact_id: string }[] {
   const linhas: { indicador_contact_id: string }[] = [];
   for (const [id, n] of Object.entries(mapa)) for (let i = 0; i < n; i++) linhas.push({ indicador_contact_id: id });
@@ -55,8 +55,25 @@ describe("listarMultiplicadores — cohort e zeros", () => {
   it("tag mas sem sinal → aparece com ZEROS e compartilhou=false (a 'certeza')", async () => {
     const r = await listarMultiplicadores(dbListar([{ id: "a", name: "Ana" }], {}, {}), ORG);
     expect(r).toEqual([
-      { contactId: "a", nome: "Ana", trouxe: 0, alcancou: 0, ultimaAtividadeISO: null, compartilhou: false, recebeuLink: false },
+      { contactId: "a", nome: "Ana", trouxe: 0, alcancou: 0, ultimaAtividadeISO: null, compartilhou: false, recebeuLink: false, tipo: "assessor" },
     ]);
+  });
+
+  it("tipo: tag 'divulgador' → 'divulgador'; só 'multiplicador' (ou sem tags) → 'assessor'", async () => {
+    const r = await listarMultiplicadores(
+      dbListar(
+        [
+          { id: "a", name: "Assessor", tags: ["multiplicador"] },
+          { id: "d", name: "Divulgador", tags: ["multiplicador", "divulgador"] },
+          { id: "s", name: "SemTags" },
+        ],
+        {},
+        {},
+      ),
+      ORG,
+    );
+    const tipoDe = Object.fromEntries(r.map((m) => [m.contactId, m.tipo]));
+    expect(tipoDe).toEqual({ a: "assessor", d: "divulgador", s: "assessor" });
   });
 
   it("nome nulo → 'Sem nome'", async () => {

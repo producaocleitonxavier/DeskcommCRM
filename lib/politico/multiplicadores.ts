@@ -13,8 +13,17 @@
  */
 import type { SupabaseClient } from "@supabase/supabase-js";
 
+import { TAG_DIVULGADOR } from "@/lib/politico/divulgador";
+
 /** A etiqueta que marca um contato como multiplicador (assessor/liderança/apoiador que divulga). */
 export const TAG_MULTIPLICADOR = "multiplicador";
+
+/**
+ * Tipo do multiplicador — separa quem é quem no placar (decisão do cliente).
+ * ASSESSOR = marcado por função (só tag `multiplicador`). DIVULGADOR = entrou por
+ * convite+aceite (tem também a tag `divulgador`). Mesma máquina de medição.
+ */
+export type TipoMultiplicador = "assessor" | "divulgador";
 
 export interface MultiplicadorRow {
   contactId: string;
@@ -28,6 +37,8 @@ export interface MultiplicadorRow {
   compartilhou: boolean;
   /** Já recebeu o link pessoal de algum vídeo (existe share pessoal dele). */
   recebeuLink: boolean;
+  /** Assessor (marcado) ou divulgador (entrou por convite+aceite). */
+  tipo: TipoMultiplicador;
 }
 
 export interface SugestaoMultiplicador {
@@ -61,10 +72,15 @@ async function lerSinais(
 export async function listarMultiplicadores(db: SupabaseClient, orgId: string): Promise<MultiplicadorRow[]> {
   const { data: cts } = await db
     .from("contacts")
-    .select("id, name, last_activity_at")
+    .select("id, name, last_activity_at, tags")
     .eq("organization_id", orgId)
     .contains("tags", [TAG_MULTIPLICADOR]);
-  const contatos = (cts ?? []) as { id: string; name: string | null; last_activity_at: string | null }[];
+  const contatos = (cts ?? []) as {
+    id: string;
+    name: string | null;
+    last_activity_at: string | null;
+    tags: string[] | null;
+  }[];
   if (contatos.length === 0) return [];
 
   const { trouxeDe, alcancouDe } = await lerSinais(db, orgId);
@@ -88,6 +104,7 @@ export async function listarMultiplicadores(db: SupabaseClient, orgId: string): 
     .map((c) => {
       const trouxe = trouxeDe.get(c.id) ?? 0;
       const alcancou = alcancouDe.get(c.id) ?? 0;
+      const tags = ((c.tags ?? []) as string[]).filter((t) => typeof t === "string");
       return {
         contactId: c.id,
         nome: c.name ?? "Sem nome",
@@ -96,6 +113,7 @@ export async function listarMultiplicadores(db: SupabaseClient, orgId: string): 
         ultimaAtividadeISO: c.last_activity_at ?? null,
         compartilhou: alcancou > 0,
         recebeuLink: temLink.has(c.id),
+        tipo: (tags.includes(TAG_DIVULGADOR) ? "divulgador" : "assessor") as TipoMultiplicador,
       };
     })
     .sort((a, b) => b.trouxe - a.trouxe || b.alcancou - a.alcancou || a.nome.localeCompare(b.nome, "pt-BR"));

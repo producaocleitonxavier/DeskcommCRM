@@ -26,6 +26,10 @@ import {
   type VideoDaBiblioteca,
 } from "@/app/actions/politico/multiplicadores-envio-actions";
 import { convidarDivulgadores } from "@/app/actions/politico/divulgador-actions";
+import {
+  definirCanalMultiplicadores,
+  type CanalDisponivel,
+} from "@/app/actions/politico/multiplicadores-canal-actions";
 import type { MultiplicadorRow, SugestaoMultiplicador } from "@/lib/politico/multiplicadores";
 
 /** "há 3 dias", "hoje", "há 2 sem" — leitura rápida de recência. */
@@ -47,9 +51,18 @@ interface Props {
   sugestoes: SugestaoMultiplicador[];
   videos: VideoDaBiblioteca[];
   elegiveis: number;
+  canais: CanalDisponivel[];
+  canalAtual: string | null;
 }
 
-export default function MultiplicadoresClient({ multiplicadores, sugestoes, videos, elegiveis }: Props) {
+export default function MultiplicadoresClient({
+  multiplicadores,
+  sugestoes,
+  videos,
+  elegiveis,
+  canais,
+  canalAtual,
+}: Props) {
   const router = useRouter();
   const [ocupado, iniciar] = useTransition();
   const [busca, setBusca] = useState("");
@@ -58,6 +71,23 @@ export default function MultiplicadoresClient({ multiplicadores, sugestoes, vide
   const [videoSel, setVideoSel] = useState("");
   const [enviando, setEnviando] = useState(false);
   const [convidando, setConvidando] = useState(false);
+  const [canalSel, setCanalSel] = useState(canalAtual ?? "");
+
+  const assessores = multiplicadores.filter((m) => m.tipo === "assessor");
+  const divulgadores = multiplicadores.filter((m) => m.tipo === "divulgador");
+
+  function onSalvarCanal(valor: string) {
+    setCanalSel(valor);
+    iniciar(async () => {
+      const r = await definirCanalMultiplicadores(valor || null);
+      if (!r.ok) {
+        toast.error(r.erro);
+        return;
+      }
+      toast.success(valor ? "Número dos multiplicadores definido." : "Voltou pro automático.");
+      router.refresh();
+    });
+  }
 
   function onConvidar() {
     setConvidando(true);
@@ -149,6 +179,30 @@ export default function MultiplicadoresClient({ multiplicadores, sugestoes, vide
           ② <strong className="text-foreground">compartilha o link pessoal</strong> de um vídeo
         </span>{" "}
         e a rede abre. O sistema conta sozinho.
+      </div>
+
+      {/* Número dedicado de disparo dos multiplicadores (anti-ban, pré-setado) */}
+      <div className="gip-glass flex flex-col gap-2 p-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className="min-w-0">
+          <h2 className="text-base font-semibold text-foreground">Número de disparo dos multiplicadores</h2>
+          <p className="mt-0.5 text-[12.5px] leading-snug text-text-muted">
+            Separe o disparo dos multiplicadores num número dedicado pra não arriscar o número do gabinete (quando você
+            tiver um 2º número). Por ora, deixe no automático.
+          </p>
+        </div>
+        <select
+          className="wr-input w-full sm:w-72"
+          value={canalSel}
+          disabled={ocupado}
+          onChange={(e) => onSalvarCanal(e.target.value)}
+        >
+          <option value="">Automático (o mesmo do atendimento)</option>
+          {canais.map((c) => (
+            <option key={c.id} value={c.id}>
+              {c.rotulo}
+            </option>
+          ))}
+        </select>
       </div>
 
       {/* Adicionar multiplicador */}
@@ -320,69 +374,114 @@ export default function MultiplicadoresClient({ multiplicadores, sugestoes, vide
         </p>
       </div>
 
-      {/* Placar */}
-      <div className="gip-glass p-4">
-        <h2 className="mb-1 text-base font-semibold text-foreground">Placar dos multiplicadores</h2>
-        <p className="mb-3 text-sm text-text-muted">
-          Quanto cada um <strong className="font-semibold text-foreground">alcançou</strong> (pessoas que abriram o link dele) e quantos <strong className="font-semibold text-foreground">trouxe</strong>. “Sem alcance” = o link dele ainda não teve aberturas — seu sinal pra dar um empurrão.
-        </p>
-        {multiplicadores.length === 0 ? (
-          <div className="rounded-xl p-6 text-center">
-            <p className="text-sm font-medium text-foreground">Nenhum multiplicador marcado ainda.</p>
-            <p className="mt-1 text-sm text-text-muted">
-              Use a busca acima pra marcar seus assessores e lideranças. Aí você acompanha quem espalha o conteúdo.
-            </p>
-          </div>
-        ) : (
-          <ol className="space-y-2">
-            {multiplicadores.map((m) => {
-              const quando = tempoRelativo(m.ultimaAtividadeISO);
-              return (
-                <li
-                  key={m.contactId}
-                  className="flex items-center gap-3 rounded-xl px-3 py-2.5"
-                  style={{ background: "color-mix(in srgb, var(--color-surface-elevated) 45%, transparent)" }}
-                >
-                  <UserCircle size={22} weight="fill" className="shrink-0 text-text-subtle" aria-hidden />
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate text-sm font-semibold text-foreground">{m.nome}</p>
-                    <div className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[11px] text-text-muted">
-                      {m.trouxe > 0 && <span className="font-semibold text-accent">trouxe {m.trouxe}</span>}
-                      {m.alcancou > 0 && <span>alcançou {m.alcancou}</span>}
-                      {m.recebeuLink && <span className="text-text-subtle">· recebeu o link ✓</span>}
-                      {quando && <span className="text-text-subtle">· ativo {quando}</span>}
-                    </div>
-                  </div>
-                  {m.compartilhou ? (
-                    <span
-                      className="inline-flex shrink-0 items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-semibold"
-                      style={{ background: "color-mix(in srgb, #34D399 20%, transparent)", color: "#34D399" }}
-                    >
-                      <CheckCircle size={12} weight="fill" aria-hidden /> Gerou alcance
-                    </span>
-                  ) : (
-                    <span
-                      className="inline-flex shrink-0 items-center rounded-full px-2 py-0.5 text-[11px] font-semibold"
-                      style={{ background: "color-mix(in srgb, #FBBF24 18%, transparent)", color: "#FBBF24" }}
-                    >
-                      Sem alcance ainda
-                    </span>
-                  )}
-                  <button
-                    type="button"
-                    disabled={ocupado}
-                    onClick={() => rodar(removerMultiplicador(m.contactId), "Removido da lista.")}
-                    className="shrink-0 rounded-md p-1 text-text-muted transition-colors hover:bg-destructive/15 hover:text-destructive"
-                    title="Remover da lista de multiplicadores"
-                  >
-                    <Trash size={16} aria-hidden />
-                  </button>
-                </li>
-              );
-            })}
-          </ol>
-        )}
-      </div>
+      {/* Placar — SEPARADO Assessores × Divulgadores (saber quem é quem) */}
+      <SecaoPlacar
+        titulo="Assessores"
+        subtitulo="Marcados por você (equipe). Quanto cada um alcançou e quantos trouxe."
+        vazio="Nenhum assessor marcado ainda. Use a busca acima pra marcar seus assessores e lideranças."
+        linhas={assessores}
+        ocupado={ocupado}
+        onRemover={(id) => rodar(removerMultiplicador(id), "Removido da lista.")}
+      />
+      <SecaoPlacar
+        titulo="Divulgadores"
+        subtitulo="Apoiadores que aceitaram o convite e viraram divulgadores."
+        vazio="Nenhum divulgador ainda — eles entram pelo convite + aceite (quem responde SIM)."
+        linhas={divulgadores}
+        ocupado={ocupado}
+        onRemover={(id) => rodar(removerMultiplicador(id), "Removido da lista.")}
+      />
     </div>
+  );
+}
+
+/** Uma seção do placar (Assessores OU Divulgadores) — mesmo render de linha. */
+function SecaoPlacar({
+  titulo,
+  subtitulo,
+  vazio,
+  linhas,
+  ocupado,
+  onRemover,
+}: {
+  titulo: string;
+  subtitulo: string;
+  vazio: string;
+  linhas: MultiplicadorRow[];
+  ocupado: boolean;
+  onRemover: (contactId: string) => void;
+}) {
+  return (
+    <div className="gip-glass p-4">
+      <div className="mb-1 flex items-center gap-2">
+        <h2 className="text-base font-semibold text-foreground">{titulo}</h2>
+        <span className="rounded-full bg-white/10 px-2 text-xs font-semibold tabular-nums text-text-muted">
+          {linhas.length}
+        </span>
+      </div>
+      <p className="mb-3 text-sm text-text-muted">{subtitulo}</p>
+      {linhas.length === 0 ? (
+        <p className="rounded-xl px-3 py-5 text-center text-sm text-text-subtle">{vazio}</p>
+      ) : (
+        <ol className="space-y-2">
+          {linhas.map((m) => (
+            <LinhaMultiplicador key={m.contactId} m={m} ocupado={ocupado} onRemover={onRemover} />
+          ))}
+        </ol>
+      )}
+    </div>
+  );
+}
+
+function LinhaMultiplicador({
+  m,
+  ocupado,
+  onRemover,
+}: {
+  m: MultiplicadorRow;
+  ocupado: boolean;
+  onRemover: (contactId: string) => void;
+}) {
+  const quando = tempoRelativo(m.ultimaAtividadeISO);
+  return (
+    <li
+      className="flex items-center gap-3 rounded-xl px-3 py-2.5"
+      style={{ background: "color-mix(in srgb, var(--color-surface-elevated) 45%, transparent)" }}
+    >
+      <UserCircle size={22} weight="fill" className="shrink-0 text-text-subtle" aria-hidden />
+      <div className="min-w-0 flex-1">
+        <p className="truncate text-sm font-semibold text-foreground">{m.nome}</p>
+        <div className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[11px] text-text-muted">
+          {m.trouxe > 0 && <span className="font-semibold text-accent">trouxe {m.trouxe}</span>}
+          {m.alcancou > 0 && <span>alcançou {m.alcancou}</span>}
+          {m.recebeuLink && <span className="text-text-subtle">· recebeu o link ✓</span>}
+          {quando && <span className="text-text-subtle">· ativo {quando}</span>}
+        </div>
+      </div>
+      {m.compartilhou ? (
+        <span
+          className="inline-flex shrink-0 items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-semibold"
+          style={{ background: "color-mix(in srgb, #34D399 20%, transparent)", color: "#34D399" }}
+        >
+          <CheckCircle size={12} weight="fill" aria-hidden /> Gerou alcance
+        </span>
+      ) : (
+        <span
+          className="inline-flex shrink-0 items-center rounded-full px-2 py-0.5 text-[11px] font-semibold"
+          style={{ background: "color-mix(in srgb, #FBBF24 18%, transparent)", color: "#FBBF24" }}
+        >
+          Sem alcance ainda
+        </span>
+      )}
+      <button
+        type="button"
+        disabled={ocupado}
+        onClick={() => onRemover(m.contactId)}
+        className="shrink-0 rounded-md p-1 text-text-muted transition-colors hover:bg-destructive/15 hover:text-destructive"
+        title="Remover da lista de multiplicadores"
+      >
+        <Trash size={16} aria-hidden />
+      </button>
+    </li>
   );
 }

@@ -24,6 +24,7 @@ import { openSharedContactConversation } from "@/lib/messaging/open-shared-conta
 import { sendMessageHandler } from "@/app/api/v1/messages/_handler";
 import { obterOuCriarShare, urlDoVideoShare } from "@/lib/politico/video-share";
 import { TAG_MULTIPLICADOR } from "@/lib/politico/multiplicadores";
+import { lerCanalMultiplicadores } from "@/lib/politico/multiplicadores-canal";
 import { ApiError } from "@/lib/api/types";
 
 /** Teto por disparo — o cohort de multiplicadores é pequeno; guarda sã contra engano. */
@@ -129,6 +130,11 @@ export async function enviarVideoAosMultiplicadores(materialId: string): Promise
     return { ok: false, erro: "Nenhum multiplicador marcado ainda. Marque seus assessores/lideranças primeiro." };
   }
 
+  // Número DEDICADO dos multiplicadores (anti-ban): se configurado, o disparo sai
+  // por ele; senão (null) o sistema escolhe a sessão pronta (automático, como antes).
+  const { data: orgRow } = await db.from("organizations").select("settings").eq("id", org.orgId).maybeSingle();
+  const canal = lerCanalMultiplicadores((orgRow as { settings?: unknown } | null)?.settings) ?? undefined;
+
   const pulados: { nome: string; motivo: string }[] = [];
   let enviados = 0;
   let semCanal = false;
@@ -152,7 +158,7 @@ export async function enviarVideoAosMultiplicadores(materialId: string): Promise
     // falhariam igual, então para e avisa uma vez só.
     let conversationId: string;
     try {
-      const r = await openSharedContactConversation(admin, org.orgId, { contact_id: c.id });
+      const r = await openSharedContactConversation(admin, org.orgId, { contact_id: c.id, channel_session_id: canal });
       conversationId = r.conversation_id;
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e);

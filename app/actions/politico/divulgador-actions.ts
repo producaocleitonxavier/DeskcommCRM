@@ -27,6 +27,7 @@ import {
   listarElegiveisParaConvite,
   TAG_DIVULGADOR_CONVIDADO,
 } from "@/lib/politico/divulgador";
+import { lerCanalMultiplicadores } from "@/lib/politico/multiplicadores-canal";
 
 /** Teto por leva de convites (anti-ban + guarda sã). */
 const CAP_CONVITE = 200;
@@ -77,6 +78,11 @@ export async function convidarDivulgadores(): Promise<ConviteResultado> {
     return { ok: false, erro: "Nenhum apoiador elegível pra convidar agora." };
   }
 
+  // Número DEDICADO dos multiplicadores (anti-ban): o convite sai por ele se
+  // configurado; senão (null) automático, como antes.
+  const { data: orgRow } = await db.from("organizations").select("settings").eq("id", org.orgId).maybeSingle();
+  const canal = lerCanalMultiplicadores((orgRow as { settings?: unknown } | null)?.settings) ?? undefined;
+
   const pulados: { nome: string; motivo: string }[] = [];
   let convidados = 0;
   let semCanal = false;
@@ -92,7 +98,7 @@ export async function convidarDivulgadores(): Promise<ConviteResultado> {
 
     let conversationId: string;
     try {
-      const r = await openSharedContactConversation(admin, org.orgId, { contact_id: c.id });
+      const r = await openSharedContactConversation(admin, org.orgId, { contact_id: c.id, channel_session_id: canal });
       conversationId = r.conversation_id;
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e);

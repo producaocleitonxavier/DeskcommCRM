@@ -37,10 +37,16 @@ beforeEach(() => {
   vi.mocked(sendMessageHandler).mockResolvedValue(undefined as never);
 });
 
-function montar(opts: { cohort?: Contato[]; mat?: { id: string } | null; videos?: { id: string; titulo: string | null }[] }) {
+function montar(opts: {
+  cohort?: Contato[];
+  mat?: { id: string } | null;
+  videos?: { id: string; titulo: string | null }[];
+  settings?: unknown;
+}) {
   const db = makeDb({
     contacts: () => ({ data: opts.cohort ?? [] }),
     pol_materiais: () => ({ data: opts.videos ?? [] }),
+    organizations: () => ({ data: opts.settings === undefined ? null : { settings: opts.settings } }),
   });
   const admin = makeDb({ pol_materiais: () => ({ data: opts.mat === undefined ? { id: "m1" } : opts.mat }) });
   vi.mocked(createClient).mockResolvedValue(db as never);
@@ -220,6 +226,29 @@ describe("enviarVideoAosMultiplicadores — sem canal (session_not_found)", () =
       expect(r.total).toBe(2);
     }
     expect(sendMessageHandler).toHaveBeenCalledTimes(2); // 2 mensagens do c1 (c2 nem chegou a enviar)
+  });
+});
+
+describe("enviarVideoAosMultiplicadores — número DEDICADO (anti-ban)", () => {
+  it("canal configurado → openShared recebe channel_session_id", async () => {
+    montar({
+      mat: { id: "m1" },
+      cohort: [{ id: "c1", name: "Ana", phone_number: FONE }],
+      settings: { multiplicadores: { canal_session_id: "sess-dedicado" } },
+    });
+    await enviarVideoAosMultiplicadores("m1");
+    expect(openSharedContactConversation).toHaveBeenCalledWith(
+      expect.anything(),
+      ORG,
+      expect.objectContaining({ contact_id: "c1", channel_session_id: "sess-dedicado" }),
+    );
+  });
+
+  it("sem canal configurado → automático (channel_session_id undefined)", async () => {
+    montar({ mat: { id: "m1" }, cohort: [{ id: "c1", name: "Ana", phone_number: FONE }] });
+    await enviarVideoAosMultiplicadores("m1");
+    const arg = vi.mocked(openSharedContactConversation).mock.calls[0]![2] as { channel_session_id?: string };
+    expect(arg.channel_session_id).toBeUndefined();
   });
 });
 

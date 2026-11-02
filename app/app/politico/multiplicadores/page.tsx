@@ -14,6 +14,10 @@ import { createClient } from "@/lib/supabase/server";
 import { listarMultiplicadores, sugestoesDeMultiplicador } from "@/lib/politico/multiplicadores";
 import { contarElegiveisParaConvite } from "@/lib/politico/divulgador";
 import { listarVideosDaBiblioteca } from "@/app/actions/politico/multiplicadores-envio-actions";
+import {
+  canalMultiplicadoresAtual,
+  listarCanaisDisponiveis,
+} from "@/app/actions/politico/multiplicadores-canal-actions";
 import MultiplicadoresClient from "./_client";
 
 export const dynamic = "force-dynamic";
@@ -27,10 +31,12 @@ export default async function MultiplicadoresPage() {
   const db = await createClient();
   const multiplicadores = await listarMultiplicadores(db, org.orgId);
   const jaNoCohort = new Set(multiplicadores.map((m) => m.contactId));
-  const [sugestoes, videos, elegiveis] = await Promise.all([
+  const [sugestoes, videos, elegiveis, canais, canalAtual] = await Promise.all([
     sugestoesDeMultiplicador(db, org.orgId, jaNoCohort),
     listarVideosDaBiblioteca(),
     contarElegiveisParaConvite(db, org.orgId),
+    listarCanaisDisponiveis(),
+    canalMultiplicadoresAtual(),
   ]);
 
   return (
@@ -39,6 +45,8 @@ export default async function MultiplicadoresPage() {
       sugestoes={sugestoes}
       videos={videos}
       elegiveis={elegiveis}
+      canais={canais}
+      canalAtual={canalAtual}
     />
   );
 }
