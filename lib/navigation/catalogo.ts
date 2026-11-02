@@ -330,6 +330,20 @@ export const NAV_CATALOG = [
     sidebar: true,
   },
   {
+    // Multiplicadores: quem divulga pra você (assessores/lideranças/apoiadores).
+    // Marca o cohort (tag "multiplicador") e mostra o PLACAR — quem compartilhou,
+    // alcançou e trouxe gente, inclusive quem AINDA NÃO divulgou (a "certeza").
+    href: "/app/politico/multiplicadores",
+    label: "Multiplicadores",
+    description:
+      "Marque seus assessores e lideranças e veja quem está espalhando o seu conteúdo — quem compartilhou, quanto alcançou e quantos trouxe (e quem ainda não).",
+    icon: "Trophy",
+    group: "operacao",
+    section: "O dia a dia do relacionamento",
+    minRole: "agent",
+    sidebar: true,
+  },
+  {
     href: "/app/contacts",
     label: "Contatos",
     description: "As pessoas do outro lado da conversa e seu histórico.",
