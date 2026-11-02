@@ -15,7 +15,7 @@ export default async function GruposOrigemPage() {
   if (!org) redirect("/app/onboarding");
 
   const db = await createClient();
-  const { grupos, aClassificar } = await listarOrigensEGrupos(db, org.orgId);
+  const { grupos, aClassificar, outrasPoucas } = await listarOrigensEGrupos(db, org.orgId);
 
-  return <GruposOrigemClient grupos={grupos} aClassificar={aClassificar} />;
+  return <GruposOrigemClient grupos={grupos} aClassificar={aClassificar} outrasPoucas={outrasPoucas} />;
 }

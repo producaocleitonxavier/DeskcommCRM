@@ -29,10 +29,13 @@ export default async function NovaCampanhaPage() {
   // já organizadas pelos "Grupos de origem" do mandato. Origem nova aparece
   // sozinha; o seletor mostra agrupado (grupos primeiro, "A classificar" por
   // último). O `value` continua sendo o source cru que o filtro manda.
-  const { grupos, aClassificar } = await listarOrigensEGrupos(db, org.orgId);
+  const { grupos, aClassificar, outrasPoucas } = await listarOrigensEGrupos(db, org.orgId);
   const origens = [
-    ...grupos.flatMap((g) => g.origens.map((o) => ({ value: o.source, label: o.label, total: o.total, grupo: g.nome }))),
+    ...grupos.flatMap((g) => g.origens.map((o) => ({ value: o.source, label: o.label, total: o.total, grupo: g.nome as string | null }))),
     ...aClassificar.map((o) => ({ value: o.source, label: o.label, total: o.total, grupo: null as string | null })),
+    // Origens de 1-2 pessoas vão por último, num grupo "Outras origens", pra não
+    // espalhar ruído no meio das que importam (origens de sistema já saíram no server).
+    ...outrasPoucas.map((o) => ({ value: o.source, label: o.label, total: o.total, grupo: "Outras origens" as string | null })),
   ];
 
   // Cidades da base COM contatos (territory_id), para segmentar o disparo por

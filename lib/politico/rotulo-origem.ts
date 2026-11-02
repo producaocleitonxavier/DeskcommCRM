@@ -24,6 +24,19 @@ export const ROTULO_ORIGEM: Record<string, string> = {
   instagram: "Instagram",
 };
 
+/**
+ * Origens de SISTEMA — marcadores técnicos internos que não são "de onde a
+ * pessoa veio" (campanha). Somem do seletor e da tela de Grupos pra não poluir.
+ */
+export const ORIGENS_OCULTAS = new Set<string>(["sistema", "form"]);
+
+/**
+ * Origem com contagem ≤ este limiar (e sem grupo) é "pouca" — vai pra uma seção
+ * "Outras" recolhida, pra não espalhar origens de 1-2 pessoas no meio das que
+ * importam. Fica acessível (não some): quando crescer, aparece sozinha.
+ */
+export const LIMIAR_POUCAS = 2;
+
 /** Nome humano de uma origem — do mapa conhecido, ou humanizado por regra. */
 export function humanizarOrigem(v: string): string {
   return (

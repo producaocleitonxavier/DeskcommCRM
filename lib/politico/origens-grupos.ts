@@ -13,7 +13,7 @@
 
 import type { SupabaseClient } from "@supabase/supabase-js";
 
-import { humanizarOrigem } from "@/lib/politico/rotulo-origem";
+import { humanizarOrigem, ORIGENS_OCULTAS, LIMIAR_POUCAS } from "@/lib/politico/rotulo-origem";
 
 export interface OrigemComContagem {
   source: string;
@@ -31,6 +31,8 @@ export interface GrupoDeOrigem {
 export interface OrigensEGrupos {
   grupos: GrupoDeOrigem[];
   aClassificar: OrigemComContagem[];
+  /** Origens sem grupo e com pouca gente (≤ LIMIAR_POUCAS) — seção "Outras" recolhida. */
+  outrasPoucas: OrigemComContagem[];
 }
 
 export async function listarOrigensEGrupos(
@@ -62,10 +64,13 @@ export async function listarOrigensEGrupos(
   }));
   const grupoPorId = new Map(grupos.map((g) => [g.id, g]));
   const aClassificar: OrigemComContagem[] = [];
+  const outrasPoucas: OrigemComContagem[] = [];
 
   // Origem com mais gente primeiro — o que importa salta aos olhos.
   const ordenadas = [...origens].sort((a, b) => Number(b.total) - Number(a.total));
   for (const o of ordenadas) {
+    // Origem de SISTEMA (marcador técnico) não é "de onde a pessoa veio": some.
+    if (ORIGENS_OCULTAS.has(o.source)) continue;
     const item: OrigemComContagem = {
       source: o.source,
       label: humanizarOrigem(o.source),
@@ -73,9 +78,12 @@ export async function listarOrigensEGrupos(
     };
     const gid = grupoPorSource.get(o.source);
     const grupo = gid ? grupoPorId.get(gid) : undefined;
+    // Agrupada fica no grupo (mesmo pequena — o cliente a escolheu). Sem grupo e
+    // com pouca gente vai pra "Outras" recolhida, pra não poluir "A classificar".
     if (grupo) grupo.origens.push(item);
+    else if (item.total <= LIMIAR_POUCAS) outrasPoucas.push(item);
     else aClassificar.push(item);
   }
 
-  return { grupos, aClassificar };
+  return { grupos, aClassificar, outrasPoucas };
 }

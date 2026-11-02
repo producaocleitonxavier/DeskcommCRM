@@ -30,16 +30,19 @@ import type { GrupoDeOrigem, OrigemComContagem } from "@/lib/politico/origens-gr
 interface Props {
   grupos: GrupoDeOrigem[];
   aClassificar: OrigemComContagem[];
+  outrasPoucas: OrigemComContagem[];
 }
 
-export default function GruposOrigemClient({ grupos, aClassificar }: Props) {
+export default function GruposOrigemClient({ grupos, aClassificar, outrasPoucas }: Props) {
   const router = useRouter();
   const [ocupado, iniciar] = useTransition();
   const [novoNome, setNovoNome] = useState("");
   const [editando, setEditando] = useState<string | null>(null);
   const [nomeEdit, setNomeEdit] = useState("");
+  const [mostrarOutras, setMostrarOutras] = useState(false);
 
-  const totalOrigens = grupos.reduce((s, g) => s + g.origens.length, 0) + aClassificar.length;
+  const totalOrigens =
+    grupos.reduce((s, g) => s + g.origens.length, 0) + aClassificar.length + outrasPoucas.length;
 
   function rodar(p: Promise<{ ok: boolean; erro?: string }>, okMsg?: string) {
     iniciar(async () => {
@@ -233,6 +236,36 @@ export default function GruposOrigemClient({ grupos, aClassificar }: Props) {
                   <Chip key={o.source} origem={o} grupoAtual={null} />
                 ))}
               </div>
+            </div>
+          )}
+
+          {/* Outras (poucas) — origens de 1-2 pessoas, recolhidas pra não poluir. */}
+          {outrasPoucas.length > 0 && (
+            <div className="gip-glass p-4">
+              <button
+                type="button"
+                className="flex w-full items-center gap-2 text-left"
+                onClick={() => setMostrarOutras((v) => !v)}
+              >
+                <h2 className="text-base font-semibold text-text-muted">Outras origens</h2>
+                <span className="rounded-full bg-white/10 px-2 text-xs font-medium text-text-muted">
+                  {outrasPoucas.length}
+                </span>
+                <span className="text-xs text-text-subtle">poucas pessoas</span>
+                <CaretDown
+                  size={14}
+                  weight="bold"
+                  aria-hidden
+                  className={`ml-auto text-text-muted transition-transform ${mostrarOutras ? "rotate-180" : ""}`}
+                />
+              </button>
+              {mostrarOutras && (
+                <div className="mt-3 flex flex-wrap gap-2">
+                  {outrasPoucas.map((o) => (
+                    <Chip key={o.source} origem={o} grupoAtual={null} />
+                  ))}
+                </div>
+              )}
             </div>
           )}
         </div>
