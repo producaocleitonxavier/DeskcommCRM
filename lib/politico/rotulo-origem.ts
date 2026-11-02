@@ -56,8 +56,14 @@ export function corDoGrupo(index: number): string {
 
 /** Nome humano de uma origem — do mapa conhecido, ou humanizado por regra. */
 export function humanizarOrigem(v: string): string {
-  return (
-    ROTULO_ORIGEM[v] ??
-    v.replace(/[_-]+/g, " ").replace(/\b\w/g, (c) => c.toUpperCase())
-  );
+  const conhecido = ROTULO_ORIGEM[v];
+  if (conhecido) return conhecido;
+  // Title Case por PALAVRA, respeitando acentos. (O `\b\w` antigo tratava ç/ã
+  // como fronteira de palavra e capitalizava uma letra NO MEIO: "Indicação"
+  // virava "IndicaçãO". Capitalizar só a 1ª letra de cada palavra evita isso.)
+  return v
+    .replace(/[_-]+/g, " ")
+    .split(" ")
+    .map((w) => (w ? w.charAt(0).toUpperCase() + w.slice(1) : w))
+    .join(" ");
 }
