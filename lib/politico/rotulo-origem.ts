@@ -43,8 +43,11 @@ export const LIMIAR_POUCAS = 2;
  * grupo tem a mesma cor na tela de Grupos e no seletor de Disparos. "A classificar"
  * e "Outras origens" ficam NEUTROS (cinza), pra os grupos do mandato saltarem.
  */
+// Ordem com CONTRASTE entre cores vizinhas (grupos consecutivos saltam): azul →
+// verde → âmbar → rosa → ciano → violeta → coral → índigo. Evita dois tons
+// parecidos lado a lado (azul+violeta pareciam iguais) — é o que faz o mosaico.
 export const CORES_GRUPO = [
-  "#60A5FA", "#A78BFA", "#34D399", "#F59E0B", "#22D3EE", "#F472B6", "#818CF8", "#FB7185",
+  "#60A5FA", "#34D399", "#F59E0B", "#F472B6", "#22D3EE", "#A78BFA", "#FB7185", "#818CF8",
 ] as const;
 
 export function corDoGrupo(index: number): string {
