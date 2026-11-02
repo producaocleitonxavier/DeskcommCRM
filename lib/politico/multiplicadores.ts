@@ -26,6 +26,8 @@ export interface MultiplicadorRow {
   ultimaAtividadeISO: string | null;
   /** Já divulgou de fato (gerou algum alcance). */
   compartilhou: boolean;
+  /** Já recebeu o link pessoal de algum vídeo (existe share pessoal dele). */
+  recebeuLink: boolean;
 }
 
 export interface SugestaoMultiplicador {
@@ -66,6 +68,22 @@ export async function listarMultiplicadores(db: SupabaseClient, orgId: string): 
   if (contatos.length === 0) return [];
 
   const { trouxeDe, alcancouDe } = await lerSinais(db, orgId);
+
+  // Quem já recebeu um link pessoal (existe pol_video_shares com ele de sharer).
+  const { data: sharesData } = await db
+    .from("pol_video_shares")
+    .select("sharer_contact_id")
+    .eq("organization_id", orgId)
+    .in(
+      "sharer_contact_id",
+      contatos.map((c) => c.id),
+    );
+  const temLink = new Set(
+    ((sharesData ?? []) as { sharer_contact_id: string | null }[])
+      .map((s) => s.sharer_contact_id)
+      .filter((v): v is string => !!v),
+  );
+
   return contatos
     .map((c) => {
       const trouxe = trouxeDe.get(c.id) ?? 0;
@@ -77,6 +95,7 @@ export async function listarMultiplicadores(db: SupabaseClient, orgId: string): 
         alcancou,
         ultimaAtividadeISO: c.last_activity_at ?? null,
         compartilhou: alcancou > 0,
+        recebeuLink: temLink.has(c.id),
       };
     })
     .sort((a, b) => b.trouxe - a.trouxe || b.alcancou - a.alcancou || a.nome.localeCompare(b.nome, "pt-BR"));

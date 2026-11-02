@@ -54,7 +54,7 @@ describe("listarMultiplicadores — cohort e zeros", () => {
   it("tag mas sem sinal → aparece com ZEROS e compartilhou=false (a 'certeza')", async () => {
     const r = await listarMultiplicadores(dbListar([{ id: "a", name: "Ana" }], {}, {}), ORG);
     expect(r).toEqual([
-      { contactId: "a", nome: "Ana", trouxe: 0, alcancou: 0, ultimaAtividadeISO: null, compartilhou: false },
+      { contactId: "a", nome: "Ana", trouxe: 0, alcancou: 0, ultimaAtividadeISO: null, compartilhou: false, recebeuLink: false },
     ]);
   });
 

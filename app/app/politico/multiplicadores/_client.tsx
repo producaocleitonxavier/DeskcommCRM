@@ -14,13 +14,17 @@ import { toast } from "sonner";
 
 import { CommandHero } from "@/components/politico/command-hero";
 import { Button } from "@/components/ui/button";
-import { CheckCircle, MagnifyingGlass, Plus, Trash, UserCircle } from "@/lib/ui/icons";
+import { CheckCircle, MagnifyingGlass, PaperPlaneTilt, Plus, Trash, UserCircle } from "@/lib/ui/icons";
 import {
   adicionarMultiplicador,
   removerMultiplicador,
   buscarContatosParaMarcar,
   type ContatoParaMarcar,
 } from "@/app/actions/politico/multiplicadores-actions";
+import {
+  enviarVideoAosMultiplicadores,
+  type VideoDaBiblioteca,
+} from "@/app/actions/politico/multiplicadores-envio-actions";
 import type { MultiplicadorRow, SugestaoMultiplicador } from "@/lib/politico/multiplicadores";
 
 /** "há 3 dias", "hoje", "há 2 sem" — leitura rápida de recência. */
@@ -40,14 +44,40 @@ function tempoRelativo(iso: string | null): string | null {
 interface Props {
   multiplicadores: MultiplicadorRow[];
   sugestoes: SugestaoMultiplicador[];
+  videos: VideoDaBiblioteca[];
 }
 
-export default function MultiplicadoresClient({ multiplicadores, sugestoes }: Props) {
+export default function MultiplicadoresClient({ multiplicadores, sugestoes, videos }: Props) {
   const router = useRouter();
   const [ocupado, iniciar] = useTransition();
   const [busca, setBusca] = useState("");
   const [resultados, setResultados] = useState<ContatoParaMarcar[]>([]);
   const [buscando, setBuscando] = useState(false);
+  const [videoSel, setVideoSel] = useState("");
+  const [enviando, setEnviando] = useState(false);
+
+  function onEnviarVideo() {
+    if (!videoSel) {
+      toast.error("Escolha um vídeo primeiro.");
+      return;
+    }
+    setEnviando(true);
+    iniciar(async () => {
+      try {
+        const r = await enviarVideoAosMultiplicadores(videoSel);
+        if (!r.ok) {
+          toast.error(r.erro);
+          return;
+        }
+        const base = `Enviado para ${r.enviados} de ${r.total} multiplicador${r.total === 1 ? "" : "es"}.`;
+        if (r.pulados.length > 0) toast.warning(`${base} ${r.pulados.length} pulado(s): ${r.pulados.map((p) => `${p.nome} (${p.motivo})`).slice(0, 3).join(", ")}${r.pulados.length > 3 ? "…" : ""}`);
+        else toast.success(base);
+        router.refresh();
+      } finally {
+        setEnviando(false);
+      }
+    });
+  }
 
   function rodar(p: Promise<{ ok: boolean; erro?: string }>, okMsg?: string) {
     iniciar(async () => {
@@ -184,6 +214,57 @@ export default function MultiplicadoresClient({ multiplicadores, sugestoes }: Pr
         )}
       </div>
 
+      {/* Enviar um vídeo aos multiplicadores (envio 1-a-1 do link pessoal) */}
+      <div className="gip-glass p-4">
+        <div className="mb-1 flex items-center gap-2">
+          <PaperPlaneTilt size={18} weight="bold" className="text-accent" aria-hidden />
+          <h2 className="text-base font-semibold text-foreground">Enviar um vídeo aos multiplicadores</h2>
+        </div>
+        <p className="mb-3 text-sm text-text-muted">
+          O sistema manda, no privado de cada um, o <strong className="font-semibold text-foreground">link pessoal dele</strong> desse vídeo — pronto pra compartilhar. Cada abertura pelo link dele conta como alcance dele.
+        </p>
+        {videos.length === 0 ? (
+          <p className="text-sm text-text-subtle">
+            Nenhum vídeo na biblioteca ainda. Adicione um vídeo (post do Instagram) na biblioteca de materiais.
+          </p>
+        ) : (
+          <>
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+              <select
+                className="wr-input flex-1"
+                value={videoSel}
+                onChange={(e) => setVideoSel(e.target.value)}
+              >
+                <option value="">Escolha um vídeo…</option>
+                {videos.map((v) => (
+                  <option key={v.id} value={v.id}>
+                    {v.titulo}
+                  </option>
+                ))}
+              </select>
+              <Button onClick={onEnviarVideo} disabled={ocupado || enviando || !videoSel || multiplicadores.length === 0}>
+                <PaperPlaneTilt size={15} weight="bold" aria-hidden />
+                Enviar aos {multiplicadores.length} multiplicador{multiplicadores.length === 1 ? "" : "es"}
+              </Button>
+            </div>
+            {videoSel && (
+              <div
+                className="mt-3 rounded-xl p-3 text-[12.5px]"
+                style={{ background: "color-mix(in srgb, var(--color-text) 5%, transparent)" }}
+              >
+                <p className="mb-1 text-[11px] font-medium uppercase tracking-wide text-text-subtle">Prévia da mensagem</p>
+                <p className="whitespace-pre-line text-foreground">
+                  {"Olá, [nome]! 👋 Saiu um conteúdo novo do nosso mandato.\n\nCompartilhe com a sua rede por ESTE link — ele é só seu: [link do vídeo dele]\n\nCada pessoa que abrir pelo seu link conta como alcance seu. Obrigado por multiplicar! 🙏"}
+                </p>
+              </div>
+            )}
+          </>
+        )}
+        <p className="mt-2 text-[11px] text-text-subtle">
+          Antes do go-live, só os números de teste recebem de fato — a trava de segurança continua valendo.
+        </p>
+      </div>
+
       {/* Placar */}
       <div className="gip-glass p-4">
         <h2 className="mb-1 text-base font-semibold text-foreground">Placar dos multiplicadores</h2>
@@ -213,6 +294,7 @@ export default function MultiplicadoresClient({ multiplicadores, sugestoes }: Pr
                     <div className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[11px] text-text-muted">
                       {m.trouxe > 0 && <span className="font-semibold text-accent">trouxe {m.trouxe}</span>}
                       {m.alcancou > 0 && <span>alcançou {m.alcancou}</span>}
+                      {m.recebeuLink && <span className="text-text-subtle">· recebeu o link ✓</span>}
                       {quando && <span className="text-text-subtle">· ativo {quando}</span>}
                     </div>
                   </div>
