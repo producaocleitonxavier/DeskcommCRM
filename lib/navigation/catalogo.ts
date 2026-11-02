@@ -302,6 +302,20 @@ export const NAV_CATALOG = [
     sidebar: true,
   },
   {
+    // Grupos de origem (camaleão): organiza as origens da base (contacts.source)
+    // em grupos DO mandato. Cada cliente é diferente — Cleiton agrupa Palestras,
+    // Tramonte agrupa Emendas-Escolas/Formaturas. Alimenta o seletor do Disparos.
+    href: "/app/politico/grupos-origem",
+    label: "Grupos de origem",
+    description:
+      "Organize de onde seus contatos vieram em grupos do seu mandato. As origens aparecem sozinhas; você só arruma do seu jeito.",
+    icon: "Stack",
+    group: "operacao",
+    section: "O dia a dia do relacionamento",
+    minRole: "agent",
+    sidebar: true,
+  },
+  {
     href: "/app/contacts",
     label: "Contatos",
     description: "As pessoas do outro lado da conversa e seu histórico.",

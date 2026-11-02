@@ -33,7 +33,7 @@ import {
   X,
 } from "lucide-react";
 
-type Origem = { value: string; label: string; total: number };
+type Origem = { value: string; label: string; total: number; grupo?: string | null };
 type Material = { id: string; titulo: string; tipo: string };
 type CidadeOpt = { id: string; name: string; total: number };
 
@@ -155,6 +155,18 @@ export function NovaCampanha({
   const temPublico =
     origensSel.length > 0 || niveis.length > 0 || temps.length > 0 || cidadesSel.length > 0 || especificos.length > 0;
 
+  // Origens AGRUPADAS pelos "Grupos de origem" do mandato (camaleão). A ordem já
+  // vem do servidor (grupos primeiro, "A classificar" por último); o Map preserva
+  // a ordem de inserção. Cada mandato vê os seus grupos — nunca uma faixa plana.
+  const origensAgrupadas = useMemo(() => {
+    const m = new Map<string, Origem[]>();
+    for (const o of origens) {
+      const nome = o.grupo ?? t("A classificar");
+      (m.get(nome) ?? m.set(nome, []).get(nome)!).push(o);
+    }
+    return [...m.entries()].map(([nome, itens]) => ({ nome, itens }));
+  }, [origens, t]);
+
   // Busca de cidade (até 459 na base): filtra por nome, sem acento, e mostra as 12
   // melhores — sem despejar centenas de chips na tela.
   const cidadesFiltradas = useMemo(() => {
@@ -233,16 +245,27 @@ export function NovaCampanha({
               {t("Nenhuma origem na base ainda.")}
             </p>
           ) : (
-            <div className="flex flex-wrap gap-2">
-              {origens.map((o) => (
-                <Chip
-                  key={o.value}
-                  ativo={origensSel.includes(o.value)}
-                  onClick={() => setOrigensSel(alternar(origensSel, o.value))}
-                >
-                  {o.label}
-                  <span className="ml-1 opacity-60">· {o.total.toLocaleString("pt-BR")}</span>
-                </Chip>
+            <div className="space-y-3">
+              {origensAgrupadas.map((grupo) => (
+                <div key={grupo.nome}>
+                  {origensAgrupadas.length > 1 && (
+                    <p className="mb-1.5 text-xs font-semibold tracking-wide uppercase" style={{ color: "var(--color-text-subtle)" }}>
+                      {grupo.nome}
+                    </p>
+                  )}
+                  <div className="flex flex-wrap gap-2">
+                    {grupo.itens.map((o) => (
+                      <Chip
+                        key={o.value}
+                        ativo={origensSel.includes(o.value)}
+                        onClick={() => setOrigensSel(alternar(origensSel, o.value))}
+                      >
+                        {o.label}
+                        <span className="ml-1 opacity-60">· {o.total.toLocaleString("pt-BR")}</span>
+                      </Chip>
+                    ))}
+                  </div>
+                </div>
               ))}
             </div>
           )}
