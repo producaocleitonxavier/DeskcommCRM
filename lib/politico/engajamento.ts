@@ -7,7 +7,7 @@
  * recalcular é idempotente e nunca drifta.
  *
  * ═══ Pesos (team, 2026-10-26) ═══
- *   recebeu material           +1  (passivo — fomos nós)
+ *   recebeu material           +1  (passivo — fomos nós; TETO +4, nunca gradua sozinho)
  *   respondeu a um disparo      +5  (recíproco — ELE agiu; 1 resposta = simpatizante)
  *   cadastrou no QR (confirmou) +6
  *   consentiu continuar          +10
@@ -35,6 +35,14 @@ const ORDEM_TEMP = ["frio", "morno", "quente"] as const;
 const PESO = { material: 1, respostaDisparo: 5, qrCadastro: 6, consentiu: 10, indicado: 10, videoAbertura: 0.5 } as const;
 /** Teto de respostas pontuadas — evita que responder 50x infle o índice. */
 const TETO_RESPOSTAS = 5;
+/**
+ * Teto do material PASSIVO (recebeu, não agiu). Fica ABAIXO do piso de
+ * simpatizante (5): RECEBER sozinho nunca gradua — a nota só cruza um degrau com
+ * um ato RECÍPROCO (responder/QR/autorizar/indicar). Anti-inflação do nurture de
+ * 2027 (mandar material o ano todo não pode "fabricar" apoiador). Decisão do time
+ * 02/nov — ver [[politico_motor_ganem_nurture_entregabilidade]].
+ */
+const TETO_MATERIAL = 4;
 /** Teto de aberturas de vídeo pontuadas (10 × 0,5 = +5 máx). */
 const TETO_VIDEO_ABERTURAS = 10;
 /** Trouxe esta quantidade de gente = Multiplicador/Militante, direto. */
@@ -108,7 +116,7 @@ export async function recomputarEngajamento(
       admin.from("contacts").select("last_activity_at").eq("organization_id", organizationId).eq("id", contactId).maybeSingle(),
     ]);
 
-    const materiais = (matCamp.count ?? 0) + (matQr.count ?? 0);
+    const materiais = Math.min((matCamp.count ?? 0) + (matQr.count ?? 0), TETO_MATERIAL);
     const respostas = Math.min(respDisparo.count ?? 0, TETO_RESPOSTAS);
     const cadastrouQr = (qrConfirmado.count ?? 0) > 0 ? 1 : 0;
     const consentiu = lead.consent_at ? 1 : 0;

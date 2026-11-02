@@ -497,7 +497,7 @@ function DetalheDrawer({
                     <li><strong className="text-foreground">Autorizar</strong> continuar recebendo — +10</li>
                     <li><strong className="text-foreground">Cadastrar pelo QR</strong> — +6</li>
                     <li><strong className="text-foreground">Responder</strong> uma mensagem — +5 <span className="text-text-subtle">(responder vale muito mais que receber)</span></li>
-                    <li><strong className="text-foreground">Receber</strong> um material — +1</li>
+                    <li><strong className="text-foreground">Receber</strong> um material — +1 <span className="text-text-subtle">(só receber nunca faz subir de etapa — tem que agir de volta)</span></li>
                     <li className="pt-1 text-text-subtle">Régua: Simpatizante a partir de 5 · Apoiador 20 · Multiplicador 50 · Voto certo você marca à mão.</li>
                   </ul>
                 )}
