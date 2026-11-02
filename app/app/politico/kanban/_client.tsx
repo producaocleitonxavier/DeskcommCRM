@@ -383,6 +383,7 @@ function DetalheDrawer({
   onClose: () => void;
   onMover: (etapa: string, label: string) => void;
 }) {
+  const [comoSobe, setComoSobe] = useState(false);
   const temp = card ? (TEMP_CFG[card.temperatura] ?? TEMP_CFG.frio!) : TEMP_CFG.frio!;
   const etapa = card
     ? colunas.find((col) => col.cards.some((x) => x.contactId === card.contactId))
@@ -390,7 +391,8 @@ function DetalheDrawer({
   const dias = card ? diasDesde(card.ultimaInteracao) : null;
   const esfriando = dias !== null && dias >= 14 && card?.temperatura !== "quente";
   const degrau = card ? proximoDegrau(card.score) : null;
-  const pctBarra = card && degrau ? Math.min(100, Math.round((card.score / degrau.alvo) * 100)) : 0;
+  // Barra na escala da RÉGUA (0 → Multiplicador 50): os marcos viram a classificação visível.
+  const pctBarra = card ? Math.min(100, Math.round((card.score / META_MULTIPLICADOR) * 100)) : 0;
 
   return (
     <Sheet open={!!card} onOpenChange={(aberto) => !aberto && onClose()}>
@@ -448,17 +450,57 @@ function DetalheDrawer({
                 </div>
               </section>
 
-              {/* Engajamento */}
+              {/* Engajamento — a nota + a RÉGUA visível (marcos) + "como sobe" */}
               <section className="space-y-2">
                 <h3 className="text-xs font-semibold uppercase tracking-wide text-text-subtle">Engajamento</h3>
                 <div className="flex items-baseline gap-2">
                   <span className="text-3xl font-bold tabular-nums text-foreground">{card.score}</span>
                   <span className="text-sm text-text-muted">pontos</span>
                 </div>
-                <div className="h-2.5 overflow-hidden rounded-full" style={{ background: "color-mix(in srgb, var(--color-text) 8%, transparent)" }}>
+                {/* Barra com os marcos da régua (5 · 20 · 50) desenhados por cima */}
+                <div className="relative h-2.5 overflow-hidden rounded-full" style={{ background: "color-mix(in srgb, var(--color-text) 8%, transparent)" }}>
                   <div className="h-full rounded-full" style={{ width: `${Math.max(pctBarra, 2)}%`, background: "var(--color-accent)" }} />
+                  {[
+                    [5, "10%"],
+                    [20, "40%"],
+                  ].map(([, left]) => (
+                    <span
+                      key={left as string}
+                      className="absolute top-0 h-full w-px bg-white/30"
+                      style={{ left: left as string }}
+                      aria-hidden
+                    />
+                  ))}
+                </div>
+                <div className="flex justify-between text-[10px] text-text-subtle">
+                  <span>Simpatizante 5</span>
+                  <span>Apoiador 20</span>
+                  <span>Multiplicador 50</span>
                 </div>
                 {degrau && <p className="text-xs text-text-muted">{degrau.texto}</p>}
+                <button
+                  type="button"
+                  onClick={() => setComoSobe((v) => !v)}
+                  className="inline-flex items-center gap-1 text-xs font-medium text-accent transition-colors hover:underline"
+                >
+                  Como sobe a nota?{" "}
+                  <CaretDown
+                    size={11}
+                    weight="bold"
+                    aria-hidden
+                    className={`transition-transform ${comoSobe ? "rotate-180" : ""}`}
+                  />
+                </button>
+                {comoSobe && (
+                  <ul className="mt-1 space-y-1 rounded-xl p-3 text-[12px] text-text-muted" style={{ background: "color-mix(in srgb, var(--color-text) 5%, transparent)" }}>
+                    <li><strong className="text-foreground">Indicar alguém</strong> que se cadastra — +10 por pessoa (3 = Multiplicador na hora)</li>
+                    <li><strong className="text-foreground">Autorizar</strong> continuar recebendo — +10</li>
+                    <li><strong className="text-foreground">Cadastrar pelo QR</strong> — +6</li>
+                    <li><strong className="text-foreground">Responder</strong> uma mensagem — +5 <span className="text-text-subtle">(responder vale muito mais que receber)</span></li>
+                    <li><strong className="text-foreground">Receber</strong> um material — +1</li>
+                    <li className="pt-1 text-text-subtle">Régua: Simpatizante a partir de 5 · Apoiador 20 · Multiplicador 50 · Voto certo você marca à mão.</li>
+                  </ul>
+                )}
               </section>
 
               {/* Atividade */}
