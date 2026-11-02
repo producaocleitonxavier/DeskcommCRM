@@ -191,7 +191,7 @@ export default function LeadsClient({ leads, total, contagens, cidades, mapaResu
             <input
               type="search"
               name="busca"
-              placeholder="Buscar por nome…"
+              placeholder="Buscar por nome ou telefone…"
               defaultValue={filtros.busca}
               className="min-w-0 flex-1 border-0 bg-transparent text-sm outline-none"
               style={{ color: "var(--color-text)" }}

@@ -217,7 +217,7 @@ export default function MultiplicadoresClient({
           />
           <input
             className="wr-input pl-9"
-            placeholder="Busque pelo nome do assessor, liderança ou apoiador…"
+            placeholder="Busque por nome ou telefone (assessor, liderança ou apoiador)…"
             value={busca}
             onChange={(e) => onBuscar(e.target.value)}
           />

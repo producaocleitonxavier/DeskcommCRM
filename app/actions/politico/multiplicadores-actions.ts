@@ -75,12 +75,12 @@ export async function buscarContatosParaMarcar(termo: string): Promise<ContatoPa
   if (!org) return [];
   const db = await createClient();
 
-  const { data } = await db
-    .from("contacts")
-    .select("id, name, phone_number, tags")
-    .eq("organization_id", org.orgId)
-    .ilike("name", `%${q}%`)
-    .limit(20);
+  // Busca por nome OU telefone (muito contato tem só o 1º nome). ≥4 dígitos = telefone.
+  const soDigitos = q.replace(/\D/g, "");
+  const base = db.from("contacts").select("id, name, phone_number, tags").eq("organization_id", org.orgId);
+  const { data } = await (
+    soDigitos.length >= 4 ? base.ilike("phone_number", `%${soDigitos}%`) : base.ilike("name", `%${q}%`)
+  ).limit(20);
 
   const rows = (data ?? []) as {
     id: string;

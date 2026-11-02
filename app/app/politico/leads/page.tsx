@@ -82,7 +82,16 @@ async function buscarLeads(
   if (etapa) query = query.eq("support_level", etapa);
   if (temp) query = query.eq("temperature", temp);
   if (cidade) query = query.eq("territory_id", cidade);
-  for (const p of palavras) query = query.ilike("contacts.name", `%${p}%`);
+  // Busca por NOME ou TELEFONE: muito contato tem só o 1º nome ("Leandro", e há
+  // vários) — aí buscar pelo telefone acha direto. Se o termo tem ≥4 dígitos, é
+  // telefone (casa o trecho de dígitos no phone_number E.164, ignorando formatação);
+  // senão, busca por nome (cada palavra precisa aparecer, em qualquer ordem).
+  const soDigitos = (busca ?? "").replace(/\D/g, "");
+  if (soDigitos.length >= 4) {
+    query = query.ilike("contacts.phone_number", `%${soDigitos}%`);
+  } else {
+    for (const p of palavras) query = query.ilike("contacts.name", `%${p}%`);
+  }
 
   const { data, count } = await query;
   return { leads: (data as unknown as LeadRow[]) ?? [], total: count ?? 0 };
