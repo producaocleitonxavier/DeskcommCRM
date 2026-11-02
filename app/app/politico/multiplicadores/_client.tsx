@@ -51,6 +51,7 @@ interface Props {
   sugestoes: SugestaoMultiplicador[];
   videos: VideoDaBiblioteca[];
   elegiveis: number;
+  potenciais: number;
   canais: CanalDisponivel[];
   canalAtual: string | null;
 }
@@ -60,6 +61,7 @@ export default function MultiplicadoresClient({
   sugestoes,
   videos,
   elegiveis,
+  potenciais,
   canais,
   canalAtual,
 }: Props) {
@@ -368,6 +370,12 @@ export default function MultiplicadoresClient({
             <Megaphone size={15} weight="bold" aria-hidden />
             Convidar {elegiveis} apoiador{elegiveis === 1 ? "" : "es"}
           </Button>
+        )}
+        {potenciais > 0 && (
+          <p className="mt-2 text-[12px] font-medium text-accent">
+            ⭐ {potenciais} marcado{potenciais === 1 ? "" : "s"} como potencial multiplicador —{" "}
+            {potenciais === 1 ? "será convidado" : "serão convidados"} primeiro.
+          </p>
         )}
         <p className="mt-2 text-[11px] text-text-subtle">
           Antes do go-live, só os números de teste recebem o convite — a trava de segurança continua valendo.

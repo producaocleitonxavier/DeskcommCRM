@@ -77,10 +77,13 @@ export interface ContatoElegivel {
   id: string;
   name: string | null;
   phone_number: string | null;
+  /** Marcado como "Potencial multiplicador / líder" no cadastro — convida PRIMEIRO. */
+  potencial: boolean;
 }
 
 interface LeadComContato {
   contact_id: string;
+  leader_potential: boolean | null;
   contacts: { id: string; name: string | null; phone_number: string | null; tags: string[] | null } | null;
 }
 
@@ -89,11 +92,16 @@ interface LeadComContato {
  * multiplicador nem já foi convidado/recusou. Join por `contacts!contact_id`
  * (há duas FKs pol_leads→contacts). Lê até 1000 leads e filtra as tags no app
  * (filtro de array embarcado no PostgREST é frágil).
+ *
+ * ORDEM: quem foi marcado como POTENCIAL multiplicador/líder (`leader_potential`)
+ * vem PRIMEIRO — é o palpite do assessor sobre quem espalha; como o convite corta
+ * no cap, os potenciais são convidados antes. Sort ESTÁVEL (dentro de cada grupo
+ * mantém a ordem de leitura).
  */
 async function lerElegiveis(db: SupabaseClient, orgId: string): Promise<ContatoElegivel[]> {
   const { data } = await db
     .from("pol_leads")
-    .select("contact_id, contacts!contact_id(id, name, phone_number, tags)")
+    .select("contact_id, leader_potential, contacts!contact_id(id, name, phone_number, tags)")
     .eq("organization_id", orgId)
     .in("support_level", SUPORTE_APOIADOR_MAIS)
     .eq("opt_out", false)
@@ -110,13 +118,19 @@ async function lerElegiveis(db: SupabaseClient, orgId: string): Promise<ContatoE
     const tags = ((c.tags ?? []) as string[]).filter((t) => typeof t === "string");
     if (tags.some((t) => bloqueadas.has(t))) continue;
     vistos.add(c.id);
-    out.push({ id: c.id, name: c.name ?? null, phone_number: c.phone_number ?? null });
+    out.push({ id: c.id, name: c.name ?? null, phone_number: c.phone_number ?? null, potencial: !!r.leader_potential });
   }
-  return out;
+  // Potenciais primeiro (sort estável: só reordena pelo flag, mantém o resto).
+  return out.sort((a, b) => Number(b.potencial) - Number(a.potencial));
 }
 
 export async function contarElegiveisParaConvite(db: SupabaseClient, orgId: string): Promise<number> {
   return (await lerElegiveis(db, orgId)).length;
+}
+
+/** Quantos dos elegíveis foram marcados como POTENCIAL multiplicador/líder. */
+export async function contarPotenciaisParaConvite(db: SupabaseClient, orgId: string): Promise<number> {
+  return (await lerElegiveis(db, orgId)).filter((e) => e.potencial).length;
 }
 
 export async function listarElegiveisParaConvite(

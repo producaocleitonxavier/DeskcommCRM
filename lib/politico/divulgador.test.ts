@@ -8,6 +8,7 @@ import {
   ehNegativo,
   processarAceiteDivulgador,
   contarElegiveisParaConvite,
+  contarPotenciaisParaConvite,
   listarElegiveisParaConvite,
   TAG_DIVULGADOR_CONVIDADO,
   TAG_DIVULGADOR_RECUSOU,
@@ -153,8 +154,8 @@ describe("processarAceiteDivulgador", () => {
 });
 
 // ──────────────── elegíveis (contar / listar) ────────────────
-function lead(id: string, tags: string[] = [], phone: string | null = "+5531988887777") {
-  return { contact_id: id, contacts: { id, name: `Nome ${id}`, phone_number: phone, tags } };
+function lead(id: string, tags: string[] = [], phone: string | null = "+5531988887777", potencial = false) {
+  return { contact_id: id, leader_potential: potencial, contacts: { id, name: `Nome ${id}`, phone_number: phone, tags } };
 }
 function dbComLeads(rows: unknown[]) {
   return makeDb({ pol_leads: () => ({ data: rows }) });
@@ -196,5 +197,39 @@ describe("elegíveis para convite", () => {
 
   it("base vazia → 0", async () => {
     expect(await contarElegiveisParaConvite(dbComLeads([]) as never, ORG)).toBe(0);
+  });
+
+  it("POTENCIAIS primeiro: quem tem leader_potential vem antes (sort estável)", async () => {
+    const db = dbComLeads([
+      lead("a", [], "+5531988887777", false),
+      lead("b", [], "+5531988887777", true), // potencial
+      lead("c", [], "+5531988887777", false),
+      lead("d", [], "+5531988887777", true), // potencial
+    ]);
+    const r = await listarElegiveisParaConvite(db as never, ORG, 10);
+    // potenciais na ordem de leitura (b, d), depois os demais (a, c).
+    expect(r.map((x) => x.id)).toEqual(["b", "d", "a", "c"]);
+    expect(r.map((x) => x.potencial)).toEqual([true, true, false, false]);
+  });
+
+  it("cap convida os POTENCIAIS primeiro (corta a cauda não-potencial)", async () => {
+    const db = dbComLeads([
+      lead("a", [], "+5531988887777", false),
+      lead("b", [], "+5531988887777", true),
+      lead("c", [], "+5531988887777", false),
+    ]);
+    const r = await listarElegiveisParaConvite(db as never, ORG, 1);
+    expect(r.map((x) => x.id)).toEqual(["b"]); // o potencial, não o "a"
+  });
+
+  it("contarPotenciais conta só os marcados (e exclui bloqueados/sem telefone)", async () => {
+    const db = dbComLeads([
+      lead("a", [], "+5531988887777", true), // potencial ok
+      lead("b", [], "+5531988887777", false), // elegível mas não potencial
+      lead("c", ["multiplicador"], "+5531988887777", true), // potencial mas já multiplicador → fora
+      lead("d", [], null, true), // potencial mas sem telefone → fora
+    ]);
+    expect(await contarPotenciaisParaConvite(db as never, ORG)).toBe(1); // só "a"
+    expect(await contarElegiveisParaConvite(db as never, ORG)).toBe(2); // a, b
   });
 });

@@ -12,7 +12,7 @@ import { redirect } from "next/navigation";
 import { requireAuth, resolveActiveOrg } from "@/lib/auth/server";
 import { createClient } from "@/lib/supabase/server";
 import { listarMultiplicadores, sugestoesDeMultiplicador } from "@/lib/politico/multiplicadores";
-import { contarElegiveisParaConvite } from "@/lib/politico/divulgador";
+import { contarElegiveisParaConvite, contarPotenciaisParaConvite } from "@/lib/politico/divulgador";
 import { listarVideosDaBiblioteca } from "@/app/actions/politico/multiplicadores-envio-actions";
 import {
   canalMultiplicadoresAtual,
@@ -31,10 +31,11 @@ export default async function MultiplicadoresPage() {
   const db = await createClient();
   const multiplicadores = await listarMultiplicadores(db, org.orgId);
   const jaNoCohort = new Set(multiplicadores.map((m) => m.contactId));
-  const [sugestoes, videos, elegiveis, canais, canalAtual] = await Promise.all([
+  const [sugestoes, videos, elegiveis, potenciais, canais, canalAtual] = await Promise.all([
     sugestoesDeMultiplicador(db, org.orgId, jaNoCohort),
     listarVideosDaBiblioteca(),
     contarElegiveisParaConvite(db, org.orgId),
+    contarPotenciaisParaConvite(db, org.orgId),
     listarCanaisDisponiveis(),
     canalMultiplicadoresAtual(),
   ]);
@@ -45,6 +46,7 @@ export default async function MultiplicadoresPage() {
       sugestoes={sugestoes}
       videos={videos}
       elegiveis={elegiveis}
+      potenciais={potenciais}
       canais={canais}
       canalAtual={canalAtual}
     />
