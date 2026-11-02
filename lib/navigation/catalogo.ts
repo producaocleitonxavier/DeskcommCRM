@@ -1192,8 +1192,11 @@ export const NAV_CATALOG = [
     label: "Biblioteca de Materiais",
     description: "Banco de conteúdos — e-books, PDFs, cards e links por tema, para enviar e construir relacionamento.",
     icon: "BookOpen",
-    group: "gabinete",
-    minRole: "agent",
+    // Operação (perto de Disparos/Multiplicadores, que puxam os materiais — sem
+    // pular de menu). minRole manager: é ferramenta de conteúdo/estratégia, o
+    // assessor de rua não precisa dela (pedido do cliente).
+    group: "operacao",
+    minRole: "manager",
     sidebar: true,
   },
   {
