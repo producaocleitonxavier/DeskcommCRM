@@ -19,6 +19,52 @@ export interface OrigemComContagem {
   source: string;
   label: string;
   total: number;
+  /** Grupo sugerido (por semelhança de nome) pra uma origem sem grupo — aceite num clique. */
+  sugestaoGrupoId?: string;
+  sugestaoGrupoNome?: string;
+}
+
+/** Tokens úteis de um texto (minúsculo, sem acento, palavras ≥4 letras). */
+function tokens(s: string): string[] {
+  return s
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[̀-ͯ]/g, "")
+    .split(/[^a-z0-9]+/)
+    .filter((t) => t.length >= 4);
+}
+
+/**
+ * Sugere um grupo pra uma origem SEM grupo, casando o NOME da origem com o NOME
+ * do grupo (ex.: "Palestra Escola X" → grupo "Palestras"). Só nome, de propósito:
+ * casar com as origens já agrupadas traria ruído (ex.: "Escola"/"Teste" casam
+ * tudo). Conservador — sem match, não sugere nada (o cliente classifica à mão).
+ */
+function sugerirGrupo(
+  label: string,
+  source: string,
+  grupos: GrupoDeOrigem[],
+): { id: string; nome: string } | null {
+  const ot = tokens(`${label} ${source}`);
+  let best: GrupoDeOrigem | null = null;
+  let bestScore = 0;
+  for (const g of grupos) {
+    const gt = tokens(g.nome);
+    let score = 0;
+    for (const t of ot) {
+      for (const u of gt) {
+        if (t === u || t.startsWith(u) || u.startsWith(t)) {
+          score++;
+          break;
+        }
+      }
+    }
+    if (score > bestScore) {
+      bestScore = score;
+      best = g;
+    }
+  }
+  return best && bestScore >= 1 ? { id: best.id, nome: best.nome } : null;
 }
 
 export interface GrupoDeOrigem {
@@ -80,9 +126,18 @@ export async function listarOrigensEGrupos(
     const grupo = gid ? grupoPorId.get(gid) : undefined;
     // Agrupada fica no grupo (mesmo pequena — o cliente a escolheu). Sem grupo e
     // com pouca gente vai pra "Outras" recolhida, pra não poluir "A classificar".
-    if (grupo) grupo.origens.push(item);
-    else if (item.total <= LIMIAR_POUCAS) outrasPoucas.push(item);
-    else aClassificar.push(item);
+    if (grupo) {
+      grupo.origens.push(item);
+    } else {
+      // Sem grupo: tenta sugerir um (por nome) pra o cliente aceitar num clique.
+      const sug = sugerirGrupo(item.label, item.source, grupos);
+      if (sug) {
+        item.sugestaoGrupoId = sug.id;
+        item.sugestaoGrupoNome = sug.nome;
+      }
+      if (item.total <= LIMIAR_POUCAS) outrasPoucas.push(item);
+      else aClassificar.push(item);
+    }
   }
 
   return { grupos, aClassificar, outrasPoucas };

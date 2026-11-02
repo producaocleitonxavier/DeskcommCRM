@@ -121,6 +121,22 @@ export default function GruposOrigemClient({ grupos, aClassificar, outrasPoucas 
         <span className="rounded-full bg-accent-soft px-1.5 text-[11px] font-semibold tabular-nums text-accent">
           {origem.total.toLocaleString("pt-BR")}
         </span>
+        {grupoAtual === null && origem.sugestaoGrupoId && (
+          <button
+            type="button"
+            disabled={ocupado}
+            onClick={() =>
+              rodar(
+                moverOrigemParaGrupo(origem.source, origem.sugestaoGrupoId!),
+                `Movido para ${origem.sugestaoGrupoNome}.`,
+              )
+            }
+            className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-semibold text-accent transition-colors hover:bg-accent-soft"
+            title={`Sugestão: mover para ${origem.sugestaoGrupoNome}`}
+          >
+            → {origem.sugestaoGrupoNome}
+          </button>
+        )}
         <MoverMenu origem={origem} grupoAtual={grupoAtual} />
       </div>
     );
@@ -163,6 +179,7 @@ export default function GruposOrigemClient({ grupos, aClassificar, outrasPoucas 
         <div className="space-y-4">
           {grupos.map((g, idx) => {
             const cor = corDoGrupo(idx);
+            const pessoas = g.origens.reduce((s, o) => s + o.total, 0);
             return (
             <div
               key={g.id}
@@ -200,7 +217,10 @@ export default function GruposOrigemClient({ grupos, aClassificar, outrasPoucas 
                       className="rounded-full px-2 text-xs font-semibold tabular-nums"
                       style={{ background: `color-mix(in srgb, ${cor} 16%, transparent)`, color: cor }}
                     >
-                      {g.origens.length}
+                      {pessoas.toLocaleString("pt-BR")} {pessoas === 1 ? "pessoa" : "pessoas"}
+                    </span>
+                    <span className="text-xs font-normal text-text-subtle">
+                      · {g.origens.length} {g.origens.length === 1 ? "origem" : "origens"}
                     </span>
                   </button>
                 )}
