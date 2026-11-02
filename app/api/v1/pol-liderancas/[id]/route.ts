@@ -18,6 +18,7 @@ import { ok, fail } from "@/lib/api/wrappers";
 import { requireRole } from "@/lib/auth/require-role";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { requireSupportWrite } from "@/lib/impersonate/support";
+import { enrolarLiderancaComoMultiplicador } from "@/lib/politico/lideranca-multiplicador";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -169,6 +170,16 @@ export async function PATCH(req: NextRequest, ctx: RouteCtx): Promise<NextRespon
     resource_id: id,
     metadata: { campos_alterados: Object.keys(parsed.data) },
   });
+
+  // Se o update tocou o contato/whatsapp, (re)garante o enroll como multiplicador.
+  if ("contact_id" in parsed.data || "whatsapp" in parsed.data) {
+    await enrolarLiderancaComoMultiplicador(db, orgId, {
+      liderancaId: atualizada.id,
+      contactId: atualizada.contact_id ?? null,
+      whatsapp: atualizada.whatsapp ?? null,
+      nome: atualizada.nome ?? null,
+    });
+  }
 
   return ok({ pol_lideranca: atualizada }, { headers: { "x-request-id": requestId } });
 }

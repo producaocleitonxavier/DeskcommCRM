@@ -19,6 +19,7 @@ import { ok, fail } from "@/lib/api/wrappers";
 import { requireRole } from "@/lib/auth/require-role";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { requireSupportWrite } from "@/lib/impersonate/support";
+import { enrolarLiderancaComoMultiplicador } from "@/lib/politico/lideranca-multiplicador";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -191,6 +192,15 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     action: "pol_liderancas.create",
     resource_id: lideranca.id,
     metadata: { nome: lideranca.nome, tipo: lideranca.tipo },
+  });
+
+  // Auto-enroll: liderança já é parceira → entra como multiplicador/divulgador
+  // (recebe conteúdo pra espalhar + aparece no placar). Fail-soft por dentro.
+  await enrolarLiderancaComoMultiplicador(db, orgId, {
+    liderancaId: lideranca.id,
+    contactId: lideranca.contact_id ?? null,
+    whatsapp: lideranca.whatsapp ?? null,
+    nome: lideranca.nome ?? null,
   });
 
   return ok({ pol_lideranca: lideranca }, { status: 201, headers: { "x-request-id": requestId } });

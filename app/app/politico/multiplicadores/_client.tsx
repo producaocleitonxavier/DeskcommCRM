@@ -297,7 +297,7 @@ export default function MultiplicadoresClient({
           <h2 className="text-base font-semibold text-foreground">Enviar um conteúdo do Instagram aos multiplicadores</h2>
         </div>
         <p className="mb-3 text-sm text-text-muted">
-          O sistema manda, no privado de cada um, o <strong className="font-semibold text-foreground">link pessoal dele</strong> desse conteúdo — pronto pra compartilhar. Cada abertura pelo link dele conta como alcance dele. <span className="text-text-subtle">(Só conteúdo do Instagram espalha; ebook/enquete/PDF são pra enviar e criar relacionamento.)</span>
+          O sistema manda, no privado de cada um, o <strong className="font-semibold text-foreground">link pessoal dele</strong> desse conteúdo — pronto pra compartilhar. Cada abertura pelo link dele conta como alcance dele. <span className="text-text-subtle">(Instagram e enquete espalham — a enquete chega com o módulo de Pesquisa; ebook/PDF são pra enviar 1:1 e criar relacionamento.)</span>
         </p>
         {videos.length === 0 ? (
           <p className="text-sm text-text-subtle">
