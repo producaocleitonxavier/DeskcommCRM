@@ -5,7 +5,11 @@ import type { ModuloOpcional } from "@/lib/instalacao/modulos";
 import type { CapacidadeDaOrganizacao } from "@/lib/organizacao/capacidades";
 import { NAV_CATALOG, type NavMetadata, type NavDestinationId } from "./catalogo";
 
-const ids = NAV_CATALOG.map((d) => d.href);
+// Lista canônica de hrefs, DEDUPLICADA: uma porta pode ter 2 entradas no catálogo
+// (mesma href em 2 menus, ex.: Pesquisas em Inteligência E Operação). O `ids` é a
+// lista de destinos ÚNICOS (schema, filtro de destinos, needsAdjustment) — com
+// duplicata, o needsAdjustment acharia que a escolha salva "encolheu" e churnaria.
+const ids = [...new Set(NAV_CATALOG.map((d) => d.href))] as NavDestinationId[];
 export const interfaceSettingsSchema = z
   .object({
     preset: z.enum(["completa", "simplificada"]),

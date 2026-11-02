@@ -1035,6 +1035,18 @@ export const NAV_CATALOG = [
     minRole: "manager",
     sidebar: true,
   },
+  {
+    // Pesquisas também em OPERAÇÃO (pedido do cliente): a enquete é ferramenta de
+    // campo/relacionamento (perto de Disparos/Multiplicadores que a compartilham).
+    // Mesma tela, 2ª entrada no menu de Operação.
+    href: "/app/politico/pesquisas",
+    label: "Pesquisas",
+    description: "Pesquisas de campo com formulários públicos via token e respostas geolocalizadas.",
+    icon: "ClipboardText",
+    group: "operacao",
+    minRole: "manager",
+    sidebar: true,
+  },
 
   // ── Estratégia — Monitoramento (no sidebar) ───────────────────────
   {

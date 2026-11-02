@@ -41,6 +41,7 @@ const TIPOS: Opcao[] = [
   { id: "assistencia_social", nome: "Assistência social" },
   { id: "meio_ambiente", nome: "Meio ambiente" },
   { id: "documentacao", nome: "Documentação" },
+  { id: "visita_tecnica", nome: "Visita técnica" },
   { id: "outro", nome: "Outro" },
 ];
 const PRIORIDADES: Opcao[] = [
