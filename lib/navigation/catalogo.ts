@@ -316,6 +316,20 @@ export const NAV_CATALOG = [
     sidebar: true,
   },
   {
+    // Mobilização (Modo Campanha): o quadro — as pessoas andando pelo funil por
+    // etapa. O motor move sozinho por engajamento; o operador move à mão quando
+    // conhece alguém. Puxado pela mesma taxonomia do Disparos (origem → grupo).
+    href: "/app/politico/kanban",
+    label: "Mobilização",
+    description:
+      "O quadro da campanha: seu público em colunas por etapa (de novo cadastro a voto certo). Sobe sozinho conforme a pessoa se engaja — e você move à mão quando quiser.",
+    icon: "Kanban",
+    group: "operacao",
+    section: "O dia a dia do relacionamento",
+    minRole: "agent",
+    sidebar: true,
+  },
+  {
     href: "/app/contacts",
     label: "Contatos",
     description: "As pessoas do outro lado da conversa e seu histórico.",
