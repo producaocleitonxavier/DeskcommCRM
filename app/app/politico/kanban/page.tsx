@@ -35,6 +35,8 @@ interface LeadRow {
   support_level: string;
   temperature: string | null;
   territory_id: string | null;
+  political_score: number | null;
+  updated_at: string | null;
   contacts: { name: string | null; source: string | null } | null;
 }
 
@@ -88,7 +90,9 @@ export default async function KanbanPage() {
     ETAPAS.map(async (e) => {
       const { data } = await db
         .from("pol_leads")
-        .select("contact_id, support_level, temperature, territory_id, contacts!contact_id(name, source)")
+        .select(
+          "contact_id, support_level, temperature, territory_id, political_score, updated_at, contacts!contact_id(name, source)",
+        )
         .eq("organization_id", orgId)
         .eq("support_level", e.value)
         .order("updated_at", { ascending: false })
@@ -111,6 +115,8 @@ export default async function KanbanPage() {
         grupoCor: g?.cor ?? null,
         cidade: l.territory_id ? (cidadePorTerritorio.get(l.territory_id) ?? null) : null,
         temperatura: (l.temperature ?? "frio") as string,
+        score: Number(l.political_score) || 0,
+        ultimaInteracao: l.updated_at ?? null,
       };
     });
     return { estagio: e.value, label: e.label, cor: e.cor, total: totais[idx]!, cards };

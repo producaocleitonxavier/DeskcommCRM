@@ -7,6 +7,7 @@
  */
 
 import { useMemo, useState, useTransition } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 
@@ -17,7 +18,15 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { CaretDown } from "@/lib/ui/icons";
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import {
+  ArrowSquareOut,
+  CaretDown,
+  ChartLineUp,
+  Clock,
+  MapPin,
+  UserCircle,
+} from "@/lib/ui/icons";
 import { moverEtapa } from "@/app/actions/politico/kanban-actions";
 
 export interface CardPessoa {
@@ -29,6 +38,10 @@ export interface CardPessoa {
   grupoCor: string | null;
   cidade: string | null;
   temperatura: string;
+  /** Índice de engajamento (0+). ≥20 apoiador, ≥50 multiplicador — move o funil. */
+  score: number;
+  /** ISO da última mexida no lead (proxy de "última interação"). */
+  ultimaInteracao: string | null;
 }
 
 export interface ColunaKanban {
@@ -58,12 +71,49 @@ const TEMP_CFG: Record<string, { label: string; cor: string; emoji: string }> = 
 /** Etapas escondidas quando "só apoiador+" está ligado (topo do funil). */
 const ESCONDE_SE_SO_APOIADOR = new Set(["novo_cadastro", "simpatizante"]);
 
+/** "há 3 dias", "hoje", "há 2 sem" — leitura rápida de quem está esfriando. */
+function tempoRelativo(iso: string | null): string | null {
+  if (!iso) return null;
+  const ms = Date.now() - new Date(iso).getTime();
+  if (Number.isNaN(ms) || ms < 0) return null;
+  const dias = Math.floor(ms / 86_400_000);
+  if (dias === 0) return "hoje";
+  if (dias === 1) return "ontem";
+  if (dias < 7) return `há ${dias} dias`;
+  if (dias < 30) return `há ${Math.floor(dias / 7)} sem`;
+  if (dias < 365) return `há ${Math.floor(dias / 30)} meses`;
+  return `há ${Math.floor(dias / 365)} ano${dias < 730 ? "" : "s"}`;
+}
+
+/** Dias desde a última interação (pra marcar "esfriando"). */
+function diasDesde(iso: string | null): number | null {
+  if (!iso) return null;
+  const ms = Date.now() - new Date(iso).getTime();
+  if (Number.isNaN(ms) || ms < 0) return null;
+  return Math.floor(ms / 86_400_000);
+}
+
+/** Degraus do engajamento (espelha o motor): o que falta pra pessoa subir. */
+const META_APOIADOR = 20;
+const META_MULTIPLICADOR = 50;
+function proximoDegrau(score: number): { texto: string; alvo: number } {
+  if (score < META_APOIADOR)
+    return { texto: `Faltam ${META_APOIADOR - score} pts pra virar Apoiador`, alvo: META_APOIADOR };
+  if (score < META_MULTIPLICADOR)
+    return {
+      texto: `Faltam ${META_MULTIPLICADOR - score} pts pra virar Multiplicador`,
+      alvo: META_MULTIPLICADOR,
+    };
+  return { texto: "No topo do engajamento 🎉", alvo: META_MULTIPLICADOR };
+}
+
 export default function KanbanClient({ colunas, grupos }: Props) {
   const router = useRouter();
   const [ocupado, iniciar] = useTransition();
   const [soApoiador, setSoApoiador] = useState(true);
   const [gruposSel, setGruposSel] = useState<string[]>([]);
   const [tempsSel, setTempsSel] = useState<string[]>([]);
+  const [selecionado, setSelecionado] = useState<CardPessoa | null>(null);
 
   function alternar(lista: string[], v: string): string[] {
     return lista.includes(v) ? lista.filter((x) => x !== v) : [...lista, v];
@@ -94,6 +144,18 @@ export default function KanbanClient({ colunas, grupos }: Props) {
 
   const temPessoas = colunas.some((c) => c.total > 0);
 
+  // Resumo do funil: a campanha num relance. Base = todo mundo; apoiador+ = quem
+  // já converteu (apoiador/multiplicador/voto certo); taxa = conversão da base.
+  const resumo = useMemo(() => {
+    const porEtapa = new Map(colunas.map((c) => [c.estagio, c.total]));
+    const base = colunas.reduce((s, c) => s + c.total, 0);
+    const apoiadorMais =
+      (porEtapa.get("apoiador") ?? 0) +
+      (porEtapa.get("militante") ?? 0) +
+      (porEtapa.get("voto_certo") ?? 0);
+    return { base, apoiadorMais, taxa: base > 0 ? Math.round((apoiadorMais / base) * 100) : 0, porEtapa };
+  }, [colunas]);
+
   return (
     <div className="gip-ambient-bg min-h-full space-y-5 p-4 md:p-6">
       <CommandHero
@@ -101,6 +163,34 @@ export default function KanbanClient({ colunas, grupos }: Props) {
         titulo="Mobilização"
         subtitulo="Seu público andando pelo funil, por etapa. O sistema move sozinho conforme a pessoa se engaja — e você pode mover à mão quando conhecer alguém."
       />
+
+      {/* Resumo — a campanha num relance (o funil inteiro + conversão) */}
+      {temPessoas && (
+        <div className="gip-glass flex flex-wrap items-center gap-x-6 gap-y-4 p-4">
+          <div>
+            <p className="text-2xl font-bold tabular-nums text-foreground">
+              {resumo.base.toLocaleString("pt-BR")}
+            </p>
+            <p className="text-xs text-text-subtle">na base</p>
+          </div>
+          <div className="hidden h-9 w-px bg-white/10 sm:block" />
+          {colunas.map((c) => (
+            <div key={c.estagio} className="flex items-center gap-2">
+              <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ background: c.cor }} aria-hidden />
+              <div>
+                <p className="text-lg font-semibold tabular-nums leading-tight text-foreground">
+                  {c.total.toLocaleString("pt-BR")}
+                </p>
+                <p className="text-[11px] leading-tight text-text-subtle">{c.label}</p>
+              </div>
+            </div>
+          ))}
+          <div className="ml-auto text-right">
+            <p className="text-2xl font-bold tabular-nums text-accent">{resumo.taxa}%</p>
+            <p className="text-xs text-text-subtle">viraram apoiador+</p>
+          </div>
+        </div>
+      )}
 
       {/* Filtros */}
       <div className="gip-glass flex flex-wrap items-center gap-x-5 gap-y-3 p-3 sm:p-4">
@@ -176,7 +266,7 @@ export default function KanbanClient({ colunas, grupos }: Props) {
             const visiveis = col.cards.filter(cardPassa);
             const ocultosPeloCap = Math.max(0, col.total - col.cards.length);
             return (
-              <div key={col.estagio} className="flex w-[280px] shrink-0 flex-col">
+              <div key={col.estagio} className="flex min-w-[260px] flex-1 basis-0 flex-col">
                 {/* Cabeçalho da coluna, na cor da etapa */}
                 <div
                   className="mb-2 flex items-center gap-2 rounded-xl px-3 py-2"
@@ -199,7 +289,7 @@ export default function KanbanClient({ colunas, grupos }: Props) {
                     </p>
                   ) : (
                     visiveis.map((c) => (
-                      <CardView key={c.contactId} card={c} colunas={colunas} ocupado={ocupado} onMover={mover} />
+                      <CardView key={c.contactId} card={c} onAbrir={() => setSelecionado(c)} />
                     ))
                   )}
                   {ocultosPeloCap > 0 && (
@@ -213,29 +303,45 @@ export default function KanbanClient({ colunas, grupos }: Props) {
           })}
         </div>
       )}
+
+      <DetalheDrawer
+        card={selecionado}
+        colunas={colunas}
+        ocupado={ocupado}
+        onClose={() => setSelecionado(null)}
+        onMover={(etapa, label) => {
+          if (selecionado) mover(selecionado.contactId, etapa, label);
+          setSelecionado(null);
+        }}
+      />
     </div>
   );
 }
 
-function CardView({
-  card,
-  colunas,
-  ocupado,
-  onMover,
-}: {
-  card: CardPessoa;
-  colunas: ColunaKanban[];
-  ocupado: boolean;
-  onMover: (contactId: string, etapa: string, label: string) => void;
-}) {
+/** Card limpo — nome, de onde veio, engajamento e temperatura. Clica → abre a ficha. */
+function CardView({ card, onAbrir }: { card: CardPessoa; onAbrir: () => void }) {
   const temp = TEMP_CFG[card.temperatura] ?? TEMP_CFG.frio!;
-  const etapaAtual = colunas.find((col) => col.cards.some((x) => x.contactId === card.contactId))?.estagio;
+  const dias = diasDesde(card.ultimaInteracao);
+  const esfriando = dias !== null && dias >= 14 && card.temperatura !== "quente";
   return (
-    <div className="gip-glass p-3">
-      <p className="truncate text-sm font-semibold text-foreground" title={card.nome}>
-        {card.nome}
-      </p>
-      <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-[11px] text-text-muted">
+    <button
+      type="button"
+      onClick={onAbrir}
+      className="gip-glass gip-glass-hover w-full p-3 text-left transition-transform hover:-translate-y-0.5"
+    >
+      <div className="flex items-start justify-between gap-2">
+        <p className="truncate text-sm font-semibold text-foreground" title={card.nome}>
+          {card.nome}
+        </p>
+        <span
+          className="inline-flex shrink-0 items-center gap-0.5 rounded-full px-1.5 py-0.5 text-[10px] font-bold tabular-nums"
+          style={{ background: "color-mix(in srgb, var(--color-accent) 16%, transparent)", color: "var(--color-accent)" }}
+          title="Índice de engajamento"
+        >
+          <ChartLineUp size={10} weight="bold" aria-hidden /> {card.score}
+        </span>
+      </div>
+      <div className="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-[11px] text-text-muted">
         {card.sourceLabel && (
           <span className="inline-flex items-center gap-1">
             <span
@@ -246,37 +352,163 @@ function CardView({
             {card.sourceLabel}
           </span>
         )}
-        {card.cidade && <span>· {card.cidade}</span>}
-        <span className="inline-flex items-center gap-0.5" style={{ color: temp.cor }}>
+        {card.cidade && <span className="inline-flex items-center gap-0.5">· {card.cidade}</span>}
+      </div>
+      <div className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1 text-[11px]">
+        <span className="inline-flex items-center gap-0.5 font-medium" style={{ color: temp.cor }}>
           {temp.emoji} {temp.label}
         </span>
+        {card.ultimaInteracao && (
+          <span className={esfriando ? "text-amber-400" : "text-text-subtle"}>
+            · {esfriando ? "parado " : ""}
+            {tempoRelativo(card.ultimaInteracao)}
+          </span>
+        )}
       </div>
-      <div className="mt-2">
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <button
-              type="button"
-              disabled={ocupado}
-              className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium text-text-muted transition-colors hover:bg-white/10"
-            >
-              Mover etapa <CaretDown size={11} weight="bold" aria-hidden />
-            </button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="start">
-            {colunas
-              .filter((col) => col.estagio !== etapaAtual)
-              .map((col) => (
-                <DropdownMenuItem
-                  key={col.estagio}
-                  onSelect={() => onMover(card.contactId, col.estagio, col.label)}
+    </button>
+  );
+}
+
+/** Painel lateral com a FICHA da pessoa — clica no card e vê tudo + age. */
+function DetalheDrawer({
+  card,
+  colunas,
+  ocupado,
+  onClose,
+  onMover,
+}: {
+  card: CardPessoa | null;
+  colunas: ColunaKanban[];
+  ocupado: boolean;
+  onClose: () => void;
+  onMover: (etapa: string, label: string) => void;
+}) {
+  const temp = card ? (TEMP_CFG[card.temperatura] ?? TEMP_CFG.frio!) : TEMP_CFG.frio!;
+  const etapa = card
+    ? colunas.find((col) => col.cards.some((x) => x.contactId === card.contactId))
+    : undefined;
+  const dias = card ? diasDesde(card.ultimaInteracao) : null;
+  const esfriando = dias !== null && dias >= 14 && card?.temperatura !== "quente";
+  const degrau = card ? proximoDegrau(card.score) : null;
+  const pctBarra = card && degrau ? Math.min(100, Math.round((card.score / degrau.alvo) * 100)) : 0;
+
+  return (
+    <Sheet open={!!card} onOpenChange={(aberto) => !aberto && onClose()}>
+      <SheetContent side="right" className="gip-glass w-full overflow-y-auto border-l border-white/10 sm:max-w-md">
+        {card && (
+          <>
+            <SheetHeader className="space-y-3 text-left">
+              <div className="flex items-center gap-3">
+                <span
+                  className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full"
+                  style={{ background: "color-mix(in srgb, var(--color-accent) 16%, transparent)" }}
                 >
-                  <span className="mr-2 h-2 w-2 rounded-full" style={{ background: col.cor }} aria-hidden />
-                  {col.label}
-                </DropdownMenuItem>
-              ))}
-          </DropdownMenuContent>
-        </DropdownMenu>
-      </div>
-    </div>
+                  <UserCircle size={26} weight="fill" className="text-accent" aria-hidden />
+                </span>
+                <SheetTitle className="text-xl font-bold text-foreground">{card.nome}</SheetTitle>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {etapa && (
+                  <span
+                    className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold"
+                    style={{ background: `color-mix(in srgb, ${etapa.cor} 20%, transparent)`, color: "var(--color-text)" }}
+                  >
+                    <span className="h-2 w-2 rounded-full" style={{ background: etapa.cor }} aria-hidden />
+                    {etapa.label}
+                  </span>
+                )}
+                <span
+                  className="inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-semibold"
+                  style={{ background: `color-mix(in srgb, ${temp.cor} 20%, transparent)`, color: "var(--color-text)" }}
+                >
+                  {temp.emoji} {temp.label}
+                </span>
+              </div>
+            </SheetHeader>
+
+            <div className="mt-6 space-y-5">
+              {/* De onde veio */}
+              <section className="space-y-2">
+                <h3 className="text-xs font-semibold uppercase tracking-wide text-text-subtle">De onde veio</h3>
+                <div className="space-y-1.5 text-sm text-foreground">
+                  <p className="flex items-center gap-2">
+                    <span
+                      className="h-2 w-2 shrink-0 rounded-full"
+                      style={{ background: card.grupoCor ?? "var(--color-text-subtle)" }}
+                      aria-hidden
+                    />
+                    {card.sourceLabel ?? "Origem não informada"}
+                    {card.grupoNome && <span className="text-text-subtle">· {card.grupoNome}</span>}
+                  </p>
+                  {card.cidade && (
+                    <p className="flex items-center gap-2 text-text-muted">
+                      <MapPin size={15} aria-hidden /> {card.cidade}
+                    </p>
+                  )}
+                </div>
+              </section>
+
+              {/* Engajamento */}
+              <section className="space-y-2">
+                <h3 className="text-xs font-semibold uppercase tracking-wide text-text-subtle">Engajamento</h3>
+                <div className="flex items-baseline gap-2">
+                  <span className="text-3xl font-bold tabular-nums text-foreground">{card.score}</span>
+                  <span className="text-sm text-text-muted">pontos</span>
+                </div>
+                <div className="h-2.5 overflow-hidden rounded-full" style={{ background: "color-mix(in srgb, var(--color-text) 8%, transparent)" }}>
+                  <div className="h-full rounded-full" style={{ width: `${Math.max(pctBarra, 2)}%`, background: "var(--color-accent)" }} />
+                </div>
+                {degrau && <p className="text-xs text-text-muted">{degrau.texto}</p>}
+              </section>
+
+              {/* Atividade */}
+              <section className="space-y-2">
+                <h3 className="text-xs font-semibold uppercase tracking-wide text-text-subtle">Atividade</h3>
+                <p className={`flex items-center gap-2 text-sm ${esfriando ? "text-amber-400" : "text-foreground"}`}>
+                  <Clock size={15} aria-hidden />
+                  {card.ultimaInteracao
+                    ? `Última interação ${tempoRelativo(card.ultimaInteracao)}`
+                    : "Sem interação registrada"}
+                </p>
+                {esfriando && (
+                  <p className="text-xs text-amber-400/90">Está esfriando — vale um toque pra reativar.</p>
+                )}
+              </section>
+
+              {/* Ações */}
+              <div className="flex flex-col gap-2 border-t border-white/10 pt-4">
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <button
+                      type="button"
+                      disabled={ocupado}
+                      className="inline-flex items-center justify-center gap-1.5 rounded-xl bg-accent px-4 py-2.5 text-sm font-semibold text-accent-foreground transition-opacity hover:opacity-90 disabled:opacity-60"
+                    >
+                      Mover de etapa <CaretDown size={13} weight="bold" aria-hidden />
+                    </button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="start">
+                    {colunas
+                      .filter((col) => col.estagio !== etapa?.estagio)
+                      .map((col) => (
+                        <DropdownMenuItem key={col.estagio} onSelect={() => onMover(col.estagio, col.label)}>
+                          <span className="mr-2 h-2 w-2 rounded-full" style={{ background: col.cor }} aria-hidden />
+                          {col.label}
+                        </DropdownMenuItem>
+                      ))}
+                  </DropdownMenuContent>
+                </DropdownMenu>
+                <Link
+                  href={`/app/contacts/${card.contactId}`}
+                  className="inline-flex items-center justify-center gap-1.5 rounded-xl border border-white/12 px-4 py-2.5 text-sm font-medium text-foreground transition-colors hover:bg-white/5"
+                >
+                  Abrir ficha completa <ArrowSquareOut size={15} aria-hidden />
+                </Link>
+              </div>
+            </div>
+          </>
+        )}
+      </SheetContent>
+    </Sheet>
   );
 }
