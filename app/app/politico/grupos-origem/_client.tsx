@@ -18,7 +18,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { CaretDown, PencilSimple, Trash, TrendUp } from "@/lib/ui/icons";
+import { CaretDown, PencilSimple, Trash, ChartLineUp } from "@/lib/ui/icons";
 import {
   apagarGrupo,
   criarGrupo,
@@ -155,7 +155,7 @@ export default function GruposOrigemClient({ grupos, aClassificar, outrasPoucas,
       {conversao.length > 0 && (
         <div className="gip-glass p-4">
           <div className="mb-1 flex items-center gap-2">
-            <TrendUp size={18} weight="bold" className="text-accent" aria-hidden />
+            <ChartLineUp size={18} weight="bold" className="text-accent" aria-hidden />
             <h2 className="text-base font-semibold text-foreground">Onde investir</h2>
           </div>
           <p className="mb-3 text-sm text-text-muted">
