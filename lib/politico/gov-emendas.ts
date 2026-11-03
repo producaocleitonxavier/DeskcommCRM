@@ -38,6 +38,22 @@ export function pagoEfetivoCents(e: Pick<EmendaGov, "pagoCents" | "restoPagoCent
   return (e.pagoCents ?? 0) + (e.restoPagoCents ?? 0);
 }
 
+/**
+ * Deriva o STATUS do ciclo a partir dos valores de execução que o gov manda —
+ * assim uma emenda 100% paga aparece como "Paga" (e não "Indicada"), batendo
+ * com a régua. Só para o caminho de SYNC (gov); no cadastro manual o status é do
+ * usuário. Cobre o pago via restos (pago de verdade). Devolve um status válido
+ * do CHECK (indicada|empenhada|liquidada|paga).
+ */
+export function statusPorExecucao(
+  e: Pick<EmendaGov, "empenhadoCents" | "liquidadoCents" | "pagoCents" | "restoPagoCents">,
+): "indicada" | "empenhada" | "liquidada" | "paga" {
+  if (pagoEfetivoCents(e) > 0) return "paga";
+  if ((e.liquidadoCents ?? 0) > 0) return "liquidada";
+  if ((e.empenhadoCents ?? 0) > 0) return "empenhada";
+  return "indicada";
+}
+
 /** "10.000,00" -> 1000000 (centavos). Tolerante a vazio/formato. */
 export function moedaBrParaCents(s: string | null | undefined): number {
   const t = (s ?? "").trim();

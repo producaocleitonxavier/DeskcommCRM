@@ -13,7 +13,7 @@ import { loadAuthUser, mfaEmDivida, resolveActiveOrg } from "@/lib/auth/server";
 import { ROLE_RANK } from "@/lib/auth/types";
 import { supportWriteError } from "@/lib/impersonate/support";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { buscarEmendasGov, pagoEfetivoCents } from "@/lib/politico/gov-emendas";
+import { buscarEmendasGov, pagoEfetivoCents, statusPorExecucao } from "@/lib/politico/gov-emendas";
 import { funcaoParaArea } from "@/lib/politico/gov-funcao-area";
 
 export type ResultadoSync =
@@ -68,6 +68,9 @@ export async function sincronizarEmendasGov(): Promise<ResultadoSync> {
       valor_indicado_cents: e.empenhadoCents,
       // Área OFICIAL do gov (funcao) — não precisa adivinhar no federal.
       area_tematica: funcaoParaArea(e.funcao),
+      // Status pelo que o gov JÁ executou (paga/liquidada/empenhada) — bate com a
+      // régua; emenda paga não fica mais marcada como "Indicada".
+      status: statusPorExecucao(e),
     };
     const { data: existente } = await admin
       .from("pol_emendas")

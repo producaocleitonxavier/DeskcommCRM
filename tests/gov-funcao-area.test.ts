@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { funcaoParaArea } from "@/lib/politico/gov-funcao-area";
-import { pagoEfetivoCents } from "@/lib/politico/gov-emendas";
+import { pagoEfetivoCents, statusPorExecucao } from "@/lib/politico/gov-emendas";
 
 describe("funcaoParaArea — função oficial do gov → área do GIP", () => {
   it("Saúde → saude", () => {
@@ -37,6 +37,15 @@ describe("funcaoParaArea — função oficial do gov → área do GIP", () => {
     expect(funcaoParaArea("Saneamento")).toBe("infraestrutura");
     expect(funcaoParaArea("Transporte")).toBe("infraestrutura");
     expect(funcaoParaArea("Habitação")).toBe("infraestrutura");
+  });
+
+  it("primas sociais (Previdência / Direitos da Cidadania / Trabalho) → assistencia_social", () => {
+    expect(funcaoParaArea("Previdência Social")).toBe("assistencia_social");
+    expect(funcaoParaArea("Direitos da Cidadania")).toBe("assistencia_social");
+    expect(funcaoParaArea("Trabalho")).toBe("assistencia_social");
+    // Anti-tautologia: não é "saude" fixo nem "outro" — é a social de propósito.
+    expect(funcaoParaArea("Trabalho")).not.toBe("saude");
+    expect(funcaoParaArea("Previdência Social")).not.toBe("outro");
   });
 
   // Controle negativo: função desconhecida/não-temática cai em "outro".
@@ -82,5 +91,26 @@ describe("pagoEfetivoCents — pago no ano + pago via restos", () => {
 
   it("tolera campos ausentes (fail-soft)", () => {
     expect(pagoEfetivoCents({ pagoCents: 0, restoPagoCents: 0 })).toBe(0);
+  });
+});
+
+describe("statusPorExecucao — status pelo que o gov já executou", () => {
+  it("pago > 0 → paga (mesmo com empenho/liquidação também)", () => {
+    expect(statusPorExecucao({ empenhadoCents: 100, liquidadoCents: 100, pagoCents: 100, restoPagoCents: 0 })).toBe("paga");
+  });
+  it("pago só via RESTOS → paga (não subestima)", () => {
+    expect(statusPorExecucao({ empenhadoCents: 0, liquidadoCents: 0, pagoCents: 0, restoPagoCents: 5000 })).toBe("paga");
+  });
+  it("liquidado > 0 e pago = 0 → liquidada", () => {
+    expect(statusPorExecucao({ empenhadoCents: 100, liquidadoCents: 100, pagoCents: 0, restoPagoCents: 0 })).toBe("liquidada");
+  });
+  it("só empenhado → empenhada", () => {
+    expect(statusPorExecucao({ empenhadoCents: 100, liquidadoCents: 0, pagoCents: 0, restoPagoCents: 0 })).toBe("empenhada");
+  });
+  it("tudo zero → indicada (controle negativo)", () => {
+    expect(statusPorExecucao({ empenhadoCents: 0, liquidadoCents: 0, pagoCents: 0, restoPagoCents: 0 })).toBe("indicada");
+  });
+  it("ANTI-TAUTOLOGIA: só empenho NÃO vira paga", () => {
+    expect(statusPorExecucao({ empenhadoCents: 999, liquidadoCents: 0, pagoCents: 0, restoPagoCents: 0 })).not.toBe("paga");
   });
 });

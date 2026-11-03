@@ -43,8 +43,18 @@ export function funcaoParaArea(funcao: string | null | undefined): AreaTematica 
   const f = normaliza(funcao ?? "");
   if (!f) return "outro";
 
-  // Assistência social antes de qualquer coisa genérica.
-  if (f.includes("assistencia social")) return "assistencia_social";
+  // Assistência social (e primas sociais: previdência, direitos da cidadania,
+  // trabalho/emprego) antes de qualquer coisa genérica — pro gabinete tudo isso
+  // é "programa social", e assim caem menos emendas em "Outro".
+  if (
+    f.includes("assistencia social") ||
+    f.includes("previdencia") ||
+    f.includes("cidadania") ||
+    f.includes("direitos humanos") ||
+    f.includes("trabalho")
+  ) {
+    return "assistencia_social";
+  }
   if (f.includes("saude")) return "saude";
   if (f.includes("educacao")) return "educacao";
   if (f.includes("seguranca")) return "seguranca"; // "Segurança Pública"
