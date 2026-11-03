@@ -46,7 +46,7 @@ function esferaDoMandato(settings: unknown): "municipal" | "estadual" | "federal
 
 export interface NovoPedidoInput {
   solicitanteNome: string;
-  solicitanteOrigem: string; // lideranca | entidade | prefeitura | gabinete | publico
+  solicitanteOrigem: string; // texto livre: de onde veio o pedido (Guarda Municipal, Prefeitura…)
   objeto: string;            // o que pede (livre) — base da classificação
   descricao?: string;
   valorIndicadoCents?: number;

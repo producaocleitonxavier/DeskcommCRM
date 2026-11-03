@@ -6,7 +6,6 @@ import {
   validarAtender,
   validarRecusar,
   origemValida,
-  classificarOrigem,
 } from "@/lib/politico/pedido-emenda";
 
 describe("pedido-emenda — quem pode atender/recusar", () => {
@@ -44,49 +43,16 @@ describe("pedido-emenda — validação de recusar (exige motivo)", () => {
   });
 });
 
-describe("pedido-emenda — origem", () => {
-  it("aceita origens válidas", () => {
-    expect(origemValida("lideranca")).toBe("lideranca");
-    expect(origemValida("prefeitura")).toBe("prefeitura");
-    expect(origemValida("publico")).toBe("publico");
+describe("pedido-emenda — origem (CAMPO ABERTO: texto livre)", () => {
+  it("devolve o texto aparado, qualquer que seja", () => {
+    expect(origemValida("Guarda Municipal")).toBe("Guarda Municipal"); // o caso do cliente
+    expect(origemValida("Prefeitura")).toBe("Prefeitura");
+    expect(origemValida("  Associação de Moradores  ")).toBe("Associação de Moradores");
   });
-  it("rejeita origem inválida → null", () => {
-    expect(origemValida("qualquer")).toBeNull();
+  it("vazio/nulo/indefinido → null (controle negativo)", () => {
     expect(origemValida("")).toBeNull();
+    expect(origemValida("   ")).toBeNull();
     expect(origemValida(null)).toBeNull();
-  });
-});
-
-describe("pedido-emenda — classificarOrigem (adivinha pelo nome de quem pede)", () => {
-  it("reconhece a PREFEITURA / executivo municipal", () => {
-    expect(classificarOrigem("Prefeitura de Belo Horizonte")).toBe("prefeitura");
-    expect(classificarOrigem("Secretaria Municipal de Saúde")).toBe("prefeitura");
-    expect(classificarOrigem("Prefeito João")).toBe("prefeitura");
-  });
-  it("reconhece ENTIDADE / órgão / coletivo organizado", () => {
-    expect(classificarOrigem("Guarda Municipal")).toBe("entidade"); // o caso do cliente
-    expect(classificarOrigem("APAE de Contagem")).toBe("entidade");
-    expect(classificarOrigem("Associação de Moradores do Bairro X")).toBe("entidade");
-    expect(classificarOrigem("Igreja Batista Central")).toBe("entidade");
-  });
-  it("reconhece GABINETE / origem interna do mandato", () => {
-    expect(classificarOrigem("Gabinete do vereador")).toBe("gabinete");
-    expect(classificarOrigem("Assessor Pedro")).toBe("gabinete");
-  });
-  it("reconhece LIDERANÇA comunitária", () => {
-    expect(classificarOrigem("Liderança do Barreiro")).toBe("lideranca");
-    expect(classificarOrigem("Presidente de bairro Maria")).toBe("lideranca");
-  });
-  it("nome comum de pessoa → lideranca (padrão seguro, editável)", () => {
-    expect(classificarOrigem("João da Silva")).toBe("lideranca");
-  });
-  it("nome vazio/nulo → lideranca sem quebrar (controle negativo)", () => {
-    expect(classificarOrigem("")).toBe("lideranca");
-    expect(classificarOrigem(null)).toBe("lideranca");
-    expect(classificarOrigem(undefined)).toBe("lideranca");
-  });
-  it("não confunde 'secretaria' de entidade com acento/caixa — normaliza", () => {
-    expect(classificarOrigem("SECRETARIA de Educação")).toBe("prefeitura");
-    expect(classificarOrigem("Polícia Militar")).toBe("entidade");
+    expect(origemValida(undefined)).toBeNull();
   });
 });

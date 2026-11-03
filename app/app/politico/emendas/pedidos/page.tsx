@@ -12,7 +12,6 @@ import { createClient } from "@/lib/supabase/server";
 import { requireAuth, resolveActiveOrg } from "@/lib/auth/server";
 import { ROLE_RANK } from "@/lib/auth/types";
 import { rotuloArea } from "@/lib/politico/emenda-classificar";
-import { ORIGEM_LABEL, type OrigemPedido } from "@/lib/politico/pedido-emenda";
 import PedidosClient, { type PedidoItem } from "./_pedidos-client";
 
 export const dynamic = "force-dynamic";
@@ -38,11 +37,10 @@ export default async function PedidosEmendaPage() {
 
   const rows = (data ?? []) as Record<string, unknown>[];
   const pedidos: PedidoItem[] = rows.map((e) => {
-    const origem = (e.solicitante_origem as OrigemPedido | null) ?? null;
     return {
       id: String(e.id),
       solicitante: (e.solicitante_nome as string | null) ?? "—",
-      origem: origem ? ORIGEM_LABEL[origem] : null,
+      origem: (e.solicitante_origem as string | null)?.trim() || null,
       objeto: (e.objeto as string | null) ?? (e.descricao as string | null) ?? "—",
       descricao: (e.descricao as string | null) ?? null,
       area: rotuloArea(String(e.area_tematica ?? "outro")),
