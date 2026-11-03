@@ -34,6 +34,9 @@ export default function NovaVisitaForm({ tipoMandato, onFechar }: { tipoMandato:
   const [modoNovo, setModoNovo] = useState(false);
   const [novoNome, setNovoNome] = useState("");
   const [novoFone, setNovoFone] = useState("");
+  const [novoEndereco, setNovoEndereco] = useState("");
+  const [novoBairro, setNovoBairro] = useState("");
+  const [novoNascimento, setNovoNascimento] = useState("");
   const [criandoCidadao, setCriandoCidadao] = useState(false);
 
   // Campos da visita
@@ -71,7 +74,14 @@ export default function NovaVisitaForm({ tipoMandato, onFechar }: { tipoMandato:
     if (!novoNome.trim()) return setErro("Informe o nome do cidadão.");
     if (!novoFone.trim()) return setErro("Informe o WhatsApp do cidadão — é por onde o gabinete dá retorno.");
     setCriandoCidadao(true);
-    const res = await criarCidadao(novoNome, novoFone || undefined);
+    const res = await criarCidadao(
+      novoNome,
+      novoFone || undefined,
+      novoEndereco || undefined,
+      novoNascimento || undefined,
+      novoBairro || undefined,
+      municipio || undefined, // reaproveita o município da visita
+    );
     if (res.ok && res.id) await garantirLeadNovoCadastro(res.id);
     setCriandoCidadao(false);
     if (!res.ok || !res.id) return setErro(res.ok ? "Não consegui obter o id do cidadão." : res.erro);
@@ -124,9 +134,32 @@ export default function NovaVisitaForm({ tipoMandato, onFechar }: { tipoMandato:
           </div>
         ) : modoNovo ? (
           <div className="space-y-2 rounded-xl p-3" style={{ background: "var(--color-surface-elevated)", border: "1px solid var(--color-border)" }}>
-            <input value={novoNome} onChange={(e) => setNovoNome(e.target.value)} placeholder="Nome completo" className="wr-input w-full" />
-            <input value={novoFone} onChange={(e) => setNovoFone(e.target.value)} placeholder="WhatsApp (00) 00000-0000" inputMode="tel" className="wr-input w-full" />
-            <div className="flex gap-2">
+            <p className="text-xs" style={{ color: "var(--color-text-subtle)" }}>
+              Aproveite para cadastrar completo — a maioria ainda não está na base. Nome e WhatsApp são obrigatórios; o resto ajuda a conhecer o cidadão.
+            </p>
+            <div>
+              <label className="mb-1 block text-xs font-semibold" style={{ color: "var(--color-text-muted)" }}>Nome completo *</label>
+              <input value={novoNome} onChange={(e) => setNovoNome(e.target.value)} placeholder="Nome do cidadão" className="wr-input w-full" />
+            </div>
+            <div>
+              <label className="mb-1 block text-xs font-semibold" style={{ color: "var(--color-text-muted)" }}>WhatsApp *</label>
+              <input value={novoFone} onChange={(e) => setNovoFone(e.target.value)} placeholder="(00) 00000-0000" inputMode="tel" className="wr-input w-full" />
+            </div>
+            <div>
+              <label className="mb-1 block text-xs font-semibold" style={{ color: "var(--color-text-muted)" }}>Endereço (rua, número)</label>
+              <input value={novoEndereco} onChange={(e) => setNovoEndereco(e.target.value)} placeholder="Ex.: Rua das Flores, 100" className="wr-input w-full" />
+            </div>
+            <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+              <div>
+                <label className="mb-1 block text-xs font-semibold" style={{ color: "var(--color-text-muted)" }}>Bairro</label>
+                <input value={novoBairro} onChange={(e) => setNovoBairro(e.target.value)} placeholder="Ex.: Venda Nova" className="wr-input w-full" />
+              </div>
+              <div>
+                <label className="mb-1 block text-xs font-semibold" style={{ color: "var(--color-text-muted)" }}>Data de nascimento</label>
+                <input type="date" value={novoNascimento} onChange={(e) => setNovoNascimento(e.target.value)} className="wr-input w-full" />
+              </div>
+            </div>
+            <div className="flex gap-2 pt-1">
               <button type="button" disabled={criandoCidadao} onClick={cadastrarCidadao} className="wr-btn-dark inline-flex items-center gap-1.5 text-sm disabled:opacity-60">
                 <Check className="h-4 w-4" /> {criandoCidadao ? "Salvando…" : "Salvar cidadão"}
               </button>
@@ -149,7 +182,7 @@ export default function NovaVisitaForm({ tipoMandato, onFechar }: { tipoMandato:
                 ))}
               </div>
             )}
-            <button type="button" onClick={() => { setModoNovo(true); setNovoNome(busca.trim()); setResultados([]); }} className="mt-2 inline-flex items-center gap-1.5 text-sm font-semibold" style={{ color: "#8AA62E" }}>
+            <button type="button" onClick={() => { setModoNovo(true); setNovoNome(busca.trim()); setNovoBairro(bairro); setResultados([]); }} className="mt-2 inline-flex items-center gap-1.5 text-sm font-semibold" style={{ color: "#8AA62E" }}>
               <UserPlus className="h-4 w-4" /> Cadastrar novo cidadão
             </button>
           </div>
