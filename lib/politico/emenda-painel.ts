@@ -85,6 +85,43 @@ export function grauDoDestino(tipo: TipoMandato): "municipio" | "bairro" {
   return tipo === "dep_estadual" || tipo === "dep_federal" ? "municipio" : "bairro";
 }
 
+export interface ResumoMunicipio {
+  municipio: string;
+  total: number;
+  indicadoCents: number;
+  pagoCents: number;
+  /** % de execução (pago / indicado), 0–100 inteiro. */
+  execPct: number;
+}
+
+/**
+ * Agrega as emendas DECIDIDAS por MUNICÍPIO (o "Relatório por Município" à la
+ * Tramonte): quantas, quanto indicado, quanto pago e o % de execução. Emenda sem
+ * município cai em "Não informado" (não some do relatório). Ordena por valor
+ * indicado desc. Puro.
+ */
+export function resumoPorMunicipio(rows: EmendaLite[]): ResumoMunicipio[] {
+  const m = new Map<string, { total: number; indicadoCents: number; pagoCents: number }>();
+  for (const e of rows) {
+    if (!ehDecidida(e.status)) continue;
+    const nome = (e.municipio ?? "").trim() || "Não informado";
+    const cur = m.get(nome) ?? { total: 0, indicadoCents: 0, pagoCents: 0 };
+    cur.total += 1;
+    cur.indicadoCents += e.valorIndicadoCents || 0;
+    cur.pagoCents += e.valorPagoCents || 0;
+    m.set(nome, cur);
+  }
+  return [...m.entries()]
+    .map(([municipio, v]) => ({
+      municipio,
+      total: v.total,
+      indicadoCents: v.indicadoCents,
+      pagoCents: v.pagoCents,
+      execPct: v.indicadoCents > 0 ? Math.round((v.pagoCents / v.indicadoCents) * 100) : 0,
+    }))
+    .sort((a, b) => b.indicadoCents - a.indicadoCents || a.municipio.localeCompare(b.municipio, "pt-BR"));
+}
+
 function ehDecidida(status: string): boolean {
   return !(STATUS_NAO_DECIDIDOS as readonly string[]).includes(status);
 }

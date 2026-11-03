@@ -12,7 +12,7 @@ import { createClient } from "@/lib/supabase/server";
 import { requireAuth, resolveActiveOrg } from "@/lib/auth/server";
 import { ROLE_RANK } from "@/lib/auth/types";
 import { lerMandatoConfig } from "@/lib/politico/setup-do-mandato";
-import { derivarPainel, AREA_LABELS, type EmendaLite, type TipoMandato } from "@/lib/politico/emenda-painel";
+import { derivarPainel, resumoPorMunicipio, AREA_LABELS, type EmendaLite, type TipoMandato } from "@/lib/politico/emenda-painel";
 import { buscarEmendaVotos } from "@/app/actions/politico/emenda-votos-actions";
 import EmendasClient, { type EmendaItem } from "./_emendas-client";
 
@@ -46,7 +46,7 @@ export default async function EmendasPage() {
   const { data } = await db
     .from("pol_emendas")
     .select(
-      "id, numero, ano, tipo, esfera, modalidade, meso_regiao, valor_indicado_cents, valor_empenhado_cents, valor_pago_cents, municipio, bairro, entidade_beneficiada, area_tematica, status, beneficiarios_estimados",
+      "id, numero, ano, tipo, esfera, modalidade, meso_regiao, micro_regiao, repartida_municipio, valor_indicado_cents, valor_empenhado_cents, valor_pago_cents, municipio, bairro, entidade_beneficiada, area_tematica, status, beneficiarios_estimados",
     )
     .eq("organization_id", org.orgId)
     .order("ano", { ascending: false })
@@ -70,6 +70,27 @@ export default async function EmendasPage() {
 
   const painel = derivarPainel(lite, tipo);
 
+  // Relatório por Município (agregado) — reaproveita o mesmo motor de PDF.
+  const municipios = resumoPorMunicipio(lite);
+  const relatorioMunicipio = {
+    slug: "emendas-municipio" as const,
+    titulo: "Relatório por Município",
+    resumo: `${municipios.length} município(s)`,
+    kpis: [
+      { num: String(municipios.length), label: "Municípios" },
+      { num: moeda(painel.financeiro.alocadoCents), label: "Valor total indicado" },
+      { num: moeda(painel.financeiro.executadoCents), label: "Executado (pago)" },
+    ],
+    colunas: [
+      { header: "Município", largura: "34%" },
+      { header: "Emendas", largura: "12%" },
+      { header: "Indicado", largura: "20%" },
+      { header: "Pago", largura: "20%" },
+      { header: "Execução", largura: "14%" },
+    ],
+    linhas: municipios.map((m) => [m.municipio, String(m.total), moeda(m.indicadoCents), moeda(m.pagoCents), `${m.execPct}%`]),
+  };
+
   // Diferencial: votos cruzados (TSE). Bônus — nunca derruba a página.
   const votos = await buscarEmendaVotos(org.orgId, tipo);
 
@@ -90,6 +111,8 @@ export default async function EmendasPage() {
     bairro: (e.bairro as string | null) ?? null,
     entidade: (e.entidade_beneficiada as string | null) ?? null,
     modalidade: (e.modalidade as string | null) ?? null,
+    microRegiao: (e.micro_regiao as string | null) ?? null,
+    repartida: (e.repartida_municipio as boolean | null) === true,
     valorIndicado: moeda(Number(e.valor_indicado_cents ?? 0)),
     valorEmpenhado: moeda(Number(e.valor_empenhado_cents ?? 0)),
     valorPago: moeda(Number(e.valor_pago_cents ?? 0)),
@@ -116,6 +139,7 @@ export default async function EmendasPage() {
         pendente: moeda(painel.financeiro.pendenteCents),
       }}
       pedidosAguardando={painel.pedidosAguardando}
+      relatorioMunicipio={relatorioMunicipio}
       porArea={porArea}
       porAno={porAno}
       porRegiao={porRegiao}

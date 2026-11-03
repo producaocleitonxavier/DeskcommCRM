@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { derivarPainel, grauDoDestino, type EmendaLite } from "@/lib/politico/emenda-painel";
+import { derivarPainel, grauDoDestino, resumoPorMunicipio, type EmendaLite } from "@/lib/politico/emenda-painel";
 
 /** Dataset de deputado: destino = município, região = meso-região. */
 const DEPUTADO: EmendaLite[] = [
@@ -101,5 +101,39 @@ describe("derivarPainel — agrupamentos", () => {
     const p = derivarPainel(VEREADOR, "vereador");
     expect(p.porRegiao[0]).toEqual({ nome: "Centro", valorCents: 70_000 });
     expect(p.porRegiao[1]).toEqual({ nome: "Savassi", valorCents: 20_000 });
+  });
+});
+
+describe("resumoPorMunicipio — relatório agregado por município (à la Tramonte)", () => {
+  it("soma por município só as DECIDIDAS, com % de execução", () => {
+    const r = resumoPorMunicipio(DEPUTADO);
+    const betim = r.find((x) => x.municipio === "Betim")!;
+    expect(betim.total).toBe(2); // id1 + id2 (pedido/rascunho fora)
+    expect(betim.indicadoCents).toBe(150_000);
+    expect(betim.pagoCents).toBe(100_000);
+    expect(betim.execPct).toBe(67); // 100/150
+    // Pedido (Uberaba) e rascunho (Juiz de Fora) NÃO entram:
+    expect(r.some((x) => x.municipio === "Uberaba")).toBe(false);
+    expect(r.some((x) => x.municipio === "Juiz de Fora")).toBe(false);
+  });
+  it("ordena por valor INDICADO desc (não por % de execução) — anti-tautologia", () => {
+    const r = resumoPorMunicipio(DEPUTADO);
+    expect(r.map((x) => x.municipio)).toEqual(["Betim", "Contagem", "Poços de Caldas"]);
+    // Poços tem 100% de execução mas vem por ÚLTIMO (menor valor): prova que a
+    // ordem é por valor, não por execução.
+    expect(r[2].municipio).toBe("Poços de Caldas");
+    expect(r[2].execPct).toBe(100);
+  });
+  it("município vazio/nulo cai em 'Não informado' (não some)", () => {
+    const r = resumoPorMunicipio([
+      { id: "a", ano: 2025, status: "paga", area: "saude", municipio: null, bairro: null, mesoRegiao: null, modalidade: null, valorIndicadoCents: 10_000, valorPagoCents: 5_000 },
+      { id: "b", ano: 2025, status: "indicada", area: "saude", municipio: "   ", bairro: null, mesoRegiao: null, modalidade: null, valorIndicadoCents: 20_000, valorPagoCents: 0 },
+    ]);
+    const ni = r.find((x) => x.municipio === "Não informado")!;
+    expect(ni.total).toBe(2);
+    expect(ni.indicadoCents).toBe(30_000);
+  });
+  it("lista vazia → []", () => {
+    expect(resumoPorMunicipio([])).toEqual([]);
   });
 });

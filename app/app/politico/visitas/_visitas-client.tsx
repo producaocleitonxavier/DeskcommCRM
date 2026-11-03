@@ -10,7 +10,7 @@
 import { useMemo, useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { MapPin, CalendarClock, AlertTriangle, UserX, CheckCircle2, User, Check, X, ArrowUpRight, Camera, Plus } from "lucide-react";
+import { MapPin, CalendarClock, AlertTriangle, UserX, CheckCircle2, User, Check, X, ArrowUpRight, Camera, Plus, Printer } from "lucide-react";
 
 import { CommandHero } from "@/components/politico/command-hero";
 import { KpiCard } from "@/components/politico/kpi-card";
@@ -153,6 +153,49 @@ export default function VisitasClient({ visitas, kpis, assessores, usuarioAtualI
     router.refresh();
   }
 
+  /** Relatório imprimível da visita (abre numa aba → "Salvar como PDF"). Inclui
+   *  as fotos nativamente — simples e sem depender do motor de PDF do servidor. */
+  function imprimirRelatorio(v: VisitaItem) {
+    const esc = (s: string | null) => (s ?? "").replace(/[&<>]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" }[c] ?? c));
+    const linha = (rot: string, val: string | null) => (val && val.trim() ? `<p><strong>${rot}:</strong> ${esc(val)}</p>` : "");
+    const vFotos = fotos[v.id] ?? [];
+    const dataVis = v.realizadaEm ? fmtData(v.realizadaEm) : fmtData(v.visitaEm);
+    const imgs = vFotos.map((f) => `<img src="${f.url}" alt="${esc(f.nome)}" />`).join("");
+    const registrouOutro = !!v.relatoPorId && v.relatoPorId !== v.responsavelId;
+    const html = `<!doctype html><html lang="pt-BR"><head><meta charset="utf-8" />
+<title>Relatório de visita — ${esc(v.assunto || "Demanda")}</title>
+<style>
+ body{font-family:Arial,Helvetica,sans-serif;color:#1b1f27;max-width:720px;margin:32px auto;padding:0 20px;line-height:1.55}
+ h1{font-size:20px;margin:0 0 2px} .sub{color:#666;font-size:13px;margin-bottom:18px}
+ .box{border:1px solid #e3e3e3;border-radius:10px;padding:14px 16px;margin-bottom:14px}
+ p{margin:5px 0} .imgs{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
+ .imgs img{width:230px;height:230px;object-fit:cover;border:1px solid #ccc;border-radius:8px}
+ button{margin-top:8px;padding:8px 16px;border-radius:8px;border:1px solid #16181D;background:#16181D;color:#fff;cursor:pointer;font-size:14px}
+ @media print{button{display:none}}
+</style></head><body>
+ <h1>Relatório de Visita Técnica</h1>
+ <div class="sub">${esc(v.assunto || "Demanda")}</div>
+ <div class="box">
+  ${linha("Órgão", v.orgao)}
+  ${linha("Município", v.municipio)}
+  <p><strong>Data da visita:</strong> ${dataVis}</p>
+  ${linha("Responsável", v.responsavelNome)}
+  ${registrouOutro ? linha("Registrado por", v.relatoPorNome) : ""}
+ </div>
+ <div class="box">
+  ${linha("O que foi feito", v.relato)}
+  ${linha("Quem esteve presente", v.presentes)}
+  ${linha("O que ficou decidido", v.decisoes)}
+  ${imgs ? `<div class="imgs">${imgs}</div>` : ""}
+ </div>
+ <button onclick="window.print()">Imprimir / Salvar PDF</button>
+</body></html>`;
+    const w = window.open("", "_blank", "noopener,noreferrer");
+    if (!w) { setErro("Permita pop-ups para gerar o relatório da visita."); return; }
+    w.document.write(html);
+    w.document.close();
+  }
+
   return (
     <div className="gip-ambient-bg mx-auto max-w-[1140px] px-4 py-7 space-y-6">
       <CommandHero
@@ -275,6 +318,9 @@ export default function VisitasClient({ visitas, kpis, assessores, usuarioAtualI
                     {registradoPorOutro && (
                       <p className="mt-2 text-xs" style={{ color: "var(--color-text-subtle)" }}>registrado por {v.relatoPorNome || "outro assessor"}</p>
                     )}
+                    <button type="button" onClick={() => imprimirRelatorio(v)} className="mt-3 inline-flex items-center gap-1.5 text-xs font-semibold underline" style={{ color: "var(--color-text-muted)" }}>
+                      <Printer className="h-3.5 w-3.5" aria-hidden /> Imprimir relatório
+                    </button>
                   </div>
                 )}
 

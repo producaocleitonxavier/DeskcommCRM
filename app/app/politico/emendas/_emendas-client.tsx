@@ -16,6 +16,7 @@ import { BarChartCard } from "@/components/politico/bar-chart-card";
 import { CommandHero } from "@/components/politico/command-hero";
 import { EmptyState } from "@/components/politico/empty-state";
 import { RelatorioGabineteButton } from "@/components/politico/relatorio-gabinete-button";
+import type { RelatorioGabineteInputCliente } from "@/app/actions/politico/gerarRelatorioGabinete";
 import { SincronizarEmendasButton } from "@/components/politico/sincronizar-emendas-button";
 import type { TipoMandato } from "@/lib/politico/emenda-painel";
 import { rotuloModalidade } from "@/lib/politico/emenda-modalidade";
@@ -48,6 +49,8 @@ export interface EmendaItem {
   bairro: string | null;
   entidade: string | null;
   modalidade: string | null;
+  microRegiao: string | null;
+  repartida: boolean;
   valorIndicado: string;
   valorEmpenhado: string;
   valorPago: string;
@@ -67,6 +70,7 @@ export interface EmendasClientProps {
   kpis: { destinosAtendidos: number; totalIndicacoes: number; valorTotalIndicado: string };
   financeiro: { alocado: string; executado: string; pendente: string };
   pedidosAguardando: number;
+  relatorioMunicipio: RelatorioGabineteInputCliente;
   porArea: Barra[];
   porAno: Barra[];
   porRegiao: Barra[];
@@ -82,7 +86,7 @@ export interface EmendasClientProps {
 const TODOS = "__todos__";
 
 export default function EmendasClient(props: EmendasClientProps) {
-  const { tipo, ehDeputado, kpis, financeiro, pedidosAguardando, porArea, porAno, porRegiao, emendas, votos, ehAdmin } = props;
+  const { tipo, ehDeputado, kpis, financeiro, pedidosAguardando, relatorioMunicipio, porArea, porAno, porRegiao, emendas, votos, ehAdmin } = props;
 
   const [fAno, setFAno] = useState<string>(TODOS);
   const [fArea, setFArea] = useState<string>(TODOS);
@@ -237,8 +241,9 @@ export default function EmendasClient(props: EmendasClientProps) {
             </section>
           )}
 
-          {/* Relatório PDF (reaproveita o motor do gabinete). */}
-          <div className="flex justify-end">
+          {/* Relatórios (reaproveitam o motor do gabinete). */}
+          <div className="flex flex-wrap justify-end gap-2">
+            {ehDeputado && <RelatorioGabineteButton dados={relatorioMunicipio} label="Relatório por Município" />}
             <RelatorioGabineteButton
               dados={{
                 slug: "emendas",
@@ -267,7 +272,11 @@ export default function EmendasClient(props: EmendasClientProps) {
                   String(e.ano),
                   e.area ?? "",
                   rotuloModalidade(e.modalidade),
-                  (ehDeputado ? e.municipio : e.bairro) ?? "",
+                  [
+                    (ehDeputado ? e.municipio : e.bairro) ?? "",
+                    e.repartida ? "(município todo)" : "",
+                    ehDeputado && e.microRegiao ? `· ${e.microRegiao}` : "",
+                  ].filter(Boolean).join(" "),
                   e.entidade ?? "",
                   STATUS[e.status]?.label ?? e.status,
                   e.valorIndicado,
@@ -339,6 +348,12 @@ export default function EmendasClient(props: EmendasClientProps) {
                     <span className="w-fit rounded-full px-2 py-0.5 text-xs font-medium" style={{ background: "var(--color-surface-elevated)", color: "var(--color-text-subtle)" }}>{e.area}</span>
                     {e.modalidade && (
                       <span className="w-fit rounded-full px-2 py-0.5 text-xs font-medium" style={{ background: "var(--color-surface-elevated)", color: "var(--color-text-subtle)" }}>{rotuloModalidade(e.modalidade)}</span>
+                    )}
+                    {ehDeputado && e.microRegiao && (
+                      <span className="w-fit rounded-full px-2 py-0.5 text-xs font-medium" style={{ background: "var(--color-surface-elevated)", color: "var(--color-text-subtle)" }}>{e.microRegiao}</span>
+                    )}
+                    {e.repartida && (
+                      <span className="w-fit rounded-full px-2 py-0.5 text-xs font-medium" style={{ background: "#E4E7F8", color: "#2F3DA8" }}>Município todo</span>
                     )}
                   </div>
                   <div className="mt-auto border-t pt-3" style={{ borderColor: "var(--color-border)" }}>

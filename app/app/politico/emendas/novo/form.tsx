@@ -23,6 +23,7 @@ export interface NovaEmendaFormProps {
   orgId: string;
   territorios: Opcao[];
   liderancas: Opcao[];
+  tipoMandato: string | null;
 }
 
 const TIPOS: Opcao[] = [
@@ -64,14 +65,19 @@ function Label({ children, obrig }: { children: React.ReactNode; obrig?: boolean
   );
 }
 
-export default function NovaEmendaForm({ liderancas }: NovaEmendaFormProps) {
+export default function NovaEmendaForm({ liderancas, tipoMandato }: NovaEmendaFormProps) {
   const router = useRouter();
+
+  // Deputado trabalha com modalidade/micro-região; vereador/prefeito, não.
+  const ehDeputadoMandato = tipoMandato === "dep_estadual" || tipoMandato === "dep_federal";
 
   const [numero, setNumero] = useState("");
   const [ano, setAno] = useState(String(new Date().getFullYear()));
   const [tipo, setTipo] = useState("individual");
-  const [esfera, setEsfera] = useState("estadual");
+  const [esfera, setEsfera] = useState(ehDeputadoMandato ? (tipoMandato === "dep_federal" ? "federal" : "estadual") : "municipal");
   const [modalidade, setModalidade] = useState("");
+  const [microRegiao, setMicroRegiao] = useState("");
+  const [repartida, setRepartida] = useState(false);
   const [valor, setValor] = useState("");
   // Área NÃO é mais um dropdown obrigatório: o assessor escreve a destinação
   // livre e o sistema classifica sozinho. `areaManual` vazio = segue o palpite.
@@ -120,10 +126,13 @@ export default function NovaEmendaForm({ liderancas }: NovaEmendaFormProps) {
       valor_indicado_cents: reaisParaCents(valor),
     };
     if (modalidade.trim()) payload.modalidade = modalidade.trim();
+    if (ehDeputadoMandato && microRegiao.trim()) payload.micro_regiao = microRegiao.trim();
+    payload.repartida_municipio = repartida;
     if (numero.trim()) payload.numero = numero.trim();
     if (objeto.trim()) payload.objeto = objeto.trim();
     if (municipio.trim()) payload.municipio = municipio.trim();
-    if (bairro.trim()) payload.bairro = bairro.trim();
+    // Repartida no município todo → não faz sentido bairro.
+    if (!repartida && bairro.trim()) payload.bairro = bairro.trim();
     if (entidade.trim()) payload.entidade_beneficiada = entidade.trim();
     if (cnpj.trim()) payload.cnpj_entidade = cnpj.trim();
     if (responsavel.trim()) payload.responsavel_nome = responsavel.trim();
@@ -184,13 +193,15 @@ export default function NovaEmendaForm({ liderancas }: NovaEmendaFormProps) {
                 {ESFERAS.map((o) => <option key={o.id} value={o.id}>{o.nome}</option>)}
               </select>
             </div>
-            <div>
-              <Label>Modalidade</Label>
-              <select value={modalidade} onChange={(e) => setModalidade(e.target.value)} className="wr-input w-full">
-                <option value="">— (como o recurso é repassado)</option>
-                {MODALIDADES.map((m) => <option key={m} value={m}>{m}</option>)}
-              </select>
-            </div>
+            {ehDeputadoMandato && (
+              <div>
+                <Label>Modalidade</Label>
+                <select value={modalidade} onChange={(e) => setModalidade(e.target.value)} className="wr-input w-full">
+                  <option value="">— (como o recurso é repassado)</option>
+                  {MODALIDADES.map((m) => <option key={m} value={m}>{m}</option>)}
+                </select>
+              </div>
+            )}
             <div>
               <Label>Valor indicado (R$)</Label>
               <input type="text" inputMode="decimal" value={valor} onChange={(e) => setValor(e.target.value)} placeholder="250.000,00" className="wr-input w-full" />
@@ -229,14 +240,26 @@ export default function NovaEmendaForm({ liderancas }: NovaEmendaFormProps) {
         <section className="gip-glass space-y-4 p-5 sm:p-6">
           <h2 className="font-heading text-base font-bold" style={{ color: "var(--color-text)" }}>Destino</h2>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <label className="sm:col-span-2 flex items-center gap-2 text-sm" style={{ color: "var(--color-text)" }}>
+              <input type="checkbox" checked={repartida} onChange={(e) => setRepartida(e.target.checked)} className="h-4 w-4" />
+              Distribuída no município todo (repartida) — ex.: asfalto. Sem bairro específico.
+            </label>
             <div>
               <Label>Município</Label>
               <input type="text" value={municipio} onChange={(e) => setMunicipio(e.target.value)} className="wr-input w-full" />
             </div>
-            <div>
-              <Label>Bairro</Label>
-              <input type="text" value={bairro} onChange={(e) => setBairro(e.target.value)} className="wr-input w-full" placeholder="O bairro liga a emenda ao voto do território" />
-            </div>
+            {!repartida && (
+              <div>
+                <Label>Bairro</Label>
+                <input type="text" value={bairro} onChange={(e) => setBairro(e.target.value)} className="wr-input w-full" placeholder="O bairro liga a emenda ao voto do território" />
+              </div>
+            )}
+            {ehDeputadoMandato && (
+              <div>
+                <Label>Micro-região</Label>
+                <input type="text" value={microRegiao} onChange={(e) => setMicroRegiao(e.target.value)} className="wr-input w-full" placeholder="Ex.: Belo Horizonte, Divinópolis…" />
+              </div>
+            )}
             <div>
               <Label>Entidade beneficiada</Label>
               <input type="text" value={entidade} onChange={(e) => setEntidade(e.target.value)} className="wr-input w-full" />

@@ -16,6 +16,7 @@ import { avisoDeResolucaoLigado } from "@/lib/politico/aviso-de-resolucao";
 import DemandasCharts from "./_demandas-charts";
 import AvisoAutoToggle from "./_aviso-auto-toggle";
 import { RelatorioPdfButton } from "@/components/politico/relatorio-pdf-button";
+import { ExcelDemandasButton } from "@/components/politico/excel-demandas-button";
 import { corDoOrgao, normalizarOrgao, rollupPorOrgao, ordenarUrgencia, alertaCobranca, type DemandaCobranca, type OrgaoRollup, type AlertaCobranca } from "@/lib/politico/demanda-cobranca";
 
 export const dynamic = "force-dynamic";
@@ -426,6 +427,7 @@ export default async function GabinetePage({
         <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto sm:justify-end">
           {ehAdmin && <AvisoAutoToggle ligadoInicial={avisoLigado} />}
           <RelatorioPdfButton filtroEstado={filtroEstado} />
+          <ExcelDemandasButton filtros={{ estado: filtroEstado, orgao: filtroOrgao, cobrar: filtroCobrar }} />
           <Link
             href="/app/politico/demandas/nova"
             className="inline-flex shrink-0 items-center justify-center whitespace-nowrap rounded-full px-5 py-2.5 text-sm font-bold transition-opacity hover:opacity-90"
