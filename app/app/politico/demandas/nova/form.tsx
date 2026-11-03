@@ -21,6 +21,7 @@ import {
 } from "@/app/actions/politico/gabinete-actions";
 import { uploadAnexoDemanda, formatarBytes, ANEXO_MAX_BYTES } from "@/lib/politico/anexos-upload";
 import { CommandHero } from "@/components/politico/command-hero";
+import { orgaosSugeridos } from "@/lib/politico/demanda-cobranca";
 
 interface Opcao {
   id: string;
@@ -30,6 +31,7 @@ interface Opcao {
 export interface NovaDemandaFormProps {
   orgId: string;
   assessores: Opcao[];
+  tipoMandato?: string | null;
 }
 
 const TIPOS: Opcao[] = [
@@ -60,8 +62,9 @@ function Label({ children, obrig }: { children: React.ReactNode; obrig?: boolean
   );
 }
 
-export default function NovaDemandaForm({ assessores }: NovaDemandaFormProps) {
+export default function NovaDemandaForm({ assessores, tipoMandato }: NovaDemandaFormProps) {
   const router = useRouter();
+  const orgaosChips = orgaosSugeridos(tipoMandato);
 
   // Cidadão (contact)
   const [busca, setBusca] = useState("");
@@ -393,6 +396,23 @@ export default function NovaDemandaForm({ assessores }: NovaDemandaFormProps) {
             <div>
               <Label>Órgão de destino</Label>
               <input type="text" value={orgao} onChange={(e) => setOrgao(e.target.value)} placeholder="Ex.: Secretaria de Obras" className="wr-input w-full" />
+              {orgaosChips.length > 0 && (
+                <div className="mt-2 flex flex-wrap gap-1.5">
+                  {orgaosChips.map((o) => (
+                    <button
+                      key={o}
+                      type="button"
+                      onClick={() => setOrgao(o)}
+                      className="rounded-full px-2.5 py-1 text-xs font-medium transition-colors"
+                      style={orgao === o
+                        ? { background: "#D7F36A", color: "#16181D" }
+                        : { border: "1px solid var(--color-border)", color: "var(--color-text-muted)" }}
+                    >
+                      {o}
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
             <div>
               <Label>Data da visita</Label>

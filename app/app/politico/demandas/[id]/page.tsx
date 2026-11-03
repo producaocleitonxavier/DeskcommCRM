@@ -49,6 +49,15 @@ export default async function DemandaDetalhePage({
 
   if (!demRes.data) notFound();
 
+  // Campos de "respondeu?" (migration 9084) — busca à parte e fail-soft: se a
+  // coluna ainda não existe nesta instalação, o detalhe segue sem o controle.
+  const { data: respRow } = await db
+    .from("demandas")
+    .select("pol_respondeu, pol_respondeu_em")
+    .eq("organization_id", org.orgId)
+    .eq("id", id)
+    .maybeSingle();
+
   // Voz do Mandato armada? (liga a opção "incluir recado em áudio" no aviso.)
   const vozOk = vozArmada(await lerVozConfig(db, org.orgId));
 
@@ -76,7 +85,7 @@ export default async function DemandaDetalhePage({
 
   return (
     <DetalheDemandaClient
-      demanda={demRes.data as unknown as DemandaDetalhe}
+      demanda={{ ...(demRes.data as Record<string, unknown>), ...(respRow ?? {}) } as unknown as DemandaDetalhe}
       assessores={assessores}
       eventos={eventos}
       vozArmada={vozOk}

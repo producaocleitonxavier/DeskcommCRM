@@ -16,6 +16,7 @@ import { avisoDeResolucaoLigado } from "@/lib/politico/aviso-de-resolucao";
 import DemandasCharts from "./_demandas-charts";
 import AvisoAutoToggle from "./_aviso-auto-toggle";
 import { RelatorioPdfButton } from "@/components/politico/relatorio-pdf-button";
+import { corDoOrgao, normalizarOrgao, rollupPorOrgao, type DemandaCobranca, type OrgaoRollup } from "@/lib/politico/demanda-cobranca";
 
 export const dynamic = "force-dynamic";
 
@@ -45,6 +46,8 @@ interface Demanda {
   pol_prazo_dias: number | null;
   desfecho: string | null;
   pol_autoatendimento?: boolean | null;
+  pol_respondeu?: boolean | null;
+  pol_respondeu_em?: string | null;
 }
 
 // -- Helpers -----------------------------------------------------------------
@@ -133,18 +136,77 @@ async function colunaAutoExiste(organizationId: string): Promise<boolean> {
   return !error;
 }
 
+/** A coluna `pol_respondeu` (migration 9084) existe? Se não, a coluna/painel de
+ * cobrança por resposta somem — a tela segue funcionando como antes. */
+async function colunaRespondeuExiste(organizationId: string): Promise<boolean> {
+  const db = await createClient();
+  const { error } = await db
+    .from("demandas")
+    .select("pol_respondeu")
+    .eq("organization_id", organizationId)
+    .limit(1);
+  return !error;
+}
+
+/** Lista dos órgãos de destino DISTINTOS das demandas do gabinete (para os
+ * chips de filtro). Leve: só a coluna, dedupe em memória. */
+async function buscarOrgaos(organizationId: string, temAuto: boolean): Promise<string[]> {
+  const db = await createClient();
+  let q = db
+    .from("demandas")
+    .select("pol_orgao_destino")
+    .eq("organization_id", organizationId)
+    .eq("pol_gabinete", true)
+    .not("pol_orgao_destino", "is", null)
+    .limit(1000);
+  if (temAuto) q = q.eq("pol_autoatendimento", false);
+  const { data } = await q;
+  const set = new Set<string>();
+  for (const r of (data ?? []) as { pol_orgao_destino: string | null }[]) {
+    const o = normalizarOrgao(r.pol_orgao_destino);
+    if (o) set.add(o);
+  }
+  return [...set].sort((a, b) => a.localeCompare(b, "pt-BR"));
+}
+
+/** Rollup "por órgão" (total, atrasadas, sem resposta) de TODAS as demandas do
+ * gabinete — alimenta o painel de cobrança. Fail-soft se a coluna não existe. */
+async function buscarRollupOrgaos(organizationId: string, temAuto: boolean, temRespondeu: boolean): Promise<OrgaoRollup[]> {
+  const db = await createClient();
+  const cols = "pol_orgao_destino, estado, aberta_em, pol_prazo_dias" + (temRespondeu ? ", pol_respondeu" : "");
+  let q = db
+    .from("demandas")
+    .select(cols)
+    .eq("organization_id", organizationId)
+    .eq("pol_gabinete", true)
+    .not("pol_orgao_destino", "is", null)
+    .limit(1000);
+  if (temAuto) q = q.eq("pol_autoatendimento", false);
+  const { data } = await q;
+  const itens: DemandaCobranca[] = ((data ?? []) as unknown as Record<string, unknown>[]).map((r) => ({
+    orgao: (r.pol_orgao_destino as string | null) ?? null,
+    estado: String(r.estado ?? ""),
+    abertaEm: String(r.aberta_em ?? new Date().toISOString()),
+    prazoDias: (r.pol_prazo_dias as number | null) ?? null,
+    respondeu: temRespondeu ? (r.pol_respondeu as boolean | null) === true : false,
+  }));
+  return rollupPorOrgao(itens);
+}
+
 async function buscarDemandas(
   organizationId: string,
   pagina: number,
   filtroEstado: string | undefined,
-  opts: { temAuto: boolean; verAuto: boolean },
+  filtroOrgao: string | undefined,
+  opts: { temAuto: boolean; verAuto: boolean; temRespondeu: boolean },
 ) {
   const db = await createClient();
   const offset = (pagina - 1) * POR_PAGINA;
 
   const colunas =
     "id, assunto, estado, origem, pol_tipo, pol_prioridade, pol_orgao_destino, pol_encaminhamento_ia, dono_kind, aberta_em, prazo_em, pol_prazo_dias, desfecho" +
-    (opts.temAuto ? ", pol_autoatendimento" : "");
+    (opts.temAuto ? ", pol_autoatendimento" : "") +
+    (opts.temRespondeu ? ", pol_respondeu, pol_respondeu_em" : "");
 
   let query = db
     .from("demandas")
@@ -162,6 +224,9 @@ async function buscarDemandas(
 
   if (filtroEstado) {
     query = query.eq("estado", filtroEstado);
+  }
+  if (filtroOrgao) {
+    query = query.eq("pol_orgao_destino", filtroOrgao);
   }
 
   const { data, count } = await query;
@@ -268,14 +333,19 @@ export default async function GabinetePage({
   const params = await searchParams;
   const pagina = Math.max(1, Number(params.pagina) || 1);
   const filtroEstado = typeof params.estado === "string" ? params.estado : undefined;
+  const filtroOrgao = typeof params.orgao === "string" ? params.orgao : undefined;
 
   // Camada "A IA orientou" (autoatendimento): existe só se a migration 9072 rodou.
   const temAuto = await colunaAutoExiste(org.orgId);
   const verAuto = temAuto && params.view === "autoatendimento";
+  // Cobrança por resposta do órgão: existe só se a migration 9084 rodou.
+  const temRespondeu = await colunaRespondeuExiste(org.orgId);
 
-  const [{ demandas, total }, contagens] = await Promise.all([
-    buscarDemandas(org.orgId, pagina, filtroEstado, { temAuto, verAuto }),
+  const [{ demandas, total }, contagens, orgaos, rollupOrgaos] = await Promise.all([
+    buscarDemandas(org.orgId, pagina, filtroEstado, filtroOrgao, { temAuto, verAuto, temRespondeu }),
     contarEstados(org.orgId, temAuto),
+    buscarOrgaos(org.orgId, temAuto),
+    buscarRollupOrgaos(org.orgId, temAuto, temRespondeu),
   ]);
 
   const totalPaginas = Math.ceil(total / POR_PAGINA);
@@ -316,7 +386,7 @@ export default async function GabinetePage({
   const viewAtual = verAuto ? "autoatendimento" : undefined;
   function montarQuery(overrides: Record<string, string | undefined>) {
     const q = new URLSearchParams();
-    const merged = { estado: filtroEstado, view: viewAtual, ...overrides };
+    const merged = { estado: filtroEstado, orgao: filtroOrgao, view: viewAtual, ...overrides };
     for (const [k, v] of Object.entries(merged)) {
       if (v) q.set(k, v);
     }
@@ -359,6 +429,47 @@ export default async function GabinetePage({
             }}
             statusPie={statusPie}
           />
+
+          {/* Painel COBRANÇA POR ÓRGÃO — bate o olho e vê onde cobrar. */}
+          {!verAuto && rollupOrgaos.length > 0 && (
+            <section aria-label="Demandas por órgão" className="gip-glass p-4 sm:p-5">
+              <div className="mb-3 flex items-center justify-between">
+                <h2 className="font-heading text-base font-bold" style={{ color: "var(--color-text)" }}>Por órgão</h2>
+                <span className="text-xs" style={{ color: "var(--color-text-subtle)" }}>clique pra filtrar · onde cobrar</span>
+              </div>
+              <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                {rollupOrgaos.slice(0, 8).map((o) => {
+                  const cor = corDoOrgao(o.orgao);
+                  const ativo = filtroOrgao === o.orgao;
+                  return (
+                    <Link
+                      key={o.orgao}
+                      href={`/app/politico/demandas${montarQuery({ orgao: ativo ? undefined : o.orgao, pagina: "1" })}`}
+                      className="flex items-center justify-between gap-2 rounded-xl px-3 py-2.5 transition-colors hover:bg-white/[0.04]"
+                      style={{ background: "var(--color-surface-elevated)", border: ativo ? "1px solid rgba(215,243,106,0.5)" : "1px solid var(--color-border)" }}
+                    >
+                      <span className="inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold" style={{ background: cor.bg, color: cor.color }}>
+                        {o.orgao}
+                      </span>
+                      <span className="flex shrink-0 items-center gap-1.5 text-xs tabular-nums">
+                        <span style={{ color: "var(--color-text-muted)" }}>{o.total}</span>
+                        {o.atrasadas > 0 && (
+                          <span className="rounded-full px-1.5 py-0.5 font-bold" style={{ background: "rgba(239,68,68,0.16)", color: "#F87171" }}>
+                            {o.atrasadas} atrasada{o.atrasadas > 1 ? "s" : ""}
+                          </span>
+                        )}
+                        {temRespondeu && o.semResposta > 0 && (
+                          <span className="rounded-full px-1.5 py-0.5 font-semibold" style={{ background: "rgba(245,158,11,0.16)", color: "#E4B96E" }}>
+                            {o.semResposta} s/ resposta
+                          </span>
+                        )}
+                      </span>
+                    </Link>
+                  );
+                })}
+              </div>
+            </section>
+          )}
 
           {/* Demandas table */}
           <section aria-label="Lista de demandas" className="gip-glass pt-2 pb-0 px-0">
@@ -426,6 +537,34 @@ export default async function GabinetePage({
               ))}
             </div>
 
+            {/* Filtro por ÓRGÃO (etiquetas coloridas dos órgãos presentes) */}
+            {orgaos.length > 0 && (
+              <div className="flex flex-wrap items-center gap-2 px-4 pb-3.5">
+                <span className="text-[11px] font-semibold uppercase tracking-wide" style={{ color: "var(--color-text-subtle)" }}>Órgão:</span>
+                <Link
+                  href={`/app/politico/demandas${montarQuery({ orgao: undefined, pagina: "1" })}`}
+                  className="inline-flex items-center h-8 px-3 rounded-full text-xs font-medium transition-colors"
+                  style={!filtroOrgao ? { background: "#16181D", color: "#FFFFFF" } : { background: "var(--color-surface-elevated)", color: "var(--color-text-muted)" }}
+                >
+                  Todos
+                </Link>
+                {orgaos.map((o) => {
+                  const cor = corDoOrgao(o);
+                  const ativo = filtroOrgao === o;
+                  return (
+                    <Link
+                      key={o}
+                      href={`/app/politico/demandas${montarQuery({ orgao: ativo ? undefined : o, pagina: "1" })}`}
+                      className="inline-flex items-center h-8 rounded-full px-3 text-xs font-semibold transition-opacity hover:opacity-90"
+                      style={{ background: cor.bg, color: cor.color, outline: ativo ? "2px solid rgba(215,243,106,0.6)" : "none" }}
+                    >
+                      {o}
+                    </Link>
+                  );
+                })}
+              </div>
+            )}
+
             {demandas.length === 0 ? (
               <div className="p-12 text-center">
                 <p className="text-sm" style={{ color: "var(--color-text-subtle)" }}>
@@ -437,7 +576,7 @@ export default async function GabinetePage({
                 <table className="w-full text-sm border-collapse">
                   <thead>
                     <tr>
-                      {["Demanda", "Tipo", "Órgão destino", "Status", "Visita", "Prioridade"].map((col) => (
+                      {["Demanda", "Tipo", "Órgão destino", "Status", "Visita", "Prioridade", ...(temRespondeu ? ["Respondeu?"] : [])].map((col) => (
                         <th
                           key={col}
                           className="text-left font-semibold text-[11px] uppercase tracking-wide px-4 py-3 whitespace-nowrap border-b"
@@ -456,6 +595,9 @@ export default async function GabinetePage({
                       const pLabel = prioridadeLabel(d.pol_prioridade);
                       const pEstilo = prioridadeEstilo(d.pol_prioridade);
                       const temIA = !!d.pol_encaminhamento_ia;
+                      const orgaoNome = normalizarOrgao(d.pol_orgao_destino);
+                      const orgaoCor = corDoOrgao(orgaoNome);
+                      const fechadaRow = ["resolvida", "encerrada"].includes(d.estado);
 
                       return (
                         <tr
@@ -494,8 +636,14 @@ export default async function GabinetePage({
                           <td className="px-4 py-3.5 whitespace-nowrap" style={{ color: "var(--color-text-muted)" }}>
                             {d.pol_tipo ? d.pol_tipo.replace(/_/g, " ") : "—"}
                           </td>
-                          <td className="px-4 py-3.5 whitespace-nowrap" style={{ color: "var(--color-text-muted)" }}>
-                            {d.pol_orgao_destino ?? "—"}
+                          <td className="px-4 py-3.5 whitespace-nowrap">
+                            {orgaoNome ? (
+                              <span className="inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold" style={{ background: orgaoCor.bg, color: orgaoCor.color }}>
+                                {orgaoNome}
+                              </span>
+                            ) : (
+                              <span style={{ color: "var(--color-text-subtle)" }}>—</span>
+                            )}
                           </td>
                           <td className="px-4 py-3.5 whitespace-nowrap">
                             <div className="flex flex-wrap items-center gap-1.5">
@@ -544,6 +692,21 @@ export default async function GabinetePage({
                               <span style={{ color: "var(--color-text-subtle)" }}>Normal</span>
                             )}
                           </td>
+                          {temRespondeu && (
+                            <td className="px-4 py-3.5 whitespace-nowrap">
+                              {d.pol_respondeu ? (
+                                <span className="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold" style={{ background: "rgba(34,197,94,0.15)", color: "#7AD4AB" }}>
+                                  Sim{d.pol_respondeu_em ? ` · ${formatarData(d.pol_respondeu_em)}` : ""}
+                                </span>
+                              ) : fechadaRow ? (
+                                <span style={{ color: "var(--color-text-subtle)" }}>—</span>
+                              ) : (
+                                <span className="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold" style={{ background: "rgba(239,68,68,0.14)", color: "#F87171" }}>
+                                  Não
+                                </span>
+                              )}
+                            </td>
+                          )}
                         </tr>
                       );
                     })}

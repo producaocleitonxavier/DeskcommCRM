@@ -12,6 +12,7 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { requireAuth, resolveActiveOrg } from "@/lib/auth/server";
 import { nomesDosAtendentes } from "@/lib/users/nome-do-atendente";
+import { lerMandatoConfig } from "@/lib/politico/setup-do-mandato";
 import NovaDemandaForm from "./form";
 
 export const dynamic = "force-dynamic";
@@ -22,12 +23,12 @@ export default async function NovaDemandaPage() {
   if (!org) redirect("/app/onboarding");
 
   const db = await createClient();
-  const { data: membrosData } = await db
-    .from("user_organizations")
-    .select("user_id, role")
-    .eq("organization_id", org.orgId)
-    .is("revoked_at", null);
+  const [{ data: membrosData }, { data: orgRow }] = await Promise.all([
+    db.from("user_organizations").select("user_id, role").eq("organization_id", org.orgId).is("revoked_at", null),
+    db.from("organizations").select("settings").eq("id", org.orgId).maybeSingle(),
+  ]);
   const membrosRes = { data: membrosData };
+  const tipoMandato = lerMandatoConfig((orgRow as { settings?: unknown } | null)?.settings)?.tipo ?? null;
 
   // Assessores = membros ativos da organização. Nome via service role (cai para
   // o papel + prefixo do id quando não resolve). Ordena por nome.
@@ -40,5 +41,5 @@ export default async function NovaDemandaPage() {
     }))
     .sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR"));
 
-  return <NovaDemandaForm orgId={org.orgId} assessores={assessores} />;
+  return <NovaDemandaForm orgId={org.orgId} assessores={assessores} tipoMandato={tipoMandato} />;
 }

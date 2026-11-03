@@ -44,6 +44,8 @@ export interface DemandaDetalhe {
   aberta_em: string;
   prazo_em: string | null;
   pol_prazo_dias: number | null;
+  pol_respondeu?: boolean | null;
+  pol_respondeu_em?: string | null;
   desfecho: string | null;
   fechada_em: string | null;
   created_at: string;
@@ -155,6 +157,14 @@ export default function DetalheDemandaClient({ demanda, assessores, eventos, voz
   const [assuntoOficio, setAssuntoOficio] = useState(d.pol_oficio_assunto ?? "");
 
   const fechada = d.estado === "resolvida" || d.estado === "encerrada";
+
+  async function marcarResposta(respondeu: boolean) {
+    const patch = respondeu
+      ? { pol_respondeu: true, pol_respondeu_em: new Date().toISOString().slice(0, 10) }
+      : { pol_respondeu: false, pol_respondeu_em: null };
+    await persistir(patch, patch as Partial<DemandaDetalhe>);
+    void registrarEventoDemanda(d.id, "nota", respondeu ? "Órgão respondeu o ofício." : "Marcado como sem resposta do órgão.");
+  }
 
   async function persistir(patch: Record<string, unknown>, otimista: Partial<DemandaDetalhe>) {
     setErro(null);
@@ -569,6 +579,32 @@ export default function DetalheDemandaClient({ demanda, assessores, eventos, voz
               <Sparkles className="h-4 w-4" aria-hidden /> {gerandoIA ? "Gerando…" : "Gerar com IA"}
             </button>
           </div>
+        </div>
+
+        {/* Cobrança: o órgão já respondeu o ofício? (fácil de bater o olho) */}
+        <div className="mb-4 flex flex-wrap items-center gap-2.5 rounded-xl px-4 py-3" style={{ background: "var(--color-surface-elevated)", border: "1px solid var(--color-border)" }}>
+          <span className="text-sm font-semibold" style={{ color: "var(--color-text)" }}>O órgão respondeu?</span>
+          <button
+            type="button"
+            disabled={salvando}
+            onClick={() => marcarResposta(true)}
+            className="inline-flex items-center rounded-full px-3.5 py-1.5 text-sm font-semibold transition-colors disabled:opacity-60"
+            style={d.pol_respondeu ? { background: "#17784F", color: "#FFFFFF" } : { border: "1px solid var(--color-border)", color: "var(--color-text-muted)" }}
+          >
+            Sim
+          </button>
+          <button
+            type="button"
+            disabled={salvando}
+            onClick={() => marcarResposta(false)}
+            className="inline-flex items-center rounded-full px-3.5 py-1.5 text-sm font-semibold transition-colors disabled:opacity-60"
+            style={!d.pol_respondeu ? { background: "rgba(239,68,68,0.16)", color: "#F87171" } : { border: "1px solid var(--color-border)", color: "var(--color-text-muted)" }}
+          >
+            Ainda não
+          </button>
+          {d.pol_respondeu && d.pol_respondeu_em && (
+            <span className="text-xs" style={{ color: "var(--color-text-subtle)" }}>respondeu em {fmtData(d.pol_respondeu_em)}</span>
+          )}
         </div>
 
         {/* Dados do ofício — número MANUAL + destinatário (sempre visíveis, fáceis
