@@ -15,7 +15,7 @@ import { BotaoRecadoVoz } from "@/components/politico/botao-recado-voz";
 import { gerarEncaminhamento } from "@/app/actions/politico/gerarEncaminhamento";
 import { gerarOficioDemanda } from "@/app/actions/politico/gerarOficio";
 import { avisarCidadao, avisarResolucaoAutomatica } from "@/app/actions/politico/avisarCidadao";
-import { atualizarRegistro, excluirRegistro, registrarEventoDemanda } from "@/app/actions/politico/gabinete-actions";
+import { atualizarRegistro, excluirRegistro, registrarEventoDemanda, sincronizarVisitaNaAgenda, definirResponsavelVisita } from "@/app/actions/politico/gabinete-actions";
 import { textoCobranca } from "@/lib/politico/demanda-cobranca";
 import DemandaAnexos from "@/components/politico/demanda-anexos";
 
@@ -47,6 +47,9 @@ export interface DemandaDetalhe {
   pol_prazo_dias: number | null;
   pol_respondeu?: boolean | null;
   pol_respondeu_em?: string | null;
+  pol_visita_realizada_em?: string | null;
+  pol_visita_responsavel_id?: string | null;
+  pol_visita_responsavel_nome?: string | null;
   desfecho: string | null;
   fechada_em: string | null;
   created_at: string;
@@ -73,6 +76,8 @@ export interface Props {
   mostrarAssuntoOficio?: boolean;
   /** Nome do parlamentar (saudação do recado em áudio). */
   politicoNome?: string | null;
+  /** Id do usuário logado — atalho "Eu vou" na visita técnica. */
+  usuarioAtualId?: string | null;
 }
 
 const TIPOS: Opcao[] = [
@@ -127,7 +132,7 @@ function paraInputDate(d: string | null): string {
   return new Date(d).toISOString().slice(0, 10);
 }
 
-export default function DetalheDemandaClient({ demanda, assessores, eventos, vozArmada, mostrarAssuntoOficio, politicoNome }: Props) {
+export default function DetalheDemandaClient({ demanda, assessores, eventos, vozArmada, mostrarAssuntoOficio, politicoNome, usuarioAtualId }: Props) {
   const router = useRouter();
 
   const [d, setD] = useState<DemandaDetalhe>(demanda);
@@ -165,6 +170,30 @@ export default function DetalheDemandaClient({ demanda, assessores, eventos, voz
       : { pol_respondeu: false, pol_respondeu_em: null };
     await persistir(patch, patch as Partial<DemandaDetalhe>);
     void registrarEventoDemanda(d.id, "nota", respondeu ? "Órgão respondeu o ofício." : "Marcado como sem resposta do órgão.");
+  }
+
+  /** Marca/desmarca a VISITA técnica como realizada e espelha o estado na Agenda. */
+  async function marcarVisita(realizada: boolean) {
+    const patch = { pol_visita_realizada_em: realizada ? new Date().toISOString().slice(0, 10) : null };
+    const ok = await persistir(patch, patch as Partial<DemandaDetalhe>);
+    if (!ok) return;
+    void sincronizarVisitaNaAgenda(d.id);
+    void registrarEventoDemanda(d.id, "nota", realizada ? "Visita técnica realizada." : "Visita técnica marcada como não realizada.");
+  }
+
+  /** Define quem vai na visita (assessor cadastrado) — ou null pra tirar. */
+  async function escolherResponsavel(assessorId: string | null) {
+    setErro(null);
+    setSalvando(true);
+    const res = await definirResponsavelVisita(d.id, assessorId);
+    setSalvando(false);
+    if (!res.ok) {
+      setErro(res.erro);
+      return;
+    }
+    const nome = assessorId ? (assessores.find((a) => a.id === assessorId)?.nome ?? null) : null;
+    setD((prev) => ({ ...prev, pol_visita_responsavel_id: assessorId, pol_visita_responsavel_nome: nome }));
+    router.refresh();
   }
 
   /** Órgão não respondeu → gera o rascunho de um ofício de COBRANÇA (reiteração).
@@ -213,7 +242,11 @@ export default function DetalheDemandaClient({ demanda, assessores, eventos, voz
       pol_prazo_dias: prazoDias && Number(prazoDias) > 0 ? Math.round(Number(prazoDias)) : null,
     };
     const ok = await persistir(campos, campos as Partial<DemandaDetalhe>);
-    if (ok) setEditando(false);
+    if (ok) {
+      setEditando(false);
+      // A data da visita pode ter mudado → reespelha na Agenda (cria/atualiza/cancela).
+      void sincronizarVisitaNaAgenda(d.id);
+    }
   }
 
   async function mudarEstado(novo: string) {
@@ -628,6 +661,84 @@ export default function DetalheDemandaClient({ demanda, assessores, eventos, voz
             </button>
           )}
         </div>
+
+        {/* Visita técnica: já foi feita? (aparece quando há data de visita marcada) */}
+        {d.prazo_em && (
+          <div className="mb-4 flex flex-wrap items-center gap-2.5 rounded-xl px-4 py-3" style={{ background: "var(--color-surface-elevated)", border: "1px solid var(--color-border)" }}>
+            <span className="text-sm font-semibold" style={{ color: "var(--color-text)" }}>Visita técnica realizada?</span>
+            <button
+              type="button"
+              disabled={salvando}
+              onClick={() => marcarVisita(true)}
+              className="inline-flex items-center rounded-full px-3.5 py-1.5 text-sm font-semibold transition-colors disabled:opacity-60"
+              style={d.pol_visita_realizada_em ? { background: "#17784F", color: "#FFFFFF" } : { border: "1px solid var(--color-border)", color: "var(--color-text-muted)" }}
+            >
+              Realizada
+            </button>
+            <button
+              type="button"
+              disabled={salvando}
+              onClick={() => marcarVisita(false)}
+              className="inline-flex items-center rounded-full px-3.5 py-1.5 text-sm font-semibold transition-colors disabled:opacity-60"
+              style={!d.pol_visita_realizada_em ? { background: "rgba(245,158,11,0.16)", color: "#E4B96E" } : { border: "1px solid var(--color-border)", color: "var(--color-text-muted)" }}
+            >
+              Ainda não
+            </button>
+            {d.pol_visita_realizada_em ? (
+              <span className="text-xs" style={{ color: "var(--color-text-subtle)" }}>realizada em {fmtData(d.pol_visita_realizada_em)}</span>
+            ) : (
+              <span className="inline-flex items-center gap-1 text-xs" style={{ color: "var(--color-text-subtle)" }}>
+                <Clock className="h-3.5 w-3.5" aria-hidden /> marcada para {fmtData(d.prazo_em)} · aparece na Agenda do gabinete
+              </span>
+            )}
+          </div>
+        )}
+
+        {/* Quem vai na visita — UM responsável (assessor cadastrado). Vazio = alerta âmbar. */}
+        {d.prazo_em && (
+          <div
+            className="mb-4 rounded-xl px-4 py-3"
+            style={{ background: "var(--color-surface-elevated)", border: d.pol_visita_responsavel_id ? "1px solid var(--color-border)" : "1px solid rgba(245,158,11,0.4)" }}
+          >
+            <div className="flex flex-wrap items-center gap-2.5">
+              <span className="text-sm font-semibold" style={{ color: "var(--color-text)" }}>Quem vai na visita?</span>
+              {d.pol_visita_responsavel_id ? (
+                <span className="inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-sm font-semibold" style={{ background: "#E2F5EC", color: "#17784F" }}>
+                  ✅ {d.pol_visita_responsavel_nome || "Responsável"} vai
+                </span>
+              ) : (
+                <span className="inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-sm font-semibold" style={{ background: "rgba(245,158,11,0.16)", color: "#B45309" }}>
+                  Ninguém marcou presença ainda
+                </span>
+              )}
+              {usuarioAtualId && d.pol_visita_responsavel_id !== usuarioAtualId && (
+                <button
+                  type="button"
+                  disabled={salvando}
+                  onClick={() => escolherResponsavel(usuarioAtualId)}
+                  className="inline-flex items-center rounded-full px-3 py-1 text-sm font-semibold transition-opacity hover:opacity-90 disabled:opacity-60"
+                  style={{ background: "#16181D", color: "#FFFFFF" }}
+                >
+                  Eu vou
+                </button>
+              )}
+            </div>
+            <div className="mt-2 flex flex-wrap items-center gap-2">
+              <select
+                value={d.pol_visita_responsavel_id ?? ""}
+                disabled={salvando}
+                onChange={(e) => escolherResponsavel(e.target.value || null)}
+                className="wr-input w-full sm:w-auto"
+              >
+                <option value="">— ninguém —</option>
+                {assessores.map((a) => <option key={a.id} value={a.id}>{a.nome}</option>)}
+              </select>
+              <span className="text-xs" style={{ color: "var(--color-text-subtle)" }}>
+                Escolha um assessor cadastrado. Sempre um só — ele assume a visita.
+              </span>
+            </div>
+          </div>
+        )}
 
         {/* Dados do ofício — número MANUAL + destinatário (sempre visíveis, fáceis
             de preencher: quem opera no gabinete pode não ter intimidade com tela). */}

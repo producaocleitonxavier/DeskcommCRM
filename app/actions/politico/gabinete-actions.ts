@@ -12,6 +12,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { requireAuth, resolveActiveOrg, orgSeAoMenos } from "@/lib/auth/server";
+import { nomesDosAtendentes } from "@/lib/users/nome-do-atendente";
 
 export type AcaoResultado = { ok: true; id?: string } | { ok: false; erro: string };
 export interface CidadaoOpcao {
@@ -185,6 +186,127 @@ export async function atualizarRegistro(tabela: string, id: string, patch: Recor
   const db = await createClient();
   const { error } = await db.from(tabela).update(patch).eq("id", id).eq("organization_id", org);
   if (error) return { ok: false, erro: traduzErro(error) };
+  return { ok: true };
+}
+
+/**
+ * Espelha a VISITA TÉCNICA de uma demanda na Agenda do gabinete (pol_agenda,
+ * tipo='visita'), ligada por demanda_id — UPSERT, nunca duplica. A data vem de
+ * `demandas.prazo_em`; sem data, cancela o compromisso ligado (não apaga). Se a
+ * visita foi realizada (pol_visita_realizada_em), o compromisso vira 'concluido'.
+ *
+ * Idempotente e fail-soft: numa instalação sem a migration 9085 (coluna
+ * demanda_id / pol_visita_realizada_em) não quebra o fluxo da demanda — a visita
+ * só não aparece na Agenda. Chamada em "fire-and-forget" pelos fluxos de salvar.
+ */
+export async function sincronizarVisitaNaAgenda(demandaId: string): Promise<AcaoResultado> {
+  const org = await orgAtiva();
+  if (!org) return { ok: false, erro: "Sessão ou organização inválida." };
+  const db = await createClient();
+
+  const { data: dem, error: eDem } = await db
+    .from("demandas")
+    .select("assunto, prazo_em, pol_bairro, pol_municipio, pol_visita_realizada_em, pol_visita_responsavel_id")
+    .eq("id", demandaId)
+    .eq("organization_id", org)
+    .maybeSingle();
+  if (eDem) return { ok: true }; // fail-soft: coluna nova ausente — não quebra o salvar
+  if (!dem) return { ok: false, erro: "Demanda não encontrada." };
+  const d = dem as {
+    assunto: string | null;
+    prazo_em: string | null;
+    pol_bairro: string | null;
+    pol_municipio: string | null;
+    pol_visita_realizada_em: string | null;
+    pol_visita_responsavel_id: string | null;
+  };
+
+  // Compromisso de visita já ligado a esta demanda?
+  const { data: existente, error: eEx } = await db
+    .from("pol_agenda")
+    .select("id")
+    .eq("organization_id", org)
+    .eq("demanda_id", demandaId)
+    .eq("tipo", "visita")
+    .limit(1)
+    .maybeSingle();
+  if (eEx) return { ok: true }; // fail-soft: coluna demanda_id ausente
+  const agendaId = (existente as { id: string } | null)?.id ?? null;
+
+  // Sem data de visita → cancela o que estava marcado (preserva histórico).
+  if (!d.prazo_em) {
+    if (agendaId) {
+      await db.from("pol_agenda").update({ status: "cancelado" }).eq("id", agendaId).eq("organization_id", org);
+    }
+    return { ok: true };
+  }
+
+  const campos = {
+    titulo: `Visita técnica — ${(d.assunto ?? "").trim() || "demanda"}`,
+    tipo: "visita",
+    data_inicio: d.prazo_em,
+    dia_inteiro: true,
+    status: d.pol_visita_realizada_em ? "concluido" : "agendado",
+    local: (d.pol_bairro ?? "").trim() || null,
+    municipio: (d.pol_municipio ?? "").trim() || null,
+    descricao: "Visita de uma demanda do gabinete. Abra a demanda para o contexto.",
+    demanda_id: demandaId,
+    assessor_id: d.pol_visita_responsavel_id, // quem vai na visita aparece como dono do compromisso
+  };
+
+  const { error: eWrite } = agendaId
+    ? await db.from("pol_agenda").update(campos).eq("id", agendaId).eq("organization_id", org)
+    : await db.from("pol_agenda").insert({ ...campos, organization_id: org });
+  if (eWrite) return { ok: false, erro: traduzErro(eWrite) };
+  return { ok: true };
+}
+
+/**
+ * Define QUEM vai na visita técnica — um assessor CADASTRADO da org (sempre um só,
+ * campo vazio = ninguém marcou). Valida que o assessor é membro ativo da org,
+ * resolve o nome de exibição, grava id+nome e reespelha na Agenda (assessor_id).
+ * `assessorId = null` tira o responsável. Org-scoped. Registra no histórico.
+ */
+export async function definirResponsavelVisita(demandaId: string, assessorId: string | null): Promise<AcaoResultado> {
+  const org = await orgAtiva();
+  if (!org) return { ok: false, erro: "Sessão ou organização inválida." };
+  const db = await createClient();
+
+  // Tirar o responsável (campo vazio).
+  if (!assessorId) {
+    const { error } = await db
+      .from("demandas")
+      .update({ pol_visita_responsavel_id: null, pol_visita_responsavel_nome: null })
+      .eq("id", demandaId)
+      .eq("organization_id", org);
+    if (error) return { ok: false, erro: traduzErro(error) };
+    await sincronizarVisitaNaAgenda(demandaId);
+    void registrarEventoDemanda(demandaId, "nota", "Responsável pela visita removido.");
+    return { ok: true };
+  }
+
+  // Só um MEMBRO ATIVO da org pode ser marcado (o id nunca vem de fora da org).
+  const { data: membro, error: eMem } = await db
+    .from("user_organizations")
+    .select("user_id")
+    .eq("organization_id", org)
+    .eq("user_id", assessorId)
+    .is("revoked_at", null)
+    .maybeSingle();
+  if (eMem) return { ok: false, erro: traduzErro(eMem) };
+  if (!membro) return { ok: false, erro: "Assessor não encontrado nesta organização." };
+
+  const nomes = await nomesDosAtendentes([assessorId]);
+  const nome = nomes.get(assessorId) ?? null;
+
+  const { error } = await db
+    .from("demandas")
+    .update({ pol_visita_responsavel_id: assessorId, pol_visita_responsavel_nome: nome })
+    .eq("id", demandaId)
+    .eq("organization_id", org);
+  if (error) return { ok: false, erro: traduzErro(error) };
+  await sincronizarVisitaNaAgenda(demandaId);
+  void registrarEventoDemanda(demandaId, "nota", `${nome ?? "Assessor"} vai na visita técnica.`);
   return { ok: true };
 }
 

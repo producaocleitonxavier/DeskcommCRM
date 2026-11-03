@@ -17,6 +17,7 @@ import {
   criarCidadao,
   criarRegistro,
   garantirLeadNovoCadastro,
+  sincronizarVisitaNaAgenda,
   type CidadaoOpcao,
 } from "@/app/actions/politico/gabinete-actions";
 import { uploadAnexoDemanda, formatarBytes, ANEXO_MAX_BYTES } from "@/lib/politico/anexos-upload";
@@ -202,6 +203,10 @@ export default function NovaDemandaForm({ assessores, tipoMandato }: NovaDemanda
         await uploadAnexoDemanda(res.id, f);
       }
     }
+
+    // Marcou visita? Espelha na Agenda do gabinete (fire-and-forget — nunca
+    // bloqueia a criação da demanda).
+    if (res.id && dataVisita) void sincronizarVisitaNaAgenda(res.id);
 
     router.push(res.id ? `/app/politico/demandas/${res.id}` : "/app/politico/demandas");
     router.refresh();
