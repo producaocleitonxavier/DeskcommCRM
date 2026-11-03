@@ -53,7 +53,7 @@ interface Props {
   tipoMandato: string | null;
 }
 
-type Filtro = "todas" | "agendadas" | "atrasadas" | "sem_responsavel" | "realizadas";
+type Filtro = "todas" | "agendadas" | "atrasadas" | "sem_responsavel" | "realizadas" | "minhas";
 
 const FILTROS: { id: Filtro; label: string }[] = [
   { id: "todas", label: "Todas" },
@@ -61,6 +61,7 @@ const FILTROS: { id: Filtro; label: string }[] = [
   { id: "atrasadas", label: "Atrasadas" },
   { id: "sem_responsavel", label: "Sem responsável" },
   { id: "realizadas", label: "Realizadas" },
+  { id: "minhas", label: "Minhas visitas" },
 ];
 
 function fmtData(d: string | null): string {
@@ -104,10 +105,11 @@ export default function VisitasClient({ visitas, kpis, assessores, usuarioAtualI
       if (filtro === "atrasadas") return visitaPendente(arg(v));
       if (filtro === "sem_responsavel") return visitaSemResponsavel(arg(v));
       if (filtro === "realizadas") return !!v.realizadaEm;
+      if (filtro === "minhas") return v.responsavelId === usuarioAtualId;
       return true;
     });
     return [...filtrada].sort((a, b) => ordenarVisitas(arg(a), arg(b)));
-  }, [visitas, filtro]);
+  }, [visitas, filtro, usuarioAtualId]);
 
   function agir(fn: () => Promise<{ ok: boolean; erro?: string }>) {
     setErro(null);
