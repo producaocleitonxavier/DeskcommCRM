@@ -808,9 +808,10 @@
 @utility wr-input {
   width: 100%;
   min-height: var(--wr-btn-min-h);
-  /* Campos de formulário QUADRADOS (retangular, raio pequeno) — não pill. O pill
-     cortava o texto em textareas no celular. Botões seguem pill (--wr-btn-radius). */
-  border-radius: 10px;
+  /* Campos de formulário QUADRADOS (retangular, raio pequeno) — não pill/oval. No
+     celular o raio grande "come" o canto e aperta o texto; 6px lê como retângulo
+     limpo, igual aos campos shadcn (rounded-sm). Botões seguem pill (--wr-btn-radius). */
+  border-radius: 6px;
   border: 1px solid color-mix(in srgb, var(--color-text) 12%, transparent);
   background: color-mix(in srgb, var(--color-surface-elevated) 70%, transparent);
   color: var(--color-text);
@@ -833,7 +834,7 @@
 }
 @utility wr-textarea {
   width: 100%;
-  border-radius: 12px;
+  border-radius: 6px;
   border: 1px solid color-mix(in srgb, var(--color-text) 12%, transparent);
   background: color-mix(in srgb, var(--color-surface-elevated) 70%, transparent);
   color: var(--color-text);

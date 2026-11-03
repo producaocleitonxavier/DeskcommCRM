@@ -91,7 +91,14 @@ export default async function EmendasPage() {
     entidade: (e.entidade_beneficiada as string | null) ?? null,
     modalidade: (e.modalidade as string | null) ?? null,
     valorIndicado: moeda(Number(e.valor_indicado_cents ?? 0)),
+    valorEmpenhado: moeda(Number(e.valor_empenhado_cents ?? 0)),
     valorPago: moeda(Number(e.valor_pago_cents ?? 0)),
+    // Estados da régua do ciclo do dinheiro (Indicado→Empenhado→Pago). Ligamos o
+    // nó pelo VALOR (>0) ou pelo STATUS já ter passado da etapa — o que vier antes.
+    empenhadoOn:
+      Number(e.valor_empenhado_cents ?? 0) > 0 ||
+      ["empenhada", "liquidada", "paga"].includes(String(e.status ?? "")),
+    pagoOn: Number(e.valor_pago_cents ?? 0) > 0 || String(e.status ?? "") === "paga",
   }));
 
   return (

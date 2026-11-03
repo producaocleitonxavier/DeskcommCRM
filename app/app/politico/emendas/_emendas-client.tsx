@@ -18,6 +18,7 @@ import { EmptyState } from "@/components/politico/empty-state";
 import { RelatorioGabineteButton } from "@/components/politico/relatorio-gabinete-button";
 import { SincronizarEmendasButton } from "@/components/politico/sincronizar-emendas-button";
 import type { TipoMandato } from "@/lib/politico/emenda-painel";
+import { rotuloModalidade } from "@/lib/politico/emenda-modalidade";
 
 const STATUS: Record<string, { label: string; bg: string; fg: string }> = {
   solicitada: { label: "Pedido", bg: "#EDE9FE", fg: "#6D28D9" },
@@ -48,7 +49,10 @@ export interface EmendaItem {
   entidade: string | null;
   modalidade: string | null;
   valorIndicado: string;
+  valorEmpenhado: string;
   valorPago: string;
+  empenhadoOn: boolean;
+  pagoOn: boolean;
 }
 
 interface Barra {
@@ -246,14 +250,15 @@ export default function EmendasClient(props: EmendasClientProps) {
                   { num: financeiro.executado, label: "Executado (pago)" },
                 ],
                 colunas: [
-                  { header: "Número", largura: "10%" },
+                  { header: "Número", largura: "8%" },
                   { header: "Ano", largura: "6%" },
-                  { header: "Área", largura: "14%" },
-                  { header: "Modalidade", largura: "14%" },
-                  { header: destinoCol, largura: "14%" },
-                  { header: "Entidade", largura: "16%" },
+                  { header: "Área", largura: "12%" },
+                  { header: "Modalidade", largura: "12%" },
+                  { header: destinoCol, largura: "12%" },
+                  { header: "Entidade", largura: "12%" },
                   { header: "Status", largura: "10%", pilula: true },
-                  { header: "Indicado", largura: "10%" },
+                  { header: "Indicado", largura: "9%" },
+                  { header: "Empenhado", largura: "9%" },
                   { header: "Pago", largura: "10%" },
                 ],
                 coresPilula: coresPilulaPdf,
@@ -261,11 +266,12 @@ export default function EmendasClient(props: EmendasClientProps) {
                   e.numero ?? "—",
                   String(e.ano),
                   e.area ?? "",
-                  e.modalidade ?? "",
+                  rotuloModalidade(e.modalidade),
                   (ehDeputado ? e.municipio : e.bairro) ?? "",
                   e.entidade ?? "",
                   STATUS[e.status]?.label ?? e.status,
                   e.valorIndicado,
+                  e.valorEmpenhado,
                   e.valorPago,
                 ]),
               }}
@@ -298,7 +304,7 @@ export default function EmendasClient(props: EmendasClientProps) {
               </select>
               <select value={fModalidade} onChange={(e) => setFModalidade(e.target.value)} className="wr-input">
                 <option value={TODOS}>Modalidade: todas</option>
-                {modalidades.map((m) => <option key={m} value={m}>{m}</option>)}
+                {modalidades.map((m) => <option key={m} value={m}>{rotuloModalidade(m)}</option>)}
               </select>
               <select value={fStatus} onChange={(e) => setFStatus(e.target.value)} className="wr-input">
                 <option value={TODOS}>Status: todos</option>
@@ -332,17 +338,33 @@ export default function EmendasClient(props: EmendasClientProps) {
                   <div className="flex flex-wrap gap-1.5">
                     <span className="w-fit rounded-full px-2 py-0.5 text-xs font-medium" style={{ background: "var(--color-surface-elevated)", color: "var(--color-text-subtle)" }}>{e.area}</span>
                     {e.modalidade && (
-                      <span className="w-fit rounded-full px-2 py-0.5 text-xs font-medium" style={{ background: "var(--color-surface-elevated)", color: "var(--color-text-subtle)" }}>{e.modalidade}</span>
+                      <span className="w-fit rounded-full px-2 py-0.5 text-xs font-medium" style={{ background: "var(--color-surface-elevated)", color: "var(--color-text-subtle)" }}>{rotuloModalidade(e.modalidade)}</span>
                     )}
                   </div>
-                  <div className="mt-auto border-t pt-2.5 text-sm" style={{ borderColor: "var(--color-border)" }}>
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Indicado</span>
-                      <span className="font-semibold tabular-nums">{e.valorIndicado}</span>
+                  <div className="mt-auto border-t pt-3" style={{ borderColor: "var(--color-border)" }}>
+                    {/* Ciclo do dinheiro: Indicado → Empenhado → Pago. Bate o olho
+                        e vê em que pé está (do papel ao pagamento). */}
+                    <div className="grid grid-cols-3 gap-1 text-center">
+                      <div>
+                        <div className="text-[10px] font-semibold uppercase tracking-wide" style={{ color: "var(--color-text-subtle)" }}>Indicado</div>
+                        <div className="mt-0.5 text-xs font-semibold tabular-nums">{e.valorIndicado}</div>
+                      </div>
+                      <div>
+                        <div className="text-[10px] font-semibold uppercase tracking-wide" style={{ color: "var(--color-text-subtle)" }}>Empenhado</div>
+                        <div className="mt-0.5 text-xs font-semibold tabular-nums" style={{ color: e.empenhadoOn ? "#8A5A10" : "var(--color-text-subtle)" }}>{e.valorEmpenhado}</div>
+                      </div>
+                      <div>
+                        <div className="text-[10px] font-semibold uppercase tracking-wide" style={{ color: "var(--color-text-subtle)" }}>Pago</div>
+                        <div className="mt-0.5 text-xs font-semibold tabular-nums" style={{ color: e.pagoOn ? "#17784F" : "var(--color-text-subtle)" }}>{e.valorPago}</div>
+                      </div>
                     </div>
-                    <div className="mt-0.5 flex justify-between">
-                      <span className="text-muted-foreground">Pago</span>
-                      <span className="font-semibold tabular-nums" style={{ color: "#17784F" }}>{e.valorPago}</span>
+                    {/* Régua de 3 nós (sempre: Indicado ligado; demais conforme o estado). */}
+                    <div className="mt-2 flex items-center px-3" aria-hidden>
+                      <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ background: "#4352C4" }} />
+                      <span className="h-0.5 flex-1" style={{ background: e.empenhadoOn ? "#8A5A10" : "var(--color-border)" }} />
+                      <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ background: e.empenhadoOn ? "#8A5A10" : "var(--color-border)" }} />
+                      <span className="h-0.5 flex-1" style={{ background: e.pagoOn ? "#17784F" : "var(--color-border)" }} />
+                      <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ background: e.pagoOn ? "#17784F" : "var(--color-border)" }} />
                     </div>
                   </div>
                 </Link>

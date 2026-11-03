@@ -12,6 +12,7 @@ import { ArrowLeft, Check } from "lucide-react";
 
 import { criarRegistro, criarCidadao } from "@/app/actions/politico/gabinete-actions";
 import { classificarArea, rotuloArea, AREAS_EMENDA } from "@/lib/politico/emenda-classificar";
+import { MODALIDADES } from "@/lib/politico/emenda-modalidade";
 
 interface Opcao {
   id: string;
@@ -70,6 +71,7 @@ export default function NovaEmendaForm({ liderancas }: NovaEmendaFormProps) {
   const [ano, setAno] = useState(String(new Date().getFullYear()));
   const [tipo, setTipo] = useState("individual");
   const [esfera, setEsfera] = useState("estadual");
+  const [modalidade, setModalidade] = useState("");
   const [valor, setValor] = useState("");
   // Área NÃO é mais um dropdown obrigatório: o assessor escreve a destinação
   // livre e o sistema classifica sozinho. `areaManual` vazio = segue o palpite.
@@ -117,6 +119,7 @@ export default function NovaEmendaForm({ liderancas }: NovaEmendaFormProps) {
       status: "indicada",
       valor_indicado_cents: reaisParaCents(valor),
     };
+    if (modalidade.trim()) payload.modalidade = modalidade.trim();
     if (numero.trim()) payload.numero = numero.trim();
     if (objeto.trim()) payload.objeto = objeto.trim();
     if (municipio.trim()) payload.municipio = municipio.trim();
@@ -179,6 +182,13 @@ export default function NovaEmendaForm({ liderancas }: NovaEmendaFormProps) {
               <Label>Esfera</Label>
               <select value={esfera} onChange={(e) => setEsfera(e.target.value)} className="wr-input w-full">
                 {ESFERAS.map((o) => <option key={o.id} value={o.id}>{o.nome}</option>)}
+              </select>
+            </div>
+            <div>
+              <Label>Modalidade</Label>
+              <select value={modalidade} onChange={(e) => setModalidade(e.target.value)} className="wr-input w-full">
+                <option value="">— (como o recurso é repassado)</option>
+                {MODALIDADES.map((m) => <option key={m} value={m}>{m}</option>)}
               </select>
             </div>
             <div>

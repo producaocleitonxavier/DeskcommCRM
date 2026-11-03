@@ -14,8 +14,8 @@ import { ArrowLeft, Check, Inbox, Plus, X } from "lucide-react";
 
 import { CommandHero } from "@/components/politico/command-hero";
 import { EmptyState } from "@/components/politico/empty-state";
-import { classificarArea, rotuloArea, AREAS_EMENDA } from "@/lib/politico/emenda-classificar";
-import { ORIGENS_PEDIDO, ORIGEM_LABEL } from "@/lib/politico/pedido-emenda";
+import { classificarArea, rotuloArea } from "@/lib/politico/emenda-classificar";
+import { ORIGENS_PEDIDO, ORIGEM_LABEL, classificarOrigem, type OrigemPedido } from "@/lib/politico/pedido-emenda";
 import { atenderPedido, recusarPedido, criarPedidoEmenda } from "@/app/actions/politico/pedido-emenda-actions";
 
 export interface PedidoItem {
@@ -147,7 +147,8 @@ export default function PedidosClient({ pedidos }: { pedidos: PedidoItem[] }) {
 
 function RegistrarPedido({ onPronto }: { onPronto: () => void }) {
   const [solicitante, setSolicitante] = useState("");
-  const [origem, setOrigem] = useState<string>("lideranca");
+  const [origemManual, setOrigemManual] = useState<OrigemPedido | null>(null);
+  const [trocarOrigem, setTrocarOrigem] = useState(false);
   const [objeto, setObjeto] = useState("");
   const [descricao, setDescricao] = useState("");
   const [valor, setValor] = useState("");
@@ -157,6 +158,8 @@ function RegistrarPedido({ onPronto }: { onPronto: () => void }) {
   const [erro, setErro] = useState<string | null>(null);
 
   const areaAuto = classificarArea(`${objeto} ${descricao}`);
+  const origemAuto = classificarOrigem(solicitante);
+  const origemFinal: OrigemPedido = origemManual ?? origemAuto;
 
   async function salvar(e: React.FormEvent) {
     e.preventDefault();
@@ -166,7 +169,7 @@ function RegistrarPedido({ onPronto }: { onPronto: () => void }) {
     setSalvando(true);
     const r = await criarPedidoEmenda({
       solicitanteNome: solicitante.trim(),
-      solicitanteOrigem: origem,
+      solicitanteOrigem: origemFinal,
       objeto: objeto.trim(),
       descricao: descricao.trim() || undefined,
       valorIndicadoCents: reaisParaCents(valor),
@@ -181,17 +184,31 @@ function RegistrarPedido({ onPronto }: { onPronto: () => void }) {
   return (
     <form onSubmit={salvar} className="gip-glass space-y-4 p-5">
       <h2 className="font-heading text-base font-bold">Registrar pedido</h2>
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-        <div>
-          <label className="mb-1.5 block text-sm font-semibold">Quem está pedindo</label>
-          <input value={solicitante} onChange={(e) => setSolicitante(e.target.value)} className="wr-input w-full" placeholder="Prefeito, entidade, liderança…" />
+      <div>
+        <label className="mb-1.5 block text-sm font-semibold">Quem está pedindo</label>
+        <input value={solicitante} onChange={(e) => setSolicitante(e.target.value)} className="wr-input w-full" placeholder="Prefeito, Guarda Municipal, APAE, liderança do bairro…" />
+        <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs" style={{ color: "var(--color-text-subtle)" }}>
+          <span>
+            Origem (automática): <strong>{ORIGEM_LABEL[origemFinal]}</strong> — o sistema reconhece sozinho.
+          </span>
+          <button
+            type="button"
+            onClick={() => setTrocarOrigem((v) => !v)}
+            className="underline underline-offset-2"
+            style={{ color: "var(--color-text-muted)" }}
+          >
+            {trocarOrigem ? "fechar" : "trocar"}
+          </button>
         </div>
-        <div>
-          <label className="mb-1.5 block text-sm font-semibold">Origem</label>
-          <select value={origem} onChange={(e) => setOrigem(e.target.value)} className="wr-input w-full">
+        {trocarOrigem && (
+          <select
+            value={origemFinal}
+            onChange={(e) => setOrigemManual(e.target.value as OrigemPedido)}
+            className="wr-input mt-2 w-full sm:w-auto"
+          >
             {ORIGENS_PEDIDO.map((o) => <option key={o} value={o}>{ORIGEM_LABEL[o]}</option>)}
           </select>
-        </div>
+        )}
       </div>
       <div>
         <label className="mb-1.5 block text-sm font-semibold">O que está sendo pedido</label>
