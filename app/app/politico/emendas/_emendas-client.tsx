@@ -134,7 +134,10 @@ export default function EmendasClient(props: EmendasClientProps) {
         eyebrow="Gabinete · Emendas"
         titulo="Emendas Parlamentares"
         subtitulo={ehDeputado ? "Indicações por município, região e área — do pedido à execução." : "Emendas da cidade por bairro e área — do pedido à execução."}
-        acoes={[{ href: "/app/politico/emendas/novo", label: "+ Nova emenda", primary: true }]}
+        acoes={[
+          { href: "/app/politico/emendas/novo", label: "+ Nova emenda", primary: true },
+          { href: "/app/politico/emendas/pedidos", label: "Pedidos" },
+        ]}
         extra={ehAdmin ? <SincronizarEmendasButton /> : undefined}
       />
 
@@ -161,12 +164,12 @@ export default function EmendasClient(props: EmendasClientProps) {
           </section>
 
           {pedidosAguardando > 0 && (
-            <div className="gip-glass flex items-center gap-3 p-4" style={{ borderLeft: "3px solid #6D28D9" }}>
+            <Link href="/app/politico/emendas/pedidos" className="gip-glass gip-glass-hover flex items-center gap-3 p-4" style={{ borderLeft: "3px solid #6D28D9" }}>
               <Inbox className="h-5 w-5 shrink-0" style={{ color: "#6D28D9" }} />
               <p className="text-sm">
-                <strong>{pedidosAguardando}</strong> pedido(s) de emenda aguardando decisão. Use o filtro de status <em>Pedido</em> abaixo para ver quem pediu o quê.
+                <strong>{pedidosAguardando}</strong> pedido(s) de emenda aguardando decisão. <span className="font-medium underline">Abrir a caixa de pedidos →</span>
               </p>
-            </div>
+            </Link>
           )}
 
           {/* Diferencial: onde investi × onde votei (TSE). Só aparece se houver dado. */}

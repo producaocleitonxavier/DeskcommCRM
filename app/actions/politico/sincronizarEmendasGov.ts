@@ -13,7 +13,8 @@ import { loadAuthUser, mfaEmDivida, resolveActiveOrg } from "@/lib/auth/server";
 import { ROLE_RANK } from "@/lib/auth/types";
 import { supportWriteError } from "@/lib/impersonate/support";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { buscarEmendasGov } from "@/lib/politico/gov-emendas";
+import { buscarEmendasGov, pagoEfetivoCents } from "@/lib/politico/gov-emendas";
+import { funcaoParaArea } from "@/lib/politico/gov-funcao-area";
 
 export type ResultadoSync =
   | { ok: true; total: number; inseridas: number; atualizadas: number; semToken?: boolean; semNome?: boolean }
@@ -59,8 +60,14 @@ export async function sincronizarEmendasGov(): Promise<ResultadoSync> {
     const valores = {
       valor_empenhado_cents: e.empenhadoCents,
       valor_liquidado_cents: e.liquidadoCents,
-      valor_pago_cents: e.pagoCents,
+      // "Pago de verdade" = pago no ano + pago via RESTOS a pagar (dinheiro de
+      // anos anteriores que só saiu agora). Ignorar restoPago subestima muito.
+      // NÃO somamos restoInscrito ao empenhado pra não duplicar entre os anos
+      // puxados (o empenho do ano passado já conta na linha daquele ano).
+      valor_pago_cents: pagoEfetivoCents(e),
       valor_indicado_cents: e.empenhadoCents,
+      // Área OFICIAL do gov (funcao) — não precisa adivinhar no federal.
+      area_tematica: funcaoParaArea(e.funcao),
     };
     const { data: existente } = await admin
       .from("pol_emendas")
@@ -74,8 +81,9 @@ export async function sincronizarEmendasGov(): Promise<ResultadoSync> {
       await admin.from("pol_emendas").update({ ...valores, updated_at: new Date().toISOString() }).eq("id", achou.id).eq("organization_id", org.orgId);
       atualizadas++;
     } else {
-      // tipo e area_tematica têm CHECK com enum fixo em pol_emendas — deixamos no
-      // default e guardamos o detalhe real (função/tipo da emenda) no texto.
+      // area_tematica já vem da função oficial do gov (em `valores`). `tipo` tem
+      // CHECK de enum fixo (individual/bancada/...) que não casa com o tipo
+      // textual do gov, então fica no default e guardamos o detalhe no texto.
       const detalhe = [e.tipo, e.funcao && `Função: ${e.funcao}`].filter(Boolean).join(" · ");
       await admin.from("pol_emendas").insert({
         organization_id: org.orgId,

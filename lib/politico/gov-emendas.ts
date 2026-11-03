@@ -21,6 +21,21 @@ export interface EmendaGov {
   empenhadoCents: number;
   liquidadoCents: number;
   pagoCents: number;
+  // Restos a pagar: dinheiro de anos anteriores. `restoPagoCents` é pago de
+  // fato (só caiu neste ano) — tem que entrar no "pago de verdade", senão
+  // subestima brutalmente (ex. real: R$734 no ano + R$22.465 via restos).
+  restoInscritoCents: number;
+  restoCanceladoCents: number;
+  restoPagoCents: number;
+}
+
+/**
+ * "Pago de verdade" = pago no ano + pago via restos a pagar. Os dois são
+ * pagamentos distintos (um do orçamento do ano, outro de restos de anos
+ * anteriores), então somar NÃO duplica. Ignorar o restoPago subestima.
+ */
+export function pagoEfetivoCents(e: Pick<EmendaGov, "pagoCents" | "restoPagoCents">): number {
+  return (e.pagoCents ?? 0) + (e.restoPagoCents ?? 0);
 }
 
 /** "10.000,00" -> 1000000 (centavos). Tolerante a vazio/formato. */
@@ -44,6 +59,9 @@ interface EmendaApi {
   valorEmpenhado?: string;
   valorLiquidado?: string;
   valorPago?: string;
+  valorRestoInscrito?: string;
+  valorRestoCancelado?: string;
+  valorRestoPago?: string;
 }
 
 function tokenDoAmbiente(): string | null {
@@ -89,6 +107,9 @@ export async function buscarEmendasGov(nomeAutor: string, anos: number[]): Promi
           empenhadoCents: moedaBrParaCents(e.valorEmpenhado),
           liquidadoCents: moedaBrParaCents(e.valorLiquidado),
           pagoCents: moedaBrParaCents(e.valorPago),
+          restoInscritoCents: moedaBrParaCents(e.valorRestoInscrito),
+          restoCanceladoCents: moedaBrParaCents(e.valorRestoCancelado),
+          restoPagoCents: moedaBrParaCents(e.valorRestoPago),
         });
       }
       if (linhas.length < 15) break; // última página

@@ -11,6 +11,7 @@ import { useRouter } from "next/navigation";
 import { ArrowLeft, Check } from "lucide-react";
 
 import { criarRegistro, criarCidadao } from "@/app/actions/politico/gabinete-actions";
+import { classificarArea, rotuloArea, AREAS_EMENDA } from "@/lib/politico/emenda-classificar";
 
 interface Opcao {
   id: string;
@@ -35,20 +36,6 @@ const ESFERAS: Opcao[] = [
   { id: "estadual", nome: "Estadual" },
   { id: "federal", nome: "Federal" },
 ];
-const AREAS: Opcao[] = [
-  { id: "saude", nome: "Saúde" },
-  { id: "educacao", nome: "Educação" },
-  { id: "seguranca", nome: "Segurança" },
-  { id: "assistencia_social", nome: "Assistência social" },
-  { id: "infraestrutura", nome: "Infraestrutura" },
-  { id: "cultura", nome: "Cultura" },
-  { id: "esporte", nome: "Esporte" },
-  { id: "meio_ambiente", nome: "Meio ambiente" },
-  { id: "agricultura", nome: "Agricultura" },
-  { id: "tecnologia", nome: "Tecnologia" },
-  { id: "outro", nome: "Outro" },
-];
-
 function reaisParaCents(v: string): number {
   if (!v) return 0;
   let s = v.replace(/[^\d,.-]/g, "").trim();
@@ -84,7 +71,10 @@ export default function NovaEmendaForm({ liderancas }: NovaEmendaFormProps) {
   const [tipo, setTipo] = useState("individual");
   const [esfera, setEsfera] = useState("estadual");
   const [valor, setValor] = useState("");
-  const [area, setArea] = useState("saude");
+  // Área NÃO é mais um dropdown obrigatório: o assessor escreve a destinação
+  // livre e o sistema classifica sozinho. `areaManual` vazio = segue o palpite.
+  const [areaManual, setAreaManual] = useState<string>("");
+  const [trocandoArea, setTrocandoArea] = useState(false);
   const [descricao, setDescricao] = useState("");
   const [objeto, setObjeto] = useState("");
   const [municipio, setMunicipio] = useState("");
@@ -105,6 +95,11 @@ export default function NovaEmendaForm({ liderancas }: NovaEmendaFormProps) {
   const [salvando, setSalvando] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
 
+  // Palpite automático da área a partir do texto livre (objeto + entidade +
+  // descrição). Editável: se o assessor trocar à mão, `areaManual` vence.
+  const areaSugerida = classificarArea([objeto, entidade, descricao].join(" "));
+  const areaFinal = areaManual || areaSugerida;
+
   async function salvar(e: React.FormEvent) {
     e.preventDefault();
     setErro(null);
@@ -117,7 +112,7 @@ export default function NovaEmendaForm({ liderancas }: NovaEmendaFormProps) {
       ano: anoNum,
       tipo,
       esfera,
-      area_tematica: area,
+      area_tematica: areaFinal,
       descricao: descricao.trim(),
       status: "indicada",
       valor_indicado_cents: reaisParaCents(valor),
@@ -191,10 +186,24 @@ export default function NovaEmendaForm({ liderancas }: NovaEmendaFormProps) {
               <input type="text" inputMode="decimal" value={valor} onChange={(e) => setValor(e.target.value)} placeholder="250.000,00" className="wr-input w-full" />
             </div>
             <div>
-              <Label>Área temática</Label>
-              <select value={area} onChange={(e) => setArea(e.target.value)} className="wr-input w-full">
-                {AREAS.map((o) => <option key={o.id} value={o.id}>{o.nome}</option>)}
-              </select>
+              <Label>Área</Label>
+              {trocandoArea ? (
+                <select
+                  value={areaFinal}
+                  onChange={(e) => setAreaManual(e.target.value)}
+                  onBlur={() => setTrocandoArea(false)}
+                  className="wr-input w-full"
+                  autoFocus
+                >
+                  {AREAS_EMENDA.map((o) => <option key={o.area} value={o.area}>{o.nome}</option>)}
+                </select>
+              ) : (
+                <div className="flex items-center gap-2 rounded-xl px-3 py-2 text-sm" style={{ background: "var(--color-surface-elevated)", border: "1px solid var(--color-border)", minHeight: "42px" }}>
+                  <span className="font-medium">{rotuloArea(areaFinal)}</span>
+                  {!areaManual && <span className="text-xs" style={{ color: "var(--color-text-subtle)" }}>sugerida pelo texto</span>}
+                  <button type="button" onClick={() => setTrocandoArea(true)} className="ml-auto text-xs font-medium underline" style={{ color: "var(--color-text-subtle)" }}>trocar</button>
+                </div>
+              )}
             </div>
           </div>
           <div>
