@@ -142,6 +142,11 @@ CRONS="
 # estar fresco quando o mandato abrir. Modelo recorrente barato — não tempo real,
 # de propósito. Timeout generoso: a escuta de várias orgs passa por IA.
 0 6 * * 1|600|api/v1/cron/boletim-semanal
+# O VIGIA DA COBRANCA. Semanal (segunda, 09:00 UTC = 06:00 BRT): varre as demandas
+# atrasadas e sem resposta do orgao e deixa UM aviso por organizacao na Central de
+# Alertas. So avisa - nunca envia nada (o oficio de cobranca e sempre enviado por
+# uma pessoa). O atraso conta em DIAS, entao semanal basta e o dedup evita repeticao.
+0 9 * * 1|60|api/v1/cron/demanda-cobranca-watcher
 "
 
 # CRONTAB_PATH é ponto de injeção do teste (tests/shell/scheduler-entrypoint.test.sh).

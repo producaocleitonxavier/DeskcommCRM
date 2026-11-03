@@ -1144,6 +1144,9 @@ export const AUDIT_ACTIONS = [
   // Captação por QR: criar/apagar uma origem (ponto de captação).
   "pol_qr_origem.created",
   "pol_qr_origem.deleted",
+  // Vigia de cobrança: o cron abriu/atualizou/limpou alertas de demandas
+  // atrasadas sem resposta do órgão (só avisa; o envio é sempre humano).
+  "pol_gabinete.demanda_cobranca_vigiada",
 ] as const;
 
 /** Um código de auditoria. Derivado de `AUDIT_ACTIONS` — não redigite a lista. */
