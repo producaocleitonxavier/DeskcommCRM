@@ -86,6 +86,34 @@ export function rollupPorOrgao(itens: DemandaCobranca[]): OrgaoRollup[] {
   return [...mapa.values()].sort((a, b) => b.total - a.total || b.atrasadas - a.atrasadas || a.orgao.localeCompare(b.orgao, "pt-BR"));
 }
 
+export interface AlertaCobranca {
+  total: number;
+  porOrgao: { orgao: string; qtd: number }[]; // ordenado por qtd desc
+}
+
+/**
+ * AVISO PROATIVO de cobrança (fase 2a): as demandas que mais queimam — abertas,
+ * ATRASADAS e SEM resposta do órgão. É o subconjunto urgente do "precisa cobrar"
+ * (sem resposta), filtrado pelas que já passaram do prazo. Alimenta o banner do
+ * topo ("X atrasadas sem resposta — cobrar agora"). Nunca lança.
+ */
+export function alertaCobranca(itens: DemandaCobranca[]): AlertaCobranca {
+  const mapa = new Map<string, number>();
+  let total = 0;
+  for (const it of itens ?? []) {
+    if (ESTADOS_FECHADOS.has(it.estado)) continue;
+    if (it.respondeu) continue;
+    if (!estaAtrasada(it.abertaEm, it.prazoDias)) continue;
+    total += 1;
+    const orgao = normalizarOrgao(it.orgao) || "Sem órgão";
+    mapa.set(orgao, (mapa.get(orgao) ?? 0) + 1);
+  }
+  const porOrgao = [...mapa.entries()]
+    .map(([orgao, qtd]) => ({ orgao, qtd }))
+    .sort((a, b) => b.qtd - a.qtd || a.orgao.localeCompare(b.orgao, "pt-BR"));
+  return { total, porOrgao };
+}
+
 /** Órgãos comuns por esfera — chips de escolha rápida (padroniza a grafia). */
 export const ORGAOS_COMUNS: Record<"municipal" | "estadual" | "federal", string[]> = {
   municipal: [

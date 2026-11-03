@@ -8,6 +8,7 @@ import {
   precisaCobrar,
   ordenarUrgencia,
   textoCobranca,
+  alertaCobranca,
   type DemandaCobranca,
   type OrgaoRollup,
 } from "@/lib/politico/demanda-cobranca";
@@ -131,5 +132,35 @@ describe("demanda-cobranca — textoCobranca (ofício de reiteração)", () => {
     expect(t).toContain("demanda em referência");
     expect(t).toContain("não obteve resposta");
     expect(() => textoCobranca({})).not.toThrow();
+  });
+});
+
+describe("alertaCobranca — aviso proativo (aberta + atrasada + sem resposta)", () => {
+  const base = (over: Partial<DemandaCobranca>): DemandaCobranca => ({
+    orgao: "COPASA", estado: "em_atendimento", abertaEm: PASSADO, prazoDias: 30, respondeu: false, ...over,
+  });
+  it("conta só aberta + atrasada + sem resposta, agrupa por órgão (qtd desc)", () => {
+    const r = alertaCobranca([
+      base({ orgao: "COPASA" }),
+      base({ orgao: "COPASA" }),
+      base({ orgao: "SLU" }),
+    ]);
+    expect(r.total).toBe(3);
+    expect(r.porOrgao[0]).toEqual({ orgao: "COPASA", qtd: 2 });
+    expect(r.porOrgao[1]).toEqual({ orgao: "SLU", qtd: 1 });
+  });
+  it("exclui respondeu=true e demanda fechada (controle negativo)", () => {
+    const r = alertaCobranca([
+      base({ respondeu: true }),
+      base({ estado: "resolvida" }),
+    ]);
+    expect(r.total).toBe(0);
+  });
+  it("ANTI-TAUTOLOGIA: sem resposta mas DENTRO do prazo não entra (depende do atraso)", () => {
+    const r = alertaCobranca([base({ abertaEm: AGORA })]);
+    expect(r.total).toBe(0);
+  });
+  it("lista vazia → total 0 sem quebrar", () => {
+    expect(alertaCobranca([])).toEqual({ total: 0, porOrgao: [] });
   });
 });

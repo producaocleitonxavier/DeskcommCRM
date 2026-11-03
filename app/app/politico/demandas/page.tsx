@@ -16,7 +16,7 @@ import { avisoDeResolucaoLigado } from "@/lib/politico/aviso-de-resolucao";
 import DemandasCharts from "./_demandas-charts";
 import AvisoAutoToggle from "./_aviso-auto-toggle";
 import { RelatorioPdfButton } from "@/components/politico/relatorio-pdf-button";
-import { corDoOrgao, normalizarOrgao, rollupPorOrgao, ordenarUrgencia, type DemandaCobranca, type OrgaoRollup } from "@/lib/politico/demanda-cobranca";
+import { corDoOrgao, normalizarOrgao, rollupPorOrgao, ordenarUrgencia, alertaCobranca, type DemandaCobranca, type OrgaoRollup, type AlertaCobranca } from "@/lib/politico/demanda-cobranca";
 
 export const dynamic = "force-dynamic";
 
@@ -171,7 +171,7 @@ async function buscarOrgaos(organizationId: string, temAuto: boolean): Promise<s
 
 /** Rollup "por órgão" (total, atrasadas, sem resposta) de TODAS as demandas do
  * gabinete — alimenta o painel de cobrança. Fail-soft se a coluna não existe. */
-async function buscarRollupOrgaos(organizationId: string, temAuto: boolean, temRespondeu: boolean): Promise<OrgaoRollup[]> {
+async function buscarRollupOrgaos(organizationId: string, temAuto: boolean, temRespondeu: boolean): Promise<{ rollup: OrgaoRollup[]; alerta: AlertaCobranca }> {
   const db = await createClient();
   const cols = "pol_orgao_destino, estado, aberta_em, pol_prazo_dias" + (temRespondeu ? ", pol_respondeu" : "");
   let q = db
@@ -190,7 +190,7 @@ async function buscarRollupOrgaos(organizationId: string, temAuto: boolean, temR
     prazoDias: (r.pol_prazo_dias as number | null) ?? null,
     respondeu: temRespondeu ? (r.pol_respondeu as boolean | null) === true : false,
   }));
-  return rollupPorOrgao(itens);
+  return { rollup: rollupPorOrgao(itens), alerta: alertaCobranca(itens) };
 }
 
 async function buscarDemandas(
@@ -449,15 +449,38 @@ export default async function GabinetePage({
             statusPie={statusPie}
           />
 
+          {/* AVISO PROATIVO (fase 2a): o sistema cutuca o que está atrasado e sem
+              resposta — o gabinete não precisa procurar. Leva ao worklist de cobrança. */}
+          {!verAuto && temRespondeu && rollupOrgaos.alerta.total > 0 && (
+            <Link
+              href={`/app/politico/demandas${montarQuery({ cobrar: "1", estado: undefined, orgao: undefined, pagina: "1" })}`}
+              className="flex flex-wrap items-center justify-between gap-2 rounded-2xl px-4 py-3 transition-colors hover:bg-white/[0.04]"
+              style={{ background: "rgba(239,68,68,0.10)", border: "1px solid rgba(239,68,68,0.35)" }}
+            >
+              <span className="flex items-center gap-2 text-sm" style={{ color: "#F87171" }}>
+                <span aria-hidden>⚠</span>
+                <span style={{ color: "var(--color-text)" }}>
+                  <strong>{rollupOrgaos.alerta.total}</strong> demanda{rollupOrgaos.alerta.total > 1 ? "s" : ""} atrasada{rollupOrgaos.alerta.total > 1 ? "s" : ""} e sem resposta do órgão
+                  {rollupOrgaos.alerta.porOrgao.length > 0 && (
+                    <span style={{ color: "var(--color-text-subtle)" }}>
+                      {" "}({rollupOrgaos.alerta.porOrgao.slice(0, 3).map((o) => `${o.orgao} ${o.qtd}`).join(" · ")})
+                    </span>
+                  )}
+                </span>
+              </span>
+              <span className="shrink-0 text-sm font-bold" style={{ color: "#F87171" }}>Cobrar agora →</span>
+            </Link>
+          )}
+
           {/* Painel COBRANÇA POR ÓRGÃO — bate o olho e vê onde cobrar. */}
-          {!verAuto && rollupOrgaos.length > 0 && (
+          {!verAuto && rollupOrgaos.rollup.length > 0 && (
             <section aria-label="Demandas por órgão" className="gip-glass p-4 sm:p-5">
               <div className="mb-3 flex items-center justify-between">
                 <h2 className="font-heading text-base font-bold" style={{ color: "var(--color-text)" }}>Por órgão</h2>
                 <span className="text-xs" style={{ color: "var(--color-text-subtle)" }}>clique pra filtrar · onde cobrar</span>
               </div>
               <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-                {[...rollupOrgaos].sort(ordenarUrgencia).slice(0, 8).map((o) => {
+                {[...rollupOrgaos.rollup].sort(ordenarUrgencia).slice(0, 8).map((o) => {
                   const cor = corDoOrgao(o.orgao);
                   const ativo = filtroOrgao === o.orgao;
                   const queima = o.atrasadas > 0;
