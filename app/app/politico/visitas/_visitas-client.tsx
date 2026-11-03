@@ -10,7 +10,7 @@
 import { useMemo, useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { MapPin, CalendarClock, AlertTriangle, UserX, CheckCircle2, User, Check, X, ArrowUpRight, Camera } from "lucide-react";
+import { MapPin, CalendarClock, AlertTriangle, UserX, CheckCircle2, User, Check, X, ArrowUpRight, Camera, Plus } from "lucide-react";
 
 import { CommandHero } from "@/components/politico/command-hero";
 import { KpiCard } from "@/components/politico/kpi-card";
@@ -19,6 +19,7 @@ import { corDoOrgao } from "@/lib/politico/demanda-cobranca";
 import { visitaPendente, visitaAgendada, visitaSemResponsavel, statusVisita, ordenarVisitas } from "@/lib/politico/visita-tecnica";
 import { definirResponsavelVisita, marcarVisitaRealizada, registrarRelatoVisita } from "@/app/actions/politico/gabinete-actions";
 import { uploadAnexoDemanda, ANEXO_MAX_BYTES } from "@/lib/politico/anexos-upload";
+import NovaVisitaForm from "./_nova-visita-form";
 
 export interface FotoVisita {
   url: string;
@@ -49,6 +50,7 @@ interface Props {
   usuarioAtualId: string;
   temRelato: boolean;
   fotos: Record<string, FotoVisita[]>;
+  tipoMandato: string | null;
 }
 
 type Filtro = "todas" | "agendadas" | "atrasadas" | "sem_responsavel" | "realizadas";
@@ -80,8 +82,9 @@ const STATUS_PILL: Record<string, { bg: string; color: string; label: string }> 
   realizada: { bg: "rgba(34,197,94,0.15)", color: "#7AD4AB", label: "Realizada" },
 };
 
-export default function VisitasClient({ visitas, kpis, assessores, usuarioAtualId, temRelato, fotos }: Props) {
+export default function VisitasClient({ visitas, kpis, assessores, usuarioAtualId, temRelato, fotos, tipoMandato }: Props) {
   const router = useRouter();
+  const [novaAberta, setNovaAberta] = useState(false);
   const [filtro, setFiltro] = useState<Filtro>("todas");
   const [pendente, startTransition] = useTransition();
   const [salvandoRelato, setSalvandoRelato] = useState(false);
@@ -155,6 +158,14 @@ export default function VisitasClient({ visitas, kpis, assessores, usuarioAtualI
         titulo="Visitas Técnicas"
         subtitulo="As visitas do mandato ao território — o que está marcado, atrasado, sem responsável e já feito. Marque a sua presença e registre o relato de campo."
       />
+
+      {/* Nova visita (ficha rápida) */}
+      <div className="flex justify-end">
+        <button onClick={() => setNovaAberta((v) => !v)} className="wr-btn-dark inline-flex items-center gap-2">
+          {novaAberta ? <X className="h-4 w-4" /> : <Plus className="h-4 w-4" />} {novaAberta ? "Fechar" : "Nova visita"}
+        </button>
+      </div>
+      {novaAberta && <NovaVisitaForm tipoMandato={tipoMandato} onFechar={() => setNovaAberta(false)} />}
 
       {/* KPIs */}
       <section className="grid grid-cols-2 gap-4 lg:grid-cols-4">

@@ -16,6 +16,7 @@ import { requireAuth, resolveActiveOrg } from "@/lib/auth/server";
 import { ROLE_RANK } from "@/lib/auth/types";
 import { createClient } from "@/lib/supabase/server";
 import { nomesDosAtendentes } from "@/lib/users/nome-do-atendente";
+import { lerMandatoConfig } from "@/lib/politico/setup-do-mandato";
 import { visitaPendente, visitaAgendada, visitaSemResponsavel } from "@/lib/politico/visita-tecnica";
 import { listarAnexosDemanda } from "@/app/actions/politico/gabinete-actions";
 import VisitasClient, { type VisitaItem, type FotoVisita } from "./_visitas-client";
@@ -114,6 +115,10 @@ export default async function VisitasPage() {
     .map((m) => ({ id: m.user_id, nome: nomes.get(m.user_id) ?? `${m.user_id.slice(0, 8)} · ${m.role}` }))
     .sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR"));
 
+  // Tipo de mandato (para a escolha rápida de órgãos na ficha de nova visita).
+  const { data: orgRow } = await db.from("organizations").select("settings").eq("id", org.orgId).maybeSingle();
+  const tipoMandato = lerMandatoConfig((orgRow as { settings?: unknown } | null)?.settings)?.tipo ?? null;
+
   return (
     <VisitasClient
       visitas={visitas}
@@ -122,6 +127,7 @@ export default async function VisitasPage() {
       usuarioAtualId={user.id}
       temRelato={temRelato}
       fotos={fotos}
+      tipoMandato={tipoMandato}
     />
   );
 }
