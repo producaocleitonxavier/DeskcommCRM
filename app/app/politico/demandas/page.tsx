@@ -16,7 +16,7 @@ import { avisoDeResolucaoLigado } from "@/lib/politico/aviso-de-resolucao";
 import DemandasCharts from "./_demandas-charts";
 import AvisoAutoToggle from "./_aviso-auto-toggle";
 import { RelatorioPdfButton } from "@/components/politico/relatorio-pdf-button";
-import { corDoOrgao, normalizarOrgao, rollupPorOrgao, type DemandaCobranca, type OrgaoRollup } from "@/lib/politico/demanda-cobranca";
+import { corDoOrgao, normalizarOrgao, rollupPorOrgao, ordenarUrgencia, type DemandaCobranca, type OrgaoRollup } from "@/lib/politico/demanda-cobranca";
 
 export const dynamic = "force-dynamic";
 
@@ -198,7 +198,7 @@ async function buscarDemandas(
   pagina: number,
   filtroEstado: string | undefined,
   filtroOrgao: string | undefined,
-  opts: { temAuto: boolean; verAuto: boolean; temRespondeu: boolean },
+  opts: { temAuto: boolean; verAuto: boolean; temRespondeu: boolean; soCobrar: boolean },
 ) {
   const db = await createClient();
   const offset = (pagina - 1) * POR_PAGINA;
@@ -228,6 +228,10 @@ async function buscarDemandas(
   if (filtroOrgao) {
     query = query.eq("pol_orgao_destino", filtroOrgao);
   }
+  // "Precisa cobrar": aberta (não resolvida/encerrada) E o órgão não respondeu.
+  if (opts.soCobrar && opts.temRespondeu) {
+    query = query.not("estado", "in", "(resolvida,encerrada)").eq("pol_respondeu", false);
+  }
 
   const { data, count } = await query;
 
@@ -240,7 +244,7 @@ async function buscarDemandas(
   };
 }
 
-async function contarEstados(organizationId: string, temAuto: boolean) {
+async function contarEstados(organizationId: string, temAuto: boolean, temRespondeu: boolean) {
   const db = await createClient();
   const counts: Record<string, number> = {};
 
@@ -292,6 +296,20 @@ async function contarEstados(organizationId: string, temAuto: boolean) {
     counts._auto = autoCount ?? 0;
   }
 
+  // Precisa cobrar = abertas (não resolvida/encerrada) E órgão sem resposta.
+  if (temRespondeu) {
+    let qCobrar = db
+      .from("demandas")
+      .select("id", { count: "exact", head: true })
+      .eq("organization_id", organizationId)
+      .eq("pol_gabinete", true)
+      .not("estado", "in", "(resolvida,encerrada)")
+      .eq("pol_respondeu", false);
+    if (temAuto) qCobrar = qCobrar.eq("pol_autoatendimento", false);
+    const { count: cobrarCount } = await qCobrar;
+    counts._precisa_cobrar = cobrarCount ?? 0;
+  }
+
   return counts;
 }
 
@@ -340,10 +358,11 @@ export default async function GabinetePage({
   const verAuto = temAuto && params.view === "autoatendimento";
   // Cobrança por resposta do órgão: existe só se a migration 9084 rodou.
   const temRespondeu = await colunaRespondeuExiste(org.orgId);
+  const filtroCobrar = temRespondeu && !verAuto && params.cobrar === "1";
 
   const [{ demandas, total }, contagens, orgaos, rollupOrgaos] = await Promise.all([
-    buscarDemandas(org.orgId, pagina, filtroEstado, filtroOrgao, { temAuto, verAuto, temRespondeu }),
-    contarEstados(org.orgId, temAuto),
+    buscarDemandas(org.orgId, pagina, filtroEstado, filtroOrgao, { temAuto, verAuto, temRespondeu, soCobrar: filtroCobrar }),
+    contarEstados(org.orgId, temAuto, temRespondeu),
     buscarOrgaos(org.orgId, temAuto),
     buscarRollupOrgaos(org.orgId, temAuto, temRespondeu),
   ]);
@@ -386,7 +405,7 @@ export default async function GabinetePage({
   const viewAtual = verAuto ? "autoatendimento" : undefined;
   function montarQuery(overrides: Record<string, string | undefined>) {
     const q = new URLSearchParams();
-    const merged = { estado: filtroEstado, orgao: filtroOrgao, view: viewAtual, ...overrides };
+    const merged = { estado: filtroEstado, orgao: filtroOrgao, view: viewAtual, cobrar: filtroCobrar ? "1" : undefined, ...overrides };
     for (const [k, v] of Object.entries(merged)) {
       if (v) q.set(k, v);
     }
@@ -438,18 +457,22 @@ export default async function GabinetePage({
                 <span className="text-xs" style={{ color: "var(--color-text-subtle)" }}>clique pra filtrar · onde cobrar</span>
               </div>
               <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-                {rollupOrgaos.slice(0, 8).map((o) => {
+                {[...rollupOrgaos].sort(ordenarUrgencia).slice(0, 8).map((o) => {
                   const cor = corDoOrgao(o.orgao);
                   const ativo = filtroOrgao === o.orgao;
+                  const queima = o.atrasadas > 0;
                   return (
                     <Link
                       key={o.orgao}
-                      href={`/app/politico/demandas${montarQuery({ orgao: ativo ? undefined : o.orgao, pagina: "1" })}`}
+                      href={`/app/politico/demandas${montarQuery({ orgao: ativo ? undefined : o.orgao, cobrar: undefined, pagina: "1" })}`}
                       className="flex items-center justify-between gap-2 rounded-xl px-3 py-2.5 transition-colors hover:bg-white/[0.04]"
-                      style={{ background: "var(--color-surface-elevated)", border: ativo ? "1px solid rgba(215,243,106,0.5)" : "1px solid var(--color-border)" }}
+                      style={{ background: "var(--color-surface-elevated)", border: ativo ? "1px solid rgba(215,243,106,0.5)" : queima ? "1px solid rgba(239,68,68,0.35)" : "1px solid var(--color-border)" }}
                     >
-                      <span className="inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold" style={{ background: cor.bg, color: cor.color }}>
-                        {o.orgao}
+                      <span className="flex min-w-0 items-center gap-1.5">
+                        {queima && <span className="h-2 w-2 shrink-0 rounded-full" style={{ background: "#EF4444" }} aria-hidden title="Tem demanda atrasada" />}
+                        <span className="inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold" style={{ background: cor.bg, color: cor.color }}>
+                          {o.orgao}
+                        </span>
                       </span>
                       <span className="flex shrink-0 items-center gap-1.5 text-xs tabular-nums">
                         <span style={{ color: "var(--color-text-muted)" }}>{o.total}</span>
@@ -511,20 +534,35 @@ export default async function GabinetePage({
             {/* Filters */}
             <div className="flex flex-wrap gap-2.5 px-4 py-3.5">
               <Link
-                href={`/app/politico/demandas${montarQuery({ estado: undefined, pagina: "1" })}`}
+                href={`/app/politico/demandas${montarQuery({ estado: undefined, cobrar: undefined, pagina: "1" })}`}
                 className="inline-flex items-center h-9 px-3.5 rounded-full text-sm font-medium transition-colors"
                 style={
-                  !filtroEstado
+                  !filtroEstado && !filtroCobrar
                     ? { background: "#16181D", color: "#FFFFFF" }
                     : { background: "var(--color-surface-elevated)", color: "var(--color-text-muted)" }
                 }
               >
                 Todas
               </Link>
+              {/* Atalho de COBRANÇA: só o que está aberto e sem resposta do órgão. */}
+              {temRespondeu && (
+                <Link
+                  href={`/app/politico/demandas${montarQuery({ cobrar: filtroCobrar ? undefined : "1", estado: undefined, orgao: undefined, pagina: "1" })}`}
+                  className="inline-flex items-center gap-1.5 h-9 px-3.5 rounded-full text-sm font-semibold transition-colors"
+                  style={
+                    filtroCobrar
+                      ? { background: "#B91C1C", color: "#FFFFFF" }
+                      : { background: "rgba(239,68,68,0.14)", color: "#F87171" }
+                  }
+                  title="Demandas abertas em que o órgão ainda não respondeu — o que cobrar hoje."
+                >
+                  ⚠ Precisa cobrar{typeof contagens._precisa_cobrar === "number" ? ` (${contagens._precisa_cobrar})` : ""}
+                </Link>
+              )}
               {["aberta", "em_atendimento", "encaminhada", "resolvida"].map((est) => (
                 <Link
                   key={est}
-                  href={`/app/politico/demandas${montarQuery({ estado: est, pagina: "1" })}`}
+                  href={`/app/politico/demandas${montarQuery({ estado: est, cobrar: undefined, pagina: "1" })}`}
                   className="inline-flex items-center h-9 px-3.5 rounded-full text-sm font-medium transition-colors"
                   style={
                     filtroEstado === est
@@ -542,7 +580,7 @@ export default async function GabinetePage({
               <div className="flex flex-wrap items-center gap-2 px-4 pb-3.5">
                 <span className="text-[11px] font-semibold uppercase tracking-wide" style={{ color: "var(--color-text-subtle)" }}>Órgão:</span>
                 <Link
-                  href={`/app/politico/demandas${montarQuery({ orgao: undefined, pagina: "1" })}`}
+                  href={`/app/politico/demandas${montarQuery({ orgao: undefined, cobrar: undefined, pagina: "1" })}`}
                   className="inline-flex items-center h-8 px-3 rounded-full text-xs font-medium transition-colors"
                   style={!filtroOrgao ? { background: "#16181D", color: "#FFFFFF" } : { background: "var(--color-surface-elevated)", color: "var(--color-text-muted)" }}
                 >
@@ -554,7 +592,7 @@ export default async function GabinetePage({
                   return (
                     <Link
                       key={o}
-                      href={`/app/politico/demandas${montarQuery({ orgao: ativo ? undefined : o, pagina: "1" })}`}
+                      href={`/app/politico/demandas${montarQuery({ orgao: ativo ? undefined : o, cobrar: undefined, pagina: "1" })}`}
                       className="inline-flex items-center h-8 rounded-full px-3 text-xs font-semibold transition-opacity hover:opacity-90"
                       style={{ background: cor.bg, color: cor.color, outline: ativo ? "2px solid rgba(215,243,106,0.6)" : "none" }}
                     >

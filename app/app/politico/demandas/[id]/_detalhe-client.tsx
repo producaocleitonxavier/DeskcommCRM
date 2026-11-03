@@ -16,6 +16,7 @@ import { gerarEncaminhamento } from "@/app/actions/politico/gerarEncaminhamento"
 import { gerarOficioDemanda } from "@/app/actions/politico/gerarOficio";
 import { avisarCidadao, avisarResolucaoAutomatica } from "@/app/actions/politico/avisarCidadao";
 import { atualizarRegistro, excluirRegistro, registrarEventoDemanda } from "@/app/actions/politico/gabinete-actions";
+import { textoCobranca } from "@/lib/politico/demanda-cobranca";
 import DemandaAnexos from "@/components/politico/demanda-anexos";
 
 interface Opcao {
@@ -164,6 +165,15 @@ export default function DetalheDemandaClient({ demanda, assessores, eventos, voz
       : { pol_respondeu: false, pol_respondeu_em: null };
     await persistir(patch, patch as Partial<DemandaDetalhe>);
     void registrarEventoDemanda(d.id, "nota", respondeu ? "Órgão respondeu o ofício." : "Marcado como sem resposta do órgão.");
+  }
+
+  /** Órgão não respondeu → gera o rascunho de um ofício de COBRANÇA (reiteração).
+   * Preenche o campo de encaminhamento e abre a edição pro assessor revisar;
+   * NÃO salva sozinho (ele confere e dá um número novo de ofício antes de imprimir). */
+  function gerarCobranca() {
+    setEncaminhamento(textoCobranca({ rotuloAnterior: d.pol_oficio_rotulo, assunto: d.pol_oficio_assunto }));
+    setEditando(true);
+    void registrarEventoDemanda(d.id, "nota", "Gerado modelo de ofício de cobrança (reiteração).");
   }
 
   async function persistir(patch: Record<string, unknown>, otimista: Partial<DemandaDetalhe>) {
@@ -604,6 +614,18 @@ export default function DetalheDemandaClient({ demanda, assessores, eventos, voz
           </button>
           {d.pol_respondeu && d.pol_respondeu_em && (
             <span className="text-xs" style={{ color: "var(--color-text-subtle)" }}>respondeu em {fmtData(d.pol_respondeu_em)}</span>
+          )}
+          {/* Órgão não respondeu e já houve ofício antes → cobrar (reiterar). */}
+          {!d.pol_respondeu && !fechada && (d.pol_oficio_rotulo || d.pol_encaminhamento_ia) && (
+            <button
+              type="button"
+              onClick={gerarCobranca}
+              className="ml-auto inline-flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-sm font-semibold transition-opacity hover:opacity-90"
+              style={{ background: "rgba(239,68,68,0.14)", color: "#F87171", border: "1px solid rgba(239,68,68,0.3)" }}
+              title="Gera o rascunho de um ofício reiterando o pedido ao órgão. Revise e dê um NOVO número antes de imprimir."
+            >
+              <Clock className="h-4 w-4" aria-hidden /> Gerar ofício de cobrança
+            </button>
           )}
         </div>
 

@@ -109,3 +109,43 @@ export function orgaosSugeridos(tipo: string | null | undefined): string[] {
   if (tipo === "dep_estadual") return ORGAOS_COMUNS.estadual;
   return ORGAOS_COMUNS.municipal;
 }
+
+/**
+ * "Precisa cobrar": a demanda ainda está na mesa (aberta) E o órgão não respondeu.
+ * É o worklist de cobrança do gabinete — o que exige um empurrão hoje.
+ */
+export function precisaCobrar(d: { estado: string; respondeu: boolean }): boolean {
+  return !ESTADOS_FECHADOS.has(d.estado) && !d.respondeu;
+}
+
+/**
+ * Ordena o painel "Por órgão" por URGÊNCIA (o que queima primeiro): mais
+ * atrasadas na frente, depois mais sem resposta, depois maior volume, e por fim
+ * alfabética. Comparador puro (use com [...rollup].sort(ordenarUrgencia)).
+ */
+export function ordenarUrgencia(a: OrgaoRollup, b: OrgaoRollup): number {
+  return (
+    b.atrasadas - a.atrasadas ||
+    b.semResposta - a.semResposta ||
+    b.total - a.total ||
+    a.orgao.localeCompare(b.orgao, "pt-BR")
+  );
+}
+
+/**
+ * Corpo de um ofício de COBRANÇA (reiteração) — o gabinete mandou o pedido, o
+ * órgão não respondeu, e a gente cobra. Formal, pt-BR, SEM promessa de campanha.
+ * Determinístico (não chama IA). Encaixa o nº do ofício anterior quando houver.
+ */
+export function textoCobranca(p: { rotuloAnterior?: string | null; assunto?: string | null }): string {
+  const rotulo = (p.rotuloAnterior ?? "").trim();
+  const assunto = (p.assunto ?? "").trim();
+  const refOficio = rotulo ? `o Ofício nº ${rotulo}, expedido por este gabinete,` : `o ofício anteriormente encaminhado por este gabinete,`;
+  const refAssunto = assunto ? `referente a ${assunto},` : `referente à demanda em referência,`;
+  return (
+    `Reitero a Vossa Senhoria ${refOficio} ${refAssunto} o qual, até o presente momento, ` +
+    `não obteve resposta. Considerando a relevância do pleito para a população atendida, ` +
+    `solicito a especial gentileza de informar o andamento e as providências adotadas. ` +
+    `Renovo protestos de elevada estima e consideração.`
+  );
+}

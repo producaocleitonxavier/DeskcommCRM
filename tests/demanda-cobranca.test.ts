@@ -5,7 +5,11 @@ import {
   corDoOrgao,
   rollupPorOrgao,
   orgaosSugeridos,
+  precisaCobrar,
+  ordenarUrgencia,
+  textoCobranca,
   type DemandaCobranca,
+  type OrgaoRollup,
 } from "@/lib/politico/demanda-cobranca";
 
 const PASSADO = "2020-01-01T12:00:00.000Z"; // bem no passado → sempre atrasada
@@ -81,5 +85,51 @@ describe("demanda-cobranca — orgaosSugeridos por mandato", () => {
     expect(orgaosSugeridos("dep_estadual")).toContain("DER-MG");
     expect(orgaosSugeridos("vereador")).toContain("BHTRANS");
     expect(orgaosSugeridos(null)).toContain("COPASA"); // default municipal
+  });
+});
+
+describe("demanda-cobranca — precisaCobrar", () => {
+  it("aberta + órgão não respondeu → true", () => {
+    expect(precisaCobrar({ estado: "em_atendimento", respondeu: false })).toBe(true);
+    expect(precisaCobrar({ estado: "encaminhada", respondeu: false })).toBe(true);
+  });
+  it("respondeu → false (não precisa cobrar)", () => {
+    expect(precisaCobrar({ estado: "em_atendimento", respondeu: true })).toBe(false);
+  });
+  it("CONTROLE NEGATIVO: resolvida/encerrada → false mesmo sem resposta", () => {
+    expect(precisaCobrar({ estado: "resolvida", respondeu: false })).toBe(false);
+    expect(precisaCobrar({ estado: "encerrada", respondeu: false })).toBe(false);
+  });
+});
+
+describe("demanda-cobranca — ordenarUrgencia", () => {
+  it("ANTI-TAUTOLOGIA: órgão com atrasadas vem antes mesmo com total MENOR", () => {
+    const a: OrgaoRollup = { orgao: "A", total: 5, atrasadas: 0, semResposta: 0 };
+    const b: OrgaoRollup = { orgao: "B", total: 1, atrasadas: 2, semResposta: 1 };
+    const ordenado = [a, b].sort(ordenarUrgencia);
+    expect(ordenado[0]!.orgao).toBe("B"); // B queima mais, apesar de ter menos no total
+    expect(ordenado[1]!.orgao).toBe("A");
+  });
+  it("empate em atrasadas → desempata por sem-resposta, depois total", () => {
+    const x: OrgaoRollup = { orgao: "X", total: 3, atrasadas: 1, semResposta: 1 };
+    const y: OrgaoRollup = { orgao: "Y", total: 9, atrasadas: 1, semResposta: 3 };
+    const ordenado = [x, y].sort(ordenarUrgencia);
+    expect(ordenado[0]!.orgao).toBe("Y"); // mesma atraso, Y tem mais sem-resposta
+  });
+});
+
+describe("demanda-cobranca — textoCobranca (ofício de reiteração)", () => {
+  it("com rótulo encaixa o número do ofício", () => {
+    const t = textoCobranca({ rotuloAnterior: "OF. GAB 048/2026", assunto: "iluminação da praça" });
+    expect(t).toContain("Ofício nº OF. GAB 048/2026");
+    expect(t).toContain("referente a iluminação da praça");
+    expect(t).toContain("não obteve resposta");
+  });
+  it("sem rótulo/assunto usa a variante genérica e não lança", () => {
+    const t = textoCobranca({ rotuloAnterior: null, assunto: null });
+    expect(t).toContain("ofício anteriormente encaminhado");
+    expect(t).toContain("demanda em referência");
+    expect(t).toContain("não obteve resposta");
+    expect(() => textoCobranca({})).not.toThrow();
   });
 });
