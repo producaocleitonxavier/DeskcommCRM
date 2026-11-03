@@ -58,15 +58,6 @@ export default async function DemandaDetalhePage({
     .eq("id", id)
     .maybeSingle();
 
-  // Campo de visita técnica (migration 9085) — fetch à parte e fail-soft (query
-  // separada da de "respondeu?" para que a ausência de uma não derrube a outra).
-  const { data: visitaRow } = await db
-    .from("demandas")
-    .select("pol_visita_realizada_em, pol_visita_responsavel_id, pol_visita_responsavel_nome")
-    .eq("organization_id", org.orgId)
-    .eq("id", id)
-    .maybeSingle();
-
   // Voz do Mandato armada? (liga a opção "incluir recado em áudio" no aviso.)
   const vozOk = vozArmada(await lerVozConfig(db, org.orgId));
 
@@ -94,13 +85,12 @@ export default async function DemandaDetalhePage({
 
   return (
     <DetalheDemandaClient
-      demanda={{ ...(demRes.data as Record<string, unknown>), ...(respRow ?? {}), ...(visitaRow ?? {}) } as unknown as DemandaDetalhe}
+      demanda={{ ...(demRes.data as Record<string, unknown>), ...(respRow ?? {}) } as unknown as DemandaDetalhe}
       assessores={assessores}
       eventos={eventos}
       vozArmada={vozOk}
       mostrarAssuntoOficio={mostrarAssuntoOficio}
       politicoNome={politicoNome}
-      usuarioAtualId={user.id}
     />
   );
 }

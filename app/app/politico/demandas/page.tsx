@@ -17,7 +17,6 @@ import DemandasCharts from "./_demandas-charts";
 import AvisoAutoToggle from "./_aviso-auto-toggle";
 import { RelatorioPdfButton } from "@/components/politico/relatorio-pdf-button";
 import { corDoOrgao, normalizarOrgao, rollupPorOrgao, ordenarUrgencia, alertaCobranca, type DemandaCobranca, type OrgaoRollup, type AlertaCobranca } from "@/lib/politico/demanda-cobranca";
-import { visitaPendente, visitaSemResponsavel } from "@/lib/politico/visita-tecnica";
 
 export const dynamic = "force-dynamic";
 
@@ -49,9 +48,6 @@ interface Demanda {
   pol_autoatendimento?: boolean | null;
   pol_respondeu?: boolean | null;
   pol_respondeu_em?: string | null;
-  pol_visita_realizada_em?: string | null;
-  pol_visita_responsavel_id?: string | null;
-  pol_visita_responsavel_nome?: string | null;
 }
 
 // -- Helpers -----------------------------------------------------------------
@@ -152,18 +148,6 @@ async function colunaRespondeuExiste(organizationId: string): Promise<boolean> {
   return !error;
 }
 
-/** A coluna `pol_visita_realizada_em` (migration 9085) existe? Se não, o selo
- * "Visita atrasada" some e a tela segue como antes. */
-async function colunaVisitaExiste(organizationId: string): Promise<boolean> {
-  const db = await createClient();
-  const { error } = await db
-    .from("demandas")
-    .select("pol_visita_realizada_em")
-    .eq("organization_id", organizationId)
-    .limit(1);
-  return !error;
-}
-
 /** Lista dos órgãos de destino DISTINTOS das demandas do gabinete (para os
  * chips de filtro). Leve: só a coluna, dedupe em memória. */
 async function buscarOrgaos(organizationId: string, temAuto: boolean): Promise<string[]> {
@@ -214,7 +198,7 @@ async function buscarDemandas(
   pagina: number,
   filtroEstado: string | undefined,
   filtroOrgao: string | undefined,
-  opts: { temAuto: boolean; verAuto: boolean; temRespondeu: boolean; temVisita: boolean; soCobrar: boolean },
+  opts: { temAuto: boolean; verAuto: boolean; temRespondeu: boolean; soCobrar: boolean },
 ) {
   const db = await createClient();
   const offset = (pagina - 1) * POR_PAGINA;
@@ -222,8 +206,7 @@ async function buscarDemandas(
   const colunas =
     "id, assunto, estado, origem, pol_tipo, pol_prioridade, pol_orgao_destino, pol_encaminhamento_ia, dono_kind, aberta_em, prazo_em, pol_prazo_dias, desfecho" +
     (opts.temAuto ? ", pol_autoatendimento" : "") +
-    (opts.temRespondeu ? ", pol_respondeu, pol_respondeu_em" : "") +
-    (opts.temVisita ? ", pol_visita_realizada_em, pol_visita_responsavel_id, pol_visita_responsavel_nome" : "");
+    (opts.temRespondeu ? ", pol_respondeu, pol_respondeu_em" : "");
 
   let query = db
     .from("demandas")
@@ -375,12 +358,10 @@ export default async function GabinetePage({
   const verAuto = temAuto && params.view === "autoatendimento";
   // Cobrança por resposta do órgão: existe só se a migration 9084 rodou.
   const temRespondeu = await colunaRespondeuExiste(org.orgId);
-  // Visita técnica: selo "Visita atrasada" existe só se a migration 9085 rodou.
-  const temVisita = await colunaVisitaExiste(org.orgId);
   const filtroCobrar = temRespondeu && !verAuto && params.cobrar === "1";
 
   const [{ demandas, total }, contagens, orgaos, rollupOrgaos] = await Promise.all([
-    buscarDemandas(org.orgId, pagina, filtroEstado, filtroOrgao, { temAuto, verAuto, temRespondeu, temVisita, soCobrar: filtroCobrar }),
+    buscarDemandas(org.orgId, pagina, filtroEstado, filtroOrgao, { temAuto, verAuto, temRespondeu, soCobrar: filtroCobrar }),
     contarEstados(org.orgId, temAuto, temRespondeu),
     buscarOrgaos(org.orgId, temAuto),
     buscarRollupOrgaos(org.orgId, temAuto, temRespondeu),
@@ -678,14 +659,6 @@ export default async function GabinetePage({
                       const orgaoNome = normalizarOrgao(d.pol_orgao_destino);
                       const orgaoCor = corDoOrgao(orgaoNome);
                       const fechadaRow = ["resolvida", "encerrada"].includes(d.estado);
-                      const visitaArg = {
-                        visitaEm: d.prazo_em,
-                        realizadaEm: d.pol_visita_realizada_em ?? null,
-                        estado: d.estado,
-                        responsavelId: d.pol_visita_responsavel_id ?? null,
-                      };
-                      const visitaAtrasada = temVisita && visitaPendente(visitaArg);
-                      const visitaSemResp = temVisita && visitaSemResponsavel(visitaArg);
 
                       return (
                         <tr
@@ -749,31 +722,15 @@ export default async function GabinetePage({
                           </td>
                           <td className="px-4 py-3.5 whitespace-nowrap">
                             {d.prazo_em ? (
-                              <span className="inline-flex flex-col gap-1">
-                                <span className="text-sm tabular-nums" style={{ color: "var(--color-text-muted)" }}>
-                                  {formatarData(d.prazo_em)}
-                                  {diasPrazo !== null && !["resolvida", "encerrada"].includes(d.estado) && (
-                                    <span className="ml-1 text-xs">
-                                      {diasPrazo < 0
-                                        ? `(${Math.abs(diasPrazo)}d atrás)`
-                                        : diasPrazo === 0
-                                          ? "(hoje)"
-                                          : `(${diasPrazo}d)`}
-                                    </span>
-                                  )}
-                                </span>
-                                {visitaAtrasada && (
-                                  <span
-                                    className="inline-flex w-fit items-center rounded-full px-2 py-0.5 text-[11px] font-bold"
-                                    style={{ background: "rgba(239,68,68,0.16)", color: "#F87171" }}
-                                    title={visitaSemResp ? "Visita marcada, não feita e ninguém marcou presença" : "Visita marcada e ainda não realizada"}
-                                  >
-                                    Visita atrasada{visitaSemResp ? " · sem responsável" : ""}
-                                  </span>
-                                )}
-                                {!visitaAtrasada && d.pol_visita_responsavel_nome && (
-                                  <span className="w-fit text-[11px]" style={{ color: "var(--color-text-subtle)" }}>
-                                    vai: {d.pol_visita_responsavel_nome}
+                              <span className="text-sm tabular-nums" style={{ color: "var(--color-text-muted)" }}>
+                                {formatarData(d.prazo_em)}
+                                {diasPrazo !== null && !["resolvida", "encerrada"].includes(d.estado) && (
+                                  <span className="ml-1 text-xs">
+                                    {diasPrazo < 0
+                                      ? `(${Math.abs(diasPrazo)}d atrás)`
+                                      : diasPrazo === 0
+                                        ? "(hoje)"
+                                        : `(${diasPrazo}d)`}
                                   </span>
                                 )}
                               </span>

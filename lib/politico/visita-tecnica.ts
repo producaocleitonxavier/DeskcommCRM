@@ -48,3 +48,31 @@ export function visitaAgendada(d: VisitaDemanda): boolean {
   if (Number.isNaN(t)) return false;
   return t >= Date.now();
 }
+
+export type StatusVisita = "realizada" | "atrasada" | "agendada";
+
+/**
+ * Bucket da visita para o painel "Visitas Técnicas": realizada vence tudo;
+ * depois atrasada (pendente); o resto é agendada (futura ou neutra). É puro.
+ */
+export function statusVisita(d: VisitaDemanda): StatusVisita {
+  if (d.realizadaEm) return "realizada";
+  if (visitaPendente(d)) return "atrasada";
+  return "agendada";
+}
+
+const RANK_VISITA: Record<StatusVisita, number> = { atrasada: 0, agendada: 1, realizada: 2 };
+
+/**
+ * Ordenação do painel: ATRASADAS primeiro, depois agendadas, depois realizadas;
+ * dentro de cada grupo, a data mais próxima vem antes. Comparador puro (use com
+ * [...visitas].sort(ordenarVisitas)).
+ */
+export function ordenarVisitas(a: VisitaDemanda, b: VisitaDemanda): number {
+  const ra = RANK_VISITA[statusVisita(a)];
+  const rb = RANK_VISITA[statusVisita(b)];
+  if (ra !== rb) return ra - rb;
+  const ta = a.visitaEm ? Date.parse(a.visitaEm) : 0;
+  const tb = b.visitaEm ? Date.parse(b.visitaEm) : 0;
+  return (Number.isNaN(ta) ? 0 : ta) - (Number.isNaN(tb) ? 0 : tb);
+}

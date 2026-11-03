@@ -310,6 +310,62 @@ export async function definirResponsavelVisita(demandaId: string, assessorId: st
   return { ok: true };
 }
 
+/**
+ * Marca/desmarca a VISITA técnica como realizada (grava pol_visita_realizada_em)
+ * e reespelha o estado na Agenda. Ação fina reutilizada pelo módulo "Visitas
+ * Técnicas" (a mesma gravação que o card do detalhe faz). Org-scoped.
+ */
+export async function marcarVisitaRealizada(demandaId: string, realizada: boolean): Promise<AcaoResultado> {
+  const org = await orgAtiva();
+  if (!org) return { ok: false, erro: "Sessão ou organização inválida." };
+  const db = await createClient();
+  const { error } = await db
+    .from("demandas")
+    .update({ pol_visita_realizada_em: realizada ? new Date().toISOString().slice(0, 10) : null })
+    .eq("id", demandaId)
+    .eq("organization_id", org);
+  if (error) return { ok: false, erro: traduzErro(error) };
+  await sincronizarVisitaNaAgenda(demandaId);
+  void registrarEventoDemanda(demandaId, "nota", realizada ? "Visita técnica realizada." : "Visita técnica marcada como não realizada.");
+  return { ok: true };
+}
+
+/**
+ * RELATO da visita (o que foi feito / presentes / decidido) — o assessor registra
+ * o resultado de campo e o gabinete inteiro vê. Marca a visita como realizada se
+ * ainda não estiver (relato e realização andam juntos). Reeditável. Org-scoped.
+ */
+export async function registrarRelatoVisita(
+  demandaId: string,
+  entrada: { relato?: string; presentes?: string; decisoes?: string },
+): Promise<AcaoResultado> {
+  const org = await orgAtiva();
+  if (!org) return { ok: false, erro: "Sessão ou organização inválida." };
+  const db = await createClient();
+
+  const { data: atual } = await db
+    .from("demandas")
+    .select("pol_visita_realizada_em")
+    .eq("id", demandaId)
+    .eq("organization_id", org)
+    .maybeSingle();
+  const jaRealizada = !!(atual as { pol_visita_realizada_em: string | null } | null)?.pol_visita_realizada_em;
+
+  const patch: Record<string, unknown> = {
+    pol_visita_relato: (entrada.relato ?? "").trim() || null,
+    pol_visita_presentes: (entrada.presentes ?? "").trim() || null,
+    pol_visita_decisoes: (entrada.decisoes ?? "").trim() || null,
+  };
+  // Relato implica visita feita: se ainda não tinha data de realização, carimba hoje.
+  if (!jaRealizada) patch.pol_visita_realizada_em = new Date().toISOString().slice(0, 10);
+
+  const { error } = await db.from("demandas").update(patch).eq("id", demandaId).eq("organization_id", org);
+  if (error) return { ok: false, erro: traduzErro(error) };
+  await sincronizarVisitaNaAgenda(demandaId);
+  void registrarEventoDemanda(demandaId, "nota", jaRealizada ? "Relato da visita técnica atualizado." : "Visita técnica realizada (com relato).");
+  return { ok: true };
+}
+
 /** Registra um evento no histórico de uma demanda (escopado à org ativa). */
 export async function registrarEventoDemanda(
   demandaId: string,

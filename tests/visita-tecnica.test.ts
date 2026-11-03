@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 
-import { visitaPendente, visitaAgendada, visitaSemResponsavel } from "@/lib/politico/visita-tecnica";
+import { visitaPendente, visitaAgendada, visitaSemResponsavel, statusVisita, ordenarVisitas } from "@/lib/politico/visita-tecnica";
 
 const PASSADO = "2020-01-01T12:00:00.000Z"; // bem no passado
 const FUTURO = new Date(Date.now() + 7 * 86400000).toISOString(); // daqui a uma semana
@@ -47,5 +47,30 @@ describe("visitaAgendada — visita futura ainda por fazer", () => {
   });
   it("marcada no passado NÃO é 'agendada' (é pendente) — não se sobrepõem", () => {
     expect(visitaAgendada({ visitaEm: PASSADO, realizadaEm: null, estado: "em_atendimento" })).toBe(false);
+  });
+});
+
+describe("statusVisita — bucket do painel", () => {
+  it("realizada vence tudo (mesmo com data vencida)", () => {
+    expect(statusVisita({ visitaEm: PASSADO, realizadaEm: "2020-01-02", estado: "em_atendimento" })).toBe("realizada");
+  });
+  it("passado + não feita → atrasada; futuro + não feita → agendada", () => {
+    expect(statusVisita({ visitaEm: PASSADO, realizadaEm: null, estado: "em_atendimento" })).toBe("atrasada");
+    expect(statusVisita({ visitaEm: FUTURO, realizadaEm: null, estado: "em_atendimento" })).toBe("agendada");
+  });
+});
+
+describe("ordenarVisitas — atrasadas primeiro, depois data mais próxima", () => {
+  it("ANTI-TAUTOLOGIA: atrasada vem antes de agendada e de realizada (não é ordem de entrada)", () => {
+    const realizada = { visitaEm: PASSADO, realizadaEm: "2020-01-02", estado: "em_atendimento" };
+    const agendada = { visitaEm: FUTURO, realizadaEm: null, estado: "em_atendimento" };
+    const atrasada = { visitaEm: PASSADO, realizadaEm: null, estado: "em_atendimento" };
+    const ordenada = [realizada, agendada, atrasada].sort(ordenarVisitas);
+    expect(ordenada.map(statusVisita)).toEqual(["atrasada", "agendada", "realizada"]);
+  });
+  it("entre duas agendadas, a data mais próxima vem antes", () => {
+    const perto = { visitaEm: new Date(Date.now() + 2 * 86400000).toISOString(), realizadaEm: null, estado: "aberta" };
+    const longe = { visitaEm: new Date(Date.now() + 20 * 86400000).toISOString(), realizadaEm: null, estado: "aberta" };
+    expect([longe, perto].sort(ordenarVisitas)[0]).toBe(perto);
   });
 });

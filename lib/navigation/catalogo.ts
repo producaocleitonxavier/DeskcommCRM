@@ -1155,6 +1155,15 @@ export const NAV_CATALOG = [
     sidebar: true,
   },
   {
+    href: "/app/politico/visitas",
+    label: "Visitas Técnicas",
+    description: "Agenda de visitas do mandato ao território: o que está marcado, atrasado, sem responsável e já feito. O assessor marca a própria presença e registra o relato de campo.",
+    icon: "MapPin",
+    group: "gabinete",
+    minRole: "manager",
+    sidebar: true,
+  },
+  {
     href: "/app/politico/oficios",
     label: "Ofícios",
     description: "Busque qualquer ofício emitido por número, assunto, órgão ou nome do cidadão.",
