@@ -181,7 +181,7 @@ export default function RaioXClient({ eleicoes, municipios: municipiosLista }: {
               <h3 className="font-heading text-base font-bold" style={{ color: "var(--color-text)" }}>Municípios</h3>
               <span className="text-xs" style={{ color: "var(--color-text-subtle)" }}>{municipios.length} com voto</span>
             </div>
-            <ListaDrill linhas={municipios} selecionavel selecionado={munSel?.chave} onSelecionar={abrirMunicipio} />
+            <ListaDrill linhas={municipios} selecionavel selecionado={munSel?.chave} onSelecionar={abrirMunicipio} placeholderBusca="Buscar município…" />
           </section>
 
           {/* Drill dentro do município */}
@@ -203,7 +203,7 @@ export default function RaioXClient({ eleicoes, municipios: municipiosLista }: {
                     </button>
                   ))}
                 </div>
-                <ListaDrill linhas={drill} />
+                <ListaDrill linhas={drill} placeholderBusca="Buscar bairro, local, zona…" />
               </>
             ) : (
               <div className="flex flex-1 items-center justify-center p-10 text-center text-sm" style={{ color: "var(--color-text-subtle)" }}>
@@ -282,19 +282,42 @@ export default function RaioXClient({ eleicoes, municipios: municipiosLista }: {
   );
 }
 
-function ListaDrill({ linhas, selecionavel, selecionado, onSelecionar }: {
+function normalizaBusca(s: string): string {
+  return (s ?? "").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").trim();
+}
+
+function ListaDrill({ linhas, selecionavel, selecionado, onSelecionar, placeholderBusca }: {
   linhas: DrillLinha[];
   selecionavel?: boolean;
   selecionado?: string;
   onSelecionar?: (l: DrillLinha) => void;
+  placeholderBusca?: string;
 }) {
+  const [busca, setBusca] = useState("");
   const max = useMemo(() => Math.max(...linhas.map((l) => l.votos), 1), [linhas]);
   if (linhas.length === 0) {
     return <div className="p-8 text-center text-sm" style={{ color: "var(--color-text-subtle)" }}>Sem dados.</div>;
   }
+  // Mantém a POSIÇÃO original (ranking) mesmo filtrando — quem busca um bairro
+  // quer saber em que lugar ele está, não a posição na lista filtrada.
+  const termo = normalizaBusca(busca);
+  const itens = linhas.map((l, idx) => ({ l, idx })).filter((x) => !termo || normalizaBusca(x.l.rotulo).includes(termo));
   return (
-    <ul className="max-h-[520px] overflow-y-auto">
-      {linhas.map((l, i) => {
+    <>
+      {linhas.length > 6 && (
+        <div className="px-4 pt-3 pb-1">
+          <div className="relative">
+            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2" aria-hidden style={{ color: "var(--color-text-subtle)" }} />
+            <input value={busca} onChange={(e) => setBusca(e.target.value)} placeholder={placeholderBusca ?? "Buscar…"} className="wr-input w-full pl-9" />
+          </div>
+        </div>
+      )}
+      {itens.length === 0 ? (
+        <div className="p-8 text-center text-sm" style={{ color: "var(--color-text-subtle)" }}>Nenhum resultado para &ldquo;{busca.trim()}&rdquo;.</div>
+      ) : (
+    <ul className="max-h-[480px] overflow-y-auto">
+      {itens.map(({ l, idx }) => {
+        const i = idx;
         const conteudo = (
           <>
             <span className="w-6 shrink-0 text-right text-xs tabular-nums" style={{ color: "var(--color-text-subtle)" }}>{i + 1}</span>
@@ -327,5 +350,7 @@ function ListaDrill({ linhas, selecionavel, selecionado, onSelecionar }: {
         );
       })}
     </ul>
+      )}
+    </>
   );
 }
