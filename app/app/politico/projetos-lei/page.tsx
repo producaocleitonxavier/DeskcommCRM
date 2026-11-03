@@ -9,11 +9,10 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { requireAuth, resolveActiveOrg } from "@/lib/auth/server";
 import { ROLE_RANK } from "@/lib/auth/types";
+import { grupoSituacao, autoriaEhColetiva } from "@/lib/politico/projeto-lei";
 import ProjetosClient, { type ProjetoItem } from "./_projetos-client";
 
 export const dynamic = "force-dynamic";
-
-const CONCLUIDOS = ["aprovado", "vetado", "promulgado", "arquivado", "retirado"];
 
 export default async function ProjetosLeiPage() {
   const user = await requireAuth();
@@ -25,7 +24,7 @@ export default async function ProjetosLeiPage() {
   const { data } = await db
     .from("pol_projetos_lei")
     .select(
-      "id, numero, tipo, esfera, titulo, status, prioridade, autor_mandatario, alinhamento_campanha, data_apresentacao, data_ultima_movimentacao, comissao_atual",
+      "id, numero, tipo, esfera, titulo, status, prioridade, autor_mandatario, alinhamento_campanha, data_apresentacao, data_ultima_movimentacao, comissao_atual, tema, coautores",
     )
     .eq("organization_id", org.orgId)
     .order("data_ultima_movimentacao", { ascending: false, nullsFirst: false })
@@ -39,17 +38,21 @@ export default async function ProjetosLeiPage() {
     titulo: String(p.titulo ?? ""),
     status: String(p.status ?? "rascunho"),
     comissao: (p.comissao_atual as string | null) ?? null,
+    tema: (p.tema as string | null) ?? null,
     autorMandatario: Boolean(p.autor_mandatario),
     alinhamento: Boolean(p.alinhamento_campanha),
+    coletiva: autoriaEhColetiva(p.coautores as string[] | null),
     dataApresentacao: (p.data_apresentacao as string | null) ?? null,
     dataUltimaMov: (p.data_ultima_movimentacao as string | null) ?? null,
   }));
 
   const kpis = {
-    emTramitacao: projetos.filter((p) => !CONCLUIDOS.includes(p.status)).length,
+    total: projetos.length,
+    virouLei: projetos.filter((p) => p.status === "promulgado").length,
+    nasComissoes: projetos.filter((p) => grupoSituacao(p.status) === "comissoes").length,
+    emTramitacao: projetos.filter((p) => grupoSituacao(p.status) === "tramitacao").length,
     deAutoria: projetos.filter((p) => p.autorMandatario).length,
     alinhados: projetos.filter((p) => p.alinhamento).length,
-    aprovados: projetos.filter((p) => ["aprovado", "promulgado"].includes(p.status)).length,
   };
 
   return <ProjetosClient kpis={kpis} projetos={projetos} ehAdmin={ROLE_RANK[org.role] >= ROLE_RANK.admin} />;

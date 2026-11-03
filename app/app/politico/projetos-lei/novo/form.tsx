@@ -12,6 +12,7 @@ import { useRouter } from "next/navigation";
 import { ArrowLeft, Check } from "lucide-react";
 
 import { criarRegistro } from "@/app/actions/politico/gabinete-actions";
+import { classificarArea, rotuloArea } from "@/lib/politico/emenda-classificar";
 
 interface Opcao {
   id: string;
@@ -105,6 +106,10 @@ export default function NovoProjetoForm({}: { orgId: string }) {
   const [salvando, setSalvando] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
 
+  // Área adivinhada pelo texto (título + ementa) — igual às emendas. Se o
+  // assessor não escrever um tema, grava essa sugestão; nunca bloqueia o salvar.
+  const areaSugerida = rotuloArea(classificarArea(`${titulo} ${ementa}`));
+
   async function salvar(e: React.FormEvent) {
     e.preventDefault();
     setErro(null);
@@ -127,7 +132,7 @@ export default function NovoProjetoForm({}: { orgId: string }) {
     };
     if (ementa.trim()) payload.ementa = ementa.trim();
     if (descricao.trim()) payload.descricao = descricao.trim();
-    if (tema.trim()) payload.tema = tema.trim();
+    payload.tema = tema.trim() || areaSugerida;
     if (url.trim()) payload.url_oficial = url.trim();
     if (comissao.trim()) payload.comissao_atual = comissao.trim();
     if (relator.trim()) payload.relator = relator.trim();
@@ -171,7 +176,13 @@ export default function NovoProjetoForm({}: { orgId: string }) {
 
         <section className="gip-glass space-y-4 p-5 sm:p-6">
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <div><Label>Tema</Label><input type="text" value={tema} onChange={(e) => setTema(e.target.value)} className="wr-input w-full" /></div>
+            <div>
+              <Label>Tema / Área</Label>
+              <input type="text" value={tema} onChange={(e) => setTema(e.target.value)} placeholder={`Sugestão: ${areaSugerida}`} className="wr-input w-full" />
+              <p className="mt-1 text-xs" style={{ color: "var(--color-text-subtle)" }}>
+                Área (sugerida pelo título): <strong>{areaSugerida}</strong> — deixe em branco para usar essa, ou escreva a sua.
+              </p>
+            </div>
             <div><Label>Prioridade</Label><select value={prioridade} onChange={(e) => setPrioridade(e.target.value)} className="wr-input w-full">{PRIORIDADES.map((o) => <option key={o.id} value={o.id}>{o.nome}</option>)}</select></div>
             <div><Label>Comissão atual</Label><input type="text" value={comissao} onChange={(e) => setComissao(e.target.value)} className="wr-input w-full" /></div>
             <div><Label>Relator</Label><input type="text" value={relator} onChange={(e) => setRelator(e.target.value)} className="wr-input w-full" /></div>
