@@ -44,29 +44,62 @@ function Campo({ label, children, dica }: { label: string; children: React.React
 
 const inputCls = "wr-input w-full";
 
-export default function SetupWizard({ inicial }: { inicial: { nome: string; cargo: string; cidade: string; subtitulo: string } }) {
+/**
+ * Estado inicial do assistente. Os quatro primeiros (identidade) vêm de
+ * pol_gabinete_config; o resto, de settings.gabinete.mandato (lerMandatoConfig).
+ * TUDO é pré-carregado para o assistente funcionar como EDITOR: reeditar e salvar
+ * preserva o que não foi tocado (salvarSetupDoMandato sobrescreve o mandato).
+ */
+export interface SetupInicial {
+  nome: string;
+  cargo: string;
+  cidade: string;
+  subtitulo: string;
+  tipo?: string | null;
+  uf?: string | null;
+  whats?: string | null;
+  horario?: string | null;
+  insta?: string | null;
+  endereco?: string | null;
+  email?: string | null;
+  agendaContato?: string | null;
+  portal?: string | null;
+  servicos?: { nome: string; link: string }[] | null;
+  orgaos?: string | null;
+  bio?: string | null;
+  temas?: string | null;
+}
+
+const TIPO_VALIDO = (t: string | null | undefined): TipoMandato | null =>
+  t === "vereador" || t === "prefeito" || t === "dep_estadual" || t === "dep_federal" ? t : null;
+
+export default function SetupWizard({ inicial }: { inicial: SetupInicial }) {
   const router = useRouter();
   const [passo, setPasso] = useState(0);
-  const [tipo, setTipo] = useState<TipoMandato | null>(null);
+  const [tipo, setTipo] = useState<TipoMandato | null>(TIPO_VALIDO(inicial.tipo));
   const [nome, setNome] = useState(inicial.nome);
   const [cargo, setCargo] = useState(inicial.cargo);
   const [cidade, setCidade] = useState(inicial.cidade);
-  const [uf, setUf] = useState("");
+  const [uf, setUf] = useState(inicial.uf ?? "");
   const [subtitulo, setSubtitulo] = useState(inicial.subtitulo);
-  const [whats, setWhats] = useState("");
-  const [horario, setHorario] = useState("");
-  const [insta, setInsta] = useState("");
-  const [endereco, setEndereco] = useState("");
-  const [email, setEmail] = useState("");
-  const [agendaContato, setAgendaContato] = useState("");
-  const [portal, setPortal] = useState("");
-  const [servicos, setServicos] = useState<{ nome: string; link: string }[]>([
-    { nome: "", link: "" },
-    { nome: "", link: "" },
-  ]);
-  const [orgaos, setOrgaos] = useState("");
-  const [bio, setBio] = useState("");
-  const [temas, setTemas] = useState("");
+  const [whats, setWhats] = useState(inicial.whats ?? "");
+  const [horario, setHorario] = useState(inicial.horario ?? "");
+  const [insta, setInsta] = useState(inicial.insta ?? "");
+  const [endereco, setEndereco] = useState(inicial.endereco ?? "");
+  const [email, setEmail] = useState(inicial.email ?? "");
+  const [agendaContato, setAgendaContato] = useState(inicial.agendaContato ?? "");
+  const [portal, setPortal] = useState(inicial.portal ?? "");
+  const [servicos, setServicos] = useState<{ nome: string; link: string }[]>(
+    inicial.servicos && inicial.servicos.length > 0
+      ? inicial.servicos.map((s) => ({ nome: s.nome ?? "", link: s.link ?? "" }))
+      : [
+          { nome: "", link: "" },
+          { nome: "", link: "" },
+        ],
+  );
+  const [orgaos, setOrgaos] = useState(inicial.orgaos ?? "");
+  const [bio, setBio] = useState(inicial.bio ?? "");
+  const [temas, setTemas] = useState(inicial.temas ?? "");
 
   const [salvando, setSalvando] = useState(false);
   const [concluido, setConcluido] = useState(false);

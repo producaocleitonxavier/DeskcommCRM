@@ -1238,6 +1238,15 @@ export const NAV_CATALOG = [
     minRole: "manager",
     sidebar: true,
   },
+  {
+    href: "/app/politico/configuracao",
+    label: "Configurar mandato",
+    description: "Assistente que define o TIPO de mandato e os dados do gabinete (canais, portal, órgãos, bio). É um editor: reeditar não apaga o que já estava preenchido.",
+    icon: "ListChecks",
+    group: "gabinete",
+    minRole: "admin",
+    sidebar: true,
+  },
 
   // ── Rotas políticas que existiam sem porta no menu (Prompt 6) ────────
   {

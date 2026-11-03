@@ -62,6 +62,8 @@ const NAV_ALLOWLIST: Record<string, string> = {
     "sub-fluxo de nova demanda, alcançado pelo botão '+ Nova demanda' em /app/politico/demandas",
   "/app/politico/emendas/novo":
     "sub-fluxo de nova emenda, alcançado pelo botão '+ Nova emenda' em /app/politico/emendas",
+  "/app/politico/emendas/pedidos":
+    "caixa de entrada de pedidos de emenda, alcançada pelo botão 'Pedidos' no cabeçalho de /app/politico/emendas",
   "/app/politico/obras/nova":
     "sub-fluxo de nova obra/fiscalização, alcançado pelo botão '+ Nova' em /app/politico/obras",
   "/app/politico/liderancas/novo":
@@ -74,8 +76,6 @@ const NAV_ALLOWLIST: Record<string, string> = {
     "redirect para /app/agenda — criar compromisso passou para a Agenda completa do Gabinete",
   "/app/politico/pesquisas/nova":
     "sub-fluxo de nova pesquisa, alcançado pelo botão '+ Nova pesquisa' em /app/politico/pesquisas",
-  "/app/politico/configuracao":
-    "assistente de configuração do mandato, alcançado pelo redirect de primeiro acesso (deveAbrirSetup) e pelo menu Identidade do Mandato",
   "/app/politico/prestacao-contas":
     "Painel do Mandato — 3ª aba do Comando (Hoje · Painel · Prestação de Contas), alcançada pelas abas do topo",
   "/app/politico/rankings":

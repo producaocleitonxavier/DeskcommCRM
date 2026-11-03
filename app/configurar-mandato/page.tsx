@@ -11,6 +11,7 @@ import { redirect } from "next/navigation";
 import { requireAuth, resolveActiveOrg } from "@/lib/auth/server";
 import { ROLE_RANK, type Role } from "@/lib/auth/types";
 import { createClient } from "@/lib/supabase/server";
+import { lerMandatoConfig } from "@/lib/politico/setup-do-mandato";
 import { marcaDaSaida } from "@/lib/branding/saida";
 import BoasVindasEConfig from "./_boas-vindas";
 
@@ -29,11 +30,12 @@ export default async function ConfigurarMandatoPage() {
   // e aí reabrir o assistente (pra reeditar) é inofensivo. A TRAVA de obrigar a
   // config vive no portão do /app (app/app/layout.tsx), não aqui.
   const db = await createClient();
-  const { data } = await db
-    .from("pol_gabinete_config")
-    .select("nome_parlamentar, cargo, cidade, subtitulo")
-    .eq("organization_id", org.orgId)
-    .maybeSingle();
+  const [cfgRes, orgRes] = await Promise.all([
+    db.from("pol_gabinete_config").select("nome_parlamentar, cargo, cidade, subtitulo").eq("organization_id", org.orgId).maybeSingle(),
+    db.from("organizations").select("settings").eq("id", org.orgId).maybeSingle(),
+  ]);
+  const data = cfgRes.data;
+  const m = lerMandatoConfig(orgRes.data?.settings);
   const marca = await marcaDaSaida(null);
 
   return (
@@ -43,6 +45,19 @@ export default async function ConfigurarMandatoPage() {
         cargo: data?.cargo ?? "",
         cidade: data?.cidade ?? "",
         subtitulo: data?.subtitulo ?? "",
+        tipo: m?.tipo ?? null,
+        uf: m?.uf ?? null,
+        whats: m?.whats ?? null,
+        horario: m?.horario ?? null,
+        insta: m?.insta ?? null,
+        endereco: m?.endereco ?? null,
+        email: m?.email ?? null,
+        agendaContato: m?.agendaContato ?? null,
+        portal: m?.portal ?? null,
+        servicos: m?.servicos ?? null,
+        orgaos: m?.orgaos ?? null,
+        bio: m?.bio ?? null,
+        temas: m?.temas ?? null,
       }}
       marcaNome={marca.nome}
     />

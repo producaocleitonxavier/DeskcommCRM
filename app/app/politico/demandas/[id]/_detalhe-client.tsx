@@ -565,6 +565,103 @@ export default function DetalheDemandaClient({ demanda, assessores, eventos, voz
         )}
       </section>
 
+      {/* Visita técnica — CARD dedicado (fora do ofício): data, quem vai e se foi feita. */}
+      {(d.prazo_em || d.pol_tipo === "visita_tecnica") && (
+        <section className="gip-glass p-6 sm:p-7">
+          <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+            <h2 className="font-heading text-base font-bold" style={{ color: "var(--color-text)" }}>Visita técnica</h2>
+            {d.prazo_em ? (
+              <span className="inline-flex items-center gap-1 text-xs" style={{ color: "var(--color-text-subtle)" }}>
+                <Clock className="h-3.5 w-3.5" aria-hidden />
+                {d.pol_visita_realizada_em
+                  ? `realizada em ${fmtData(d.pol_visita_realizada_em)}`
+                  : `marcada para ${fmtData(d.prazo_em)} · aparece na Agenda`}
+              </span>
+            ) : (
+              <span className="text-xs" style={{ color: "var(--color-text-subtle)" }}>sem data — use “Editar” para marcar</span>
+            )}
+          </div>
+
+          {d.prazo_em ? (
+            <div className="grid gap-3">
+              {/* Quem vai na visita — UM responsável (assessor cadastrado). Vazio = alerta âmbar. */}
+              <div
+                className="rounded-xl px-4 py-3"
+                style={{ background: "var(--color-surface-elevated)", border: d.pol_visita_responsavel_id ? "1px solid var(--color-border)" : "1px solid rgba(245,158,11,0.4)" }}
+              >
+                <div className="flex flex-wrap items-center gap-2.5">
+                  <span className="text-sm font-semibold" style={{ color: "var(--color-text)" }}>Quem vai na visita?</span>
+                  {d.pol_visita_responsavel_id ? (
+                    <span className="inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-sm font-semibold" style={{ background: "#E2F5EC", color: "#17784F" }}>
+                      ✅ {d.pol_visita_responsavel_nome || "Responsável"} vai
+                    </span>
+                  ) : (
+                    <span className="inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-sm font-semibold" style={{ background: "rgba(245,158,11,0.16)", color: "#B45309" }}>
+                      Ninguém marcou presença ainda
+                    </span>
+                  )}
+                  {usuarioAtualId && d.pol_visita_responsavel_id !== usuarioAtualId && (
+                    <button
+                      type="button"
+                      disabled={salvando}
+                      onClick={() => escolherResponsavel(usuarioAtualId)}
+                      className="inline-flex items-center rounded-full px-3 py-1 text-sm font-semibold transition-opacity hover:opacity-90 disabled:opacity-60"
+                      style={{ background: "#16181D", color: "#FFFFFF" }}
+                    >
+                      Eu vou
+                    </button>
+                  )}
+                </div>
+                <div className="mt-2 flex flex-wrap items-center gap-2">
+                  <select
+                    value={d.pol_visita_responsavel_id ?? ""}
+                    disabled={salvando}
+                    onChange={(e) => escolherResponsavel(e.target.value || null)}
+                    className="wr-input w-full sm:w-auto"
+                  >
+                    <option value="">— ninguém —</option>
+                    {assessores.map((a) => <option key={a.id} value={a.id}>{a.nome}</option>)}
+                  </select>
+                  <span className="text-xs" style={{ color: "var(--color-text-subtle)" }}>
+                    Escolha um assessor cadastrado. Sempre um só — ele assume a visita.
+                  </span>
+                </div>
+              </div>
+
+              {/* Já foi feita? */}
+              <div className="flex flex-wrap items-center gap-2.5 rounded-xl px-4 py-3" style={{ background: "var(--color-surface-elevated)", border: "1px solid var(--color-border)" }}>
+                <span className="text-sm font-semibold" style={{ color: "var(--color-text)" }}>Já foi feita?</span>
+                <button
+                  type="button"
+                  disabled={salvando}
+                  onClick={() => marcarVisita(true)}
+                  className="inline-flex items-center rounded-full px-3.5 py-1.5 text-sm font-semibold transition-colors disabled:opacity-60"
+                  style={d.pol_visita_realizada_em ? { background: "#17784F", color: "#FFFFFF" } : { border: "1px solid var(--color-border)", color: "var(--color-text-muted)" }}
+                >
+                  Realizada
+                </button>
+                <button
+                  type="button"
+                  disabled={salvando}
+                  onClick={() => marcarVisita(false)}
+                  className="inline-flex items-center rounded-full px-3.5 py-1.5 text-sm font-semibold transition-colors disabled:opacity-60"
+                  style={!d.pol_visita_realizada_em ? { background: "rgba(245,158,11,0.16)", color: "#E4B96E" } : { border: "1px solid var(--color-border)", color: "var(--color-text-muted)" }}
+                >
+                  Ainda não
+                </button>
+                {d.pol_visita_realizada_em && (
+                  <span className="text-xs" style={{ color: "var(--color-text-subtle)" }}>realizada em {fmtData(d.pol_visita_realizada_em)}</span>
+                )}
+              </div>
+            </div>
+          ) : (
+            <p className="text-sm" style={{ color: "var(--color-text-muted)" }}>
+              Marque a <strong>Data da visita</strong> em “Editar” para organizar a visita técnica — aí você define quem vai e marca quando for feita.
+            </p>
+          )}
+        </section>
+      )}
+
       {/* Encaminhamento (+ IA no próximo passo) */}
       <section className="gip-glass p-6 sm:p-7">
         <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
@@ -661,84 +758,6 @@ export default function DetalheDemandaClient({ demanda, assessores, eventos, voz
             </button>
           )}
         </div>
-
-        {/* Visita técnica: já foi feita? (aparece quando há data de visita marcada) */}
-        {d.prazo_em && (
-          <div className="mb-4 flex flex-wrap items-center gap-2.5 rounded-xl px-4 py-3" style={{ background: "var(--color-surface-elevated)", border: "1px solid var(--color-border)" }}>
-            <span className="text-sm font-semibold" style={{ color: "var(--color-text)" }}>Visita técnica realizada?</span>
-            <button
-              type="button"
-              disabled={salvando}
-              onClick={() => marcarVisita(true)}
-              className="inline-flex items-center rounded-full px-3.5 py-1.5 text-sm font-semibold transition-colors disabled:opacity-60"
-              style={d.pol_visita_realizada_em ? { background: "#17784F", color: "#FFFFFF" } : { border: "1px solid var(--color-border)", color: "var(--color-text-muted)" }}
-            >
-              Realizada
-            </button>
-            <button
-              type="button"
-              disabled={salvando}
-              onClick={() => marcarVisita(false)}
-              className="inline-flex items-center rounded-full px-3.5 py-1.5 text-sm font-semibold transition-colors disabled:opacity-60"
-              style={!d.pol_visita_realizada_em ? { background: "rgba(245,158,11,0.16)", color: "#E4B96E" } : { border: "1px solid var(--color-border)", color: "var(--color-text-muted)" }}
-            >
-              Ainda não
-            </button>
-            {d.pol_visita_realizada_em ? (
-              <span className="text-xs" style={{ color: "var(--color-text-subtle)" }}>realizada em {fmtData(d.pol_visita_realizada_em)}</span>
-            ) : (
-              <span className="inline-flex items-center gap-1 text-xs" style={{ color: "var(--color-text-subtle)" }}>
-                <Clock className="h-3.5 w-3.5" aria-hidden /> marcada para {fmtData(d.prazo_em)} · aparece na Agenda do gabinete
-              </span>
-            )}
-          </div>
-        )}
-
-        {/* Quem vai na visita — UM responsável (assessor cadastrado). Vazio = alerta âmbar. */}
-        {d.prazo_em && (
-          <div
-            className="mb-4 rounded-xl px-4 py-3"
-            style={{ background: "var(--color-surface-elevated)", border: d.pol_visita_responsavel_id ? "1px solid var(--color-border)" : "1px solid rgba(245,158,11,0.4)" }}
-          >
-            <div className="flex flex-wrap items-center gap-2.5">
-              <span className="text-sm font-semibold" style={{ color: "var(--color-text)" }}>Quem vai na visita?</span>
-              {d.pol_visita_responsavel_id ? (
-                <span className="inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-sm font-semibold" style={{ background: "#E2F5EC", color: "#17784F" }}>
-                  ✅ {d.pol_visita_responsavel_nome || "Responsável"} vai
-                </span>
-              ) : (
-                <span className="inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-sm font-semibold" style={{ background: "rgba(245,158,11,0.16)", color: "#B45309" }}>
-                  Ninguém marcou presença ainda
-                </span>
-              )}
-              {usuarioAtualId && d.pol_visita_responsavel_id !== usuarioAtualId && (
-                <button
-                  type="button"
-                  disabled={salvando}
-                  onClick={() => escolherResponsavel(usuarioAtualId)}
-                  className="inline-flex items-center rounded-full px-3 py-1 text-sm font-semibold transition-opacity hover:opacity-90 disabled:opacity-60"
-                  style={{ background: "#16181D", color: "#FFFFFF" }}
-                >
-                  Eu vou
-                </button>
-              )}
-            </div>
-            <div className="mt-2 flex flex-wrap items-center gap-2">
-              <select
-                value={d.pol_visita_responsavel_id ?? ""}
-                disabled={salvando}
-                onChange={(e) => escolherResponsavel(e.target.value || null)}
-                className="wr-input w-full sm:w-auto"
-              >
-                <option value="">— ninguém —</option>
-                {assessores.map((a) => <option key={a.id} value={a.id}>{a.nome}</option>)}
-              </select>
-              <span className="text-xs" style={{ color: "var(--color-text-subtle)" }}>
-                Escolha um assessor cadastrado. Sempre um só — ele assume a visita.
-              </span>
-            </div>
-          </div>
-        )}
 
         {/* Dados do ofício — número MANUAL + destinatário (sempre visíveis, fáceis
             de preencher: quem opera no gabinete pode não ter intimidade com tela). */}

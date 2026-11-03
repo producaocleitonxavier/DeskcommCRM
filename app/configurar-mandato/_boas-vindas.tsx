@@ -13,13 +13,13 @@
 import { useState } from "react";
 import { ArrowRight } from "lucide-react";
 
-import SetupWizard from "@/app/app/politico/configuracao/_wizard-client";
+import SetupWizard, { type SetupInicial } from "@/app/app/politico/configuracao/_wizard-client";
 
 export default function BoasVindasEConfig({
   inicial,
   marcaNome,
 }: {
-  inicial: { nome: string; cargo: string; cidade: string; subtitulo: string };
+  inicial: SetupInicial;
   marcaNome: string;
 }) {
   const [comecou, setComecou] = useState(false);
