@@ -20,6 +20,7 @@ import { ok, fail } from "@/lib/api/wrappers";
 import { audit } from "@/lib/audit";
 import { autorizaCron } from "@/lib/auth/cron-auth";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { idsDeOrgsParadas } from "@/lib/organizacao/operante";
 import { encryptWebhookSecret } from "@/lib/webhooks/secrets";
 import { decryptWebhookSecret } from "@/lib/webhooks/secrets";
 import { logger } from "@/lib/logger";
@@ -97,10 +98,23 @@ export async function GET(req: NextRequest): Promise<Response> {
     return ok({ refreshed: 0, skipped: 0 }, { requestId });
   }
 
-  let refreshed = 0;
-  let skipped = 0;
+  // Org suspensa/arquivada não tem token renovado: renovar é uma chamada EXTERNA
+  // (Graph API) por sessão, e não se gasta rede mantendo viva a integração de
+  // quem não opera. Régua única em @/lib/organizacao/operante. Fail-soft: se a
+  // leitura das paradas falhar, segue sem o filtro (renovar é melhor que travar).
+  let paradas = new Set<string>();
+  try {
+    paradas = new Set(await idsDeOrgsParadas(admin));
+  } catch (err) {
+    logger.warn("[ig-token-refresh] não deu pra ler orgs paradas (seguindo sem o filtro)", { error: err });
+  }
+  const ativas = sessions.filter((s) => !paradas.has(s.organization_id));
 
-  for (const session of sessions) {
+  let refreshed = 0;
+  // As sessões de orgs paradas não são processadas — contam como puladas.
+  let skipped = sessions.length - ativas.length;
+
+  for (const session of ativas) {
     try {
       // Decifrar o token atual
       const currentToken = await decryptWebhookSecret(
