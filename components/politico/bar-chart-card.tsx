@@ -64,6 +64,11 @@ function ChartTooltip({ active, label, payload }: TooltipProps) {
 export function BarChartCard({ title, data, height = 280, horizontal = false, className }: BarChartCardProps) {
   const eixoTick = { fontSize: 12, fill: "var(--color-text-subtle)" };
   const gid = `bar-grad-${useId().replace(/[:]/g, "")}`;
+  // Folga no topo do eixo (12%) pra a barra mais longa NUNCA encostar na borda —
+  // senão o rótulo de valor (que fica no fim da barra) corta. Régua: bater o
+  // olho e ver o número inteiro.
+  const vmax = data.reduce((m, d) => Math.max(m, Number(d.value) || 0), 0);
+  const topo = vmax > 0 ? Math.ceil(vmax * 1.12) : 1;
 
   return (
     <div className={cn("gip-glass p-6", className)}>
@@ -72,7 +77,7 @@ export function BarChartCard({ title, data, height = 280, horizontal = false, cl
         <BarChart
           data={data}
           layout={horizontal ? "vertical" : "horizontal"}
-          margin={{ top: 4, right: 12, left: horizontal ? 8 : -8, bottom: 0 }}
+          margin={{ top: horizontal ? 4 : 16, right: horizontal ? 56 : 12, left: horizontal ? 8 : -8, bottom: 0 }}
         >
           <defs>
             {data.map((d, i) => {
@@ -93,7 +98,7 @@ export function BarChartCard({ title, data, height = 280, horizontal = false, cl
           />
           {horizontal ? (
             <>
-              <XAxis type="number" tick={eixoTick} tickLine={false} axisLine={{ stroke: "rgba(255,255,255,0.08)" }} allowDecimals={false} />
+              <XAxis type="number" domain={[0, topo]} tick={eixoTick} tickLine={false} axisLine={{ stroke: "rgba(255,255,255,0.08)" }} allowDecimals={false} />
               <YAxis
                 type="category"
                 dataKey="name"
@@ -111,7 +116,7 @@ export function BarChartCard({ title, data, height = 280, horizontal = false, cl
                 tickLine={false}
                 axisLine={{ stroke: "rgba(255,255,255,0.08)" }}
               />
-              <YAxis tick={eixoTick} tickLine={false} axisLine={false} width={40} allowDecimals={false} />
+              <YAxis domain={[0, topo]} tick={eixoTick} tickLine={false} axisLine={false} width={40} allowDecimals={false} />
             </>
           )}
           <Tooltip content={<ChartTooltip />} cursor={{ fill: "rgba(255,255,255,0.05)" }} />
