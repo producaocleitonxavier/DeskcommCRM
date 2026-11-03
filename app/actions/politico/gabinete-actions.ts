@@ -339,8 +339,10 @@ export async function registrarRelatoVisita(
   demandaId: string,
   entrada: { relato?: string; presentes?: string; decisoes?: string },
 ): Promise<AcaoResultado> {
-  const org = await orgAtiva();
-  if (!org) return { ok: false, erro: "Sessão ou organização inválida." };
+  const user = await requireAuth();
+  const orgRes = await resolveActiveOrg(user);
+  if (!orgRes) return { ok: false, erro: "Sessão ou organização inválida." };
+  const org = orgRes.orgId;
   const db = await createClient();
 
   const { data: atual } = await db
@@ -351,15 +353,28 @@ export async function registrarRelatoVisita(
     .maybeSingle();
   const jaRealizada = !!(atual as { pol_visita_realizada_em: string | null } | null)?.pol_visita_realizada_em;
 
-  const patch: Record<string, unknown> = {
+  const base: Record<string, unknown> = {
     pol_visita_relato: (entrada.relato ?? "").trim() || null,
     pol_visita_presentes: (entrada.presentes ?? "").trim() || null,
     pol_visita_decisoes: (entrada.decisoes ?? "").trim() || null,
   };
   // Relato implica visita feita: se ainda não tinha data de realização, carimba hoje.
-  if (!jaRealizada) patch.pol_visita_realizada_em = new Date().toISOString().slice(0, 10);
+  if (!jaRealizada) base.pol_visita_realizada_em = new Date().toISOString().slice(0, 10);
 
-  const { error } = await db.from("demandas").update(patch).eq("id", demandaId).eq("organization_id", org);
+  // Autoria do relato (quem preencheu — pode ser um colega, não o responsável).
+  const nomes = await nomesDosAtendentes([user.id]);
+  const comAutoria = {
+    ...base,
+    pol_visita_relato_por_id: user.id,
+    pol_visita_relato_por_nome: nomes.get(user.id) ?? null,
+  };
+
+  // Tenta com a autoria; se as colunas da 9088 ainda não existem, grava sem ela
+  // (fail-soft — o relato é o que importa; a autoria é um extra).
+  let { error } = await db.from("demandas").update(comAutoria).eq("id", demandaId).eq("organization_id", org);
+  if (error) {
+    ({ error } = await db.from("demandas").update(base).eq("id", demandaId).eq("organization_id", org));
+  }
   if (error) return { ok: false, erro: traduzErro(error) };
   await sincronizarVisitaNaAgenda(demandaId);
   void registrarEventoDemanda(demandaId, "nota", jaRealizada ? "Relato da visita técnica atualizado." : "Visita técnica realizada (com relato).");

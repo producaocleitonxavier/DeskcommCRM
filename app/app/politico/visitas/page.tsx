@@ -17,7 +17,8 @@ import { ROLE_RANK } from "@/lib/auth/types";
 import { createClient } from "@/lib/supabase/server";
 import { nomesDosAtendentes } from "@/lib/users/nome-do-atendente";
 import { visitaPendente, visitaAgendada, visitaSemResponsavel } from "@/lib/politico/visita-tecnica";
-import VisitasClient, { type VisitaItem } from "./_visitas-client";
+import { listarAnexosDemanda } from "@/app/actions/politico/gabinete-actions";
+import VisitasClient, { type VisitaItem, type FotoVisita } from "./_visitas-client";
 
 export const dynamic = "force-dynamic";
 
@@ -34,16 +35,18 @@ export default async function VisitasPage() {
 
   const db = await createClient();
 
-  const [temVisita, temRelato, temAuto] = await Promise.all([
+  const [temVisita, temRelato, temRelatoPor, temAuto] = await Promise.all([
     colunaExiste(db, org.orgId, "pol_visita_realizada_em"),
     colunaExiste(db, org.orgId, "pol_visita_relato"),
+    colunaExiste(db, org.orgId, "pol_visita_relato_por_id"),
     colunaExiste(db, org.orgId, "pol_autoatendimento"),
   ]);
 
   const colunas =
     "id, assunto, pol_orgao_destino, pol_municipio, prazo_em, estado, pol_prazo_dias" +
     (temVisita ? ", pol_visita_realizada_em, pol_visita_responsavel_id, pol_visita_responsavel_nome" : "") +
-    (temRelato ? ", pol_visita_relato, pol_visita_presentes, pol_visita_decisoes" : "");
+    (temRelato ? ", pol_visita_relato, pol_visita_presentes, pol_visita_decisoes" : "") +
+    (temRelatoPor ? ", pol_visita_relato_por_id, pol_visita_relato_por_nome" : "");
 
   let q = db
     .from("demandas")
@@ -70,7 +73,28 @@ export default async function VisitasPage() {
     relato: (r.pol_visita_relato as string | null) ?? null,
     presentes: (r.pol_visita_presentes as string | null) ?? null,
     decisoes: (r.pol_visita_decisoes as string | null) ?? null,
+    relatoPorId: (r.pol_visita_relato_por_id as string | null) ?? null,
+    relatoPorNome: (r.pol_visita_relato_por_nome as string | null) ?? null,
   }));
+
+  // Fotos (anexos de IMAGEM) das visitas REALIZADAS — "mostrar o serviço". Só as
+  // realizadas, para não disparar N URLs assinadas à toa. Fail-soft por item.
+  const fotosEntries = await Promise.all(
+    visitas
+      .filter((v) => v.realizadaEm)
+      .map(async (v): Promise<[string, FotoVisita[]]> => {
+        try {
+          const anexos = await listarAnexosDemanda(v.id);
+          const imgs = anexos
+            .filter((a) => /^image\//i.test(a.media_mime) && a.url)
+            .map((a) => ({ url: a.url as string, nome: a.nome_arquivo }));
+          return [v.id, imgs];
+        } catch {
+          return [v.id, []];
+        }
+      }),
+  );
+  const fotos: Record<string, FotoVisita[]> = Object.fromEntries(fotosEntries.filter(([, imgs]) => imgs.length > 0));
 
   // KPIs sobre TODAS as visitas (server-side).
   const kpis = {
@@ -97,6 +121,7 @@ export default async function VisitasPage() {
       assessores={assessores}
       usuarioAtualId={user.id}
       temRelato={temRelato}
+      fotos={fotos}
     />
   );
 }

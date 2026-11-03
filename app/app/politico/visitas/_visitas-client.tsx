@@ -10,7 +10,7 @@
 import { useMemo, useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { MapPin, CalendarClock, AlertTriangle, UserX, CheckCircle2, User, Check, X, ArrowUpRight } from "lucide-react";
+import { MapPin, CalendarClock, AlertTriangle, UserX, CheckCircle2, User, Check, X, ArrowUpRight, Camera } from "lucide-react";
 
 import { CommandHero } from "@/components/politico/command-hero";
 import { KpiCard } from "@/components/politico/kpi-card";
@@ -18,6 +18,12 @@ import { EmptyState } from "@/components/politico/empty-state";
 import { corDoOrgao } from "@/lib/politico/demanda-cobranca";
 import { visitaPendente, visitaAgendada, visitaSemResponsavel, statusVisita, ordenarVisitas } from "@/lib/politico/visita-tecnica";
 import { definirResponsavelVisita, marcarVisitaRealizada, registrarRelatoVisita } from "@/app/actions/politico/gabinete-actions";
+import { uploadAnexoDemanda, ANEXO_MAX_BYTES } from "@/lib/politico/anexos-upload";
+
+export interface FotoVisita {
+  url: string;
+  nome: string;
+}
 
 export interface VisitaItem {
   id: string;
@@ -32,6 +38,8 @@ export interface VisitaItem {
   relato: string | null;
   presentes: string | null;
   decisoes: string | null;
+  relatoPorId: string | null;
+  relatoPorNome: string | null;
 }
 
 interface Props {
@@ -40,6 +48,7 @@ interface Props {
   assessores: { id: string; nome: string }[];
   usuarioAtualId: string;
   temRelato: boolean;
+  fotos: Record<string, FotoVisita[]>;
 }
 
 type Filtro = "todas" | "agendadas" | "atrasadas" | "sem_responsavel" | "realizadas";
@@ -71,16 +80,18 @@ const STATUS_PILL: Record<string, { bg: string; color: string; label: string }> 
   realizada: { bg: "rgba(34,197,94,0.15)", color: "#7AD4AB", label: "Realizada" },
 };
 
-export default function VisitasClient({ visitas, kpis, assessores, usuarioAtualId, temRelato }: Props) {
+export default function VisitasClient({ visitas, kpis, assessores, usuarioAtualId, temRelato, fotos }: Props) {
   const router = useRouter();
   const [filtro, setFiltro] = useState<Filtro>("todas");
   const [pendente, startTransition] = useTransition();
+  const [salvandoRelato, setSalvandoRelato] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
-  // Relato aberto (id da visita) + rascunho dos 3 campos.
+  // Relato aberto (id da visita) + rascunho dos 3 campos + fotos a enviar.
   const [relatoId, setRelatoId] = useState<string | null>(null);
   const [relato, setRelato] = useState("");
   const [presentes, setPresentes] = useState("");
   const [decisoes, setDecisoes] = useState("");
+  const [fotosNovas, setFotosNovas] = useState<File[]>([]);
 
   const arg = (v: VisitaItem) => ({ visitaEm: v.visitaEm, realizadaEm: v.realizadaEm, estado: v.estado, responsavelId: v.responsavelId });
 
@@ -109,20 +120,32 @@ export default function VisitasClient({ visitas, kpis, assessores, usuarioAtualI
     setRelato(v.relato ?? "");
     setPresentes(v.presentes ?? "");
     setDecisoes(v.decisoes ?? "");
+    setFotosNovas([]);
     setErro(null);
   }
 
-  function salvarRelato(id: string) {
+  async function salvarRelato(id: string) {
     setErro(null);
-    startTransition(async () => {
-      const r = await registrarRelatoVisita(id, { relato, presentes, decisoes });
-      if (!r.ok) {
-        setErro(r.erro ?? "Não foi possível salvar o relato.");
-        return;
-      }
-      setRelatoId(null);
-      router.refresh();
-    });
+    setSalvandoRelato(true);
+    // 1) Sobe as fotos (anexos da demanda). Fail-soft: foto que falha não perde o
+    //    texto do relato — avisa e segue.
+    let falhouFoto = false;
+    for (const f of fotosNovas) {
+      if (f.size > ANEXO_MAX_BYTES) { falhouFoto = true; continue; }
+      const up = await uploadAnexoDemanda(id, f);
+      if (!up.ok) falhouFoto = true;
+    }
+    // 2) Grava o relato (marca realizada se ainda não; carimba quem preencheu).
+    const r = await registrarRelatoVisita(id, { relato, presentes, decisoes });
+    setSalvandoRelato(false);
+    if (!r.ok) {
+      setErro(r.erro ?? "Não foi possível salvar o relato.");
+      return;
+    }
+    if (falhouFoto) setErro("Relato salvo, mas uma ou mais fotos não subiram. Tente anexá-las de novo.");
+    setRelatoId(null);
+    setFotosNovas([]);
+    router.refresh();
   }
 
   return (
@@ -180,6 +203,8 @@ export default function VisitasClient({ visitas, kpis, assessores, usuarioAtualI
             const semResp = visitaSemResponsavel(arg(v));
             const euSou = v.responsavelId === usuarioAtualId;
             const temRelatoPreenchido = !!(v.relato || v.presentes || v.decisoes);
+            const vFotos = fotos[v.id] ?? [];
+            const registradoPorOutro = !!v.relatoPorId && v.relatoPorId !== v.responsavelId;
 
             return (
               <div key={v.id} className="gip-glass flex flex-col gap-3 p-5">
@@ -218,12 +243,25 @@ export default function VisitasClient({ visitas, kpis, assessores, usuarioAtualI
                   )}
                 </div>
 
-                {/* Relato (visível a todos quando houver) */}
-                {temRelatoPreenchido && relatoId !== v.id && (
+                {/* Resultado da visita (relato + fotos) — visível a todo o gabinete. */}
+                {(temRelatoPreenchido || vFotos.length > 0) && relatoId !== v.id && (
                   <div className="rounded-xl p-3 text-sm" style={{ background: "var(--color-surface-elevated)", border: "1px solid var(--color-border)" }}>
                     {v.relato && (<p><strong>O que foi feito:</strong> {v.relato}</p>)}
                     {v.presentes && (<p className="mt-1"><strong>Presentes:</strong> {v.presentes}</p>)}
                     {v.decisoes && (<p className="mt-1"><strong>Decidido:</strong> {v.decisoes}</p>)}
+                    {vFotos.length > 0 && (
+                      <div className="mt-2 flex flex-wrap gap-2">
+                        {vFotos.map((f, i) => (
+                          /* eslint-disable-next-line @next/next/no-img-element */
+                          <a key={i} href={f.url} target="_blank" rel="noopener noreferrer" title={f.nome}>
+                            <img src={f.url} alt={f.nome} className="h-20 w-20 rounded-lg object-cover" style={{ border: "1px solid var(--color-border)" }} />
+                          </a>
+                        ))}
+                      </div>
+                    )}
+                    {registradoPorOutro && (
+                      <p className="mt-2 text-xs" style={{ color: "var(--color-text-subtle)" }}>registrado por {v.relatoPorNome || "outro assessor"}</p>
+                    )}
                   </div>
                 )}
 
@@ -236,11 +274,29 @@ export default function VisitasClient({ visitas, kpis, assessores, usuarioAtualI
                     <input value={presentes} onChange={(e) => setPresentes(e.target.value)} className="wr-input w-full" placeholder="Ex.: assessor, liderança do bairro, técnico da Copasa" />
                     <label className="block text-xs font-semibold" style={{ color: "var(--color-text-muted)" }}>O que ficou decidido</label>
                     <textarea value={decisoes} onChange={(e) => setDecisoes(e.target.value)} rows={2} className="wr-input w-full" placeholder="Ex.: Ofício à Secretaria de Obras pedindo o reparo em 30 dias." />
+
+                    {/* Foto do campo (câmera ou galeria) — vira anexo da demanda. */}
+                    <label
+                      className="flex min-h-[48px] cursor-pointer items-center justify-center gap-2 rounded-xl px-4 text-sm font-semibold"
+                      style={{ border: "1px dashed var(--color-border)", background: "var(--color-surface)", color: "var(--color-text-muted)" }}
+                    >
+                      <Camera className="h-5 w-5" aria-hidden />
+                      {fotosNovas.length > 0 ? `${fotosNovas.length} foto(s) selecionada(s)` : "Anexar foto da visita"}
+                      <input
+                        type="file"
+                        accept="image/*"
+                        capture="environment"
+                        multiple
+                        className="hidden"
+                        onChange={(e) => setFotosNovas(Array.from(e.target.files ?? []))}
+                      />
+                    </label>
+
                     <div className="flex gap-2">
-                      <button disabled={pendente} onClick={() => salvarRelato(v.id)} className="wr-btn-dark inline-flex items-center gap-1.5 text-sm disabled:opacity-60">
-                        <Check className="h-4 w-4" /> Salvar {v.realizadaEm ? "relato" : "e marcar realizada"}
+                      <button disabled={salvandoRelato} onClick={() => salvarRelato(v.id)} className="wr-btn-dark inline-flex items-center gap-1.5 text-sm disabled:opacity-60">
+                        <Check className="h-4 w-4" /> {salvandoRelato ? "Salvando…" : `Salvar ${v.realizadaEm ? "relato" : "e marcar realizada"}`}
                       </button>
-                      <button onClick={() => setRelatoId(null)} className="wr-btn text-sm">Cancelar</button>
+                      <button disabled={salvandoRelato} onClick={() => setRelatoId(null)} className="wr-btn text-sm disabled:opacity-60">Cancelar</button>
                     </div>
                   </div>
                 ) : (
