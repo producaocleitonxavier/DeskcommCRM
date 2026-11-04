@@ -11,11 +11,14 @@
 import { createClient } from "@/lib/supabase/server";
 import { lerMandatoConfig } from "@/lib/politico/setup-do-mandato";
 
-export type Leitura = "oportunidade" | "fortaleza" | "acompanhar";
+export type Leitura = "oportunidade" | "fortaleza" | "fraco" | "acompanhar";
 
 export interface BairroInvestir {
-  /** Nome da unidade: bairro (vereador) ou município (deputado). */
+  /** Nome da unidade (para exibir): bairro (vereador) ou município (deputado). */
   bairro: string;
+  /** Valor CRU da demanda (pol_municipio/pol_bairro) — usado para filtrar a lista
+   *  de demandas ao clicar. Pode diferir do nome exibido (que pode vir do TSE). */
+  valor: string;
   demandas: number;
   votos: number;
   leitura: Leitura;
@@ -98,12 +101,6 @@ export async function buscarOndeInvestir(orgId: string): Promise<OndeInvestir> {
     }
   }
 
-  // Limiares (terços) dos votos entre as unidades COM voto.
-  const votosOrdenados = [...votosPorUnidade.values()].map((v) => v.votos).filter((v) => v > 0).sort((a, b) => a - b);
-  const p = (frac: number) => (votosOrdenados.length ? votosOrdenados[Math.floor((votosOrdenados.length - 1) * frac)] ?? 0 : 0);
-  const baixo = p(0.34);
-  const alto = p(0.66);
-
   // ── Demandas por UNIDADE (do gabinete) ─────────────────────────────────
   const coluna = ehDeputado ? "pol_municipio" : "pol_bairro";
   const { data: dem } = await db
@@ -122,18 +119,35 @@ export async function buscarOndeInvestir(orgId: string): Promise<OndeInvestir> {
     demandasPorUnidade.set(k, { nome: cur?.nome ?? nome, qtd: (cur?.qtd ?? 0) + 1 });
   }
 
-  const itens: BairroInvestir[] = [];
-  for (const [k, d] of demandasPorUnidade) {
+  // Leitura REAL (fortaleza / oportunidade / ponto fraco). Os limiares saem das
+  // unidades QUE APARECEM (as que têm demanda) — NÃO do estado/cidade inteiros;
+  // senão todo lugar onde o gabinete já trabalha (que costumam ser os redutos
+  // dele) vira "fortaleza" e a tela mente. Cruzamos voto × demanda:
+  //  • muito voto (terço de cima) = FORTALEZA (sua base — proteja e retribua);
+  //  • pouco voto mas o cidadão PEDE bastante = OPORTUNIDADE (espaço pra crescer);
+  //  • pouco voto E pouca relação = PONTO FRACO (presença fraca, vale avaliar).
+  const base = [...demandasPorUnidade].map(([k, d]) => {
     const v = votosPorUnidade.get(k);
-    const votos = v?.votos ?? 0;
-    let leitura: Leitura = "acompanhar";
-    if (votos <= baixo) leitura = "oportunidade";
-    else if (votos >= alto) leitura = "fortaleza";
-    itens.push({ bairro: v?.nome ?? d.nome, demandas: d.qtd, votos, leitura });
-  }
+    return { nome: v?.nome ?? d.nome, valor: d.nome, demandas: d.qtd, votos: v?.votos ?? 0 };
+  });
+  const votosOrd = base.map((b) => b.votos).filter((v) => v > 0).sort((a, b) => a - b);
+  const nv = votosOrd.length;
+  // Limiar da fortaleza = terço de cima dos votos entre as unidades mostradas.
+  const alto = nv ? votosOrd[Math.min(nv - 1, Math.ceil((nv * 2) / 3))] ?? 0 : 0;
+  // Demanda "relevante" = igual ou acima da mediana das unidades mostradas.
+  const demOrd = base.map((b) => b.demandas).sort((a, b) => a - b);
+  const medianaDem = demOrd.length ? demOrd[Math.floor((demOrd.length - 1) / 2)] ?? 1 : 1;
 
-  // Oportunidades primeiro (menos votos no topo), depois mais demandas.
-  const ordem: Record<Leitura, number> = { oportunidade: 0, acompanhar: 1, fortaleza: 2 };
+  const itens: BairroInvestir[] = base.map((b) => {
+    let leitura: Leitura;
+    if (b.votos > 0 && b.votos >= alto) leitura = "fortaleza";
+    else if (b.demandas >= medianaDem) leitura = "oportunidade";
+    else leitura = "fraco";
+    return { bairro: b.nome, valor: b.valor, demandas: b.demandas, votos: b.votos, leitura };
+  });
+
+  // Oportunidades no topo (onde investir), depois os pontos fracos, por fim as fortalezas.
+  const ordem: Record<Leitura, number> = { oportunidade: 0, fraco: 1, fortaleza: 2, acompanhar: 3 };
   itens.sort((a, b) => ordem[a.leitura] - ordem[b.leitura] || a.votos - b.votos || b.demandas - a.demandas);
 
   return { temTse: true, cidade, dimensao, itens: itens.slice(0, 10) };

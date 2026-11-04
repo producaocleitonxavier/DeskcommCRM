@@ -31,6 +31,7 @@ function reais(v: number): string {
 const LEITURA_ESTILO: Record<Leitura, { rotulo: string; bg: string; cor: string }> = {
   oportunidade: { rotulo: "🎯 Oportunidade", bg: "rgba(215,243,106,0.18)", cor: "var(--color-accent)" },
   fortaleza: { rotulo: "💪 Fortaleza", bg: "rgba(23,120,79,0.12)", cor: "#17784F" },
+  fraco: { rotulo: "⚠️ Ponto fraco", bg: "rgba(220,70,70,0.14)", cor: "#C0392B" },
   acompanhar: { rotulo: "Acompanhar", bg: "var(--color-surface-elevated)", cor: "var(--color-text-muted)" },
 };
 
@@ -129,10 +130,15 @@ export default function PrestacaoContasClient({ dados, ondeInvestir, ehAdmin }: 
           <div className="mt-5 space-y-2.5">
             {ondeInvestir.itens.map((b) => {
               const s = LEITURA_ESTILO[b.leitura];
+              // Clica na cidade → abre as demandas DELA (filtradas) e já desce pra lista.
+              const chave = ehMunicipio ? "municipio" : "bairro";
+              const href = `/app/politico/demandas?${chave}=${encodeURIComponent(b.valor)}#lista-demandas`;
               return (
-                <div
+                <Link
                   key={b.bairro}
-                  className="flex flex-wrap items-center justify-between gap-2 rounded-[12px] p-3"
+                  href={href}
+                  title={`Ver os ${b.demandas} ${b.demandas === 1 ? "pedido" : "pedidos"} de ${b.bairro}`}
+                  className="flex flex-wrap items-center justify-between gap-2 rounded-[12px] p-3 transition-colors hover:bg-white/[0.04]"
                   style={{ border: "1px solid var(--color-border)", background: "var(--color-surface-elevated)" }}
                 >
                   <div className="min-w-0">
@@ -141,10 +147,13 @@ export default function PrestacaoContasClient({ dados, ondeInvestir, ehAdmin }: 
                       {b.demandas} {b.demandas === 1 ? "pedido" : "pedidos"} · {b.votos.toLocaleString("pt-BR")} {b.votos === 1 ? "voto" : "votos"} seus aqui
                     </p>
                   </div>
-                  <span className="inline-flex shrink-0 items-center rounded-full px-3 py-1 text-xs font-bold" style={{ background: s.bg, color: s.cor }}>
-                    {s.rotulo}
+                  <span className="inline-flex shrink-0 items-center gap-1 text-xs font-bold">
+                    <span className="inline-flex items-center rounded-full px-3 py-1" style={{ background: s.bg, color: s.cor }}>
+                      {s.rotulo}
+                    </span>
+                    <span aria-hidden style={{ color: "var(--color-text-subtle)" }}>→</span>
                   </span>
-                </div>
+                </Link>
               );
             })}
           </div>

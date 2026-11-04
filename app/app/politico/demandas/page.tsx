@@ -199,7 +199,7 @@ async function buscarDemandas(
   pagina: number,
   filtroEstado: string | undefined,
   filtroOrgao: string | undefined,
-  opts: { temAuto: boolean; verAuto: boolean; temRespondeu: boolean; soCobrar: boolean },
+  opts: { temAuto: boolean; verAuto: boolean; temRespondeu: boolean; soCobrar: boolean; municipio?: string; bairro?: string },
 ) {
   const db = await createClient();
   const offset = (pagina - 1) * POR_PAGINA;
@@ -228,6 +228,14 @@ async function buscarDemandas(
   }
   if (filtroOrgao) {
     query = query.eq("pol_orgao_destino", filtroOrgao);
+  }
+  // ilike (sem curinga) = igualdade sem ligar pra maiúscula/minúscula — o nome
+  // pode chegar do TSE em caixa diferente da que o gabinete digitou na demanda.
+  if (opts.municipio) {
+    query = query.ilike("pol_municipio", opts.municipio);
+  }
+  if (opts.bairro) {
+    query = query.ilike("pol_bairro", opts.bairro);
   }
   // "Precisa cobrar": aberta (não resolvida/encerrada) E o órgão não respondeu.
   if (opts.soCobrar && opts.temRespondeu) {
@@ -353,6 +361,10 @@ export default async function GabinetePage({
   const pagina = Math.max(1, Number(params.pagina) || 1);
   const filtroEstado = typeof params.estado === "string" ? params.estado : undefined;
   const filtroOrgao = typeof params.orgao === "string" ? params.orgao : undefined;
+  // Filtro por CIDADE (vindo do "Onde investir" da Prestação de Contas): deputado
+  // filtra por município, vereador por bairro — a demanda guarda os dois campos.
+  const filtroMunicipio = typeof params.municipio === "string" ? params.municipio : undefined;
+  const filtroBairro = typeof params.bairro === "string" ? params.bairro : undefined;
 
   // Camada "A IA orientou" (autoatendimento): existe só se a migration 9072 rodou.
   const temAuto = await colunaAutoExiste(org.orgId);
@@ -362,7 +374,7 @@ export default async function GabinetePage({
   const filtroCobrar = temRespondeu && !verAuto && params.cobrar === "1";
 
   const [{ demandas, total }, contagens, orgaos, rollupOrgaos] = await Promise.all([
-    buscarDemandas(org.orgId, pagina, filtroEstado, filtroOrgao, { temAuto, verAuto, temRespondeu, soCobrar: filtroCobrar }),
+    buscarDemandas(org.orgId, pagina, filtroEstado, filtroOrgao, { temAuto, verAuto, temRespondeu, soCobrar: filtroCobrar, municipio: filtroMunicipio, bairro: filtroBairro }),
     contarEstados(org.orgId, temAuto, temRespondeu),
     buscarOrgaos(org.orgId, temAuto),
     buscarRollupOrgaos(org.orgId, temAuto, temRespondeu),
@@ -406,7 +418,7 @@ export default async function GabinetePage({
   const viewAtual = verAuto ? "autoatendimento" : undefined;
   function montarQuery(overrides: Record<string, string | undefined>) {
     const q = new URLSearchParams();
-    const merged = { estado: filtroEstado, orgao: filtroOrgao, view: viewAtual, cobrar: filtroCobrar ? "1" : undefined, ...overrides };
+    const merged = { estado: filtroEstado, orgao: filtroOrgao, view: viewAtual, cobrar: filtroCobrar ? "1" : undefined, municipio: filtroMunicipio, bairro: filtroBairro, ...overrides };
     for (const [k, v] of Object.entries(merged)) {
       if (v) q.set(k, v);
     }
@@ -455,7 +467,7 @@ export default async function GabinetePage({
               resposta — o gabinete não precisa procurar. Leva ao worklist de cobrança. */}
           {!verAuto && temRespondeu && rollupOrgaos.alerta.total > 0 && (
             <Link
-              href={`/app/politico/demandas${montarQuery({ cobrar: "1", estado: undefined, orgao: undefined, pagina: "1" })}`}
+              href={`/app/politico/demandas${montarQuery({ cobrar: "1", estado: undefined, orgao: undefined, pagina: "1" })}#lista-demandas`}
               className="flex flex-wrap items-center justify-between gap-2 rounded-2xl px-4 py-3 transition-colors hover:bg-white/[0.04]"
               style={{ background: "rgba(239,68,68,0.10)", border: "1px solid rgba(239,68,68,0.35)" }}
             >
@@ -489,7 +501,7 @@ export default async function GabinetePage({
                   return (
                     <Link
                       key={o.orgao}
-                      href={`/app/politico/demandas${montarQuery({ orgao: ativo ? undefined : o.orgao, cobrar: undefined, pagina: "1" })}`}
+                      href={`/app/politico/demandas${montarQuery({ orgao: ativo ? undefined : o.orgao, cobrar: undefined, pagina: "1" })}#lista-demandas`}
                       className="flex items-center justify-between gap-2 rounded-xl px-3 py-2.5 transition-colors hover:bg-white/[0.04]"
                       style={{ background: "var(--color-surface-elevated)", border: ativo ? "1px solid rgba(215,243,106,0.5)" : queima ? "1px solid rgba(239,68,68,0.35)" : "1px solid var(--color-border)" }}
                     >
@@ -520,7 +532,27 @@ export default async function GabinetePage({
           )}
 
           {/* Demandas table */}
-          <section aria-label="Lista de demandas" className="gip-glass pt-2 pb-0 px-0">
+          <section aria-label="Lista de demandas" id="lista-demandas" className="gip-glass pt-2 pb-0 px-0 scroll-mt-20">
+            {/* Banner "você está filtrando" — informação clara em meio segundo. */}
+            {(filtroMunicipio || filtroBairro || filtroCobrar) && (
+              <div
+                className="mx-4 mt-3.5 flex flex-wrap items-center justify-between gap-2 rounded-xl px-3.5 py-2.5"
+                style={{ background: "rgba(215,243,106,0.10)", border: "1px solid rgba(215,243,106,0.3)" }}
+              >
+                <span className="text-sm font-semibold" style={{ color: "var(--color-text)" }}>
+                  {filtroCobrar
+                    ? `Mostrando só o que precisa de cobrança · ${total} ${total === 1 ? "demanda" : "demandas"}`
+                    : `Demandas de ${filtroMunicipio ?? filtroBairro} · ${total} ${total === 1 ? "demanda" : "demandas"}`}
+                </span>
+                <Link
+                  href={`/app/politico/demandas${montarQuery({ municipio: undefined, bairro: undefined, cobrar: undefined, estado: undefined, orgao: undefined, pagina: "1" })}`}
+                  className="shrink-0 text-sm font-bold"
+                  style={{ color: "var(--color-accent)" }}
+                >
+                  Ver todas →
+                </Link>
+              </div>
+            )}
             {/* Alternador de visão: fila de trabalho vs. o que a IA orientou */}
             {temAuto && (
               <div className="flex flex-wrap items-center gap-2 px-4 pt-3.5">
