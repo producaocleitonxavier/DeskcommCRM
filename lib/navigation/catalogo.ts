@@ -1056,7 +1056,9 @@ export const NAV_CATALOG = [
     icon: "Brain",
     group: "inteligencia",
     minRole: "manager",
-    sidebar: true,
+    // Oculto do menu (decisão 04/nov): hoje é um wrapper fino que sobrepõe as telas
+    // visuais da Inteligência; volta como vitrine real na camada profunda (SAM). Rota segue viva.
+    sidebar: false,
   },
   {
     href: "/app/politico/briefing",
