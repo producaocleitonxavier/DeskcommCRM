@@ -8,13 +8,11 @@
  */
 import { useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { CheckCircle2, Clock, FileText, Building2, Hammer, Coins, Users, MessageSquare, MapPin, Download, Loader2, Target, Check, X, TrendingUp } from "lucide-react";
+import { CheckCircle2, Clock, FileText, Building2, Hammer, Coins, Users, MessageSquare, MapPin, Download, Loader2, TrendingUp } from "lucide-react";
 
 import { CommandHero } from "@/components/politico/command-hero";
 import { KpiCard } from "@/components/politico/kpi-card";
 import { gerarRelatorioPrestacaoContas } from "@/app/actions/politico/gerarRelatorioPrestacaoContas";
-import { definirMetasDoMandato } from "@/app/actions/politico/definirMetasDoMandato";
 import type { PrestacaoContas, Periodo } from "@/lib/politico/prestacao-contas-dados";
 import type { OndeInvestir, Leitura } from "@/lib/politico/onde-investir";
 
@@ -30,13 +28,6 @@ function reais(v: number): string {
   return "R$ " + v.toLocaleString("pt-BR");
 }
 
-const METAS_DEF: { chave: "demandas" | "oficios" | "obras" | "base"; label: string }[] = [
-  { chave: "demandas", label: "Demandas atendidas" },
-  { chave: "oficios", label: "Ofícios emitidos" },
-  { chave: "obras", label: "Obras entregues" },
-  { chave: "base", label: "Pessoas na base" },
-];
-
 const LEITURA_ESTILO: Record<Leitura, { rotulo: string; bg: string; cor: string }> = {
   oportunidade: { rotulo: "🎯 Oportunidade", bg: "rgba(215,243,106,0.18)", cor: "var(--color-accent)" },
   fortaleza: { rotulo: "💪 Fortaleza", bg: "rgba(23,120,79,0.12)", cor: "#17784F" },
@@ -44,41 +35,17 @@ const LEITURA_ESTILO: Record<Leitura, { rotulo: string; bg: string; cor: string 
 };
 
 export default function PrestacaoContasClient({ dados, ondeInvestir, ehAdmin }: { dados: PrestacaoContas; ondeInvestir: OndeInvestir; ehAdmin: boolean }) {
-  const router = useRouter();
   const maxEvol = Math.max(1, ...dados.evolucao.map((e) => e.valor));
   const maxBairro = Math.max(1, ...dados.topBairros.map((b) => b.valor));
 
   const [gerando, setGerando] = useState(false);
   const [erroPdf, setErroPdf] = useState<string | null>(null);
 
-  const [editMetas, setEditMetas] = useState(false);
-  const [salvandoMetas, setSalvandoMetas] = useState(false);
-  const [mDemandas, setMDemandas] = useState(dados.metas.demandas != null ? String(dados.metas.demandas) : "");
-  const [mOficios, setMOficios] = useState(dados.metas.oficios != null ? String(dados.metas.oficios) : "");
-  const [mObras, setMObras] = useState(dados.metas.obras != null ? String(dados.metas.obras) : "");
-  const [mBase, setMBase] = useState(dados.metas.base != null ? String(dados.metas.base) : "");
+  // Rótulo da unidade do "Onde investir" conforme o mandato (bairro x município).
+  const ehMunicipio = ondeInvestir.dimensao === "municipio";
+  const unidade = ehMunicipio ? "Município" : "Bairro";
+  const unidadeMin = ehMunicipio ? "município" : "bairro";
 
-  const temMeta = METAS_DEF.some((d) => dados.metas[d.chave] != null);
-  const realizado: Record<string, number> = {
-    demandas: dados.totaisMandato.demandas,
-    oficios: dados.totaisMandato.oficios,
-    obras: dados.totaisMandato.obras,
-    base: dados.totaisMandato.base,
-  };
-
-  async function salvarMetas() {
-    setSalvandoMetas(true);
-    const num = (s: string) => {
-      const n = parseInt(s.replace(/\D+/g, ""), 10);
-      return Number.isFinite(n) ? n : 0;
-    };
-    const r = await definirMetasDoMandato({ demandas: num(mDemandas), oficios: num(mOficios), obras: num(mObras), base: num(mBase) });
-    setSalvandoMetas(false);
-    if (r.ok) {
-      setEditMetas(false);
-      router.refresh();
-    }
-  }
   async function gerarPdf() {
     setErroPdf(null);
     setGerando(true);
@@ -141,102 +108,14 @@ export default function PrestacaoContasClient({ dados, ondeInvestir, ehAdmin }: 
         <KpiCard label={dados.baseNovos > 0 ? `Pessoas na base (+${dados.baseNovos} no período)` : "Pessoas na base"} valor={dados.baseTotal} icone={Users} />
       </div>
 
-      {/* Metas do mandato */}
-      <section className="gip-glass p-6">
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <div className="flex items-center gap-2">
-            <Target size={18} style={{ color: "#8AA62E" }} />
-            <h2 className="font-heading text-xl font-bold leading-tight">Metas do mandato</h2>
-          </div>
-          {ehAdmin && !editMetas && (
-            <button
-              type="button"
-              onClick={() => setEditMetas(true)}
-              className="inline-flex items-center gap-1.5 rounded-full px-3.5 py-2 text-[13px] font-semibold transition-opacity hover:opacity-80"
-              style={{ background: "var(--color-surface-elevated)", color: "var(--color-text-muted)" }}
-            >
-              {temMeta ? "Ajustar metas" : "Definir metas"}
-            </button>
-          )}
-        </div>
-
-        {editMetas ? (
-          <div className="mt-4">
-            <p className="mb-3 text-sm" style={{ color: "var(--color-text-muted)" }}>
-              Quanto o mandato quer alcançar, no total. Deixe em branco o que não quiser acompanhar.
-            </p>
-            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-              {([["Demandas atendidas", mDemandas, setMDemandas], ["Ofícios emitidos", mOficios, setMOficios], ["Obras entregues", mObras, setMObras], ["Pessoas na base", mBase, setMBase]] as const).map(([lab, val, set]) => (
-                <div key={lab}>
-                  <label className="mb-1 block text-[13px] font-semibold">{lab}</label>
-                  <input
-                    inputMode="numeric"
-                    className="wr-input w-full"
-                    value={val}
-                    onChange={(e) => set(e.target.value.replace(/\D+/g, ""))}
-                    placeholder="Ex.: 100"
-                  />
-                </div>
-              ))}
-            </div>
-            <div className="mt-4 flex items-center gap-2">
-              <button
-                type="button"
-                onClick={salvarMetas}
-                disabled={salvandoMetas}
-                className="inline-flex items-center gap-2 rounded-full px-5 py-2.5 text-sm font-bold transition-opacity hover:opacity-90 disabled:opacity-60"
-                style={{ background: "#D7F36A", color: "#16181D" }}
-              >
-                {salvandoMetas ? <Loader2 size={16} className="animate-spin" /> : <Check size={16} />}
-                {salvandoMetas ? "Salvando…" : "Salvar metas"}
-              </button>
-              <button
-                type="button"
-                onClick={() => setEditMetas(false)}
-                className="inline-flex items-center gap-1.5 rounded-full px-4 py-2.5 text-sm font-semibold transition-opacity hover:opacity-80"
-                style={{ background: "var(--color-surface-elevated)", color: "var(--color-text-muted)" }}
-              >
-                <X size={15} /> Cancelar
-              </button>
-            </div>
-          </div>
-        ) : temMeta ? (
-          <div className="mt-5 grid gap-4 sm:grid-cols-2">
-            {METAS_DEF.filter((d) => dados.metas[d.chave] != null).map((d) => {
-              const meta = dados.metas[d.chave] as number;
-              const feito = realizado[d.chave] ?? 0;
-              const pct = Math.min(100, Math.round((feito / meta) * 100));
-              const bateu = feito >= meta;
-              return (
-                <div key={d.chave}>
-                  <div className="mb-1 flex items-center justify-between text-sm">
-                    <span className="font-medium">{d.label}</span>
-                    <span className="font-bold" style={{ color: bateu ? "#17784F" : "var(--color-text-muted)" }}>
-                      {feito.toLocaleString("pt-BR")} / {meta.toLocaleString("pt-BR")} {bateu ? "✓" : `· ${pct}%`}
-                    </span>
-                  </div>
-                  <div className="h-2.5 w-full overflow-hidden rounded-full" style={{ background: "var(--color-surface-elevated)" }}>
-                    <div className="h-full rounded-full" style={{ width: `${pct}%`, background: bateu ? "#17784F" : "#D7F36A" }} />
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        ) : (
-          <p className="mt-4 text-sm" style={{ color: "var(--color-text-subtle)" }}>
-            {ehAdmin ? "Defina metas para acompanhar o progresso do mandato." : "O gabinete ainda não definiu metas."}
-          </p>
-        )}
-      </section>
-
-      {/* Onde investir (inteligência preditiva: demandas × votos por bairro) */}
+      {/* Onde investir (inteligência preditiva: demandas × votos por bairro/município) */}
       <section className="gip-glass p-6">
         <div className="flex items-center gap-2">
           <TrendingUp size={18} style={{ color: "#8AA62E" }} />
           <h2 className="font-heading text-xl font-bold leading-tight">Onde investir</h2>
         </div>
         <p className="mt-1 text-sm" style={{ color: "var(--color-text-muted)" }}>
-          Cruzamos onde o cidadão mais pede ajuda com onde você tem votos. Bairro que pede e quase não vota é a sua maior oportunidade.
+          Cruzamos onde o cidadão mais pede ajuda com onde você tem votos. {unidade} que pede e quase não vota é a sua maior oportunidade.
         </p>
         {!ondeInvestir.temTse ? (
           <p className="mt-4 text-sm" style={{ color: "var(--color-text-subtle)" }}>
@@ -244,7 +123,7 @@ export default function PrestacaoContasClient({ dados, ondeInvestir, ehAdmin }: 
           </p>
         ) : ondeInvestir.itens.length === 0 ? (
           <p className="mt-4 text-sm" style={{ color: "var(--color-text-subtle)" }}>
-            Assim que houver demandas com o bairro informado, a leitura aparece aqui — por bairro.
+            Assim que houver demandas com o {unidadeMin} informado, a leitura aparece aqui — por {unidadeMin}.
           </p>
         ) : (
           <div className="mt-5 space-y-2.5">
