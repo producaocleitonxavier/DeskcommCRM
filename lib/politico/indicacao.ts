@@ -204,12 +204,21 @@ export async function convidarAIndicar(
     if (!numero) return;
 
     const idm = await lerIdentidadeDoMandato(admin, organizationId);
-    const textoPreenchido = `Olá! Me indicaram e quero receber os materiais e ${novidadesDeLabel(idm)}. [ind:${codigo}]`;
+    // Prefill curto e sem acento → o wa.me fica MUITO menor (menos encoding), sem cara
+    // de link suspeito. "Oi" em vez de "Olá!" (tira o %C3%A1) e sem "Me indicaram e".
+    const textoPreenchido = `Oi! Quero receber os materiais e ${novidadesDeLabel(idm)}. [ind:${codigo}]`;
     const link = `https://wa.me/${numero.replace(/\D+/g, "")}?text=${encodeURIComponent(textoPreenchido)}`;
+    // DUAS mensagens (igual aos Multiplicadores): a pessoa só ENCAMINHA a de baixo —
+    // o link sozinho fica limpo e não parece vírus no meio de um texto.
     await enviarTextoNoCanal(admin, {
       organizationId, contactId, canalId,
-      texto: `💚 Curtiu? Indica pra quem precisa — é só a pessoa me chamar por aqui: ${link}`,
+      texto: "💚 Gostou? Indique para quem precisa — é só *encaminhar a mensagem abaixo* 👇",
       rotulo: "indicacao-convite",
+    });
+    await enviarTextoNoCanal(admin, {
+      organizationId, contactId, canalId,
+      texto: link,
+      rotulo: "indicacao-convite-link",
     });
   } catch (err) {
     logger.warn("[indicacao] convite falhou (segue normal)", { organization_id: organizationId, detail: err instanceof Error ? err.message.slice(0, 120) : "?" });

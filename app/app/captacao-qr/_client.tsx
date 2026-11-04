@@ -7,6 +7,7 @@
  * recebendo o material — sem link pra clicar. Premium e didática.
  */
 import { useCallback, useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 
 import { CommandHero } from "@/components/politico/command-hero";
 import { KpiCard } from "@/components/politico/kpi-card";
@@ -402,6 +403,14 @@ function CartaoOrigem({
             “{textoDoEnvio(origem.mensagem, origem.codigo)}”
           </p>
           <div className="flex flex-wrap gap-2">
+            <Link
+              href={`/app/captacao-qr/${origem.id}/evento`}
+              className="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-bold"
+              style={{ background: "#D7F36A", color: "#16181D" }}
+              title={t("Abrir tela cheia do QR para o evento (contador ao vivo)")}
+            >
+              <Megaphone className="h-3.5 w-3.5" /> {t("Modo Evento")}
+            </Link>
             <button type="button" onClick={() => void copiar()} disabled={!link} className="wr-btn inline-flex items-center gap-1.5 px-3 py-1.5 text-xs">
               {copiado ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
               {copiado ? t("Copiado!") : t("Copiar link")}
