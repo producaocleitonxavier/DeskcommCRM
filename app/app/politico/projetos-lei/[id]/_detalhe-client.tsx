@@ -13,6 +13,7 @@ import { useRouter } from "next/navigation";
 import { ArrowLeft, ExternalLink, Pencil, X } from "lucide-react";
 
 import { atualizarRegistro } from "@/app/actions/politico/gabinete-actions";
+import { RelatorioGabineteButton } from "@/components/politico/relatorio-gabinete-button";
 
 interface Opcao {
   id: string;
@@ -175,6 +176,38 @@ export default function DetalheProjetoClient({ projeto }: { projeto: ProjetoDeta
   const terminal = ["vetado", "arquivado", "retirado"].includes(p.status);
   const podeAvancar = idx >= 0 && idx < FLOW.length - 1;
 
+  // PDF de UM projeto (ficha/espelho com o timbrado do mandato) — reusa o gerador do gabinete.
+  const pdfDados = {
+    slug: "projetos" as const,
+    titulo: `${p.numero} — ${rotulo(TIPOS, p.tipo)}`.slice(0, 80),
+    resumo: p.titulo.slice(0, 160),
+    kpis: [
+      { num: rotulo(STATUS_OPC, p.status).slice(0, 24), label: "Situação" },
+      { num: p.autor_mandatario ? "Sim" : "—", label: "De autoria" },
+      { num: fmtData(p.data_apresentacao).slice(0, 24), label: "Apresentado" },
+    ],
+    colunas: [
+      { header: "Campo", largura: "32%" },
+      { header: "Informação", largura: "68%" },
+    ],
+    linhas: ([
+      ["Número", p.numero],
+      ["Tipo", rotulo(TIPOS, p.tipo)],
+      ["Esfera", rotulo(ESFERAS, p.esfera)],
+      ["Situação", rotulo(STATUS_OPC, p.status)],
+      ["Tema", p.tema ?? "—"],
+      ["Comissão atual", p.comissao_atual ?? "—"],
+      ["Relator", p.relator ?? "—"],
+      ["Apresentado em", fmtData(p.data_apresentacao)],
+      ["Última movimentação", fmtData(p.data_ultima_movimentacao)],
+      ["Coautores", (p.coautores ?? []).join(", ") || "—"],
+    ] as string[][]).map((r) => r.map((c) => c.slice(0, 200))),
+    analise: [
+      p.ementa ? `Ementa: ${p.ementa}` : "",
+      p.descricao ? `Descrição: ${p.descricao}` : "",
+    ].filter(Boolean).map((s) => s.slice(0, 240)),
+  };
+
   return (
     <div className="gip-ambient-bg mx-auto max-w-[900px] px-4 py-7 space-y-5">
       <div>
@@ -203,6 +236,7 @@ export default function DetalheProjetoClient({ projeto }: { projeto: ProjetoDeta
                 <ExternalLink className="h-4 w-4" aria-hidden /> Oficial
               </a>
             )}
+            <RelatorioGabineteButton dados={pdfDados} label="Baixar PDF" />
             {podeAvancar && !terminal && !editando && (
               <button type="button" disabled={salvando} onClick={registrarMovimentacao} className="wr-btn-dark">Registrar movimentação</button>
             )}
