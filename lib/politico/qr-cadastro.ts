@@ -110,9 +110,13 @@ async function iniciarCadastro(
   }
 
   // Origem no contato — FIRST-TOUCH (não sobrescreve de onde a pessoa veio).
+  // Grava EXATAMENTE o nome do evento/ponto (sem prefixo): na lista de pessoas e
+  // nos filtros, bate o olho e já sabe de qual evento a pessoa veio. Quem veio por
+  // QR fica registrado na própria pol_qr_cadastros (origem_id) — aqui o source é o
+  // "de onde veio" estratégico, legível para o gabinete.
   await admin
     .from("contacts")
-    .update({ source: `QR · ${origem.nome}` })
+    .update({ source: origem.nome })
     .eq("organization_id", organizationId)
     .eq("id", contactId)
     .or("source.is.null,source.eq.");
