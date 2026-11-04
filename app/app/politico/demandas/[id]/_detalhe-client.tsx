@@ -543,8 +543,8 @@ export default function DetalheDemandaClient({ demanda, assessores, eventos, voz
           <div className="flex flex-wrap items-center gap-2">
             <button
               type="button"
-              disabled={gerandoOficio || !d.pol_encaminhamento_ia?.trim()}
-              title={!d.pol_encaminhamento_ia?.trim() ? "Gere e salve o encaminhamento primeiro" : "Emitir ofício em PDF"}
+              disabled={gerandoOficio || !encaminhamento.trim()}
+              title={!encaminhamento.trim() ? "Escreva ou gere o encaminhamento primeiro" : "Emitir ofício em PDF"}
               onClick={async () => {
                 setErro(null);
                 if (!numeroOficio.trim()) {
@@ -552,8 +552,10 @@ export default function DetalheDemandaClient({ demanda, assessores, eventos, voz
                   return;
                 }
                 setGerandoOficio(true);
-                // Salva número e destinatário ANTES de gerar (a tela é a fonte).
+                // Salva o TEXTO + número + destinatário ANTES de gerar o PDF (a tela é a
+                // fonte da verdade — senão o ofício sairia com o texto antigo do banco).
                 await atualizarRegistro("demandas", d.id, {
+                  pol_encaminhamento_ia: encaminhamento.trim() || null,
                   pol_oficio_rotulo: numeroOficio.trim(),
                   pol_oficio_destinatario: destinatarioOficio.trim() || null,
                   pol_oficio_assunto: assuntoOficio.trim() || null,
@@ -578,6 +580,12 @@ export default function DetalheDemandaClient({ demanda, assessores, eventos, voz
               onClick={async () => {
                 setErro(null);
                 setGerandoIA(true);
+                // Salva o destinatário/assunto antes de gerar — assim a IA lê a
+                // autoridade do banco e escreve o vocativo com o GÊNERO certo.
+                await atualizarRegistro("demandas", d.id, {
+                  pol_oficio_destinatario: destinatarioOficio.trim() || null,
+                  pol_oficio_assunto: assuntoOficio.trim() || null,
+                });
                 const res = await gerarEncaminhamento(d.id);
                 setGerandoIA(false);
                 if (res.ok) {

@@ -98,7 +98,7 @@ export async function gerarEncaminhamento(demandaId: string): Promise<ResultadoE
 
   const { data: d } = await admin
     .from("demandas")
-    .select("assunto, pol_tipo, pol_orgao_destino, pol_prioridade, contacts(name)")
+    .select("assunto, pol_tipo, pol_orgao_destino, pol_prioridade, pol_oficio_destinatario, contacts(name)")
     .eq("organization_id", org.orgId)
     .eq("id", demandaId)
     .maybeSingle();
@@ -115,11 +115,16 @@ export async function gerarEncaminhamento(demandaId: string): Promise<ResultadoE
   const tipo = (d.pol_tipo as string | null)?.replace(/_/g, " ") ?? "demanda";
   const orgao = (d.pol_orgao_destino as string | null) ?? "ao órgão competente";
   const prioridade = (d.pol_prioridade as string | null) ?? "normal";
+  const destinatario = (d.pol_oficio_destinatario as string | null)?.trim() || "";
 
   const system =
     "Você é assessor(a) de gabinete parlamentar no Brasil. Redige ofícios de encaminhamento " +
     "formais, objetivos e cordiais, em português do Brasil, dirigidos a órgãos públicos. " +
     "Não use saudações exageradas, não invente dados, números de processo ou nomes de autoridades. " +
+    "Abra o texto com o VOCATIVO adequado à autoridade destinatária, respeitando o GÊNERO dela " +
+    "(ex.: 'Senhora Comandante,' ou 'Senhor Secretário,'). NUNCA presuma o gênero masculino: deduza " +
+    "do nome e do cargo da autoridade informada. Se a autoridade não for informada ou o gênero for " +
+    "incerto, abra com 'Prezado(a) Senhor(a),'. " +
     "Escreva apenas o corpo do encaminhamento, pronto para revisão.";
 
   const prompt =
@@ -128,8 +133,9 @@ export async function gerarEncaminhamento(demandaId: string): Promise<ResultadoE
     `Demandante: ${demandante}\n` +
     `Assunto: ${assunto}\n` +
     `Natureza: ${tipo}\n` +
-    `Prioridade: ${prioridade}\n\n` +
-    `Encaminhe a solicitação, contextualize de forma objetiva e peça a devida análise/providência. ` +
+    `Prioridade: ${prioridade}\n` +
+    (destinatario ? `Autoridade destinatária (use para o vocativo correto, com o gênero certo): ${destinatario}\n` : "") +
+    `\nEncaminhe a solicitação, contextualize de forma objetiva e peça a devida análise/providência. ` +
     `Devolva somente o texto do encaminhamento.`;
 
   try {
