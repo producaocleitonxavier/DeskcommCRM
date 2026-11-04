@@ -16,6 +16,7 @@ import { buscarLinhaDoTempo } from "@/lib/politico/linha-do-tempo";
 import { LinhaDoTempo360 } from "@/components/politico/linha-do-tempo-360";
 import BotaoDescadastro from "./_descadastrar";
 import VideoDivulgar, { type VideoItem } from "./_video-divulgar";
+import { TAG_MULTIPLICADOR } from "@/lib/politico/multiplicadores";
 
 export const dynamic = "force-dynamic";
 
@@ -347,17 +348,27 @@ export default async function FichaPage({
 
   const { lead, contact, eventos360, mobilizadorNome, origemCaptacao, origemLideranca } = dados;
 
+  // "Vídeo pra divulgar" é SÓ para quem divulga de fato: o multiplicador — liderança/
+  // assessor marcado por função, ou apoiador+ que aceitou o convite (consentimento).
+  // Novo cadastro/simpatizante NÃO vê o card. Marcador canônico: a tag `multiplicador`
+  // (mesmo critério do placar de Multiplicadores e de quem recebe o disparo do link).
+  const ehMultiplicador = (contact.tags ?? []).includes(TAG_MULTIPLICADOR);
+
   // Vídeos da biblioteca (posts do IG) para gerar o link pessoal de divulgação.
-  const dbVideos = await createClient();
-  const { data: videosData } = await dbVideos
-    .from("pol_materiais")
-    .select("id, titulo")
-    .eq("organization_id", org.orgId)
-    .eq("tipo", "video")
-    .eq("ativo", true)
-    .order("created_at", { ascending: false })
-    .limit(12);
-  const videos: VideoItem[] = ((videosData ?? []) as { id: string; titulo: string }[]).map((v) => ({ id: v.id, titulo: v.titulo }));
+  // Só busca para multiplicador — não faz sentido para o resto da base.
+  let videos: VideoItem[] = [];
+  if (ehMultiplicador) {
+    const dbVideos = await createClient();
+    const { data: videosData } = await dbVideos
+      .from("pol_materiais")
+      .select("id, titulo")
+      .eq("organization_id", org.orgId)
+      .eq("tipo", "video")
+      .eq("ativo", true)
+      .order("created_at", { ascending: false })
+      .limit(12);
+    videos = ((videosData ?? []) as { id: string; titulo: string }[]).map((v) => ({ id: v.id, titulo: v.titulo }));
+  }
 
   // Cidade/bairro do contato — vários formatos de custom_fields coexistem na base
   // (cadastro novo: cidade/bairro + endereco; demanda/eventos/migração: endereco_gip).
@@ -571,7 +582,7 @@ export default async function FichaPage({
           </div>
 
           {/* Vídeo pra divulgar — link pessoal rastreável (alcance do multiplicador) */}
-          {!contact.is_blocked && (
+          {!contact.is_blocked && ehMultiplicador && (
             <VideoDivulgar contactId={contact.id} whatsDigits={whatsDigits} videos={videos} />
           )}
 
