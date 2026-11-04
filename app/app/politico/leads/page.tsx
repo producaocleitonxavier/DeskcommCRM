@@ -50,6 +50,7 @@ async function buscarLeads(
   busca?: string,
   temp?: string,
   cidade?: string,
+  esfriando?: boolean,
 ) {
   const db = await createClient();
   const offset = (pagina - 1) * POR_PAGINA;
@@ -82,6 +83,12 @@ async function buscarLeads(
   if (etapa) query = query.eq("support_level", etapa);
   if (temp) query = query.eq("temperature", temp);
   if (cidade) query = query.eq("territory_id", cidade);
+  // "Esfriando": contatos QUENTES sem atividade há 7+ dias — mesmo critério do card
+  // "contatos quentes esfriando" da tela Hoje. Filtra o pai pela coluna do embed inner.
+  if (esfriando) {
+    const corte7d = new Date(Date.now() - 7 * 86_400_000).toISOString();
+    query = query.eq("temperature", "quente").lt("contacts.last_activity_at", corte7d);
+  }
   // Busca por NOME ou TELEFONE: muito contato tem só o 1º nome ("Leandro", e há
   // vários) — aí buscar pelo telefone acha direto. Se o termo tem ≥4 dígitos, é
   // telefone (casa o trecho de dígitos no phone_number E.164, ignorando formatação);
@@ -180,9 +187,10 @@ export default async function PessoasPage({
   const busca = typeof params.busca === "string" ? params.busca : "";
   const temp = typeof params.temp === "string" ? params.temp : "";
   const cidade = typeof params.cidade === "string" ? params.cidade : "";
+  const esfriando = params.esfriando === "1" || params.esfriando === "true";
 
   const [{ leads, total }, contagens, cidades, mapaBase] = await Promise.all([
-    buscarLeads(org.orgId, pagina, etapa || undefined, busca || undefined, temp || undefined, cidade || undefined),
+    buscarLeads(org.orgId, pagina, etapa || undefined, busca || undefined, temp || undefined, cidade || undefined, esfriando),
     contarPorEtapa(org.orgId),
     buscarCidades(org.orgId),
     buscarMapaBase(org.orgId),
@@ -200,7 +208,7 @@ export default async function PessoasPage({
       contagens={contagens}
       cidades={cidades}
       mapaResumo={mapaResumo}
-      filtros={{ etapa, busca, temp, cidade, pagina }}
+      filtros={{ etapa, busca, temp, cidade, pagina, esfriando }}
       porPagina={POR_PAGINA}
       podeManutencao={ROLE_RANK[org.role] >= ROLE_RANK.manager}
     />

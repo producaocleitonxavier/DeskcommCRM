@@ -61,6 +61,7 @@ interface Filtros {
   temp: string;
   cidade: string;
   pagina: number;
+  esfriando?: boolean;
 }
 
 export interface LeadsClientProps {
@@ -90,6 +91,7 @@ export default function LeadsClient({ leads, total, contagens, cidades, mapaResu
     if (merged.busca) q.set("busca", merged.busca);
     if (merged.temp) q.set("temp", merged.temp);
     if (merged.cidade) q.set("cidade", merged.cidade);
+    if (merged.esfriando) q.set("esfriando", "1");
     if (merged.pagina > 1) q.set("pagina", String(merged.pagina));
     const s = q.toString();
     return `/app/politico/leads${s ? `?${s}` : ""}`;
@@ -119,6 +121,21 @@ export default function LeadsClient({ leads, total, contagens, cidades, mapaResu
         subtitulo="Toda a base em um lugar — filtre por etapa ou temperatura."
         acoes={[{ href: "/app/politico/leads/novo", label: "+ Novo cadastro", primary: true }]}
       />
+
+      {/* ── Modo "contatos quentes esfriando" (vindo do card da tela Hoje) ─ */}
+      {filtros.esfriando && (
+        <div className="gip-glass flex flex-col gap-2 p-4 sm:flex-row sm:items-center sm:justify-between" style={{ borderLeft: "3px solid #EF4444" }}>
+          <div>
+            <p className="text-sm font-semibold" style={{ color: "var(--color-text)" }}>🔥 Contatos quentes esfriando</p>
+            <p className="text-xs" style={{ color: "var(--color-text-muted)" }}>
+              Pessoas <strong>quentes</strong> sem contato há <strong>7+ dias</strong> — fale com elas antes que esfriem. ({total.toLocaleString("pt-BR")})
+            </p>
+          </div>
+          <Link href="/app/politico/leads" className="wr-btn inline-flex items-center gap-2 self-start sm:self-auto whitespace-nowrap">
+            ← Voltar para todas as pessoas
+          </Link>
+        </div>
+      )}
 
       {/* ── Manutenção da base (só Gerente+): preencher cidade e zona que faltam ─ */}
       {podeManutencao && (
@@ -183,6 +200,7 @@ export default function LeadsClient({ leads, total, contagens, cidades, mapaResu
           {filtros.etapa && <input type="hidden" name="etapa" value={filtros.etapa} />}
           {filtros.temp && <input type="hidden" name="temp" value={filtros.temp} />}
           {filtros.cidade && <input type="hidden" name="cidade" value={filtros.cidade} />}
+          {filtros.esfriando && <input type="hidden" name="esfriando" value="1" />}
           <label
             className="flex min-h-[44px] items-center gap-2.5 rounded-full px-4"
             style={{ background: "var(--color-surface-elevated)" }}

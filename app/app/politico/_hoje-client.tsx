@@ -246,7 +246,7 @@ export default function HojeClient({
           )}
           {filaAcao.leadsQuentesSemContato > 0 && (
             <Link
-              href="/app/politico/leads"
+              href="/app/politico/leads?esfriando=1"
               className="gip-glass gip-glass-hover flex items-center gap-3 p-4"
             >
               <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl" style={{ background: "rgba(239,68,68,0.14)", color: "#F87171" }} aria-hidden>
