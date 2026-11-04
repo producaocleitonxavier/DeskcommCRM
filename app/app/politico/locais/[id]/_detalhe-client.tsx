@@ -270,7 +270,7 @@ export default function LocalDetalheClient({
         {abrirEvento && (
           <form onSubmit={novoEvento} className="space-y-4 rounded-xl p-4" style={{ background: "var(--color-surface-elevated)", border: "1px solid var(--color-border)" }}>
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-              <div className="sm:col-span-2"><Label>Tema</Label><input type="text" value={tema} onChange={(e) => setTema(e.target.value)} placeholder="Ex.: Proteção digital das crianças" className="wr-input w-full" /></div>
+              <div className="sm:col-span-2"><Label>Tema do evento</Label><input type="text" value={tema} onChange={(e) => setTema(e.target.value)} placeholder="Ex.: Proteção digital das crianças" className="wr-input w-full" /></div>
               <div><Label>Tipo</Label><select value={tipoEvento} onChange={(e) => setTipoEvento(e.target.value)} className="wr-input w-full">{TIPOS_EVENTO.map((o) => <option key={o.id} value={o.id}>{o.nome}</option>)}</select></div>
               <div><Label>Data</Label><input type="date" value={dataEvento} onChange={(e) => setDataEvento(e.target.value)} className="wr-input w-full" /></div>
               <div><Label>Público estimado</Label><input type="number" min={0} value={publico} onChange={(e) => setPublico(e.target.value)} className="wr-input w-full" /></div>

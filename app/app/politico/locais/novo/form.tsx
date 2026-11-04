@@ -193,7 +193,7 @@ export default function NovoLocalForm({ materiais, liderancas }: { materiais: Ma
           <ArrowLeft className="h-4 w-4" aria-hidden /> Locais & Eventos
         </Link>
         <h1 className="mt-3 font-heading text-3xl font-bold leading-tight">Novo local</h1>
-        <p className="mt-1 text-sm" style={{ color: "var(--color-text-muted)" }}>Escola, igreja ou associação onde o mandato faz eventos — e, se quiser, já registre a palestra.</p>
+        <p className="mt-1 text-sm" style={{ color: "var(--color-text-muted)" }}>Escola, igreja ou associação onde o mandato faz eventos — e, se quiser, já registre o evento.</p>
       </div>
 
       <form onSubmit={salvar} className="space-y-5">
@@ -239,10 +239,10 @@ export default function NovoLocalForm({ materiais, liderancas }: { materiais: Ma
         </section>
 
         <section className="gip-glass space-y-4 p-5 sm:p-6">
-          <Toggle on={comEvento} set={setComEvento} label="Já registrar a palestra / evento realizado aqui" />
+          <Toggle on={comEvento} set={setComEvento} label="Já registrar o evento realizado aqui" />
           {comEvento && (
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-              <div className="sm:col-span-2"><Label>Tema da palestra</Label><input type="text" value={tema} onChange={(e) => setTema(e.target.value)} placeholder="Ex.: Proteção digital das crianças" className="wr-input w-full" /></div>
+              <div className="sm:col-span-2"><Label>Tema do evento</Label><input type="text" value={tema} onChange={(e) => setTema(e.target.value)} placeholder="Ex.: Proteção digital das crianças" className="wr-input w-full" /></div>
               <div><Label>Tipo de evento</Label><select value={tipoEvento} onChange={(e) => setTipoEvento(e.target.value)} className="wr-input w-full">{TIPOS_EVENTO.map((o) => <option key={o.id} value={o.id}>{o.nome}</option>)}</select></div>
               <div><Label>Data</Label><input type="date" value={data} onChange={(e) => setData(e.target.value)} className="wr-input w-full" /></div>
               <div><Label>Público estimado</Label><input type="number" min={0} value={publico} onChange={(e) => setPublico(e.target.value)} placeholder="Ex.: 200" className="wr-input w-full" /></div>
