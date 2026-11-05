@@ -369,6 +369,17 @@ async function rodarUmaCampanha(
   }
 
   // ─── O RODÍZIO: qual número fala com esta pessoa ───
+  //
+  // O FREIO DE SAÚDE entra AQUI, no mesmo lugar onde o número fora do ar é
+  // descartado. O circuito de saúde (`lib/agent-engine/health/circuit.ts`) segura
+  // o outbound de um número quando o bloqueio dele passa do limiar — mas ele
+  // governa a FILA DO AGENTE, e a campanha não é um job dessa fila: sem esta
+  // leitura, a campanha seguiria disparando por um número que o sistema já marcou
+  // como queimando. A campanha herda a MESMA decisão do freio — não inventa um
+  // segundo. (O hold é ORTOGONAL ao `status` do canal: um número WORKING pode
+  // estar em hold de saúde, então o corte de `status !== WORKING` abaixo não basta.)
+  const emHold = await numerosEmHoldDeSaude(admin, campanha.organization_id, numeros);
+  let pulouPorHoldDeSaude = false;
   const disponiveis: NumeroDisponivel[] = [];
   const knobsPorNumero = new Map<string, Awaited<ReturnType<typeof loadChannelKnobs>>>();
   for (const sessionId of numeros) {
@@ -388,6 +399,14 @@ async function rodarUmaCampanha(
     // Número fora do ar não entra no rodízio: mandar por ele seria fabricar uma
     // mensagem presa em `sending` que o recovery depois marca como falha.
     if (!linha || linha.status !== "WORKING") continue;
+    // Número que o freio de saúde está segurando (block rate alto, ou número novo
+    // ainda em go-live) também não entra: a fila da campanha retém e tenta de novo
+    // no próximo tique, exatamente como o agente faz sob o mesmo hold. Reter não é
+    // perder — o destinatário continua `pending`.
+    if (emHold.has(sessionId)) {
+      pulouPorHoldDeSaude = true;
+      continue;
+    }
 
     const estadoDoNumero = await loadPacingState(pool, campanha.organization_id, sessionId, {
       now: agora,
@@ -414,8 +433,15 @@ async function rodarUmaCampanha(
   const escolha = escolherNumero(disponiveis, await numeroDoHistorico(admin, campanha, alvo.contact_id));
   if (!escolha) {
     // Nenhum número pode agora. Não é falha do destinatário: é o ritmo dos
-    // números. Volta para a fila e tenta no próximo tique.
-    return { enviadas: 0, pulados: 0, concluidas: 0, detalhe: "canal:sem_numero_livre" };
+    // números (ou o freio de saúde). Volta para a fila e tenta no próximo tique.
+    // O motivo distinto deixa o freio VISÍVEL no log/observabilidade — senão um
+    // número segurado por queima seria indistinguível de um número só sem folga.
+    return {
+      enviadas: 0,
+      pulados: 0,
+      concluidas: 0,
+      detalhe: pulouPorHoldDeSaude ? "canal:em_hold_de_saude" : "canal:sem_numero_livre",
+    };
   }
   const sessionEscolhida = escolha.sessionId;
   const knobs = knobsPorNumero.get(sessionEscolhida)!.knobs;
@@ -615,6 +641,66 @@ async function numerosDaCampanha(admin: SupabaseClient, campanha: CampanhaRow): 
   }
   return poolDaCampanha(
     campanha.channel_session_id,
+    (data ?? []).map((l) => (l as { channel_session_id: string }).channel_session_id),
+  );
+}
+
+/**
+ * Os números que o FREIO DE SAÚDE está segurando agora (`health_hold_active`).
+ *
+ * O circuito de saúde (`lib/agent-engine/health/circuit.ts`) marca
+ * `channel_session_health.health_hold_active = true` quando um número está
+ * QUEIMANDO: block rate acima do limiar (`block_rate`) ou taxa de resposta no chão
+ * (`response_rate`). A campanha lê esse sinal para não disparar por um número que o
+ * sistema já segurou: a proteção que já existe passa a valer para o disparo também,
+ * sem um segundo mecanismo que possa divergir dela.
+ *
+ * ═══ Por que SÓ queima, e NÃO go_live ═══
+ *
+ * O mesmo flag também segura número novo até o go-live (`reason = 'go_live'`) — mas
+ * esse é o portão do AGENTE (a cadência automática dele nasce retida), NÃO sinal de
+ * que o número esteja queimando. A campanha tem o PRÓPRIO portão de pré-go-live
+ * (`channel_sessions.metadata.ai_gate_mode`). Frear a campanha por go_live
+ * congelaria todo gabinete em pré-go-live — o estado normal antes da virada de
+ * chave —, e foi o caso que a checagem em produção pegou (05/nov). Por isso o filtro
+ * é por MOTIVO de queima, nunca pelo flag sozinho.
+ *
+ * ═══ Falha ABERTA, de propósito ═══
+ *
+ * Se a leitura quebrar, devolve vazio e a campanha segue — a mesma régua de
+ * `numerosDaCampanha`. Um erro de telemetria não pode calar o disparo; e o freio
+ * continua protegendo a fila do agente de qualquer jeito. Número SEM linha de
+ * saúde (instalação que nunca sincronizou saúde) também passa: não há sinal para
+ * segurar, e travar tudo por ausência de dado seria o remédio pior que a doença.
+ *
+ * Uma consulta só para o pool inteiro (não uma por número): o `in (...)` é curto
+ * — o pool de uma campanha é o principal mais os vinculados, unidades, não a base.
+ */
+export async function numerosEmHoldDeSaude(
+  admin: SupabaseClient,
+  organizationId: string,
+  numeros: readonly string[],
+): Promise<Set<string>> {
+  if (numeros.length === 0) return new Set();
+  const { data, error } = await admin
+    .from("channel_session_health")
+    .select("channel_session_id")
+    .eq("organization_id", organizationId)
+    .in("channel_session_id", numeros as string[])
+    .eq("health_hold_active", true)
+    // SÓ os holds de QUEIMA. `go_live` é o portão do AGENTE (número novo nasce
+    // retido até a virada de chave), NÃO sinal de bloqueio — e a campanha tem o
+    // próprio portão de pré-go-live. Frear a campanha por go_live congelaria todo
+    // gabinete em pré-go-live (o estado normal): foi o caso que a checagem em
+    // produção pegou (05/nov, piloto em "aguardando liberação").
+    .in("health_hold_reason", ["block_rate", "response_rate"]);
+  if (error) {
+    logger.warn("[campanha] leitura do freio de saúde falhou; seguindo sem ela", {
+      motivo: error.message,
+    });
+    return new Set();
+  }
+  return new Set(
     (data ?? []).map((l) => (l as { channel_session_id: string }).channel_session_id),
   );
 }
