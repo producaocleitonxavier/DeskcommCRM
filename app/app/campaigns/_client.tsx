@@ -66,6 +66,7 @@ export function ListaDeCampanhas() {
         subtitulo="Fale com a base que você escolhe — por origem e estágio no funil, no ritmo que não queima o número. Quem responde entra no atendimento e recebe o material sozinho."
         acoes={[
           { href: "/app/campaigns/new", label: "Novo disparo", primary: true },
+          { href: "/app/campaigns/saude", label: "Saúde dos números" },
           { href: "/app/campaigns/settings", label: "Ajustes" },
         ]}
       />
