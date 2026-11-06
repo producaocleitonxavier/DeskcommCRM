@@ -277,6 +277,17 @@ async function rodarUmaCampanha(
     };
   }
 
+  // ─── A TRAVA DE COBAIA (allowlist + botão de pânico) ───
+  // Lida AQUI, com alvo já confirmado (campanha vazia não consulta) e ANTES de
+  // qualquer envio. Org real não tem controle → cobaia=false → nada muda; só o
+  // laboratório é restringido. Ver travaDeCobaia e a migration 9090.
+  const trava = await travaDeCobaia(admin, campanha.organization_id);
+  if (trava.pausado) {
+    // BOTÃO DE PÂNICO: para a campanha desta org na hora. O destinatário fica
+    // `pending` e volta quando o interruptor desligar — pausar não é perder.
+    return { enviadas: 0, pulados: 0, concluidas: 0, detalhe: "cobaia:envio_pausado" };
+  }
+
   // ─── Os vetos por PESSOA, revalidados ───
   // Vêm ANTES do ritmo de propósito: pular não gasta janela de envio, e uma fila
   // cheia de bloqueados não pode consumir o teto diário do número. E são
@@ -308,6 +319,25 @@ async function rodarUmaCampanha(
   // A lista de exclusão da operação, revalidada AQUI e não só na preparação:
   // ela pode ter crescido depois do snapshot, e o ponto dela é impedir o envio.
   const enderecoAtual = (contato?.phone_number ?? alvo.recipient_address ?? "").trim();
+
+  // ALLOWLIST DA COBAIA: em modo laboratório, só telefone-semente pode receber.
+  // Qualquer outro destino é RECUSADO antes de sair — a trava que garante, no
+  // código, que nenhum eleitor real recebe num teste (a isolação da org é a
+  // proteção primária; esta é o cinto). Fora do modo cobaia, não restringe nada.
+  // Exclui de vez (não volta a `pending`): um não-semente nunca vai poder enviar.
+  if (trava.cobaia && !trava.sementes.has(soDigitos(enderecoAtual))) {
+    await admin
+      .from("campaign_recipients")
+      .update({
+        status: "skipped",
+        eligibility_status: "excluded",
+        exclusion_reason: "fora_allowlist_cobaia",
+      })
+      .eq("id", alvo.id)
+      .eq("status", "pending");
+    return { enviadas: 0, pulados: 1, concluidas: 0, detalhe: "cobaia:destino_fora_da_allowlist" };
+  }
+
   if (enderecoAtual !== "") {
     const { data: suprimido } = await admin
       .from("campaign_suppressions")
@@ -703,6 +733,74 @@ export async function numerosEmHoldDeSaude(
   return new Set(
     (data ?? []).map((l) => (l as { channel_session_id: string }).channel_session_id),
   );
+}
+
+/**
+ * A TRAVA DE COBAIA de uma org: é laboratório? está pausada? quais telefones
+ * podem receber? (migration 9090).
+ *
+ * Org REAL (de cliente) não tem linha em `pol_cobaia_controle` → devolve
+ * `{cobaia:false, pausado:false}` e NADA é restringido. A trava só morde o
+ * laboratório do teste em escala, onde a linha vermelha (zero envio a eleitor
+ * real) precisa ser garantida pelo código, não pela disciplina.
+ *
+ * ═══ Duas falhas DE PROPÓSITO diferentes ═══
+ *
+ * · Erro ao ler o CONTROLE → falha-ABERTA como org normal. Um erro transitório
+ *   não pode parar a campanha de um cliente que nem é cobaia; e "não sei" só pode
+ *   virar "não restringe" porque a org real nunca é laboratório.
+ * · Org É cobaia mas erro ao ler as SEMENTES → falha-FECHADA: conjunto vazio,
+ *   nenhum destino casa, TODO envio recusado. No laboratório, segurança vence
+ *   liveness — melhor não mandar do que mandar para fora da allowlist.
+ */
+export interface TravaDeCobaia {
+  cobaia: boolean;
+  pausado: boolean;
+  sementes: Set<string>;
+}
+
+export async function travaDeCobaia(
+  admin: SupabaseClient,
+  organizationId: string,
+): Promise<TravaDeCobaia> {
+  const semRestricao: TravaDeCobaia = { cobaia: false, pausado: false, sementes: new Set() };
+  const { data: ctrl, error: erroCtrl } = await admin
+    .from("pol_cobaia_controle")
+    .select("modo_cobaia, envio_pausado")
+    .eq("organization_id", organizationId)
+    .maybeSingle();
+  if (erroCtrl) {
+    logger.warn("[campanha] leitura do controle de cobaia falhou; tratando como org normal", {
+      motivo: erroCtrl.message,
+    });
+    return semRestricao;
+  }
+  if (!ctrl) return semRestricao; // org normal: sem linha, sem restrição
+  const linha = ctrl as { modo_cobaia?: boolean; envio_pausado?: boolean };
+  const pausado = !!linha.envio_pausado;
+  const cobaia = linha.modo_cobaia !== false; // default true
+  if (!cobaia) return { cobaia: false, pausado, sementes: new Set() };
+
+  const { data: sem, error: erroSem } = await admin
+    .from("pol_cobaia_semente")
+    .select("telefone")
+    .eq("organization_id", organizationId);
+  if (erroSem) {
+    logger.error("[campanha] org cobaia e a leitura das sementes falhou; travando o envio (falha-fechada)", {
+      motivo: erroSem.message,
+    });
+    return { cobaia: true, pausado, sementes: new Set() };
+  }
+  return {
+    cobaia: true,
+    pausado,
+    sementes: new Set((sem ?? []).map((s) => soDigitos((s as { telefone: string }).telefone))),
+  };
+}
+
+/** Só os dígitos de um telefone — a comparação da allowlist ignora +55, espaços e traços. */
+export function soDigitos(telefone: string | null | undefined): string {
+  return (telefone ?? "").replace(/\D/g, "");
 }
 
 /**

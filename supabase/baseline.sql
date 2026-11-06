@@ -56563,3 +56563,38 @@ revoke all on function public.pol_carimbar_zonas_leads(uuid) from anon;
 grant execute on function public.pol_carimbar_zonas_leads(uuid) to authenticated;
 
 notify pgrst, 'reload schema';
+
+-- ─── 9090 — Trava de COBAIA (allowlist de destino + botão de pânico) ───────────
+-- Ver supabase/migrations/20261202000000_9090_cobaia_trava.sql. Idempotente.
+create table if not exists public.pol_cobaia_controle (
+  organization_id uuid primary key references public.organizations(id) on delete cascade,
+  modo_cobaia boolean not null default true,
+  envio_pausado boolean not null default false,
+  observacao text,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+alter table public.pol_cobaia_controle enable row level security;
+drop policy if exists tenant_isolation_pol_cobaia_controle_all on public.pol_cobaia_controle;
+create policy tenant_isolation_pol_cobaia_controle_all on public.pol_cobaia_controle
+  using (organization_id in (select public.fn_user_org_ids()));
+revoke all on public.pol_cobaia_controle from anon;
+grant select, insert, update, delete on public.pol_cobaia_controle to authenticated;
+
+create table if not exists public.pol_cobaia_semente (
+  id uuid primary key default gen_random_uuid(),
+  organization_id uuid not null references public.organizations(id) on delete cascade,
+  telefone text not null,
+  rotulo text,
+  created_at timestamptz not null default now(),
+  unique (organization_id, telefone)
+);
+create index if not exists idx_pol_cobaia_semente_org on public.pol_cobaia_semente(organization_id);
+alter table public.pol_cobaia_semente enable row level security;
+drop policy if exists tenant_isolation_pol_cobaia_semente_all on public.pol_cobaia_semente;
+create policy tenant_isolation_pol_cobaia_semente_all on public.pol_cobaia_semente
+  using (organization_id in (select public.fn_user_org_ids()));
+revoke all on public.pol_cobaia_semente from anon;
+grant select, insert, update, delete on public.pol_cobaia_semente to authenticated;
+
+notify pgrst, 'reload schema';
