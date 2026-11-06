@@ -12,9 +12,19 @@
  * Puramente SSR: sem useEffect, sem flash.
  */
 
-export default function WarRoomShell({ children }: { children: React.ReactNode }) {
+export default function WarRoomShell({
+  children,
+  claro = false,
+}: {
+  children: React.ReactNode;
+  /** Tema CLARO (Marinho) escopado à org — só quando `organizations.settings.tema = "claro"`. */
+  claro?: boolean;
+}) {
   return (
-    <div className="war-room min-h-dvh" data-theme="dark">
+    <div
+      className={`war-room min-h-dvh${claro ? " wr-claro" : ""}`}
+      data-theme={claro ? "light" : "dark"}
+    >
       {children}
     </div>
   );

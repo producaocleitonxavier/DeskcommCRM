@@ -1013,10 +1013,108 @@
   --agenda-pessoa-7: #be9ef6;
   --agenda-pessoa-8: #cc77b1;
 
+  /* Hero "Centro de Comando" — CommandHero lê estes tokens (antes eram hex inline) */
+  --hero-grad: linear-gradient(135deg,#0E1116 0%,#14181F 55%,#1A2410 100%);
+  --hero-border: rgba(215,243,106,0.22);
+  --hero-glow: rgba(215,243,106,0.16);
+  --hero-eyebrow: #D7F36A;
+  --hero-title: #FFFFFF;
+  --hero-sub: rgba(255,255,255,0.6);
+  --hero-btn-bg: #D7F36A;
+  --hero-btn-fg: #14181F;
+  --hero-btn-outline: rgba(255,255,255,0.18);
+  --hero-btn-outline-fg: rgba(255,255,255,0.9);
+
   /* Fundo aplicado diretamente ao wrapper */
   background-color: #0a0c10;
   color: #e8e8e4;
 }
+
+/* ===== TEMA CLARO escopado (Marinho & Laranja) =========================
+   Só vale onde a org liga `tema:claro` (WarRoomShell adiciona `.wr-claro`).
+   Espelha os tokens do .war-room com a paleta clara: branco-quente +
+   marinho-ardósia + acento tijolo. Neutra p/ não vestir cor de partido; o
+   acento final vira a cor da marca da org. `.war-room.wr-claro` tem mais
+   especificidade que `.war-room`, então vence sem !important. ===== */
+.war-room.wr-claro {
+  color-scheme: light;
+  --wr-glow: 0 1px 2px rgba(20,30,40,0.05);
+
+  --color-bg: #f4f2ec;
+  --color-surface: #ffffff;
+  --color-surface-elevated: #faf8f3;
+  --color-overlay: rgba(20,30,40,0.35);
+
+  --color-text: #1e2a38;
+  --color-text-muted: #5c6474;
+  --color-text-subtle: #8a93a3;
+
+  --color-border: #e7e4db;
+  --color-border-strong: #d6d2c8;
+
+  --color-accent: #b0542a;
+  --color-accent-fg: #ffffff;
+  --color-accent-soft: rgba(176,84,42,0.12);
+  --color-accent-hover: #9a4a25;
+
+  --color-success: #1f7a52; --color-success-bg: rgba(31,122,82,0.12); --color-success-fg: #1a6646;
+  --color-warning: #b0741b; --color-warning-bg: rgba(176,116,27,0.14); --color-warning-fg: #8c5c15;
+  --color-error: #c0392b; --color-error-bg: rgba(192,57,43,0.10); --color-error-fg: #a32e22;
+  --color-info: #2a4056; --color-info-bg: rgba(42,64,86,0.12); --color-info-fg: #223447;
+
+  --shadow-xs: 0 1px 2px 0 rgba(20,30,40,0.06);
+  --shadow-sm: 0 1px 2px 0 rgba(20,30,40,0.08), 0 1px 1px 0 rgba(20,30,40,0.04);
+  --shadow-md: 0 4px 12px -2px rgba(20,30,40,0.10), 0 2px 4px -1px rgba(20,30,40,0.06);
+  --shadow-lg: 0 12px 32px -6px rgba(20,30,40,0.12), 0 4px 12px -2px rgba(20,30,40,0.08);
+  --shadow-xl: 0 24px 48px -12px rgba(20,30,40,0.16), 0 8px 16px -4px rgba(20,30,40,0.10);
+
+  --wr-nav-bg: #ffffff;
+  --wr-nav-fg: #1e2a38;
+  --wr-card-shadow: 0 1px 2px rgba(20,30,40,0.06);
+
+  --background: #f4f2ec;
+  --foreground: #1e2a38;
+  --card: #ffffff;
+  --card-foreground: #1e2a38;
+  --popover: #ffffff;
+  --popover-foreground: #1e2a38;
+  --primary: #b0542a;
+  --primary-foreground: #ffffff;
+  --secondary: #faf8f3;
+  --secondary-foreground: #1e2a38;
+  --muted: #f1efe9;
+  --muted-foreground: #5c6474;
+  --accent: #faf8f3;
+  --accent-foreground: #1e2a38;
+  --border: rgba(20,30,40,0.10);
+  --input: rgba(20,30,40,0.12);
+  --ring: #b0542a;
+  --destructive: #c0392b;
+  --destructive-foreground: #ffffff;
+
+  /* Hero fica MARINHO (momento de marca) mesmo no tema claro — só o workspace clareia */
+  --hero-grad: linear-gradient(135deg,#1b2a38 0%,#223447 55%,#2b4158 100%);
+  --hero-border: rgba(43,65,88,0.28);
+  --hero-glow: rgba(176,84,42,0.20);
+  --hero-eyebrow: #dd9057;
+  --hero-title: #ffffff;
+  --hero-sub: rgba(255,255,255,0.72);
+  --hero-btn-bg: #b0542a;
+  --hero-btn-fg: #ffffff;
+  --hero-btn-outline: rgba(255,255,255,0.24);
+  --hero-btn-outline-fg: rgba(255,255,255,0.92);
+
+  background-color: #f4f2ec;
+  color: #1e2a38;
+}
+/* Fundo ambiente claro: troca os glows frios (azul/violeta sobre preto) por um
+   sopro marinho discreto sobre o creme. */
+.war-room.wr-claro .gip-ambient-bg {
+  background:
+    radial-gradient(90% 55% at 50% -15%, color-mix(in srgb, #2a4056 5%, transparent), transparent 58%),
+    var(--color-bg);
+}
+
 .wr-card-dark {
   background: var(--color-surface);
   border: 1px solid var(--color-border);
