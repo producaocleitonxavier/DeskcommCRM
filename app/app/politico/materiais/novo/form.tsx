@@ -117,7 +117,7 @@ export default function NovoMaterialForm() {
               <p className="mt-1.5 text-xs" style={{ color: "var(--color-text-muted)" }}>Cole o link de uma imagem de capa. Sem capa, o card mostra o título sobre um fundo do mandato.</p>
             </div>
             <div className="flex items-end">
-              <div className="relative h-32 w-24 overflow-hidden rounded-lg" style={{ background: "linear-gradient(135deg,#14181F 0%,#1A2410 100%)", border: "1px solid var(--color-border)" }}>
+              <div className="relative h-32 w-24 overflow-hidden rounded-lg" style={{ background: "var(--hero-grad)", border: "1px solid var(--color-border)" }}>
                 {capaUrl.trim() ? (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img src={capaUrl} alt="Prévia da capa" className="h-full w-full object-cover" />

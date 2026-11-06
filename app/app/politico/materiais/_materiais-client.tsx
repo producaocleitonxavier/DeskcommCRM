@@ -125,7 +125,7 @@ export default function MateriaisClient({ materiais }: MateriaisClientProps) {
                 >
                   {/* Capa */}
                   <a href={m.url} target="_blank" rel="noopener noreferrer" className="group relative block">
-                    <div className="relative aspect-[3/4] w-full overflow-hidden" style={{ background: "linear-gradient(135deg,#14181F 0%,#1A2410 100%)" }}>
+                    <div className="relative aspect-[3/4] w-full overflow-hidden" style={{ background: "var(--hero-grad)" }}>
                       {m.capaUrl ? (
                         // eslint-disable-next-line @next/next/no-img-element
                         <img
