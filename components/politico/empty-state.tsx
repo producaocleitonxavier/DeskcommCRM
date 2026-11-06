@@ -22,7 +22,7 @@ export function EmptyState({ icon: Icone, title, description, action, className 
     <div className={cn("flex flex-col items-center justify-center px-6 py-14 text-center", className)}>
       <span
         className="flex h-16 w-16 items-center justify-center rounded-full"
-        style={{ background: "rgba(215,243,106,0.1)", border: "1px solid rgba(215,243,106,0.2)" }}
+        style={{ background: "color-mix(in srgb, var(--color-accent) 10%, transparent)", border: "1px solid color-mix(in srgb, var(--color-accent) 20%, transparent)" }}
         aria-hidden
       >
         <Icone className="h-7 w-7" style={{ color: "var(--color-accent)" }} />

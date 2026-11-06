@@ -50,7 +50,7 @@ function Label({ children, obrig }: { children: React.ReactNode; obrig?: boolean
 function Toggle({ on, set, label }: { on: boolean; set: (v: boolean) => void; label: string }) {
   return (
     <button type="button" onClick={() => set(!on)} className="flex items-center gap-2 text-sm font-medium" style={{ color: "var(--color-text)" }}>
-      <span className="relative inline-flex h-5 w-9 items-center rounded-full transition-colors" style={{ background: on ? "#D7F36A" : "rgba(255,255,255,0.15)" }}>
+      <span className="relative inline-flex h-5 w-9 items-center rounded-full transition-colors" style={{ background: on ? "var(--color-accent)" : "rgba(255,255,255,0.15)" }}>
         <span className="inline-block h-4 w-4 rounded-full bg-white transition-transform" style={{ transform: on ? "translateX(18px)" : "translateX(2px)" }} />
       </span>
       {label}
@@ -215,7 +215,7 @@ export default function MaterialDetalheClient({ material }: { material: Material
                   <img src={capaUrl} alt="Prévia da capa" className="h-full w-full object-cover" />
                 ) : (
                   <div className="flex h-full w-full items-center justify-center">
-                    <ImageIcon className="h-6 w-6" style={{ color: "rgba(215,243,106,0.6)" }} aria-hidden />
+                    <ImageIcon className="h-6 w-6" style={{ color: "color-mix(in srgb, var(--color-accent) 60%, transparent)" }} aria-hidden />
                   </div>
                 )}
               </div>

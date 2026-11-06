@@ -264,9 +264,9 @@ export default function IdentidadeClient({ inicial }: { inicial: IdentidadeGabin
                   onClick={() => setDestPosicao(opt.v)}
                   className="rounded-full px-4 py-2 text-sm font-semibold transition-colors"
                   style={{
-                    border: `1px solid ${ativo ? "#D7F36A" : "var(--color-border)"}`,
-                    background: ativo ? "rgba(215,243,106,0.14)" : "var(--color-surface-elevated)",
-                    color: ativo ? "#D7F36A" : "var(--color-text-muted)",
+                    border: `1px solid ${ativo ? "var(--color-accent)" : "var(--color-border)"}`,
+                    background: ativo ? "color-mix(in srgb, var(--color-accent) 14%, transparent)" : "var(--color-surface-elevated)",
+                    color: ativo ? "var(--color-accent)" : "var(--color-text-muted)",
                   }}
                 >
                   {opt.l}
@@ -303,11 +303,11 @@ export default function IdentidadeClient({ inicial }: { inicial: IdentidadeGabin
                   onClick={() => setAssinaturaModo(opt.v)}
                   className="rounded-xl px-4 py-3 text-left transition-colors"
                   style={{
-                    border: `1px solid ${ativo ? "#D7F36A" : "var(--color-border)"}`,
-                    background: ativo ? "rgba(215,243,106,0.1)" : "var(--color-surface-elevated)",
+                    border: `1px solid ${ativo ? "var(--color-accent)" : "var(--color-border)"}`,
+                    background: ativo ? "color-mix(in srgb, var(--color-accent) 10%, transparent)" : "var(--color-surface-elevated)",
                   }}
                 >
-                  <span className="block text-sm font-semibold" style={{ color: ativo ? "#D7F36A" : "var(--color-text)" }}>{opt.l}</span>
+                  <span className="block text-sm font-semibold" style={{ color: ativo ? "var(--color-accent)" : "var(--color-text)" }}>{opt.l}</span>
                   <span className="mt-0.5 block text-xs" style={{ color: "var(--color-text-subtle)" }}>{opt.d}</span>
                 </button>
               );

@@ -28,7 +28,7 @@ export default function CopiarLink({ token }: { token: string }) {
         type="button"
         onClick={copiar}
         className="inline-flex shrink-0 items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold"
-        style={{ background: "#D7F36A", color: "#1B2206" }}
+        style={{ background: "var(--color-accent)", color: "#1B2206" }}
       >
         {copiado ? <Check className="h-3.5 w-3.5" aria-hidden /> : <Copy className="h-3.5 w-3.5" aria-hidden />}
         {copiado ? "Copiado!" : "Copiar link"}

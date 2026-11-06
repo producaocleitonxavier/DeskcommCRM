@@ -145,7 +145,7 @@ export default function HojeClient({
     value: s.count,
     color: FUNIL_HEX[i] ?? FUNIL_HEX[FUNIL_HEX.length - 1]!,
   }));
-  const AREA_HEX = ["#D7F36A", "#60A5FA", "#F59E0B", "#22C55E", "#A78BFA", "#F472B6"];
+  const AREA_HEX = ["var(--color-accent)", "#60A5FA", "#F59E0B", "#22C55E", "#A78BFA", "#F472B6"];
   const porAreaData = g.porArea.map((a, i) => ({ name: a.name, value: a.value, fill: AREA_HEX[i % AREA_HEX.length]! }));
   const registradasData = g.registradas14d;
 
@@ -155,18 +155,18 @@ export default function HojeClient({
       <header
         className="wr-card relative overflow-hidden p-6 sm:p-8"
         style={{
-          background: "linear-gradient(135deg,#0E1116 0%,#14181F 55%,#1A2410 100%)",
-          border: "1px solid rgba(215,243,106,0.22)",
+          background: "var(--hero-grad)",
+          border: "1px solid color-mix(in srgb, var(--color-accent) 22%, transparent)",
         }}
       >
         <div
           aria-hidden
           className="pointer-events-none absolute -right-16 -top-20 h-64 w-64 rounded-full"
-          style={{ background: "radial-gradient(closest-side,rgba(215,243,106,0.16),transparent)" }}
+          style={{ background: "radial-gradient(closest-side,color-mix(in srgb, var(--color-accent) 16%, transparent),transparent)" }}
         />
         <div className="relative flex flex-wrap items-center justify-between gap-6">
           <div className="min-w-0">
-            <span className="text-[11px] font-bold uppercase tracking-[0.2em]" style={{ color: "#D7F36A" }}>
+            <span className="text-[11px] font-bold uppercase tracking-[0.2em]" style={{ color: "var(--color-accent)" }}>
               GIP · Centro de Comando
             </span>
             <h1 className="font-heading mt-1.5 text-3xl font-bold leading-tight sm:text-4xl" style={{ color: "#FFFFFF" }}>
@@ -181,7 +181,7 @@ export default function HojeClient({
               <Link
                 href="/app/politico/demandas/nova"
                 className="inline-flex min-h-[40px] items-center gap-1.5 rounded-full px-4 text-sm font-semibold"
-                style={{ background: "#D7F36A", color: "#14181F" }}
+                style={{ background: "var(--color-accent)", color: "#14181F" }}
               >
                 <Inbox className="h-4 w-4" aria-hidden /> Nova demanda
               </Link>
@@ -213,7 +213,7 @@ export default function HojeClient({
               href="/app/inbox"
               className="gip-glass gip-glass-hover flex items-center gap-3 p-4"
             >
-              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl" style={{ background: "rgba(215,243,106,0.14)", color: "#9fd30f" }} aria-hidden>
+              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl" style={{ background: "color-mix(in srgb, var(--color-accent) 14%, transparent)", color: "#9fd30f" }} aria-hidden>
                 <Sparkles className="h-5 w-5" />
               </span>
               <span className="min-w-0 flex-1">
@@ -330,7 +330,7 @@ export default function HojeClient({
         {/* Aniversariantes */}
         <div className="gip-glass p-5 sm:p-6">
           <div className="mb-3 flex items-center gap-2">
-            <span className="flex h-8 w-8 items-center justify-center rounded-full" style={{ background: "rgba(215,243,106,0.18)", color: "#7E8F2B" }} aria-hidden>
+            <span className="flex h-8 w-8 items-center justify-center rounded-full" style={{ background: "color-mix(in srgb, var(--color-accent) 18%, transparent)", color: "#7E8F2B" }} aria-hidden>
               <Gift className="h-4 w-4" />
             </span>
             <h2 className="font-heading text-base font-bold" style={{ color: "var(--color-text)" }}>Aniversariantes (lideranças)</h2>

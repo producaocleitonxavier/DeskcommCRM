@@ -13,7 +13,7 @@ const ESTILO: Record<TipoEvento, { Icon: LucideIcon; bg: string; cor: string }> 
   encaminhada: { Icon: Send, bg: "#F0E7FB", cor: "#7C3AED" },
   oficio: { Icon: FileText, bg: "#E4E7F8", cor: "#2F3DA8" },
   aviso: { Icon: Bell, bg: "#FCF1DC", cor: "#8A5A10" },
-  funil: { Icon: ArrowUpRight, bg: "rgba(215,243,106,0.18)", cor: "#5E7A10" },
+  funil: { Icon: ArrowUpRight, bg: "color-mix(in srgb, var(--color-accent) 18%, transparent)", cor: "#5E7A10" },
   nota: { Icon: StickyNote, bg: "var(--color-surface-elevated)", cor: "var(--color-text-muted)" },
 };
 

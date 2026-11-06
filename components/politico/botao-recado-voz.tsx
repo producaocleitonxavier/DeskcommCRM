@@ -62,7 +62,7 @@ export function BotaoRecadoVoz({
         onClick={() => setAberto(true)}
         title="Mandar recado em áudio na voz do político"
         className="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[13px] font-semibold transition-transform hover:scale-[1.02]"
-        style={{ border: "1px solid rgba(215,243,106,0.4)", background: "rgba(215,243,106,0.1)", color: "#D7F36A" }}
+        style={{ border: "1px solid color-mix(in srgb, var(--color-accent) 40%, transparent)", background: "color-mix(in srgb, var(--color-accent) 10%, transparent)", color: "var(--color-accent)" }}
       >
         <Mic className="h-3.5 w-3.5" aria-hidden /> {compacto ? "Áudio" : "Recado em áudio"}
       </button>
@@ -80,7 +80,7 @@ export function BotaoRecadoVoz({
           >
             <div className="mb-3 flex items-center justify-between">
               <h3 className="flex items-center gap-2 font-heading text-base font-bold" style={{ color: "var(--color-text)" }}>
-                <Mic className="h-4 w-4" style={{ color: "#D7F36A" }} aria-hidden /> Recado na voz{primeiro ? ` para ${primeiro}` : ""}
+                <Mic className="h-4 w-4" style={{ color: "var(--color-accent)" }} aria-hidden /> Recado na voz{primeiro ? ` para ${primeiro}` : ""}
               </h3>
               <button type="button" onClick={() => !pending && setAberto(false)} className="rounded-full p-1" style={{ color: "var(--color-text-subtle)" }} aria-label="Fechar">
                 <X className="h-4 w-4" aria-hidden />
@@ -99,7 +99,7 @@ export function BotaoRecadoVoz({
             {msg && (
               <div
                 className="mt-2 flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm"
-                style={{ background: msg.tipo === "ok" ? "rgba(215,243,106,0.14)" : "rgba(239,68,68,0.14)", color: msg.tipo === "ok" ? "#D7F36A" : "#F87171" }}
+                style={{ background: msg.tipo === "ok" ? "color-mix(in srgb, var(--color-accent) 14%, transparent)" : "rgba(239,68,68,0.14)", color: msg.tipo === "ok" ? "var(--color-accent)" : "#F87171" }}
               >
                 {msg.tipo === "ok" && <Check className="h-4 w-4" aria-hidden />} {msg.texto}
               </div>
@@ -111,7 +111,7 @@ export function BotaoRecadoVoz({
                 onClick={enviar}
                 disabled={pending || !texto.trim()}
                 className="inline-flex items-center gap-2 rounded-full px-5 py-2 text-sm font-bold disabled:opacity-60"
-                style={{ background: "#D7F36A", color: "#1B2206" }}
+                style={{ background: "var(--color-accent)", color: "#1B2206" }}
               >
                 {pending ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden /> : <Send className="h-4 w-4" aria-hidden />} Enviar na voz
               </button>

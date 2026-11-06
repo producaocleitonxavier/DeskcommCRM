@@ -262,9 +262,9 @@ export default function DetalheProjetoClient({ projeto }: { projeto: ProjetoDeta
                   <span
                     className="rounded-full px-2.5 py-1 text-[11px] font-semibold"
                     style={{
-                      background: reached ? "rgba(215,243,106,0.14)" : "rgba(255,255,255,0.04)",
-                      color: reached ? "#D7F36A" : "var(--color-text-subtle)",
-                      border: `1px solid ${i === idx ? "rgba(215,243,106,0.5)" : "transparent"}`,
+                      background: reached ? "color-mix(in srgb, var(--color-accent) 14%, transparent)" : "rgba(255,255,255,0.04)",
+                      color: reached ? "var(--color-accent)" : "var(--color-text-subtle)",
+                      border: `1px solid ${i === idx ? "color-mix(in srgb, var(--color-accent) 50%, transparent)" : "transparent"}`,
                     }}
                   >
                     {FLOW_CURTO[s]}
@@ -344,7 +344,7 @@ function Info({ label, valor }: { label: string; valor: string }) {
 function Toggle({ on, set, label }: { on: boolean; set: (v: boolean) => void; label: string }) {
   return (
     <button type="button" onClick={() => set(!on)} className="flex items-center gap-2 text-sm font-medium" style={{ color: "var(--color-text)" }}>
-      <span className="relative inline-flex h-5 w-9 items-center rounded-full transition-colors" style={{ background: on ? "#D7F36A" : "rgba(255,255,255,0.15)" }}>
+      <span className="relative inline-flex h-5 w-9 items-center rounded-full transition-colors" style={{ background: on ? "var(--color-accent)" : "rgba(255,255,255,0.15)" }}>
         <span className="inline-block h-4 w-4 rounded-full bg-white transition-transform" style={{ transform: on ? "translateX(18px)" : "translateX(2px)" }} />
       </span>
       {label}

@@ -1040,22 +1040,37 @@
   color-scheme: light;
   --wr-glow: 0 1px 2px rgba(20,30,40,0.05);
 
-  --color-bg: #f4f2ec;
+  /* Fundo um pouco mais fundo que os cards, p/ os cards brancos SALTAREM (o
+     patchwork anterior sofria de creme-sobre-creme, contraste lavado). */
+  --color-bg: #ebe7dd;
   --color-surface: #ffffff;
-  --color-surface-elevated: #faf8f3;
+  --color-surface-elevated: #f6f3ea;
   --color-overlay: rgba(20,30,40,0.35);
 
-  --color-text: #1e2a38;
-  --color-text-muted: #5c6474;
-  --color-text-subtle: #8a93a3;
+  --color-text: #19222e;
+  --color-text-muted: #596170;
+  --color-text-subtle: #828a98;
 
-  --color-border: #e7e4db;
-  --color-border-strong: #d6d2c8;
+  --color-border: #dbd5c8;
+  --color-border-strong: #c7c0b0;
 
+  /* Acento TIJOLO — base + rampa (componentes que usam -300 pegam o primário).
+     Em escuro a rampa é lima; aqui espelha em terracota p/ não vazar verde. */
   --color-accent: #b0542a;
   --color-accent-fg: #ffffff;
   --color-accent-soft: rgba(176,84,42,0.12);
   --color-accent-hover: #9a4a25;
+  --color-accent-50: #f8ece3;
+  --color-accent-100: #efd4c2;
+  --color-accent-200: #e0ac8c;
+  --color-accent-300: #b0542a;
+  --color-accent-400: #9f4b26;
+  --color-accent-500: #8c4221;
+  --color-accent-600: #78381c;
+  --color-accent-700: #632f18;
+  --color-accent-800: #4f2613;
+  --color-accent-900: #3c1d0f;
+  --color-accent-950: #26120a;
 
   --color-success: #1f7a52; --color-success-bg: rgba(31,122,82,0.12); --color-success-fg: #1a6646;
   --color-warning: #b0741b; --color-warning-bg: rgba(176,116,27,0.14); --color-warning-fg: #8c5c15;
@@ -1070,7 +1085,7 @@
 
   --wr-nav-bg: #ffffff;
   --wr-nav-fg: #1e2a38;
-  --wr-card-shadow: 0 1px 2px rgba(20,30,40,0.06);
+  --wr-card-shadow: 0 1px 3px rgba(20,30,40,0.08), 0 1px 2px rgba(20,30,40,0.05);
 
   --background: #f4f2ec;
   --foreground: #1e2a38;
@@ -1086,8 +1101,8 @@
   --muted-foreground: #5c6474;
   --accent: #faf8f3;
   --accent-foreground: #1e2a38;
-  --border: rgba(20,30,40,0.10);
-  --input: rgba(20,30,40,0.12);
+  --border: rgba(20,30,40,0.13);
+  --input: rgba(20,30,40,0.14);
   --ring: #b0542a;
   --destructive: #c0392b;
   --destructive-foreground: #ffffff;

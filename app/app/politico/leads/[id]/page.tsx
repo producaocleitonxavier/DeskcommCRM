@@ -456,7 +456,7 @@ export default async function FichaPage({
               {lead.leader_potential && (
                 <span
                   className="inline-flex items-center rounded-full px-2.5 py-1 text-xs font-bold"
-                  style={{ background: "#D7F36A", color: "#2E3410" }}
+                  style={{ background: "var(--color-accent)", color: "#2E3410" }}
                 >
                   Líder
                 </span>

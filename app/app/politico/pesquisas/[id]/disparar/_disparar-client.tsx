@@ -128,7 +128,7 @@ export default function DispararClient({ surveyId, titulo, numPerguntas, nomeMan
                   return (
                     <button key={n.v} type="button" onClick={() => setNiveis((a) => toggle(a, n.v))}
                       className={chip(on)}
-                      style={{ background: on ? "#D7F36A" : "var(--color-surface-elevated)", color: on ? "#16181D" : "var(--color-text-muted)", border: "1px solid var(--color-border)" }}>
+                      style={{ background: on ? "var(--color-accent)" : "var(--color-surface-elevated)", color: on ? "#16181D" : "var(--color-text-muted)", border: "1px solid var(--color-border)" }}>
                       {n.l}
                     </button>
                   );
@@ -143,7 +143,7 @@ export default function DispararClient({ surveyId, titulo, numPerguntas, nomeMan
                   return (
                     <button key={tt.v} type="button" onClick={() => setTemps((a) => toggle(a, tt.v))}
                       className={chip(on)}
-                      style={{ background: on ? "#D7F36A" : "var(--color-surface-elevated)", color: on ? "#16181D" : "var(--color-text-muted)", border: "1px solid var(--color-border)" }}>
+                      style={{ background: on ? "var(--color-accent)" : "var(--color-surface-elevated)", color: on ? "#16181D" : "var(--color-text-muted)", border: "1px solid var(--color-border)" }}>
                       {tt.l}
                     </button>
                   );
@@ -159,7 +159,7 @@ export default function DispararClient({ surveyId, titulo, numPerguntas, nomeMan
                     return (
                       <button key={o.origem} type="button" onClick={() => setOrigensSel((a) => toggle(a, o.origem))}
                         className="rounded-lg px-3 py-2 text-sm font-medium transition-colors"
-                        style={{ background: on ? "#D7F36A" : "var(--color-surface-elevated)", color: on ? "#16181D" : "var(--color-text-muted)", border: "1px solid var(--color-border)" }}>
+                        style={{ background: on ? "var(--color-accent)" : "var(--color-surface-elevated)", color: on ? "#16181D" : "var(--color-text-muted)", border: "1px solid var(--color-border)" }}>
                         {origemLabel(o.origem)} <span style={{ opacity: 0.6 }}>· {o.total}</span>
                       </button>
                     );
@@ -189,7 +189,7 @@ export default function DispararClient({ surveyId, titulo, numPerguntas, nomeMan
               {pessoas.length > 0 && (
                 <div className="mt-2 flex flex-wrap gap-1.5">
                   {pessoas.map((p) => (
-                    <span key={p.id} className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium" style={{ background: "rgba(215,243,106,0.16)", color: "var(--color-text)", border: "1px solid rgba(215,243,106,0.4)" }}>
+                    <span key={p.id} className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium" style={{ background: "color-mix(in srgb, var(--color-accent) 16%, transparent)", color: "var(--color-text)", border: "1px solid color-mix(in srgb, var(--color-accent) 40%, transparent)" }}>
                       {p.nome}
                       <button type="button" onClick={() => setPessoas((a) => a.filter((x) => x.id !== p.id))} aria-label="remover"><X className="h-3 w-3" /></button>
                     </span>

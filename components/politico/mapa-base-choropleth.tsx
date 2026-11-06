@@ -25,7 +25,7 @@ export interface BasePonto {
 // concentrada (a capital tem milhares, o interior unidades), então as faixas são
 // escalonadas para o mapa não virar "tudo apagado menos uma cidade".
 const BUCKETS = [
-  { min: 1000, cor: "#D7F36A", label: "1.000+" },
+  { min: 1000, cor: "var(--color-accent)", label: "1.000+" },
   { min: 300, cor: "#A9D13F", label: "300–999" },
   { min: 100, cor: "#7FA82C", label: "100–299" },
   { min: 50, cor: "#5C7F23", label: "50–99" },

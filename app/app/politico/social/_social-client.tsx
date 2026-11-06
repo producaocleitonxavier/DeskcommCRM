@@ -108,7 +108,7 @@ export default function OpiniaoPublicaClient({ config, resumo, mencoes }: { conf
           <button type="button" onClick={() => setCfgAberto((v) => !v)} className="inline-flex items-center gap-1.5 rounded-full px-3 py-2 text-sm font-semibold" style={{ border: "1px solid var(--color-border)", color: "var(--color-text-muted)" }}>
             <Settings2 className="h-4 w-4" aria-hidden /> Termos
           </button>
-          <button type="button" onClick={atualizar} disabled={atualizando || !temConfig} className="inline-flex items-center gap-1.5 rounded-full px-4 py-2 text-sm font-semibold disabled:opacity-50" style={{ background: "#D7F36A", color: "#16181D" }}>
+          <button type="button" onClick={atualizar} disabled={atualizando || !temConfig} className="inline-flex items-center gap-1.5 rounded-full px-4 py-2 text-sm font-semibold disabled:opacity-50" style={{ background: "var(--color-accent)", color: "#16181D" }}>
             <RefreshCw className={`h-4 w-4 ${atualizando ? "animate-spin" : ""}`} aria-hidden /> {atualizando ? "Buscando…" : "Atualizar"}
           </button>
         </div>
@@ -127,7 +127,7 @@ export default function OpiniaoPublicaClient({ config, resumo, mencoes }: { conf
             <Campo label="Bairros de interesse" hint="separe por vírgula"><input value={bairros} onChange={(e) => setBairros(e.target.value)} placeholder="Centro, Trevo, Venda Nova" className="wr-input w-full" /></Campo>
           </div>
           <div className="flex flex-wrap items-center gap-2">
-            <button type="button" onClick={salvar} disabled={salvando} className="rounded-full px-4 py-2 text-sm font-semibold disabled:opacity-60" style={{ background: "#D7F36A", color: "#16181D" }}>{salvando ? "Salvando…" : "Salvar termos"}</button>
+            <button type="button" onClick={salvar} disabled={salvando} className="rounded-full px-4 py-2 text-sm font-semibold disabled:opacity-60" style={{ background: "var(--color-accent)", color: "#16181D" }}>{salvando ? "Salvando…" : "Salvar termos"}</button>
             <span className="text-xs" style={{ color: "var(--color-text-subtle)" }}>Por enquanto captamos a imprensa (Google Notícias). Os comentários do Instagram entram em breve.</span>
           </div>
         </section>
@@ -146,7 +146,7 @@ export default function OpiniaoPublicaClient({ config, resumo, mencoes }: { conf
           <section className="gip-glass overflow-hidden p-0">
             <div className="grid grid-cols-1 gap-0 md:grid-cols-[320px_1fr]">
               {/* Índice */}
-              <div className="flex flex-col justify-center gap-3 p-6" style={{ background: "linear-gradient(145deg, rgba(215,243,106,0.06), transparent)", borderRight: "1px solid var(--color-border)" }}>
+              <div className="flex flex-col justify-center gap-3 p-6" style={{ background: "linear-gradient(145deg, color-mix(in srgb, var(--color-accent) 6%, transparent), transparent)", borderRight: "1px solid var(--color-border)" }}>
                 <span className="text-[11px] font-bold uppercase tracking-[0.14em]" style={{ color: "var(--color-text-subtle)" }}>Índice de sentimento</span>
                 <div className="flex items-end gap-2">
                   <span className="font-heading text-5xl font-bold leading-none tabular-nums" style={{ color: netCor }}>{net > 0 ? `+${net}` : net}</span>
@@ -182,7 +182,7 @@ export default function OpiniaoPublicaClient({ config, resumo, mencoes }: { conf
             <div className="mb-4 flex items-center justify-between">
               <h2 className="text-sm font-bold" style={{ color: "var(--color-text)" }}>Pulso da cobertura</h2>
               <div className="flex items-center gap-3 text-[11px]" style={{ color: "var(--color-text-subtle)" }}>
-                <Leg cor="#D7F36A" t="volume" linha /><Leg cor={SENT.positivo.cor} t="dia positivo" /><Leg cor={SENT.negativo.cor} t="dia negativo" />
+                <Leg cor="var(--color-accent)" t="volume" linha /><Leg cor={SENT.positivo.cor} t="dia positivo" /><Leg cor={SENT.negativo.cor} t="dia negativo" />
               </div>
             </div>
             <PulsoArea dados={resumo.porDia} />
@@ -347,8 +347,8 @@ function PulsoArea({ dados }: { dados: { dia: string; total: number; pos: number
       <svg viewBox={`0 0 ${W} ${H}`} width="100%" height={H} preserveAspectRatio="none" role="img" aria-label="Pulso da cobertura por dia" onMouseMove={onMove} onMouseLeave={() => setHover(null)} style={{ cursor: "crosshair", display: "block" }}>
         <defs>
           <linearGradient id="pulsoFill" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor="rgba(215,243,106,0.32)" />
-            <stop offset="100%" stopColor="rgba(215,243,106,0)" />
+            <stop offset="0%" stopColor="color-mix(in srgb, var(--color-accent) 32%, transparent)" />
+            <stop offset="100%" stopColor="color-mix(in srgb, var(--color-accent) 0%, transparent)" />
           </linearGradient>
           <filter id="pulsoGlow" x="-10%" y="-60%" width="120%" height="220%">
             <feGaussianBlur stdDeviation="3.2" result="b" />
@@ -356,9 +356,9 @@ function PulsoArea({ dados }: { dados: { dia: string; total: number; pos: number
           </filter>
         </defs>
         <path d={area} fill="url(#pulsoFill)" style={{ opacity: 0, animation: "gip-area-in 0.9s ease 0.3s forwards" }} />
-        <path d={linha} pathLength={1} fill="none" stroke="#D7F36A" strokeWidth={2.5} strokeLinecap="round" filter="url(#pulsoGlow)" style={{ strokeDasharray: 1, strokeDashoffset: 1, animation: "gip-draw-line 1.3s cubic-bezier(0.16,1,0.3,1) forwards" }} />
+        <path d={linha} pathLength={1} fill="none" stroke="var(--color-accent)" strokeWidth={2.5} strokeLinecap="round" filter="url(#pulsoGlow)" style={{ strokeDasharray: 1, strokeDashoffset: 1, animation: "gip-draw-line 1.3s cubic-bezier(0.16,1,0.3,1) forwards" }} />
         {hover != null && (
-          <line x1={X(hover)} y1={padTop - 8} x2={X(hover)} y2={H - padBot} stroke="rgba(215,243,106,0.4)" strokeWidth={1} strokeDasharray="3 3" />
+          <line x1={X(hover)} y1={padTop - 8} x2={X(hover)} y2={H - padBot} stroke="color-mix(in srgb, var(--color-accent) 40%, transparent)" strokeWidth={1} strokeDasharray="3 3" />
         )}
         {dados.map((d, i) => (
           <g key={d.dia}>
@@ -374,7 +374,7 @@ function PulsoArea({ dados }: { dados: { dia: string; total: number; pos: number
           style={{
             position: "absolute", left: `${(X(hover!) / W) * 100}%`, top: Y(hd.total) - 12,
             transform: "translate(-50%, -100%)", pointerEvents: "none", zIndex: 5,
-            background: "rgba(12,14,19,0.97)", border: "1px solid rgba(215,243,106,0.4)", borderRadius: 9,
+            background: "rgba(12,14,19,0.97)", border: "1px solid color-mix(in srgb, var(--color-accent) 40%, transparent)", borderRadius: 9,
             padding: "6px 10px", whiteSpace: "nowrap", boxShadow: "0 10px 28px rgba(0,0,0,0.55)",
           }}
         >

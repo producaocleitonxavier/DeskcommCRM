@@ -300,11 +300,11 @@ export default function DetalheDemandaClient({ demanda, assessores, eventos, voz
         <div
           className="-mx-6 -mt-6 mb-5 px-6 py-2.5 sm:-mx-7 sm:-mt-7 sm:px-7"
           style={{
-            background: "linear-gradient(135deg,#0E1116 0%,#14181F 55%,#1A2410 100%)",
-            borderBottom: "1px solid rgba(215,243,106,0.22)",
+            background: "var(--hero-grad)",
+            borderBottom: "1px solid color-mix(in srgb, var(--color-accent) 22%, transparent)",
           }}
         >
-          <span className="text-[11px] font-bold uppercase tracking-[0.2em]" style={{ color: "#D7F36A" }}>
+          <span className="text-[11px] font-bold uppercase tracking-[0.2em]" style={{ color: "var(--color-accent)" }}>
             Gabinete · Atendimento ao cidadão
           </span>
         </div>
@@ -471,7 +471,7 @@ export default function DetalheDemandaClient({ demanda, assessores, eventos, voz
                       type="button"
                       onClick={() => setPrazoDias(prazoDias === String(n) ? "" : String(n))}
                       className="rounded-full px-3 py-1.5 text-xs font-bold transition"
-                      style={prazoDias === String(n) ? { background: "#D7F36A", color: "#16181D" } : { border: "1px solid var(--color-border)", color: "var(--color-text-muted)" }}
+                      style={prazoDias === String(n) ? { background: "var(--color-accent)", color: "#16181D" } : { border: "1px solid var(--color-border)", color: "var(--color-text-muted)" }}
                     >
                       {n}d
                     </button>
@@ -596,7 +596,7 @@ export default function DetalheDemandaClient({ demanda, assessores, eventos, voz
                 }
               }}
               className="wr-btn inline-flex items-center gap-1.5 disabled:opacity-50"
-              style={{ background: "rgba(215,243,106,0.14)", color: "#D7F36A", borderColor: "rgba(215,243,106,0.3)" }}
+              style={{ background: "color-mix(in srgb, var(--color-accent) 14%, transparent)", color: "var(--color-accent)", borderColor: "color-mix(in srgb, var(--color-accent) 30%, transparent)" }}
             >
               <Sparkles className="h-4 w-4" aria-hidden /> {gerandoIA ? "Gerando…" : "Gerar com IA"}
             </button>
@@ -700,7 +700,7 @@ export default function DetalheDemandaClient({ demanda, assessores, eventos, voz
             onChange={(e) => setEncaminhamento(e.target.value)}
             rows={12}
             placeholder="Ex.: Ofício encaminhado à Secretaria de Obras solicitando…"
-            className="w-full resize-y rounded-xl px-4 py-3.5 text-sm leading-relaxed outline-none transition-colors focus:border-[rgba(215,243,106,0.55)]"
+            className="w-full resize-y rounded-xl px-4 py-3.5 text-sm leading-relaxed outline-none transition-colors focus:border-[color-mix(in srgb, var(--color-accent) 55%, transparent)]"
             style={{
               background: "var(--color-surface-elevated)",
               border: "1px solid var(--color-border)",
@@ -738,7 +738,7 @@ export default function DetalheDemandaClient({ demanda, assessores, eventos, voz
 
 const EVT_ICONE: Record<string, { Icon: typeof Flag; cor: string }> = {
   registrada: { Icon: Flag, cor: "#9CA3AF" },
-  encaminhamento_ia: { Icon: Sparkles, cor: "#D7F36A" },
+  encaminhamento_ia: { Icon: Sparkles, cor: "var(--color-accent)" },
   oficio_emitido: { Icon: Printer, cor: "#60A5FA" },
   cidadao_avisado: { Icon: MessageCircle, cor: "#25D366" },
   estado_alterado: { Icon: Clock, cor: "#F59E0B" },

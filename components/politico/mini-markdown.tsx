@@ -17,12 +17,12 @@ export function MiniMarkdown({ texto }: { texto: string }) {
       const txt = h[2]!.replace(/\*\*/g, "");
       return h[1]!.length === 1
         ? <h3 key={i} className="mb-1 font-heading text-base font-bold" style={{ color: "var(--color-text)" }}>{txt}</h3>
-        : <h4 key={i} className="mt-3 mb-1 font-heading text-sm font-bold" style={{ color: "#D7F36A" }}>{txt}</h4>;
+        : <h4 key={i} className="mt-3 mb-1 font-heading text-sm font-bold" style={{ color: "var(--color-accent)" }}>{txt}</h4>;
     }
     const partes = linha.split(/(\*\*[^*]+\*\*)/g).filter(Boolean);
     const soNegrito = partes.length === 1 && /^\*\*[^*]+\*\*$/.test(partes[0]!);
     const bullet = /^\s*[-*]\s+/.test(linha);
-    if (soNegrito) return <h4 key={i} className="mt-3 mb-1 font-heading text-sm font-bold" style={{ color: "#D7F36A" }}>{partes[0]!.slice(2, -2)}</h4>;
+    if (soNegrito) return <h4 key={i} className="mt-3 mb-1 font-heading text-sm font-bold" style={{ color: "var(--color-accent)" }}>{partes[0]!.slice(2, -2)}</h4>;
     if (bullet) return <li key={i} className="ml-4 list-disc text-sm leading-relaxed" style={{ color: "var(--color-text-muted)" }}>{inline(linha.replace(/^\s*[-*]\s+/, ""))}</li>;
     if (linha.trim() === "") return <div key={i} className="h-1.5" />;
     return <p key={i} className="text-sm leading-relaxed" style={{ color: "var(--color-text-muted)" }}>{inline(linha)}</p>;

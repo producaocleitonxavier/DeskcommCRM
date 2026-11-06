@@ -27,7 +27,7 @@ export interface MapaObrasPublicoProps {
 
 const STATUS_COR: Record<string, string> = {
   planejada: "#60A5FA",
-  em_andamento: "#D7F36A",
+  em_andamento: "var(--color-accent)",
   paralisada: "#ef4444",
   concluida: "#22C55E",
   cancelada: "#9CA3AF",
@@ -61,7 +61,7 @@ export default function MapaObrasPublico({ obras }: MapaObrasPublicoProps) {
         <TileLayer url="https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}" />
         <TileLayer url="https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Reference/MapServer/tile/{z}/{y}/{x}" opacity={0.6} />
         {obras.map((o) => {
-          const cor = STATUS_COR[o.status] ?? "#D7F36A";
+          const cor = STATUS_COR[o.status] ?? "var(--color-accent)";
           return (
             <CircleMarker
               key={o.id}
@@ -100,7 +100,7 @@ export default function MapaObrasPublico({ obras }: MapaObrasPublicoProps) {
         <div className="mt-1.5 flex flex-col gap-1">
           {statusPresentes.map((s) => (
             <span key={s} className="flex items-center gap-1.5">
-              <span className="inline-block h-2.5 w-2.5 rounded-full" style={{ background: STATUS_COR[s] ?? "#D7F36A" }} aria-hidden />
+              <span className="inline-block h-2.5 w-2.5 rounded-full" style={{ background: STATUS_COR[s] ?? "var(--color-accent)" }} aria-hidden />
               {STATUS_LABEL[s] ?? s}
             </span>
           ))}

@@ -84,7 +84,7 @@ export default function DashboardClient({ dash, funil, calls }: DashboardClientP
               dash ? (
                 <span
                   className="inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold"
-                  style={{ background: "rgba(215,243,106,0.14)", color: "#D7F36A", border: "1px solid rgba(215,243,106,0.3)" }}
+                  style={{ background: "color-mix(in srgb, var(--color-accent) 14%, transparent)", color: "var(--color-accent)", border: "1px solid color-mix(in srgb, var(--color-accent) 30%, transparent)" }}
                 >
                   <Users className="h-3.5 w-3.5" aria-hidden />
                   {dash.total_leads.toLocaleString("pt-BR")} contatos

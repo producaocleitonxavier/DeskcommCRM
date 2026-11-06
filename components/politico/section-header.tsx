@@ -13,7 +13,7 @@ export interface SectionHeaderProps {
   title: string;
   subtitle?: string;
   action?: { label: string; href: string };
-  /** "accent" = pill lime (#D7F36A, texto dark); "default" = wr-btn com borda. */
+  /** "accent" = pill lime (var(--color-accent), texto dark); "default" = wr-btn com borda. */
   actionTone?: "default" | "accent";
   className?: string;
 }

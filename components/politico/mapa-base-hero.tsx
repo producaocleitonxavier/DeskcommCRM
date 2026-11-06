@@ -47,9 +47,9 @@ export default function MapaBaseHero({ resumo }: { resumo: MapaBaseResumo }) {
       >
         <span
           className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl"
-          style={{ background: "rgba(215,243,106,0.12)" }}
+          style={{ background: "color-mix(in srgb, var(--color-accent) 12%, transparent)" }}
         >
-          <MapIcon className="h-4 w-4" style={{ color: "#D7F36A" }} aria-hidden />
+          <MapIcon className="h-4 w-4" style={{ color: "var(--color-accent)" }} aria-hidden />
         </span>
         <span className="min-w-0 flex-1">
           <span className="block font-heading text-base font-bold" style={{ color: "var(--color-text)" }}>

@@ -148,7 +148,7 @@ export default function InteligenciaClient({ kpis, zonas, topLocais, meses }: In
                     className="flex items-center justify-between gap-3 rounded-xl px-3 py-2.5 transition-colors hover:bg-[rgba(255,255,255,0.04)]"
                   >
                     <span className="flex min-w-0 items-center gap-3">
-                      <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-xs font-bold" style={{ background: "rgba(215,243,106,0.12)", color: "var(--color-accent)" }}>
+                      <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-xs font-bold" style={{ background: "color-mix(in srgb, var(--color-accent) 12%, transparent)", color: "var(--color-accent)" }}>
                         {i + 1}
                       </span>
                       <span className="min-w-0">

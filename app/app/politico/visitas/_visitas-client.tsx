@@ -367,7 +367,7 @@ export default function VisitasClient({ visitas, kpis, assessores, usuarioAtualI
                         <X className="h-4 w-4" /> Sair da visita
                       </button>
                     ) : (
-                      <button disabled={pendente} onClick={() => agir(() => definirResponsavelVisita(v.id, usuarioAtualId))} className="wr-btn-dark inline-flex items-center gap-1.5 text-sm disabled:opacity-60" style={semResp ? { background: "#D7F36A", color: "#16181D" } : undefined}>
+                      <button disabled={pendente} onClick={() => agir(() => definirResponsavelVisita(v.id, usuarioAtualId))} className="wr-btn-dark inline-flex items-center gap-1.5 text-sm disabled:opacity-60" style={semResp ? { background: "var(--color-accent)", color: "#16181D" } : undefined}>
                         <User className="h-4 w-4" /> Eu vou
                       </button>
                     )}

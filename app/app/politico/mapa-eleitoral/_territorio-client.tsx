@@ -73,7 +73,7 @@ export default function TerritorioClient({
                 <li key={c.id} className="flex items-center gap-3">
                   <span
                     className="w-5 shrink-0 text-right text-xs font-bold tabular-nums"
-                    style={{ color: i < 3 ? "#D7F36A" : "var(--color-text-subtle)" }}
+                    style={{ color: i < 3 ? "var(--color-accent)" : "var(--color-text-subtle)" }}
                   >
                     {i + 1}
                   </span>

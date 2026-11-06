@@ -443,7 +443,7 @@ export default async function GabinetePage({
           <Link
             href="/app/politico/demandas/nova"
             className="inline-flex shrink-0 items-center justify-center whitespace-nowrap rounded-full px-5 py-2.5 text-sm font-bold transition-opacity hover:opacity-90"
-            style={{ background: "#D7F36A", color: "#16181D" }}
+            style={{ background: "var(--color-accent)", color: "#16181D" }}
           >
             + Nova demanda
           </Link>
@@ -503,7 +503,7 @@ export default async function GabinetePage({
                       key={o.orgao}
                       href={`/app/politico/demandas${montarQuery({ orgao: ativo ? undefined : o.orgao, cobrar: undefined, pagina: "1" })}#lista-demandas`}
                       className="flex items-center justify-between gap-2 rounded-xl px-3 py-2.5 transition-colors hover:bg-white/[0.04]"
-                      style={{ background: "var(--color-surface-elevated)", border: ativo ? "1px solid rgba(215,243,106,0.5)" : queima ? "1px solid rgba(239,68,68,0.35)" : "1px solid var(--color-border)" }}
+                      style={{ background: "var(--color-surface-elevated)", border: ativo ? "1px solid color-mix(in srgb, var(--color-accent) 50%, transparent)" : queima ? "1px solid rgba(239,68,68,0.35)" : "1px solid var(--color-border)" }}
                     >
                       <span className="flex min-w-0 items-center gap-1.5">
                         {queima && <span className="h-2 w-2 shrink-0 rounded-full" style={{ background: "#EF4444" }} aria-hidden title="Tem demanda atrasada" />}
@@ -537,7 +537,7 @@ export default async function GabinetePage({
             {(filtroMunicipio || filtroBairro || filtroCobrar) && (
               <div
                 className="mx-4 mt-3.5 flex flex-wrap items-center justify-between gap-2 rounded-xl px-3.5 py-2.5"
-                style={{ background: "rgba(215,243,106,0.10)", border: "1px solid rgba(215,243,106,0.3)" }}
+                style={{ background: "color-mix(in srgb, var(--color-accent) 10%, transparent)", border: "1px solid color-mix(in srgb, var(--color-accent) 30%, transparent)" }}
               >
                 <span className="text-sm font-semibold" style={{ color: "var(--color-text)" }}>
                   {filtroCobrar
@@ -651,7 +651,7 @@ export default async function GabinetePage({
                       key={o}
                       href={`/app/politico/demandas${montarQuery({ orgao: ativo ? undefined : o, cobrar: undefined, pagina: "1" })}`}
                       className="inline-flex items-center h-8 rounded-full px-3 text-xs font-semibold transition-opacity hover:opacity-90"
-                      style={{ background: cor.bg, color: cor.color, outline: ativo ? "2px solid rgba(215,243,106,0.6)" : "none" }}
+                      style={{ background: cor.bg, color: cor.color, outline: ativo ? "2px solid color-mix(in srgb, var(--color-accent) 60%, transparent)" : "none" }}
                     >
                       {o}
                     </Link>
@@ -712,7 +712,7 @@ export default async function GabinetePage({
                               {temIA && (
                                 <span
                                   className="inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-bold"
-                                  style={{ background: "#D7F36A", color: "#2E3410" }}
+                                  style={{ background: "var(--color-accent)", color: "#2E3410" }}
                                 >
                                   IA
                                 </span>

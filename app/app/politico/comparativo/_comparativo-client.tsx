@@ -36,13 +36,13 @@ function MiniMarkdown({ texto }: { texto: string }) {
       const txt = h[2]!.replace(/\*\*/g, "");
       return h[1]!.length === 1
         ? <h3 key={i} className="mb-1 font-heading text-base font-bold" style={{ color: "var(--color-text)" }}>{txt}</h3>
-        : <h4 key={i} className="mt-3 mb-1 font-heading text-sm font-bold" style={{ color: "#D7F36A" }}>{txt}</h4>;
+        : <h4 key={i} className="mt-3 mb-1 font-heading text-sm font-bold" style={{ color: "var(--color-accent)" }}>{txt}</h4>;
     }
     const partes = linha.split(/(\*\*[^*]+\*\*)/g).filter(Boolean);
     const soNegrito = partes.length === 1 && /^\*\*[^*]+\*\*$/.test(partes[0]!);
     const nodes = inline(linha);
     const bullet = /^\s*[-*]\s+/.test(linha);
-    if (soNegrito) return <h4 key={i} className="mt-3 mb-1 font-heading text-sm font-bold" style={{ color: "#D7F36A" }}>{partes[0]!.slice(2, -2)}</h4>;
+    if (soNegrito) return <h4 key={i} className="mt-3 mb-1 font-heading text-sm font-bold" style={{ color: "var(--color-accent)" }}>{partes[0]!.slice(2, -2)}</h4>;
     if (bullet) return <li key={i} className="ml-4 list-disc text-sm leading-relaxed" style={{ color: "var(--color-text-muted)" }}>{inline(linha.replace(/^\s*[-*]\s+/, ""))}</li>;
     if (linha.trim() === "") return <div key={i} className="h-1.5" />;
     return <p key={i} className="text-sm leading-relaxed" style={{ color: "var(--color-text-muted)" }}>{nodes}</p>;
@@ -57,7 +57,7 @@ const DIMS: { key: Dim; label: string }[] = [
   { key: "zona", label: "Zona" },
   { key: "secao", label: "Seção" },
 ];
-const CORES = ["#D7F36A", "#7da9bf", "#d09455", "#c87263", "#a78bfa"]; // até 5 candidatos
+const CORES = ["var(--color-accent)", "#7da9bf", "#d09455", "#c87263", "#a78bfa"]; // até 5 candidatos
 
 function pct(n: number, d: number): string {
   return d > 0 ? `${((n / d) * 100).toFixed(2)}%` : "—";
@@ -217,7 +217,7 @@ export default function ComparativoClient({ eleicoes, municipios }: { eleicoes: 
                   <li key={c.sq}>
                     <button type="button" onClick={() => toggle(c)}
                       className="flex w-full items-center gap-3 px-5 py-2.5 text-left transition-colors hover:bg-[rgba(0,0,0,0.03)]"
-                      style={{ borderTop: "1px solid var(--color-border)", ...(ativo ? { background: "rgba(215,243,106,0.12)" } : {}) }}>
+                      style={{ borderTop: "1px solid var(--color-border)", ...(ativo ? { background: "color-mix(in srgb, var(--color-accent) 12%, transparent)" } : {}) }}>
                       <span className="w-6 shrink-0 text-right text-xs tabular-nums" style={{ color: "var(--color-text-subtle)" }}>{c.posicao}</span>
                       <CandFoto sq={c.sq} ano={eleicaoAno} nome={c.nomeUrna} size={34} />
                       <div className="min-w-0 flex-1">
@@ -341,7 +341,7 @@ export default function ComparativoClient({ eleicoes, municipios }: { eleicoes: 
         <section className="gip-glass p-5">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div className="flex items-center gap-2.5">
-              <Sparkles className="h-5 w-5 shrink-0" style={{ color: "#D7F36A" }} aria-hidden />
+              <Sparkles className="h-5 w-5 shrink-0" style={{ color: "var(--color-accent)" }} aria-hidden />
               <div>
                 <h3 className="font-heading text-base font-bold" style={{ color: "var(--color-text)" }}>Leitura estratégica (IA)</h3>
                 <p className="text-xs" style={{ color: "var(--color-text-subtle)" }}>
@@ -352,7 +352,7 @@ export default function ComparativoClient({ eleicoes, municipios }: { eleicoes: 
             </div>
             <button type="button" onClick={gerarAnalise} disabled={gerandoIA}
               className="flex items-center gap-2 rounded-full px-4 py-2 text-sm font-semibold transition-opacity disabled:opacity-60"
-              style={{ background: "#D7F36A", color: "#16181D" }}>
+              style={{ background: "var(--color-accent)", color: "#16181D" }}>
               {gerandoIA
                 ? <><Loader2 className="h-4 w-4 animate-spin" aria-hidden /> Analisando…</>
                 : <><Sparkles className="h-4 w-4" aria-hidden /> {analise ? "Refazer análise" : "Gerar análise"}</>}

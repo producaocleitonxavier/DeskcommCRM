@@ -34,7 +34,7 @@ export interface ObraRow {
 
 export const STATUS: Record<string, { label: string; bg: string; color: string }> = {
   planejada: { label: "Planejada", bg: "rgba(255,255,255,0.08)", color: "rgba(255,255,255,0.75)" },
-  em_andamento: { label: "Em andamento", bg: "rgba(215,243,106,0.16)", color: "#D7F36A" },
+  em_andamento: { label: "Em andamento", bg: "color-mix(in srgb, var(--color-accent) 16%, transparent)", color: "var(--color-accent)" },
   paralisada: { label: "Paralisada", bg: "rgba(224,128,121,0.16)", color: "#E08079" },
   concluida: { label: "Concluída", bg: "rgba(23,120,79,0.20)", color: "#58C08A" },
   cancelada: { label: "Cancelada", bg: "rgba(255,255,255,0.06)", color: "rgba(255,255,255,0.45)" },
@@ -65,7 +65,7 @@ export default function ObrasClient({ obras, executivo, eleicoes, mandatoInicial
 
       {/* Explicação didática */}
       <div className="flex items-start gap-2.5 rounded-xl p-3.5" style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.1)" }}>
-        <Info className="mt-0.5 h-4 w-4 shrink-0" aria-hidden style={{ color: "#D7F36A" }} />
+        <Info className="mt-0.5 h-4 w-4 shrink-0" aria-hidden style={{ color: "var(--color-accent)" }} />
         <p className="text-[13px] leading-relaxed" style={{ color: "rgba(255,255,255,0.72)" }}>
           Cada card é uma <strong style={{ color: "#fff" }}>obra, serviço ou contrato público</strong> num território.
           Marque a <strong style={{ color: "#fff" }}>natureza</strong>: <strong style={{ color: "#fff" }}>Fiscalização</strong> (você acompanha e cobra o que o poder público faz — com vistorias, checklist e fotos)
@@ -77,7 +77,7 @@ export default function ObrasClient({ obras, executivo, eleicoes, mandatoInicial
       {/* KPIs */}
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
         <Kpi label="Total" value={String(obras.length)} sub="obras & contratos" />
-        <Kpi label="Em andamento" value={String(emAndamento)} sub={paralisadas ? `${paralisadas} paralisada(s)` : "em execução"} accent="#D7F36A" />
+        <Kpi label="Em andamento" value={String(emAndamento)} sub={paralisadas ? `${paralisadas} paralisada(s)` : "em execução"} accent="var(--color-accent)" />
         <Kpi label="Concluídas" value={String(concluidas)} sub="entregues" accent="#58C08A" />
         <Kpi label="Valor acompanhado" value={brl(valorTotal)} sub="soma dos contratos" />
       </div>
@@ -88,7 +88,7 @@ export default function ObrasClient({ obras, executivo, eleicoes, mandatoInicial
           {([["todas", "Todas"], ["fiscalizacao", "Fiscalização"], ["execucao", "Execução"]] as const).map(([v, l]) => (
             <button key={v} type="button" onClick={() => setFNat(v)}
               className="rounded-full px-3.5 py-1.5 text-xs font-semibold transition-colors"
-              style={fNat === v ? { background: "#D7F36A", color: "#14181F" } : { color: "rgba(255,255,255,0.75)" }}>{l}</button>
+              style={fNat === v ? { background: "var(--color-accent)", color: "#14181F" } : { color: "rgba(255,255,255,0.75)" }}>{l}</button>
           ))}
         </div>
         <select value={fStatus} onChange={(e) => setFStatus(e.target.value)} className="wr-input h-9 py-0 text-sm">
@@ -110,7 +110,7 @@ export default function ObrasClient({ obras, executivo, eleicoes, mandatoInicial
               <Link key={o.id} href={`/app/politico/obras/${o.id}`}
                 className="gip-glass gip-glass-hover block p-4">
                 <div className="flex items-start justify-between gap-2">
-                  <div className="flex items-center gap-2 text-xs font-semibold" style={{ color: o.natureza === "execucao" ? "#7da9bf" : "#D7F36A" }}>
+                  <div className="flex items-center gap-2 text-xs font-semibold" style={{ color: o.natureza === "execucao" ? "#7da9bf" : "var(--color-accent)" }}>
                     {o.natureza === "execucao" ? <HardHat className="h-3.5 w-3.5" aria-hidden /> : <ShieldCheck className="h-3.5 w-3.5" aria-hidden />}
                     {o.natureza === "execucao" ? "Execução" : "Fiscalização"} · {TIPO[o.tipo] ?? o.tipo}
                   </div>
@@ -126,7 +126,7 @@ export default function ObrasClient({ obras, executivo, eleicoes, mandatoInicial
                   <div className="mt-2.5">
                     <div className="mb-1 flex justify-between text-[11px]" style={{ color: "var(--color-text-subtle)" }}><span>Execução</span><span className="tabular-nums">{o.percentual}%</span></div>
                     <div className="h-1.5 w-full overflow-hidden rounded-full" style={{ background: "rgba(255,255,255,0.08)" }}>
-                      <div className="h-full rounded-full" style={{ width: `${o.percentual}%`, background: "#D7F36A" }} />
+                      <div className="h-full rounded-full" style={{ width: `${o.percentual}%`, background: "var(--color-accent)" }} />
                     </div>
                   </div>
                 )}
@@ -164,17 +164,17 @@ function MandatoStrip({ eleicoes, inicial }: { eleicoes: EleicaoOpcao[]; inicial
 
   if (mandato && !abrir) {
     return (
-      <div className="flex flex-wrap items-center gap-2 rounded-xl px-3.5 py-2.5" style={{ background: "rgba(215,243,106,0.08)", border: "1px solid rgba(215,243,106,0.3)" }}>
-        <Target className="h-4 w-4 shrink-0" aria-hidden style={{ color: "#D7F36A" }} />
+      <div className="flex flex-wrap items-center gap-2 rounded-xl px-3.5 py-2.5" style={{ background: "color-mix(in srgb, var(--color-accent) 8%, transparent)", border: "1px solid color-mix(in srgb, var(--color-accent) 30%, transparent)" }}>
+        <Target className="h-4 w-4 shrink-0" aria-hidden style={{ color: "var(--color-accent)" }} />
         <span className="text-[13px]" style={{ color: "rgba(255,255,255,0.8)" }}>Mandato vinculado: <strong style={{ color: "#fff" }}>{mandato.nome}</strong> — cada obra mostra os votos que você fez no bairro.</span>
-        <button type="button" onClick={() => setAbrir(true)} className="ml-auto text-xs font-semibold" style={{ color: "#D7F36A" }}>trocar</button>
+        <button type="button" onClick={() => setAbrir(true)} className="ml-auto text-xs font-semibold" style={{ color: "var(--color-accent)" }}>trocar</button>
       </div>
     );
   }
   return (
-    <div className="space-y-2 rounded-xl p-3.5" style={{ background: "rgba(215,243,106,0.06)", border: "1px dashed rgba(215,243,106,0.4)" }}>
+    <div className="space-y-2 rounded-xl p-3.5" style={{ background: "color-mix(in srgb, var(--color-accent) 6%, transparent)", border: "1px dashed color-mix(in srgb, var(--color-accent) 40%, transparent)" }}>
       <div className="flex items-center gap-2 text-[13px]" style={{ color: "rgba(255,255,255,0.8)" }}>
-        <Target className="h-4 w-4 shrink-0" aria-hidden style={{ color: "#D7F36A" }} />
+        <Target className="h-4 w-4 shrink-0" aria-hidden style={{ color: "var(--color-accent)" }} />
         <strong style={{ color: "#fff" }}>Vincule seu mandato (TSE)</strong> para ver, em cada obra, os votos que você fez naquele bairro — o retorno em votos do recurso.
         {mandato && <button type="button" onClick={() => setAbrir(false)} className="ml-auto"><X className="h-4 w-4" style={{ color: "var(--color-text-subtle)" }} /></button>}
       </div>

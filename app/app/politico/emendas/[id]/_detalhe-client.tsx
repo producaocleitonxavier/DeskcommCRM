@@ -314,14 +314,14 @@ export default function DetalheEmendaClient({ emenda, liderancas, peso, mandatoN
                   key={s.label}
                   className="rounded-xl p-3"
                   style={{
-                    background: reached ? "rgba(215,243,106,0.1)" : "rgba(255,255,255,0.03)",
-                    border: `1px solid ${reached ? "rgba(215,243,106,0.35)" : "var(--color-border)"}`,
+                    background: reached ? "color-mix(in srgb, var(--color-accent) 10%, transparent)" : "rgba(255,255,255,0.03)",
+                    border: `1px solid ${reached ? "color-mix(in srgb, var(--color-accent) 35%, transparent)" : "var(--color-border)"}`,
                   }}
                 >
                   <div className="flex items-center gap-1.5">
                     <span
                       className="inline-flex h-4 w-4 items-center justify-center rounded-full text-[10px] font-bold"
-                      style={{ background: reached ? "#D7F36A" : "rgba(255,255,255,0.1)", color: reached ? "#16181D" : "var(--color-text-subtle)" }}
+                      style={{ background: reached ? "var(--color-accent)" : "rgba(255,255,255,0.1)", color: reached ? "#16181D" : "var(--color-text-subtle)" }}
                     >
                       {i + 1}
                     </span>
@@ -345,7 +345,7 @@ export default function DetalheEmendaClient({ emenda, liderancas, peso, mandatoN
         )}
         {/* Avançar etapa: captura VALOR + data juntos (resolve o valor que ficava 0). */}
         {avAberto && proximaAcao && !editando && (
-          <div className="mt-4 flex flex-wrap items-end gap-2 rounded-xl p-3" style={{ background: "rgba(215,243,106,0.06)", border: "1px solid rgba(215,243,106,0.3)" }}>
+          <div className="mt-4 flex flex-wrap items-end gap-2 rounded-xl p-3" style={{ background: "color-mix(in srgb, var(--color-accent) 6%, transparent)", border: "1px solid color-mix(in srgb, var(--color-accent) 30%, transparent)" }}>
             <Campo label={proximaAcao.valorLabel}>
               <input type="text" inputMode="decimal" value={avValor} onChange={(ev) => setAvValor(ev.target.value)} placeholder="0,00" className="wr-input" style={{ minWidth: 160 }} autoFocus />
             </Campo>
@@ -362,13 +362,13 @@ export default function DetalheEmendaClient({ emenda, liderancas, peso, mandatoN
       )}
 
       {peso && (peso.meusVotos > 0 || peso.leads > 0) && (
-        <section className="gip-glass p-5" style={{ background: "linear-gradient(180deg, rgba(215,243,106,0.06), transparent)" }}>
+        <section className="gip-glass p-5" style={{ background: "linear-gradient(180deg, color-mix(in srgb, var(--color-accent) 6%, transparent), transparent)" }}>
           <h2 className="font-heading text-base font-bold" style={{ color: "var(--color-text)" }}>Você investiu onde te elegeu?</h2>
           <p className="mb-3 text-xs" style={{ color: "var(--color-text-subtle)" }}>
             O que {mandatoNome || "você"} fez e tem no bairro <strong style={{ color: "var(--color-text)" }}>{emenda.bairro || "—"}</strong> — o retorno eleitoral deste recurso.
           </p>
           <div className="grid grid-cols-3 gap-3">
-            <PesoBox valor={peso.meusVotos.toLocaleString("pt-BR")} label="Seus votos ali" sub={peso.universo > 0 ? `${((peso.meusVotos / peso.universo) * 100).toFixed(1)}% do bairro` : "no último pleito"} accent="#D7F36A" />
+            <PesoBox valor={peso.meusVotos.toLocaleString("pt-BR")} label="Seus votos ali" sub={peso.universo > 0 ? `${((peso.meusVotos / peso.universo) * 100).toFixed(1)}% do bairro` : "no último pleito"} accent="var(--color-accent)" />
             <PesoBox valor={peso.universo.toLocaleString("pt-BR")} label="Votos do cargo" sub="tamanho eleitoral" />
             <PesoBox valor={peso.leads.toLocaleString("pt-BR")} label="Sua base de contatos" sub="contatos no bairro" accent="#7da9bf" />
           </div>
@@ -426,7 +426,7 @@ export default function DetalheEmendaClient({ emenda, liderancas, peso, mandatoN
               </div>
             </div>
             <Campo label="Observações"><textarea value={observacoes} onChange={(ev) => setObservacoes(ev.target.value)} rows={2} className="wr-input w-full" /></Campo>
-            <label className="flex items-start gap-3 rounded-xl p-3 cursor-pointer select-none" style={{ background: "rgba(215,243,106,0.06)", border: "1px solid rgba(215,243,106,0.25)" }}>
+            <label className="flex items-start gap-3 rounded-xl p-3 cursor-pointer select-none" style={{ background: "color-mix(in srgb, var(--color-accent) 6%, transparent)", border: "1px solid color-mix(in srgb, var(--color-accent) 25%, transparent)" }}>
               <input type="checkbox" checked={publica} onChange={(ev) => setPublica(ev.target.checked)} className="mt-0.5 h-5 w-5 rounded accent-[#7E8F2B]" />
               <span>
                 <span className="block text-sm font-semibold" style={{ color: "var(--color-text)" }}>Mostrar no Portal da Transparência</span>
@@ -468,20 +468,20 @@ function CaptacaoEmendaCard({ emendaId, beneficiarios, vozArmada, politicoNome }
     <section className="gip-glass p-5">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-2.5">
-          <Users className="h-5 w-5 shrink-0" aria-hidden style={{ color: "#D7F36A" }} />
+          <Users className="h-5 w-5 shrink-0" aria-hidden style={{ color: "var(--color-accent)" }} />
           <div>
             <h2 className="font-heading text-base font-bold" style={{ color: "var(--color-text)" }}>Captação de beneficiários</h2>
             <p className="text-xs" style={{ color: "var(--color-text-subtle)" }}>Dê este link à entidade beneficiada: cada cadastro vira base sua, no bairro. O link aceita cadastros ilimitados.</p>
           </div>
         </div>
         <div className="text-right">
-          <div className="font-heading text-2xl font-bold tabular-nums" style={{ color: "#D7F36A" }}>{beneficiarios.toLocaleString("pt-BR")}</div>
+          <div className="font-heading text-2xl font-bold tabular-nums" style={{ color: "var(--color-accent)" }}>{beneficiarios.toLocaleString("pt-BR")}</div>
           <div className="text-[11px]" style={{ color: "var(--color-text-subtle)" }}>cadastrados</div>
         </div>
       </div>
       <div className="mt-3 flex flex-wrap items-center gap-2">
         <input readOnly value={link} className="wr-input flex-1 text-xs" onFocus={(ev) => ev.currentTarget.select()} style={{ minWidth: 200 }} />
-        <button type="button" onClick={copiar} className="inline-flex items-center gap-1.5 rounded-full px-4 py-2 text-sm font-semibold" style={{ background: "#D7F36A", color: "#16181D" }}><Copy className="h-4 w-4" aria-hidden /> {copiado ? "Copiado!" : "Copiar link"}</button>
+        <button type="button" onClick={copiar} className="inline-flex items-center gap-1.5 rounded-full px-4 py-2 text-sm font-semibold" style={{ background: "var(--color-accent)", color: "#16181D" }}><Copy className="h-4 w-4" aria-hidden /> {copiado ? "Copiado!" : "Copiar link"}</button>
         {beneficiarios > 0 && <button type="button" onClick={ver} className="inline-flex items-center gap-1.5 rounded-full px-4 py-2 text-sm font-semibold" style={{ border: "1px solid var(--color-border)", color: "var(--color-text-muted)" }}><Users className="h-4 w-4" aria-hidden /> {verando ? "Ocultar" : "Ver cadastros"}</button>}
       </div>
       {verando && (

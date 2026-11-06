@@ -52,7 +52,7 @@ export default function TransparenciaClient({ config }: { config: PortalConfig }
     <div className="gip-ambient-bg mx-auto max-w-[840px] px-4 py-7 space-y-5">
       <header>
         <div className="flex items-center gap-2.5">
-          <span className="flex h-10 w-10 items-center justify-center rounded-full" style={{ background: "rgba(215,243,106,0.16)", color: "#7E8F2B" }} aria-hidden>
+          <span className="flex h-10 w-10 items-center justify-center rounded-full" style={{ background: "color-mix(in srgb, var(--color-accent) 16%, transparent)", color: "#7E8F2B" }} aria-hidden>
             <Globe className="h-5 w-5" />
           </span>
           <div>
@@ -82,7 +82,7 @@ export default function TransparenciaClient({ config }: { config: PortalConfig }
             role="switch"
             aria-checked={ativo}
             className="relative inline-flex h-7 w-12 shrink-0 items-center rounded-full transition-colors disabled:opacity-60"
-            style={{ background: ativo ? "#D7F36A" : "var(--color-border)" }}
+            style={{ background: ativo ? "var(--color-accent)" : "var(--color-border)" }}
           >
             <span className="inline-block h-5 w-5 transform rounded-full bg-white transition-transform" style={{ transform: ativo ? "translateX(22px)" : "translateX(4px)" }} />
           </button>
@@ -93,7 +93,7 @@ export default function TransparenciaClient({ config }: { config: PortalConfig }
         {/* Link público */}
         <div className="mt-4 flex flex-wrap items-center gap-2">
           <input readOnly value={link} onFocus={(e) => e.currentTarget.select()} className="wr-input flex-1 text-xs" style={{ minWidth: 220, opacity: ativo ? 1 : 0.6 }} />
-          <button type="button" onClick={copiar} className="inline-flex items-center gap-1.5 rounded-full px-4 py-2 text-sm font-semibold" style={{ background: "#D7F36A", color: "#16181D" }}>
+          <button type="button" onClick={copiar} className="inline-flex items-center gap-1.5 rounded-full px-4 py-2 text-sm font-semibold" style={{ background: "var(--color-accent)", color: "#16181D" }}>
             <Copy className="h-4 w-4" aria-hidden /> {copiado ? "Copiado!" : "Copiar link"}
           </button>
           {ativo && (
@@ -127,7 +127,7 @@ export default function TransparenciaClient({ config }: { config: PortalConfig }
 
         <div className="gip-glass p-5">
           <div className="flex items-center gap-2.5">
-            <span className="flex h-9 w-9 items-center justify-center rounded-full" style={{ background: "rgba(215,243,106,0.18)", color: "#7E8F2B" }} aria-hidden>
+            <span className="flex h-9 w-9 items-center justify-center rounded-full" style={{ background: "color-mix(in srgb, var(--color-accent) 18%, transparent)", color: "#7E8F2B" }} aria-hidden>
               <HandCoins style={{ width: 18, height: 18 }} />
             </span>
             <div>

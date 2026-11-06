@@ -105,7 +105,7 @@ export default async function RadarZonalPage({ searchParams }: { searchParams: P
               return (
                 <Link key={tab.value} href={tab.href} role="tab" aria-selected={active}
                   className="inline-flex min-h-[40px] items-center rounded-full px-4 text-sm font-semibold transition-colors"
-                  style={active ? { background: "#D7F36A", color: "#14181F" } : { border: "1px solid rgba(255,255,255,0.18)", color: "rgba(255,255,255,0.9)" }}>
+                  style={active ? { background: "var(--color-accent)", color: "#14181F" } : { border: "1px solid rgba(255,255,255,0.18)", color: "rgba(255,255,255,0.9)" }}>
                   {tab.label}
                 </Link>
               );
@@ -125,7 +125,7 @@ export default async function RadarZonalPage({ searchParams }: { searchParams: P
       ) : (
         <>
           <div className="flex items-start gap-2.5 rounded-xl p-3.5" style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.1)" }}>
-            <Info className="mt-0.5 h-4 w-4 shrink-0" aria-hidden style={{ color: "#D7F36A" }} />
+            <Info className="mt-0.5 h-4 w-4 shrink-0" aria-hidden style={{ color: "var(--color-accent)" }} />
             <p className="text-[13px] leading-relaxed" style={{ color: "rgba(255,255,255,0.72)" }}>
               <strong style={{ color: "#fff" }}>Minha Base</strong> são os contatos do <strong style={{ color: "#fff" }}>seu CRM</strong> (da sua operação) distribuídos pelas cidades onde moram.
               Cada bolha é uma cidade — tamanho = quantidade de contatos, cor = força (novos ×1, simpatizantes ×3, apoiadores ×6).

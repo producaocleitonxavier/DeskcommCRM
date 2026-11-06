@@ -29,7 +29,7 @@ export interface MapaChoroplethProps {
 
 // Buckets de share (% do candidato no município) → cor (rampa lime da marca).
 const BUCKETS = [
-  { min: 0.5, cor: "#D7F36A", label: "≥ 50%" },
+  { min: 0.5, cor: "var(--color-accent)", label: "≥ 50%" },
   { min: 0.4, cor: "#A9D13F", label: "40–50%" },
   { min: 0.3, cor: "#7FA82C", label: "30–40%" },
   { min: 0.2, cor: "#5C7F23", label: "20–30%" },

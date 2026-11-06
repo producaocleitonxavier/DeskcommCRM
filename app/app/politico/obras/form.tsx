@@ -135,7 +135,7 @@ export default function ObraForm({ emendas, naturezaInicial }: { emendas: Emenda
       {erro && <p className="text-sm" style={{ color: "#E08079" }}>{erro}</p>}
       <div className="flex gap-2">
         <button type="button" onClick={salvar} disabled={salvando}
-          className="inline-flex items-center gap-2 rounded-full px-5 py-2.5 text-sm font-semibold disabled:opacity-60" style={{ background: "#D7F36A", color: "#16181D" }}>
+          className="inline-flex items-center gap-2 rounded-full px-5 py-2.5 text-sm font-semibold disabled:opacity-60" style={{ background: "var(--color-accent)", color: "#16181D" }}>
           {salvando ? <><Loader2 className="h-4 w-4 animate-spin" aria-hidden /> Salvando…</> : "Salvar e abrir"}
         </button>
         <button type="button" onClick={() => router.push("/app/politico/obras")} className="rounded-full px-5 py-2.5 text-sm font-semibold" style={{ border: "1px solid var(--color-border)", color: "var(--color-text-muted)" }}>Cancelar</button>
@@ -158,8 +158,8 @@ function Campo({ label, children }: { label: string; children: React.ReactNode }
 function BotaoNatureza({ ativo, onClick, icon, titulo, desc }: { ativo: boolean; onClick: () => void; icon: React.ReactNode; titulo: string; desc: string }) {
   return (
     <button type="button" onClick={onClick} className="flex items-start gap-2.5 rounded-xl p-3 text-left transition-colors"
-      style={ativo ? { background: "rgba(215,243,106,0.12)", border: "1px solid #D7F36A" } : { border: "1px solid var(--color-border)" }}>
-      <span className="mt-0.5" style={{ color: ativo ? "#D7F36A" : "var(--color-text-subtle)" }}>{icon}</span>
+      style={ativo ? { background: "color-mix(in srgb, var(--color-accent) 12%, transparent)", border: "1px solid var(--color-accent)" } : { border: "1px solid var(--color-border)" }}>
+      <span className="mt-0.5" style={{ color: ativo ? "var(--color-accent)" : "var(--color-text-subtle)" }}>{icon}</span>
       <span><span className="block text-sm font-bold" style={{ color: "var(--color-text)" }}>{titulo}</span><span className="block text-xs" style={{ color: "var(--color-text-muted)" }}>{desc}</span></span>
     </button>
   );

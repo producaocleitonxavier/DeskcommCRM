@@ -21,7 +21,7 @@ import {
 
 const VERDE = "#17784F";
 const VERMELHO = "#A3302A";
-const ACCENT = "#D7F36A";
+const ACCENT = "var(--color-accent)";
 
 function esc(s: string): string {
   return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
@@ -191,7 +191,7 @@ export default function BoletimClient({
 
       {!bol && (
         <div className="gip-glass p-7 text-center">
-          <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-2xl" style={{ background: "rgba(215,243,106,0.18)", color: "#5C7F23" }}>
+          <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-2xl" style={{ background: "color-mix(in srgb, var(--color-accent) 18%, transparent)", color: "#5C7F23" }}>
             <Newspaper size={24} />
           </div>
           <p className="mx-auto max-w-md text-sm" style={{ color: "var(--color-text-muted)" }}>
@@ -231,7 +231,7 @@ export default function BoletimClient({
 
           {/* A semana em 3 frases */}
           {bol.resumoIa && (
-            <div className="mb-5 rounded-xl p-4" style={{ background: "rgba(215,243,106,0.12)", border: "1px solid rgba(92,127,35,0.28)" }}>
+            <div className="mb-5 rounded-xl p-4" style={{ background: "color-mix(in srgb, var(--color-accent) 12%, transparent)", border: "1px solid rgba(92,127,35,0.28)" }}>
               <p className="mb-1 inline-flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wide" style={{ color: "#5C7F23" }}>
                 <Sparkles size={13} /> A semana em poucas frases
               </p>

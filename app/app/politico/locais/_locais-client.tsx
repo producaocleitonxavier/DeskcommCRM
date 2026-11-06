@@ -113,7 +113,7 @@ export default function LocaisClient({ locais, kpis }: LocaisClientProps) {
                   className="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-sm font-medium transition-colors"
                   style={
                     ativo
-                      ? { background: "#D7F36A", color: "#14181F" }
+                      ? { background: "var(--color-accent)", color: "#14181F" }
                       : {
                           background: "var(--color-surface-elevated)",
                           color: "var(--color-text-muted)",
@@ -142,7 +142,7 @@ export default function LocaisClient({ locais, kpis }: LocaisClientProps) {
                   <div className="flex items-start gap-3">
                     <span
                       className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl"
-                      style={{ background: "rgba(215,243,106,0.12)", border: "1px solid rgba(215,243,106,0.22)" }}
+                      style={{ background: "color-mix(in srgb, var(--color-accent) 12%, transparent)", border: "1px solid color-mix(in srgb, var(--color-accent) 22%, transparent)" }}
                     >
                       <Icone className="h-5 w-5" style={{ color: "var(--color-accent)" }} aria-hidden />
                     </span>
@@ -162,7 +162,7 @@ export default function LocaisClient({ locais, kpis }: LocaisClientProps) {
                       </span>
                     )}
                     {l.zona && (
-                      <span className="rounded-full px-2 py-0.5 text-[11px] font-semibold" style={{ background: "rgba(215,243,106,0.16)", color: "#5B6B16" }}>
+                      <span className="rounded-full px-2 py-0.5 text-[11px] font-semibold" style={{ background: "color-mix(in srgb, var(--color-accent) 16%, transparent)", color: "#5B6B16" }}>
                         Zona {l.zona}
                       </span>
                     )}

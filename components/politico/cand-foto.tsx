@@ -31,7 +31,7 @@ export function CandFoto({ sq, ano, nome, size = 40 }: { sq: string; ano: number
     return (
       <div
         className="flex shrink-0 items-center justify-center rounded-full font-bold"
-        style={{ ...estiloBase, background: "rgba(215,243,106,0.15)", color: "#5C7F23", fontSize: size * 0.36 }}
+        style={{ ...estiloBase, background: "color-mix(in srgb, var(--color-accent) 15%, transparent)", color: "#5C7F23", fontSize: size * 0.36 }}
         aria-hidden
       >
         {iniciais(nome)}

@@ -250,8 +250,8 @@ export default function VozClient({ inicial }: { inicial: Inicial }) {
       />
 
       {/* Regras TSE */}
-      <section className="rounded-[16px] p-4" style={{ background: "rgba(215,243,106,0.08)", border: "1px solid rgba(215,243,106,0.25)" }}>
-        <p className="flex items-center gap-2 text-sm font-semibold" style={{ color: "#D7F36A" }}>
+      <section className="rounded-[16px] p-4" style={{ background: "color-mix(in srgb, var(--color-accent) 8%, transparent)", border: "1px solid color-mix(in srgb, var(--color-accent) 25%, transparent)" }}>
+        <p className="flex items-center gap-2 text-sm font-semibold" style={{ color: "var(--color-accent)" }}>
           <ShieldCheck className="h-4 w-4" aria-hidden /> Regras obrigatórias (Lei eleitoral — TSE 23.755/2026)
         </p>
         <ul className="mt-2 space-y-1 text-[13px]" style={{ color: "var(--color-text-muted)" }}>
@@ -278,15 +278,15 @@ export default function VozClient({ inicial }: { inicial: Inicial }) {
         </p>
 
         {/* GUIA DE GRAVAÇÃO — dicas + roteiro pronto pra ler (ninguém sabe o que falar) */}
-        <div className="rounded-[16px] p-4" style={{ border: "1px solid rgba(215,243,106,0.3)", background: "rgba(215,243,106,0.06)" }}>
-          <p className="flex items-center gap-1.5 text-sm font-bold" style={{ color: "#D7F36A" }}>
+        <div className="rounded-[16px] p-4" style={{ border: "1px solid color-mix(in srgb, var(--color-accent) 30%, transparent)", background: "color-mix(in srgb, var(--color-accent) 6%, transparent)" }}>
+          <p className="flex items-center gap-1.5 text-sm font-bold" style={{ color: "var(--color-accent)" }}>
             <FileText className="h-4 w-4" aria-hidden /> Não sabe o que falar? É só ler este texto
           </p>
 
           <ul className="mt-3 space-y-1.5 text-[13px]" style={{ color: "var(--color-text-muted)" }}>
             {DICAS_GRAVACAO.map((d) => (
               <li key={d} className="flex gap-2">
-                <Check className="mt-0.5 h-3.5 w-3.5 shrink-0" style={{ color: "#D7F36A" }} aria-hidden />
+                <Check className="mt-0.5 h-3.5 w-3.5 shrink-0" style={{ color: "var(--color-accent)" }} aria-hidden />
                 <span>{d}</span>
               </li>
             ))}
@@ -298,7 +298,7 @@ export default function VozClient({ inicial }: { inicial: Inicial }) {
               type="button"
               onClick={copiarRoteiro}
               className="inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold"
-              style={{ border: "1px solid var(--color-border)", background: "var(--color-surface-elevated)", color: copiado ? "#D7F36A" : "var(--color-text-muted)" }}
+              style={{ border: "1px solid var(--color-border)", background: "var(--color-surface-elevated)", color: copiado ? "var(--color-accent)" : "var(--color-text-muted)" }}
             >
               {copiado ? <Check className="h-3.5 w-3.5" aria-hidden /> : <Copy className="h-3.5 w-3.5" aria-hidden />}
               {copiado ? "Copiado!" : "Copiar texto"}
@@ -326,12 +326,12 @@ export default function VozClient({ inicial }: { inicial: Inicial }) {
               type="button"
               onClick={iniciarGravacao}
               className="flex w-full cursor-pointer flex-col items-center justify-center gap-2 rounded-[14px] px-4 py-7 text-center transition-transform hover:scale-[1.01]"
-              style={{ border: "2px dashed rgba(215,243,106,0.5)", background: "rgba(215,243,106,0.07)" }}
+              style={{ border: "2px dashed color-mix(in srgb, var(--color-accent) 50%, transparent)", background: "color-mix(in srgb, var(--color-accent) 7%, transparent)" }}
             >
-              <span className="flex h-14 w-14 items-center justify-center rounded-full" style={{ background: "rgba(215,243,106,0.16)", color: "#D7F36A" }} aria-hidden>
+              <span className="flex h-14 w-14 items-center justify-center rounded-full" style={{ background: "color-mix(in srgb, var(--color-accent) 16%, transparent)", color: "var(--color-accent)" }} aria-hidden>
                 <Mic className="h-7 w-7" />
               </span>
-              <span className="text-[16px] font-bold" style={{ color: "#D7F36A" }}>Toque para gravar a voz</span>
+              <span className="text-[16px] font-bold" style={{ color: "var(--color-accent)" }}>Toque para gravar a voz</span>
               <span className="text-xs" style={{ color: "var(--color-text-subtle)" }}>Permita o microfone quando pedir · fale 2 a 3 min</span>
             </button>
           )}
@@ -347,7 +347,7 @@ export default function VozClient({ inicial }: { inicial: Inicial }) {
                 <button type="button" onClick={cancelarGravacao} className="inline-flex items-center gap-1.5 rounded-full px-4 py-2 text-sm font-semibold" style={{ border: "1px solid var(--color-border)", background: "var(--color-surface)", color: "var(--color-text-muted)" }}>
                   <Trash2 className="h-4 w-4" aria-hidden /> Cancelar
                 </button>
-                <button type="button" onClick={pararGravacao} className="inline-flex items-center gap-1.5 rounded-full px-5 py-2 text-sm font-bold" style={{ background: "#D7F36A", color: "#1B2206" }}>
+                <button type="button" onClick={pararGravacao} className="inline-flex items-center gap-1.5 rounded-full px-5 py-2 text-sm font-bold" style={{ background: "var(--color-accent)", color: "#1B2206" }}>
                   <Square className="h-4 w-4" aria-hidden /> Parar
                 </button>
               </div>
@@ -355,8 +355,8 @@ export default function VozClient({ inicial }: { inicial: Inicial }) {
           )}
 
           {!gravando && gravacao && (
-            <div className="flex flex-col gap-3 rounded-[14px] px-4 py-4" style={{ border: "2px solid #D7F36A", background: "rgba(215,243,106,0.08)" }}>
-              <span className="flex items-center gap-2 text-[15px] font-bold" style={{ color: "#D7F36A" }}>
+            <div className="flex flex-col gap-3 rounded-[14px] px-4 py-4" style={{ border: "2px solid var(--color-accent)", background: "color-mix(in srgb, var(--color-accent) 8%, transparent)" }}>
+              <span className="flex items-center gap-2 text-[15px] font-bold" style={{ color: "var(--color-accent)" }}>
                 <Check className="h-5 w-5" aria-hidden /> Gravação pronta {gravacaoSeg > 0 ? `(${fmtTempo(gravacaoSeg)})` : ""}
               </span>
               {gravacaoUrl && <audio controls src={gravacaoUrl} className="w-full" />}
@@ -380,12 +380,12 @@ export default function VozClient({ inicial }: { inicial: Inicial }) {
             <label
               htmlFor="amostra-voz"
               className="flex cursor-pointer flex-col items-center justify-center gap-2 rounded-[16px] px-4 py-6 text-center transition-transform hover:scale-[1.01]"
-              style={{ border: `2px dashed ${nomeArquivo ? "#D7F36A" : "var(--color-border)"}`, background: "var(--color-surface-elevated)" }}
+              style={{ border: `2px dashed ${nomeArquivo ? "var(--color-accent)" : "var(--color-border)"}`, background: "var(--color-surface-elevated)" }}
             >
-              <span className="flex h-11 w-11 items-center justify-center rounded-full" style={{ background: "rgba(215,243,106,0.12)", color: "#D7F36A" }} aria-hidden>
+              <span className="flex h-11 w-11 items-center justify-center rounded-full" style={{ background: "color-mix(in srgb, var(--color-accent) 12%, transparent)", color: "var(--color-accent)" }} aria-hidden>
                 {nomeArquivo ? <Check className="h-6 w-6" /> : <Upload className="h-6 w-6" />}
               </span>
-              <span className="text-[15px] font-bold" style={{ color: nomeArquivo ? "#D7F36A" : "var(--color-text)" }}>
+              <span className="text-[15px] font-bold" style={{ color: nomeArquivo ? "var(--color-accent)" : "var(--color-text)" }}>
                 {nomeArquivo ?? "Clique para subir o áudio"}
               </span>
               <span className="text-xs" style={{ color: "var(--color-text-subtle)" }}>
@@ -410,7 +410,7 @@ export default function VozClient({ inicial }: { inicial: Inicial }) {
           <input name="consentimento" type="checkbox" required className="mt-0.5" />
           <span>Confirmo que esta é a <strong>minha própria voz</strong> e autorizo a clonagem para mensagens do meu mandato, ciente das regras da lei eleitoral.</span>
         </label>
-        <button type="submit" disabled={pending} className="inline-flex items-center gap-2 rounded-full px-5 py-2.5 text-sm font-bold disabled:opacity-60" style={{ background: "#D7F36A", color: "#1B2206" }}>
+        <button type="submit" disabled={pending} className="inline-flex items-center gap-2 rounded-full px-5 py-2.5 text-sm font-bold disabled:opacity-60" style={{ background: "var(--color-accent)", color: "#1B2206" }}>
           {pending ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden /> : <Upload className="h-4 w-4" aria-hidden />}
           {temVoz ? "Reenviar amostra / reclonar" : "Clonar minha voz"}
         </button>
@@ -449,9 +449,9 @@ export default function VozClient({ inicial }: { inicial: Inicial }) {
                     disabled={pending}
                     className="rounded-full px-3.5 py-1.5 text-[13px] font-semibold transition-colors disabled:opacity-60"
                     style={{
-                      border: `1px solid ${ativoSel ? "#D7F36A" : "var(--color-border)"}`,
-                      background: ativoSel ? "rgba(215,243,106,0.16)" : "var(--color-surface-elevated)",
-                      color: ativoSel ? "#D7F36A" : "var(--color-text-muted)",
+                      border: `1px solid ${ativoSel ? "var(--color-accent)" : "var(--color-border)"}`,
+                      background: ativoSel ? "color-mix(in srgb, var(--color-accent) 16%, transparent)" : "var(--color-surface-elevated)",
+                      color: ativoSel ? "var(--color-accent)" : "var(--color-text-muted)",
                     }}
                   >
                     {p.rotulo}
@@ -474,7 +474,7 @@ export default function VozClient({ inicial }: { inicial: Inicial }) {
               <p className="text-sm font-semibold" style={{ color: "var(--color-text)" }}>{ativo ? "Voz do Mandato ligada" : "Voz do Mandato desligada"}</p>
               <p className="text-xs" style={{ color: "var(--color-text-subtle)" }}>{ativo ? "Pode gerar e enviar mensagens de voz." : "Pausada — nada é enviado até você ligar."}</p>
             </div>
-            <button type="button" onClick={toggle} disabled={pending} className="relative inline-flex h-8 w-14 shrink-0 items-center rounded-full transition-colors disabled:opacity-60" style={{ background: ativo ? "#D7F36A" : "var(--color-border)" }} aria-pressed={ativo}>
+            <button type="button" onClick={toggle} disabled={pending} className="relative inline-flex h-8 w-14 shrink-0 items-center rounded-full transition-colors disabled:opacity-60" style={{ background: ativo ? "var(--color-accent)" : "var(--color-border)" }} aria-pressed={ativo}>
               <span className="inline-block h-6 w-6 rounded-full bg-white transition-transform" style={{ transform: ativo ? "translateX(26px)" : "translateX(4px)" }} />
             </button>
           </div>
@@ -482,7 +482,7 @@ export default function VozClient({ inicial }: { inicial: Inicial }) {
       )}
 
       {msg && (
-        <div className="flex items-center gap-2 rounded-[12px] px-4 py-3 text-sm" style={{ background: msg.tipo === "ok" ? "rgba(215,243,106,0.14)" : "rgba(239,68,68,0.14)", color: msg.tipo === "ok" ? "#D7F36A" : "#F87171" }}>
+        <div className="flex items-center gap-2 rounded-[12px] px-4 py-3 text-sm" style={{ background: msg.tipo === "ok" ? "color-mix(in srgb, var(--color-accent) 14%, transparent)" : "rgba(239,68,68,0.14)", color: msg.tipo === "ok" ? "var(--color-accent)" : "#F87171" }}>
           {msg.tipo === "ok" && <Check className="h-4 w-4" aria-hidden />} {msg.texto}
         </div>
       )}

@@ -29,7 +29,7 @@ function reais(v: number): string {
 }
 
 const LEITURA_ESTILO: Record<Leitura, { rotulo: string; bg: string; cor: string }> = {
-  oportunidade: { rotulo: "🎯 Oportunidade", bg: "rgba(215,243,106,0.18)", cor: "var(--color-accent)" },
+  oportunidade: { rotulo: "🎯 Oportunidade", bg: "color-mix(in srgb, var(--color-accent) 18%, transparent)", cor: "var(--color-accent)" },
   fortaleza: { rotulo: "💪 Fortaleza", bg: "rgba(23,120,79,0.12)", cor: "#17784F" },
   fraco: { rotulo: "⚠️ Ponto fraco", bg: "rgba(220,70,70,0.14)", cor: "#C0392B" },
   acompanhar: { rotulo: "Acompanhar", bg: "var(--color-surface-elevated)", cor: "var(--color-text-muted)" },
@@ -89,7 +89,7 @@ export default function PrestacaoContasClient({ dados, ondeInvestir, ehAdmin }: 
           onClick={gerarPdf}
           disabled={gerando}
           className="inline-flex items-center gap-2 rounded-full px-5 py-2.5 text-sm font-bold transition-opacity hover:opacity-90 disabled:opacity-60"
-          style={{ background: "#D7F36A", color: "#16181D" }}
+          style={{ background: "var(--color-accent)", color: "#16181D" }}
         >
           {gerando ? <Loader2 size={16} className="animate-spin" /> : <Download size={16} />}
           {gerando ? "Gerando…" : "Gerar relatório (PDF)"}
@@ -171,7 +171,7 @@ export default function PrestacaoContasClient({ dados, ondeInvestir, ehAdmin }: 
                 <span className="text-[11px] font-bold" style={{ color: "var(--color-text-muted)" }}>{e.valor}</span>
                 <div
                   className="w-full rounded-t-[6px]"
-                  style={{ height: `${Math.max(4, (e.valor / maxEvol) * 120)}px`, background: e.valor > 0 ? "#D7F36A" : "var(--color-border)", minHeight: 4 }}
+                  style={{ height: `${Math.max(4, (e.valor / maxEvol) * 120)}px`, background: e.valor > 0 ? "var(--color-accent)" : "var(--color-border)", minHeight: 4 }}
                 />
                 <span className="text-[11px]" style={{ color: "var(--color-text-subtle)" }}>{e.mes}</span>
               </div>
@@ -199,7 +199,7 @@ export default function PrestacaoContasClient({ dados, ondeInvestir, ehAdmin }: 
                     <span className="font-bold" style={{ color: "var(--color-text-muted)" }}>{b.valor}</span>
                   </div>
                   <div className="h-2.5 w-full overflow-hidden rounded-full" style={{ background: "var(--color-surface-elevated)" }}>
-                    <div className="h-full rounded-full" style={{ width: `${(b.valor / maxBairro) * 100}%`, background: "#D7F36A" }} />
+                    <div className="h-full rounded-full" style={{ width: `${(b.valor / maxBairro) * 100}%`, background: "var(--color-accent)" }} />
                   </div>
                 </div>
               ))}

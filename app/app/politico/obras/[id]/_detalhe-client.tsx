@@ -95,14 +95,14 @@ export default function ObraDetalhe({ data }: { data: ObraDetalheData }) {
       <section className="gip-glass p-5">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div className="min-w-0">
-            <div className="flex items-center gap-2 text-xs font-semibold" style={{ color: obra.natureza === "execucao" ? "#7da9bf" : "#D7F36A" }}>
+            <div className="flex items-center gap-2 text-xs font-semibold" style={{ color: obra.natureza === "execucao" ? "#7da9bf" : "var(--color-accent)" }}>
               {obra.natureza === "execucao" ? <HardHat className="h-3.5 w-3.5" aria-hidden /> : <ShieldCheck className="h-3.5 w-3.5" aria-hidden />}
               {obra.natureza === "execucao" ? "Execução" : "Fiscalização"} · {TIPO[obra.tipo] ?? obra.tipo}
             </div>
             <h1 className="mt-1 font-heading text-xl font-bold" style={{ color: "var(--color-text)" }}>{obra.titulo}</h1>
             <div className="mt-1.5 flex flex-wrap items-center gap-2 text-xs" style={{ color: "var(--color-text-muted)" }}>
               {(str("bairro") || str("municipio")) && <span className="inline-flex items-center gap-1"><MapPin className="h-3 w-3" aria-hidden />{[str("bairro"), str("municipio")].filter(Boolean).join(" · ")}</span>}
-              {data.regional && <span className="rounded-full px-2 py-0.5" style={{ background: "rgba(215,243,106,0.14)", color: "#D7F36A" }}>Regional {data.regional}</span>}
+              {data.regional && <span className="rounded-full px-2 py-0.5" style={{ background: "color-mix(in srgb, var(--color-accent) 14%, transparent)", color: "var(--color-accent)" }}>Regional {data.regional}</span>}
               {obra.valor_cents > 0 && <span>{brl(obra.valor_cents)}</span>}
             </div>
             {data.emendaRotulo && <div className="mt-1 text-xs" style={{ color: "var(--color-text-subtle)" }}>Recurso: {data.emendaRotulo}</div>}
@@ -115,7 +115,7 @@ export default function ObraDetalhe({ data }: { data: ObraDetalheData }) {
           {(AVANCA[obra.status] ?? []).map((a) => (
             <button key={a.para} type="button" onClick={() => mudarStatus(a.para)} disabled={salvando}
               className="rounded-full px-3.5 py-1.5 text-xs font-semibold disabled:opacity-50"
-              style={a.para === "concluida" ? { background: "#17784F", color: "#fff" } : a.para === "cancelada" ? { border: "1px solid rgba(224,128,121,0.5)", color: "#E08079" } : { background: "#D7F36A", color: "#16181D" }}>
+              style={a.para === "concluida" ? { background: "#17784F", color: "#fff" } : a.para === "cancelada" ? { border: "1px solid rgba(224,128,121,0.5)", color: "#E08079" } : { background: "var(--color-accent)", color: "#16181D" }}>
               {a.label}
             </button>
           ))}
@@ -125,23 +125,23 @@ export default function ObraDetalhe({ data }: { data: ObraDetalheData }) {
 
       {/* Peso eleitoral do território — "você investiu onde te elegeu?" */}
       {data.peso && (data.peso.meusVotos > 0 || data.peso.leads > 0) && (
-        <section className="gip-glass p-5" style={{ background: "linear-gradient(180deg, rgba(215,243,106,0.06), transparent)" }}>
+        <section className="gip-glass p-5" style={{ background: "linear-gradient(180deg, color-mix(in srgb, var(--color-accent) 6%, transparent), transparent)" }}>
           <div className="mb-2 flex items-center gap-2">
-            <MapPin className="h-4 w-4" aria-hidden style={{ color: "#D7F36A" }} />
+            <MapPin className="h-4 w-4" aria-hidden style={{ color: "var(--color-accent)" }} />
             <h2 className="font-heading text-base font-bold" style={{ color: "var(--color-text)" }}>Peso eleitoral do território</h2>
           </div>
           <p className="mb-3 text-xs" style={{ color: "var(--color-text-subtle)" }}>
             O que {data.mandatoNome || "você"} fez e tem no bairro <strong style={{ color: "var(--color-text)" }}>{(obra.bairro as string) || "—"}</strong> — para saber se o recurso vai (ou foi) para onde há retorno.
           </p>
           <div className="grid grid-cols-3 gap-3">
-            <Peso valor={data.peso.meusVotos.toLocaleString("pt-BR")} label="Seus votos aqui" sub={data.peso.universo > 0 ? `${((data.peso.meusVotos / data.peso.universo) * 100).toFixed(1)}% do bairro` : "no último pleito"} accent="#D7F36A" />
+            <Peso valor={data.peso.meusVotos.toLocaleString("pt-BR")} label="Seus votos aqui" sub={data.peso.universo > 0 ? `${((data.peso.meusVotos / data.peso.universo) * 100).toFixed(1)}% do bairro` : "no último pleito"} accent="var(--color-accent)" />
             <Peso valor={data.peso.universo.toLocaleString("pt-BR")} label="Votos do cargo" sub="tamanho eleitoral" />
             <Peso valor={data.peso.leads.toLocaleString("pt-BR")} label="Sua base de contatos" sub="contatos no bairro" accent="#7da9bf" />
           </div>
         </section>
       )}
       {!data.mandatoNome && data.temBairro && (
-        <Link href="/app/politico/obras?mandato=1" className="block rounded-xl p-3.5 text-[13px]" style={{ background: "rgba(215,243,106,0.06)", border: "1px dashed rgba(215,243,106,0.4)", color: "var(--color-text-muted)" }}>
+        <Link href="/app/politico/obras?mandato=1" className="block rounded-xl p-3.5 text-[13px]" style={{ background: "color-mix(in srgb, var(--color-accent) 6%, transparent)", border: "1px dashed color-mix(in srgb, var(--color-accent) 40%, transparent)", color: "var(--color-text-muted)" }}>
           💡 <strong style={{ color: "var(--color-text)" }}>Vincule seu mandato no TSE</strong> (na lista de Obras) para ver, em cada obra, os votos que você fez naquele bairro — o retorno eleitoral do recurso.
         </Link>
       )}
@@ -176,20 +176,20 @@ function CaptacaoObraCard({ obraId, beneficiarios, vozArmada, politicoNome }: { 
     <section className="gip-glass p-5">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-2.5">
-          <Users className="h-5 w-5 shrink-0" aria-hidden style={{ color: "#D7F36A" }} />
+          <Users className="h-5 w-5 shrink-0" aria-hidden style={{ color: "var(--color-accent)" }} />
           <div>
             <h2 className="font-heading text-base font-bold" style={{ color: "var(--color-text)" }}>Captação de beneficiários</h2>
             <p className="text-xs" style={{ color: "var(--color-text-subtle)" }}>Dê este link à entidade/projeto: cada beneficiário cadastrado vira base sua, no bairro — transformando o recurso em voto mensurável. O link aceita quantos cadastros vierem.</p>
           </div>
         </div>
         <div className="text-right">
-          <div className="font-heading text-2xl font-bold tabular-nums" style={{ color: "#D7F36A" }}>{beneficiarios.toLocaleString("pt-BR")}</div>
+          <div className="font-heading text-2xl font-bold tabular-nums" style={{ color: "var(--color-accent)" }}>{beneficiarios.toLocaleString("pt-BR")}</div>
           <div className="text-[11px]" style={{ color: "var(--color-text-subtle)" }}>cadastrados</div>
         </div>
       </div>
       <div className="mt-3 flex flex-wrap items-center gap-2">
         <input readOnly value={link} className="wr-input flex-1 text-xs" onFocus={(e) => e.currentTarget.select()} style={{ minWidth: 200 }} />
-        <button type="button" onClick={copiar} className="inline-flex items-center gap-1.5 rounded-full px-4 py-2 text-sm font-semibold" style={{ background: "#D7F36A", color: "#16181D" }}>
+        <button type="button" onClick={copiar} className="inline-flex items-center gap-1.5 rounded-full px-4 py-2 text-sm font-semibold" style={{ background: "var(--color-accent)", color: "#16181D" }}>
           <Copy className="h-4 w-4" aria-hidden /> {copiado ? "Copiado!" : "Copiar link"}
         </button>
         {beneficiarios > 0 && (
@@ -297,7 +297,7 @@ function DadosCard({ obra, emendas, onSalvar }: { obra: Obra; emendas: ObraDetal
           </div>
           <L l="Vincular emenda"><select className="wr-input w-full" value={f.emenda_id} onChange={set("emenda_id")} disabled={emendas.length === 0}><option value="">{emendas.length === 0 ? "— nenhuma emenda cadastrada (cadastre em Emendas) —" : "— nenhuma —"}</option>{emendas.map((e) => <option key={e.id} value={e.id}>{e.numero ? `${e.numero}/${e.ano}` : `Emenda ${e.ano}`} — {e.descricao.slice(0, 40)}</option>)}</select></L>
           <L l="Observações"><textarea className="wr-input w-full" rows={2} value={f.observacoes} onChange={set("observacoes")} /></L>
-          <label className="flex items-start gap-3 rounded-xl p-3 cursor-pointer select-none" style={{ background: "rgba(215,243,106,0.06)", border: "1px solid rgba(215,243,106,0.25)" }}>
+          <label className="flex items-start gap-3 rounded-xl p-3 cursor-pointer select-none" style={{ background: "color-mix(in srgb, var(--color-accent) 6%, transparent)", border: "1px solid color-mix(in srgb, var(--color-accent) 25%, transparent)" }}>
             <input type="checkbox" checked={f.visibilidade === "publica"} onChange={(e) => setF((s) => ({ ...s, visibilidade: e.target.checked ? "publica" : "restrita" }))} className="mt-0.5 h-5 w-5 rounded accent-[#7E8F2B]" />
             <span>
               <span className="block text-sm font-semibold" style={{ color: "var(--color-text)" }}>Mostrar no Portal da Transparência</span>
@@ -305,7 +305,7 @@ function DadosCard({ obra, emendas, onSalvar }: { obra: Obra; emendas: ObraDetal
             </span>
           </label>
           <div className="flex gap-2">
-            <button type="button" onClick={salvar} disabled={salv} className="rounded-full px-4 py-2 text-sm font-semibold disabled:opacity-60" style={{ background: "#D7F36A", color: "#16181D" }}>{salv ? "Salvando…" : "Salvar"}</button>
+            <button type="button" onClick={salvar} disabled={salv} className="rounded-full px-4 py-2 text-sm font-semibold disabled:opacity-60" style={{ background: "var(--color-accent)", color: "#16181D" }}>{salv ? "Salvando…" : "Salvar"}</button>
             <button type="button" onClick={() => setEditando(false)} className="rounded-full px-4 py-2 text-sm font-semibold" style={{ border: "1px solid var(--color-border)", color: "var(--color-text-muted)" }}>Cancelar</button>
           </div>
         </div>
@@ -335,8 +335,8 @@ function VistoriasCard({ obraId, vistorias, onMudou, onPercentual }: { obraId: s
   return (
     <section className="gip-glass p-5">
       <div className="mb-3 flex items-center justify-between">
-        <h2 className="flex items-center gap-2 font-heading text-base font-bold" style={{ color: "var(--color-text)" }}><ClipboardCheck className="h-4 w-4" aria-hidden style={{ color: "#D7F36A" }} /> Vistorias</h2>
-        {!aberto && <button type="button" onClick={() => setAberto(true)} className="inline-flex items-center gap-1 rounded-full px-3 py-1.5 text-xs font-semibold" style={{ background: "#D7F36A", color: "#16181D" }}><Plus className="h-3.5 w-3.5" aria-hidden /> Registrar vistoria</button>}
+        <h2 className="flex items-center gap-2 font-heading text-base font-bold" style={{ color: "var(--color-text)" }}><ClipboardCheck className="h-4 w-4" aria-hidden style={{ color: "var(--color-accent)" }} /> Vistorias</h2>
+        {!aberto && <button type="button" onClick={() => setAberto(true)} className="inline-flex items-center gap-1 rounded-full px-3 py-1.5 text-xs font-semibold" style={{ background: "var(--color-accent)", color: "#16181D" }}><Plus className="h-3.5 w-3.5" aria-hidden /> Registrar vistoria</button>}
       </div>
 
       {aberto && (
@@ -365,7 +365,7 @@ function VistoriasCard({ obraId, vistorias, onMudou, onPercentual }: { obraId: s
           </div>
           <L l="Parecer"><textarea className="wr-input w-full" rows={2} value={parecer} onChange={(e) => setParecer(e.target.value)} placeholder="O que encontrou, providências, prazos." /></L>
           <div className="flex gap-2">
-            <button type="button" onClick={salvar} disabled={salv} className="rounded-full px-4 py-2 text-sm font-semibold disabled:opacity-60" style={{ background: "#D7F36A", color: "#16181D" }}>{salv ? "Salvando…" : "Salvar vistoria"}</button>
+            <button type="button" onClick={salvar} disabled={salv} className="rounded-full px-4 py-2 text-sm font-semibold disabled:opacity-60" style={{ background: "var(--color-accent)", color: "#16181D" }}>{salv ? "Salvando…" : "Salvar vistoria"}</button>
             <button type="button" onClick={() => setAberto(false)} className="rounded-full px-4 py-2 text-sm font-semibold" style={{ border: "1px solid var(--color-border)", color: "var(--color-text-muted)" }}>Cancelar</button>
           </div>
         </div>
@@ -417,14 +417,14 @@ function FotosCard({ obraId, fotos, onMudou }: { obraId: string; fotos: FotoObra
 
   return (
     <section className="gip-glass p-5">
-      <h2 className="mb-3 flex items-center gap-2 font-heading text-base font-bold" style={{ color: "var(--color-text)" }}><Camera className="h-4 w-4" aria-hidden style={{ color: "#D7F36A" }} /> Fotos & evidências</h2>
+      <h2 className="mb-3 flex items-center gap-2 font-heading text-base font-bold" style={{ color: "var(--color-text)" }}><Camera className="h-4 w-4" aria-hidden style={{ color: "var(--color-accent)" }} /> Fotos & evidências</h2>
       <div className="mb-3 flex flex-wrap items-center gap-2">
         <input className="wr-input flex-1" placeholder="Legenda (opcional)" value={legenda} onChange={(e) => setLegenda(e.target.value)} style={{ minWidth: 180 }} />
         <button type="button" onClick={() => navigator.geolocation?.getCurrentPosition((p) => setGeo({ lat: p.coords.latitude, lng: p.coords.longitude }))}
-          className="inline-flex items-center gap-1 rounded-full px-3 py-2 text-xs font-semibold" style={geo ? { background: "rgba(215,243,106,0.16)", color: "#D7F36A" } : { border: "1px solid var(--color-border)", color: "var(--color-text-muted)" }}>
+          className="inline-flex items-center gap-1 rounded-full px-3 py-2 text-xs font-semibold" style={geo ? { background: "color-mix(in srgb, var(--color-accent) 16%, transparent)", color: "var(--color-accent)" } : { border: "1px solid var(--color-border)", color: "var(--color-text-muted)" }}>
           <MapPin className="h-3.5 w-3.5" aria-hidden /> {geo ? "Local marcado" : "Marcar local"}
         </button>
-        <label className="inline-flex cursor-pointer items-center gap-1 rounded-full px-3 py-2 text-xs font-semibold" style={{ background: "#D7F36A", color: "#16181D" }}>
+        <label className="inline-flex cursor-pointer items-center gap-1 rounded-full px-3 py-2 text-xs font-semibold" style={{ background: "var(--color-accent)", color: "#16181D" }}>
           {enviando ? <><Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden /> Enviando…</> : <><Plus className="h-3.5 w-3.5" aria-hidden /> Adicionar</>}
           <input type="file" accept="image/*,application/pdf" className="hidden" disabled={enviando} onChange={(e) => { const f = e.target.files?.[0]; if (f) enviar(f); e.target.value = ""; }} />
         </label>

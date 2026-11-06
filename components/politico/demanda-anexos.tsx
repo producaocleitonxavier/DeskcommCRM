@@ -128,7 +128,7 @@ export default function DemandaAnexos({ demandaId, refreshToken = 0 }: { demanda
                 ) : (
                   <span
                     className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg"
-                    style={{ background: "rgba(215,243,106,0.12)", color: "#D7F36A" }}
+                    style={{ background: "color-mix(in srgb, var(--color-accent) 12%, transparent)", color: "var(--color-accent)" }}
                     aria-hidden
                   >
                     {img ? <ImageIcon className="h-5 w-5" /> : <FileText className="h-5 w-5" />}

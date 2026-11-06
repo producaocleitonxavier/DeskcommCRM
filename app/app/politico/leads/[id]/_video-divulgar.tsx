@@ -79,7 +79,7 @@ export default function VideoDivulgar({
             disabled={carregando && selId === v.id}
             className="flex items-center justify-between gap-2 rounded-lg px-3 py-2 text-left text-sm transition-colors disabled:opacity-60"
             style={{
-              background: selId === v.id ? "rgba(215,243,106,0.12)" : "var(--color-surface-elevated)",
+              background: selId === v.id ? "color-mix(in srgb, var(--color-accent) 12%, transparent)" : "var(--color-surface-elevated)",
               color: "var(--color-text)",
             }}
           >

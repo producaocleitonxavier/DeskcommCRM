@@ -143,14 +143,14 @@ export default function SetupWizard({ inicial }: { inicial: SetupInicial }) {
     return (
       <div className="gip-ambient-bg mx-auto max-w-[760px] px-4 py-7">
         <div className="gip-glass p-8 text-center sm:p-10">
-          <span className="mx-auto flex h-16 w-16 items-center justify-center rounded-full" style={{ background: "rgba(215,243,106,0.14)", color: "#8AA62E" }}>
+          <span className="mx-auto flex h-16 w-16 items-center justify-center rounded-full" style={{ background: "color-mix(in srgb, var(--color-accent) 14%, transparent)", color: "#8AA62E" }}>
             <PartyPopper size={30} />
           </span>
           <h1 className="font-heading mt-5 text-3xl font-bold">Tudo pronto! 🎉</h1>
           <p className="mx-auto mt-2 max-w-md text-sm" style={{ color: "var(--color-text-muted)" }}>
             O mandato está configurado. Suas informações foram salvas e já valem para os ofícios, o atendimento e a comunicação.
           </p>
-          <div className="mx-auto mt-6 max-w-md rounded-[14px] p-4 text-left" style={{ border: "1px solid rgba(215,243,106,0.3)", background: "rgba(215,243,106,0.06)" }}>
+          <div className="mx-auto mt-6 max-w-md rounded-[14px] p-4 text-left" style={{ border: "1px solid color-mix(in srgb, var(--color-accent) 30%, transparent)", background: "color-mix(in srgb, var(--color-accent) 6%, transparent)" }}>
             <p className="text-[13px] font-semibold">✨ A inteligência montou o conteúdo do seu mandato</p>
             <p className="mt-1 text-[13px]" style={{ color: "var(--color-text-muted)" }}>
               O conhecimento que a IA usa para atender foi gerado a partir do que você preencheu — portal, serviços com link e órgãos do seu município/estado. A equipe só ativa quando quiser.
@@ -160,7 +160,7 @@ export default function SetupWizard({ inicial }: { inicial: SetupInicial }) {
             type="button"
             onClick={() => router.push("/app/politico")}
             className="mt-7 inline-flex items-center gap-2 rounded-full px-7 py-3 text-sm font-bold transition-opacity hover:opacity-90"
-            style={{ background: "#D7F36A", color: "#16181D" }}
+            style={{ background: "var(--color-accent)", color: "#16181D" }}
           >
             Acessar a ferramenta agora <ArrowRight size={16} />
           </button>
@@ -189,9 +189,9 @@ export default function SetupWizard({ inicial }: { inicial: SetupInicial }) {
                   className="flex h-11 w-11 items-center justify-center rounded-full text-[17px] font-bold transition-colors"
                   style={
                     feito
-                      ? { background: "#D7F36A", color: "#16181D" }
+                      ? { background: "var(--color-accent)", color: "#16181D" }
                       : atual
-                        ? { background: "#16181D", color: "#FFFFFF", border: "2px solid #D7F36A" }
+                        ? { background: "#16181D", color: "#FFFFFF", border: "2px solid var(--color-accent)" }
                         : { background: "var(--color-surface-elevated)", color: "var(--color-text-subtle)" }
                   }
                 >
@@ -225,11 +225,11 @@ export default function SetupWizard({ inicial }: { inicial: SetupInicial }) {
                     onClick={() => escolherTipo(id)}
                     className="flex items-center gap-3.5 rounded-[16px] p-4 text-left transition-transform hover:scale-[1.01]"
                     style={{
-                      border: sel ? "2px solid #D7F36A" : "1px solid var(--color-border)",
-                      background: sel ? "rgba(215,243,106,0.08)" : "var(--color-surface-elevated)",
+                      border: sel ? "2px solid var(--color-accent)" : "1px solid var(--color-border)",
+                      background: sel ? "color-mix(in srgb, var(--color-accent) 8%, transparent)" : "var(--color-surface-elevated)",
                     }}
                   >
-                    <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full" style={{ background: sel ? "#D7F36A" : "rgba(215,243,106,0.12)", color: sel ? "#16181D" : "#8AA62E" }}>
+                    <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full" style={{ background: sel ? "var(--color-accent)" : "color-mix(in srgb, var(--color-accent) 12%, transparent)", color: sel ? "#16181D" : "#8AA62E" }}>
                       <Icon size={22} />
                     </span>
                     <div>
@@ -317,7 +317,7 @@ export default function SetupWizard({ inicial }: { inicial: SetupInicial }) {
                   type="button"
                   onClick={addServico}
                   className="mt-2.5 inline-flex items-center gap-1.5 rounded-full px-3.5 py-2 text-[13px] font-semibold transition-opacity hover:opacity-80"
-                  style={{ background: "rgba(215,243,106,0.12)", color: "#8AA62E" }}
+                  style={{ background: "color-mix(in srgb, var(--color-accent) 12%, transparent)", color: "#8AA62E" }}
                 >
                   <Plus size={15} /> Adicionar serviço
                 </button>
@@ -344,7 +344,7 @@ export default function SetupWizard({ inicial }: { inicial: SetupInicial }) {
             </div>
 
             {/* Prévia do que será gerado */}
-            <div className="mt-6 rounded-[14px] p-4" style={{ border: "1px solid rgba(215,243,106,0.3)", background: "rgba(215,243,106,0.06)" }}>
+            <div className="mt-6 rounded-[14px] p-4" style={{ border: "1px solid color-mix(in srgb, var(--color-accent) 30%, transparent)", background: "color-mix(in srgb, var(--color-accent) 6%, transparent)" }}>
               <div className="flex items-center gap-2">
                 <Sparkles size={18} style={{ color: "#8AA62E" }} />
                 <p className="text-sm font-bold">Quando você concluir, o sistema monta sozinho:</p>
@@ -377,7 +377,7 @@ export default function SetupWizard({ inicial }: { inicial: SetupInicial }) {
             onClick={() => podeAvancar && setPasso((p) => Math.min(ultimo, p + 1))}
             disabled={!podeAvancar}
             className="inline-flex items-center gap-2 rounded-full px-6 py-2.5 text-sm font-bold transition-opacity hover:opacity-90 disabled:opacity-40"
-            style={{ background: "#D7F36A", color: "#16181D" }}
+            style={{ background: "var(--color-accent)", color: "#16181D" }}
           >
             Avançar <ArrowRight size={16} />
           </button>
@@ -387,7 +387,7 @@ export default function SetupWizard({ inicial }: { inicial: SetupInicial }) {
             onClick={concluir}
             disabled={salvando}
             className="inline-flex items-center gap-2 rounded-full px-6 py-2.5 text-sm font-bold transition-opacity hover:opacity-90 disabled:opacity-60"
-            style={{ background: "#D7F36A", color: "#16181D" }}
+            style={{ background: "var(--color-accent)", color: "#16181D" }}
           >
             {salvando ? <Loader2 size={16} className="animate-spin" /> : <Check size={16} />}
             {salvando ? "Salvando…" : "Concluir configuração"}

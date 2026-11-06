@@ -63,8 +63,8 @@ export default function BaseTerritorioHero({ resumo }: { resumo: BaseTerritorioR
   return (
     <section className="wr-card overflow-hidden p-0">
       <button type="button" onClick={() => setAberto((v) => !v)} className="flex w-full items-center gap-3 px-4 py-3 text-left sm:px-5">
-        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl" style={{ background: "rgba(215,243,106,0.12)" }}>
-          <MapPin className="h-4 w-4" style={{ color: "#D7F36A" }} aria-hidden />
+        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl" style={{ background: "color-mix(in srgb, var(--color-accent) 12%, transparent)" }}>
+          <MapPin className="h-4 w-4" style={{ color: "var(--color-accent)" }} aria-hidden />
         </span>
         <span className="min-w-0 flex-1">
           <span className="block font-heading text-base font-bold" style={{ color: "var(--color-text)" }}>
@@ -93,7 +93,7 @@ export default function BaseTerritorioHero({ resumo }: { resumo: BaseTerritorioR
               return (
                 <li key={c.ibge} className="rounded-xl" style={{ background: estaAberta ? "var(--color-surface)" : "transparent" }}>
                   <button type="button" onClick={() => alternarCidade(c.nome)} className="flex w-full items-center gap-3 rounded-xl px-2.5 py-2 text-left transition-colors hover:bg-[var(--color-surface)]">
-                    <span className="w-5 shrink-0 text-center text-xs font-bold tabular-nums" style={{ color: i < 3 ? "#D7F36A" : "var(--color-text-subtle)" }}>
+                    <span className="w-5 shrink-0 text-center text-xs font-bold tabular-nums" style={{ color: i < 3 ? "var(--color-accent)" : "var(--color-text-subtle)" }}>
                       {i + 1}
                     </span>
                     <span className="min-w-0 flex-1">
@@ -105,7 +105,7 @@ export default function BaseTerritorioHero({ resumo }: { resumo: BaseTerritorioR
                         </span>
                       </span>
                       <span className="mt-1 block h-1.5 w-full overflow-hidden rounded-full" style={{ background: "rgba(255,255,255,0.06)" }}>
-                        <span className="block h-full rounded-full" style={{ width: `${larguraBarra}%`, background: "linear-gradient(90deg,#4352C4,#D7F36A)" }} />
+                        <span className="block h-full rounded-full" style={{ width: `${larguraBarra}%`, background: "linear-gradient(90deg,#4352C4,var(--color-accent))" }} />
                       </span>
                     </span>
                     <ChevronDown className="h-4 w-4 shrink-0 transition-transform" style={{ color: "var(--color-text-subtle)", transform: estaAberta ? "rotate(180deg)" : "none" }} aria-hidden />

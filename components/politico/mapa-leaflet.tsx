@@ -140,7 +140,7 @@ export default function MapaLeaflet({ pontos }: MapaLeafletProps) {
             type="button"
             onClick={() => setModo(m)}
             className="px-3 py-1.5 text-xs font-semibold transition-colors"
-            style={modo === m ? { background: "#D7F36A", color: "#16181D" } : { background: "transparent", color: "#E8E8E4" }}
+            style={modo === m ? { background: "var(--color-accent)", color: "#16181D" } : { background: "transparent", color: "#E8E8E4" }}
           >
             {m === "calor" ? "Calor" : "Bolhas"}
           </button>

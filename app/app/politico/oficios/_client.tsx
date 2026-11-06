@@ -76,7 +76,7 @@ export default function OficiosClient({
                 href={`/app/politico/demandas/${o.demandaId}`}
                 className="gip-glass gip-glass-hover flex items-start gap-3 p-4"
               >
-                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg" style={{ background: "rgba(215,243,106,0.12)", color: "#D7F36A" }} aria-hidden>
+                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg" style={{ background: "color-mix(in srgb, var(--color-accent) 12%, transparent)", color: "var(--color-accent)" }} aria-hidden>
                   <FileText className="h-5 w-5" />
                 </span>
                 <div className="min-w-0 flex-1">

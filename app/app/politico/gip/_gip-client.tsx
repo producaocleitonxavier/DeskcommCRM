@@ -61,7 +61,7 @@ export default function GipClient({ mandatoNome, cidade }: { mandatoNome: string
     <div className="mx-auto flex h-[calc(100vh-120px)] max-w-[840px] flex-col px-4 py-6">
       {/* Cabeçalho */}
       <header className="mb-4 flex items-center gap-2.5">
-        <span className="flex h-10 w-10 items-center justify-center rounded-xl" style={{ background: "rgba(215,243,106,0.16)", color: "#7E8F2B" }} aria-hidden><Sparkles className="h-5 w-5" /></span>
+        <span className="flex h-10 w-10 items-center justify-center rounded-xl" style={{ background: "color-mix(in srgb, var(--color-accent) 16%, transparent)", color: "#7E8F2B" }} aria-hidden><Sparkles className="h-5 w-5" /></span>
         <div>
           <h1 className="font-heading text-[24px] font-bold leading-tight" style={{ color: "var(--color-text)" }}>Pergunte ao GIP</h1>
           <p className="text-sm" style={{ color: "var(--color-text-muted)" }}>Pergunte à vontade. Eu cruzo voto, território, cadeiras, opinião e a sua base pra te responder na hora.</p>
@@ -72,7 +72,7 @@ export default function GipClient({ mandatoNome, cidade }: { mandatoNome: string
       <div className="min-h-0 flex-1 overflow-y-auto">
         {vazio ? (
           <div className="flex h-full flex-col items-center justify-center text-center">
-            <Sparkles className="h-10 w-10" style={{ color: "rgba(215,243,106,0.5)" }} aria-hidden />
+            <Sparkles className="h-10 w-10" style={{ color: "color-mix(in srgb, var(--color-accent) 50%, transparent)" }} aria-hidden />
             <p className="mt-4 max-w-md text-sm" style={{ color: "var(--color-text-subtle)" }}>
               Respostas ancoradas nos SEUS dados reais (votos do TSE + sua base de contatos). Comece com uma pergunta:
             </p>
@@ -87,7 +87,7 @@ export default function GipClient({ mandatoNome, cidade }: { mandatoNome: string
             {turnos.map((t, i) => (
               t.role === "user" ? (
                 <div key={i} className="flex justify-end">
-                  <div className="max-w-[80%] rounded-2xl rounded-br-sm px-4 py-2.5 text-sm" style={{ background: "#D7F36A", color: "#16181D" }}>{t.content}</div>
+                  <div className="max-w-[80%] rounded-2xl rounded-br-sm px-4 py-2.5 text-sm" style={{ background: "var(--color-accent)", color: "#16181D" }}>{t.content}</div>
                 </div>
               ) : (
                 <div key={i} className="flex flex-col gap-1.5">
@@ -106,9 +106,9 @@ export default function GipClient({ mandatoNome, cidade }: { mandatoNome: string
             {pensando && (
               <div className="flex items-center gap-2 text-sm" style={{ color: "var(--color-text-subtle)" }}>
                 <span className="flex gap-1">
-                  <span className="h-1.5 w-1.5 animate-bounce rounded-full" style={{ background: "#D7F36A", animationDelay: "0ms" }} />
-                  <span className="h-1.5 w-1.5 animate-bounce rounded-full" style={{ background: "#D7F36A", animationDelay: "120ms" }} />
-                  <span className="h-1.5 w-1.5 animate-bounce rounded-full" style={{ background: "#D7F36A", animationDelay: "240ms" }} />
+                  <span className="h-1.5 w-1.5 animate-bounce rounded-full" style={{ background: "var(--color-accent)", animationDelay: "0ms" }} />
+                  <span className="h-1.5 w-1.5 animate-bounce rounded-full" style={{ background: "var(--color-accent)", animationDelay: "120ms" }} />
+                  <span className="h-1.5 w-1.5 animate-bounce rounded-full" style={{ background: "var(--color-accent)", animationDelay: "240ms" }} />
                 </span>
                 consultando os dados…
               </div>
@@ -131,7 +131,7 @@ export default function GipClient({ mandatoNome, cidade }: { mandatoNome: string
           className="max-h-32 flex-1 resize-none bg-transparent px-2 py-1.5 text-sm outline-none"
           style={{ color: "var(--color-text)" }}
         />
-        <button type="submit" disabled={pensando || !input.trim()} className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full disabled:opacity-40" style={{ background: "#D7F36A", color: "#16181D" }} aria-label="Enviar">
+        <button type="submit" disabled={pensando || !input.trim()} className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full disabled:opacity-40" style={{ background: "var(--color-accent)", color: "#16181D" }} aria-label="Enviar">
           <ArrowUp className="h-4 w-4" />
         </button>
       </form>

@@ -73,7 +73,7 @@ function votosParaEntrar(cands: CandidatoCadeira[], seats: number, sq: string): 
 
 function moeda0(n: number): string { return n.toLocaleString("pt-BR"); }
 
-const CORES = ["#D7F36A", "#60A5FA", "#F59E0B", "#22C55E", "#A78BFA", "#F472B6", "#38BDF8", "#FB923C", "#4ADE80", "#E879F9"];
+const CORES = ["var(--color-accent)", "#60A5FA", "#F59E0B", "#22C55E", "#A78BFA", "#F472B6", "#38BDF8", "#FB923C", "#4ADE80", "#E879F9"];
 
 export default function CadeirasClient({ eleicoes, municipios }: { eleicoes: EleicaoOpt[]; municipios: MunicipioOpcao[] }) {
   const [electionId, setElectionId] = useState<number | "">("");
@@ -122,7 +122,7 @@ export default function CadeirasClient({ eleicoes, municipios }: { eleicoes: Ele
   return (
     <div className="gip-ambient-bg mx-auto max-w-[1040px] px-4 py-7 space-y-4">
       <header className="flex items-center gap-2.5">
-        <span className="flex h-10 w-10 items-center justify-center rounded-xl" style={{ background: "rgba(215,243,106,0.16)", color: "#7E8F2B" }} aria-hidden><Landmark className="h-5 w-5" /></span>
+        <span className="flex h-10 w-10 items-center justify-center rounded-xl" style={{ background: "color-mix(in srgb, var(--color-accent) 16%, transparent)", color: "#7E8F2B" }} aria-hidden><Landmark className="h-5 w-5" /></span>
         <div>
           <h1 className="font-heading text-[26px] font-bold leading-tight" style={{ color: "var(--color-text)" }}>Projeção de Cadeiras</h1>
           <p className="text-sm" style={{ color: "var(--color-text-muted)" }}>Quociente eleitoral e partidário: quantos votos pegam a cadeira — e quanto falta pra você entrar.</p>
@@ -173,7 +173,7 @@ export default function CadeirasClient({ eleicoes, municipios }: { eleicoes: Ele
 
             {/* Simulador por candidato */}
             <section className="gip-glass p-5">
-              <div className="mb-3 flex items-center gap-1.5 text-sm font-bold" style={{ color: "var(--color-text)" }}><Target className="h-4 w-4" style={{ color: "#D7F36A" }} aria-hidden /> Simule o seu candidato</div>
+              <div className="mb-3 flex items-center gap-1.5 text-sm font-bold" style={{ color: "var(--color-text)" }}><Target className="h-4 w-4" style={{ color: "var(--color-accent)" }} aria-hidden /> Simule o seu candidato</div>
               <div className="relative">
                 <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2" style={{ color: "var(--color-text-subtle)" }} aria-hidden />
                 <input value={busca} onChange={(e) => setBusca(e.target.value)} placeholder="Busque o candidato pelo nome…" className="wr-input w-full" style={{ paddingLeft: 36 }} />
@@ -209,7 +209,7 @@ export default function CadeirasClient({ eleicoes, municipios }: { eleicoes: Ele
                       <span>Votos simulados</span>
                       <span className="tabular-nums font-semibold" style={{ color: "var(--color-text)" }}>{moeda0(sim ?? candSel.votos)}</span>
                     </div>
-                    <input type="range" min={0} max={Math.max(candSel.votos * 3, alocEfetiva.qe * 2)} step={25} value={sim ?? candSel.votos} onChange={(e) => setSim(Number(e.target.value))} className="w-full accent-[#D7F36A]" />
+                    <input type="range" min={0} max={Math.max(candSel.votos * 3, alocEfetiva.qe * 2)} step={25} value={sim ?? candSel.votos} onChange={(e) => setSim(Number(e.target.value))} className="w-full accent-[var(--color-accent)]" />
                     <div className="mt-1 flex items-center justify-between text-[11px]" style={{ color: "var(--color-text-subtle)" }}>
                       <span>real: {moeda0(candSel.votos)} {candSel.eleitoReal ? "· eleito de fato" : "· não eleito"}</span>
                       {sim !== null && sim !== candSel.votos && <button type="button" onClick={() => setSim(candSel.votos)} className="font-semibold" style={{ color: "#60A5FA" }}>resetar</button>}
@@ -218,7 +218,7 @@ export default function CadeirasClient({ eleicoes, municipios }: { eleicoes: Ele
 
                   {!dentroSel && faltam > 0 && (
                     <div className="mt-3 text-sm" style={{ color: "var(--color-text)" }}>
-                      Faltam <strong style={{ color: "#D7F36A" }}>~{moeda0(faltam)} votos</strong> para entrar (mantendo os demais). Arraste acima para simular.
+                      Faltam <strong style={{ color: "var(--color-accent)" }}>~{moeda0(faltam)} votos</strong> para entrar (mantendo os demais). Arraste acima para simular.
                     </div>
                   )}
                   {!dentroSel && faltam === -1 && <div className="mt-3 text-sm" style={{ color: "var(--color-text-subtle)" }}>Entrada exige um salto grande de votos neste cenário.</div>}
@@ -234,7 +234,7 @@ export default function CadeirasClient({ eleicoes, municipios }: { eleicoes: Ele
                   const destaca = partidoSel?.sigla === p.sigla;
                   return (
                     <div key={p.sigla} className="flex items-center gap-3" style={{ opacity: destaca || !partidoSel ? 1 : 0.6 }}>
-                      <span className="w-20 shrink-0 text-sm font-semibold" style={{ color: destaca ? "#D7F36A" : "var(--color-text)" }}>{p.sigla}</span>
+                      <span className="w-20 shrink-0 text-sm font-semibold" style={{ color: destaca ? "var(--color-accent)" : "var(--color-text)" }}>{p.sigla}</span>
                       <div className="flex h-5 flex-1 items-center overflow-hidden rounded-md" style={{ background: "rgba(255,255,255,0.04)" }}>
                         <div className="h-full" style={{ width: `${(p.cadeiras / maxCad) * 100}%`, background: CORES[i % CORES.length], minWidth: p.cadeiras > 0 ? 24 : 0 }} />
                       </div>
@@ -262,8 +262,8 @@ export default function CadeirasClient({ eleicoes, municipios }: { eleicoes: Ele
 
 function Kpi({ valor, label, sub, destaque }: { valor: string; label: string; sub?: string; destaque?: boolean }) {
   return (
-    <div className="rounded-xl p-4" style={{ background: destaque ? "rgba(215,243,106,0.08)" : "rgba(255,255,255,0.03)", border: `1px solid ${destaque ? "rgba(215,243,106,0.3)" : "var(--color-border)"}` }}>
-      <div className="font-heading text-2xl font-bold tabular-nums leading-none" style={{ color: destaque ? "#D7F36A" : "var(--color-text)" }}>{valor}</div>
+    <div className="rounded-xl p-4" style={{ background: destaque ? "color-mix(in srgb, var(--color-accent) 8%, transparent)" : "rgba(255,255,255,0.03)", border: `1px solid ${destaque ? "color-mix(in srgb, var(--color-accent) 30%, transparent)" : "var(--color-border)"}` }}>
+      <div className="font-heading text-2xl font-bold tabular-nums leading-none" style={{ color: destaque ? "var(--color-accent)" : "var(--color-text)" }}>{valor}</div>
       <div className="mt-1 text-xs font-medium" style={{ color: "var(--color-text-muted)" }}>{label}</div>
       {sub && <div className="text-[11px]" style={{ color: "var(--color-text-subtle)" }}>{sub}</div>}
     </div>

@@ -129,7 +129,7 @@ export default function ImportarClient() {
       {/* ETAPA 1 — upload */}
       {etapa === "upload" && (
         <div className="gip-glass p-8 text-center">
-          <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-2xl" style={{ background: "rgba(215,243,106,0.16)", color: "#8AA62E" }}>
+          <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-2xl" style={{ background: "color-mix(in srgb, var(--color-accent) 16%, transparent)", color: "#8AA62E" }}>
             <FileSpreadsheet size={26} />
           </div>
           <p className="mx-auto max-w-md text-sm" style={{ color: "var(--color-text-muted)" }}>
@@ -156,7 +156,7 @@ export default function ImportarClient() {
       {/* ETAPA 2 — conferir o mapeamento */}
       {etapa === "mapear" && preview && (
         <>
-          <div className="gip-glass p-4" style={{ border: "1px solid rgba(92,127,35,0.4)", background: "rgba(215,243,106,0.06)" }}>
+          <div className="gip-glass p-4" style={{ border: "1px solid rgba(92,127,35,0.4)", background: "color-mix(in srgb, var(--color-accent) 6%, transparent)" }}>
             <p className="inline-flex items-center gap-1.5 text-sm font-bold" style={{ color: "#5C7F23" }}>
               <Sparkles size={15} /> O sistema entendeu {reconhecidos} coluna(s) sozinho.
             </p>
@@ -224,7 +224,7 @@ export default function ImportarClient() {
       {/* ETAPA 3 — resultado */}
       {etapa === "resultado" && relatorio && (
         <div className="gip-glass p-6 text-center">
-          <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-full" style={{ background: "rgba(215,243,106,0.16)", color: "#8AA62E" }}>
+          <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-full" style={{ background: "color-mix(in srgb, var(--color-accent) 16%, transparent)", color: "#8AA62E" }}>
             <CheckCircle2 size={28} />
           </div>
           <h2 className="font-heading text-2xl font-bold" style={{ color: "var(--color-text)" }}>Importação concluída!</h2>

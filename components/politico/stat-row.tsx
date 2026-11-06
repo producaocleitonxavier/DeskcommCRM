@@ -40,7 +40,7 @@ export function StatRow({ items, className }: StatRowProps) {
             {Icone && (
               <span
                 className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full"
-                style={{ background: "rgba(215,243,106,0.1)" }}
+                style={{ background: "color-mix(in srgb, var(--color-accent) 10%, transparent)" }}
                 aria-hidden
               >
                 <Icone className="h-4 w-4" style={{ color: "var(--color-accent)" }} />

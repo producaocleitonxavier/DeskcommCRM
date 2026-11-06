@@ -232,7 +232,7 @@ export default function BriefingClient({ eleicoes, municipios }: { eleicoes: Ele
         </div>
         <button type="button" onClick={gerar} disabled={!pronto || gerando}
           className="flex items-center gap-2 rounded-full px-5 py-2.5 text-sm font-semibold transition-opacity disabled:opacity-50"
-          style={{ background: "#D7F36A", color: "#16181D" }}>
+          style={{ background: "var(--color-accent)", color: "#16181D" }}>
           {gerando ? <><Loader2 className="h-4 w-4 animate-spin" aria-hidden /> Gerando dossiê…</> : <><Sparkles className="h-4 w-4" aria-hidden /> {dossie ? "Refazer dossiê" : "Gerar dossiê"}</>}
         </button>
       </div>
@@ -291,7 +291,7 @@ export default function BriefingClient({ eleicoes, municipios }: { eleicoes: Ele
               </p>
               <div className="space-y-1.5">
                 {/* Linha do próprio candidato — confronto direto no reduto */}
-                <div className="flex items-center gap-3 rounded-md px-1.5 py-1 text-sm" style={{ background: "rgba(215,243,106,0.14)" }}>
+                <div className="flex items-center gap-3 rounded-md px-1.5 py-1 text-sm" style={{ background: "color-mix(in srgb, var(--color-accent) 14%, transparent)" }}>
                   <span className="w-4 shrink-0 text-right text-xs" aria-hidden>★</span>
                   <span className="min-w-0 flex-1 truncate font-bold" style={{ color: "var(--color-text)" }}>
                     {cand?.nomeUrna} <span className="font-normal" style={{ color: "var(--color-text-muted)" }}>· você</span>

@@ -98,7 +98,7 @@ export default function MateriaisClient({ materiais }: MateriaisClientProps) {
                   className="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-sm font-medium transition-colors"
                   style={
                     ativo
-                      ? { background: "#D7F36A", color: "#14181F" }
+                      ? { background: "var(--color-accent)", color: "#14181F" }
                       : {
                           background: "var(--color-surface-elevated)",
                           color: "var(--color-text-muted)",
@@ -138,9 +138,9 @@ export default function MateriaisClient({ materiais }: MateriaisClientProps) {
                         <div className="flex h-full w-full flex-col items-center justify-center gap-2 px-4 text-center">
                           <span
                             className="flex h-14 w-14 items-center justify-center rounded-full"
-                            style={{ background: "rgba(215,243,106,0.12)", border: "1px solid rgba(215,243,106,0.25)" }}
+                            style={{ background: "color-mix(in srgb, var(--color-accent) 12%, transparent)", border: "1px solid color-mix(in srgb, var(--color-accent) 25%, transparent)" }}
                           >
-                            <Icone className="h-6 w-6" style={{ color: "#D7F36A" }} aria-hidden />
+                            <Icone className="h-6 w-6" style={{ color: "var(--color-accent)" }} aria-hidden />
                           </span>
                           <span className="line-clamp-3 text-sm font-semibold" style={{ color: "rgba(255,255,255,0.85)" }}>
                             {m.titulo}
@@ -161,7 +161,7 @@ export default function MateriaisClient({ materiais }: MateriaisClientProps) {
                   {/* Corpo */}
                   <div className="flex flex-1 flex-col gap-2 p-4">
                     {m.categoria?.trim() && (
-                      <span className="w-fit rounded-full px-2 py-0.5 text-[11px] font-semibold" style={{ background: "rgba(215,243,106,0.16)", color: "#5B6B16" }}>
+                      <span className="w-fit rounded-full px-2 py-0.5 text-[11px] font-semibold" style={{ background: "color-mix(in srgb, var(--color-accent) 16%, transparent)", color: "#5B6B16" }}>
                         {m.categoria}
                       </span>
                     )}

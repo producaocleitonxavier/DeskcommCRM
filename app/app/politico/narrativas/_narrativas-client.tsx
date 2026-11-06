@@ -107,7 +107,7 @@ export default function NarrativasClient({ temMandato, mandatoNome, electionId, 
       {/* Cabeçalho */}
       <header>
         <div className="flex items-center gap-2.5">
-          <span className="flex h-10 w-10 items-center justify-center rounded-full" style={{ background: "rgba(215,243,106,0.16)", color: "#7E8F2B" }} aria-hidden>
+          <span className="flex h-10 w-10 items-center justify-center rounded-full" style={{ background: "color-mix(in srgb, var(--color-accent) 16%, transparent)", color: "#7E8F2B" }} aria-hidden>
             <Sparkles className="h-5 w-5" />
           </span>
           <div>
@@ -146,7 +146,7 @@ export default function NarrativasClient({ temMandato, mandatoNome, electionId, 
                 onClick={gerar}
                 disabled={!bairro || gerando}
                 className="inline-flex items-center justify-center gap-2 rounded-full px-5 py-2.5 text-sm font-semibold disabled:opacity-50"
-                style={{ background: "#D7F36A", color: "#16181D" }}
+                style={{ background: "var(--color-accent)", color: "#16181D" }}
               >
                 <Sparkles className="h-4 w-4" aria-hidden /> {gerando ? "Gerando…" : narrativa ? "Regenerar" : "Gerar narrativa"}
               </button>
@@ -180,7 +180,7 @@ export default function NarrativasClient({ temMandato, mandatoNome, electionId, 
 
               {/* Fontes (o retrato de dados do bairro) */}
               <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-4">
-                <Fonte valor={narrativa.fontes.meusVotos.toLocaleString("pt-BR")} label="seus votos no bairro" sub={narrativa.fontes.universo > 0 ? `${((narrativa.fontes.meusVotos / narrativa.fontes.universo) * 100).toFixed(1)}% do bairro` : "—"} accent="#D7F36A" />
+                <Fonte valor={narrativa.fontes.meusVotos.toLocaleString("pt-BR")} label="seus votos no bairro" sub={narrativa.fontes.universo > 0 ? `${((narrativa.fontes.meusVotos / narrativa.fontes.universo) * 100).toFixed(1)}% do bairro` : "—"} accent="var(--color-accent)" />
                 <Fonte valor={narrativa.fontes.leads.toLocaleString("pt-BR")} label="sua base de contatos" sub={`${narrativa.fontes.quentes}q · ${narrativa.fontes.mornos}m · ${narrativa.fontes.frios}f`} />
                 <Fonte valor={String(narrativa.fontes.demAbertas)} label="demandas abertas" sub={`${narrativa.fontes.demResolvidas} resolvidas`} />
                 <Fonte valor={String(narrativa.fontes.liderancas)} label="lideranças aqui" sub={narrativa.fontes.adversarios[0] ? `rival: ${narrativa.fontes.adversarios[0].nome}` : "—"} />

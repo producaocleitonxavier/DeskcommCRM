@@ -214,7 +214,7 @@ export default function LocalDetalheClient({
         </Link>
         <div className="mt-3 flex flex-wrap items-center gap-3">
           <h1 className="font-heading text-3xl font-bold leading-tight">{local.nome}</h1>
-          <span className="rounded-full px-2.5 py-0.5 text-xs font-semibold" style={{ background: "rgba(215,243,106,0.16)", color: "#5B6B16" }}>
+          <span className="rounded-full px-2.5 py-0.5 text-xs font-semibold" style={{ background: "color-mix(in srgb, var(--color-accent) 16%, transparent)", color: "#5B6B16" }}>
             {TIPO_LABEL[local.tipo] ?? "Local"}
           </span>
           {local.zona && (
@@ -300,7 +300,7 @@ export default function LocalDetalheClient({
                   <div className="flex flex-wrap items-center gap-2 text-xs" style={{ color: "var(--color-text-subtle)" }}>
                     <span>{data(ev.data)}{ev.publicoEstimado ? ` · ~${ev.publicoEstimado} pessoas` : ""}</span>
                     {ev.ebook && (
-                      <span className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 font-semibold" style={{ background: "rgba(215,243,106,0.16)", color: "#5B6B16" }}>
+                      <span className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 font-semibold" style={{ background: "color-mix(in srgb, var(--color-accent) 16%, transparent)", color: "#5B6B16" }}>
                         <BookOpen className="h-3 w-3" aria-hidden /> {ev.ebook}
                       </span>
                     )}

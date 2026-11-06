@@ -357,7 +357,7 @@ function PreviewMobile({ perguntas, titulo, descricao, nomeMandato, onClose }: {
                     </div>
                   ))}
                 </div>
-                <button type="button" onClick={() => total > 0 && setStep(0)} style={{ width: "100%", background: "#D7F36A", color: "#16181D", border: "none", borderRadius: 14, padding: 13, fontWeight: 900, fontSize: 13 }}>
+                <button type="button" onClick={() => total > 0 && setStep(0)} style={{ width: "100%", background: "var(--color-accent)", color: "#16181D", border: "none", borderRadius: 14, padding: 13, fontWeight: 900, fontSize: 13 }}>
                   Responder agora →
                 </button>
               </div>
@@ -369,7 +369,7 @@ function PreviewMobile({ perguntas, titulo, descricao, nomeMandato, onClose }: {
                     <span>{Math.round((((step as number) + 1) / total) * 100)}%</span>
                   </div>
                   <div style={{ height: 3, background: "rgba(255,255,255,0.08)", borderRadius: 3 }}>
-                    <div style={{ height: 3, borderRadius: 3, width: `${(((step as number) + 1) / total) * 100}%`, background: "#D7F36A" }} />
+                    <div style={{ height: 3, borderRadius: 3, width: `${(((step as number) + 1) / total) * 100}%`, background: "var(--color-accent)" }} />
                   </div>
                 </div>
                 <div style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 18, padding: 16 }}>
@@ -379,7 +379,7 @@ function PreviewMobile({ perguntas, titulo, descricao, nomeMandato, onClose }: {
                 </div>
                 <div className="flex gap-2">
                   {(step as number) > 0 && <button type="button" onClick={() => setStep((step as number) - 1)} style={{ flex: 1, background: "rgba(255,255,255,0.06)", color: "#9FB0C8", border: "none", borderRadius: 12, padding: 12, fontWeight: 700, fontSize: 12 }}>← Voltar</button>}
-                  <button type="button" onClick={() => (step as number) >= total - 1 ? setStep("intro") : setStep((step as number) + 1)} style={{ flex: 2, background: "#D7F36A", color: "#16181D", border: "none", borderRadius: 12, padding: 12, fontWeight: 900, fontSize: 13 }}>
+                  <button type="button" onClick={() => (step as number) >= total - 1 ? setStep("intro") : setStep((step as number) + 1)} style={{ flex: 2, background: "var(--color-accent)", color: "#16181D", border: "none", borderRadius: 12, padding: 12, fontWeight: 900, fontSize: 13 }}>
                     {(step as number) >= total - 1 ? "Enviar ✓" : "Próxima →"}
                   </button>
                 </div>

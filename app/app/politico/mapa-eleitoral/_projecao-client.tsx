@@ -20,7 +20,7 @@ import { MiniMarkdown } from "@/components/politico/mini-markdown";
 const CLASSE: Record<ClasseZona, { label: string; bg: string; color: string; dica: string }> = {
   reduto: { label: "Reduto", bg: "rgba(23,120,79,0.18)", color: "#58C08A", dica: "Você é forte aqui — defenda a base." },
   consolidar: { label: "Consolidar", bg: "rgba(255,255,255,0.08)", color: "rgba(255,255,255,0.75)", dica: "Presença média — reforce para virar reduto." },
-  oportunidade: { label: "Oportunidade", bg: "rgba(215,243,106,0.16)", color: "#D7F36A", dica: "Muito voto e pouca presença sua — é onde crescer." },
+  oportunidade: { label: "Oportunidade", bg: "color-mix(in srgb, var(--color-accent) 16%, transparent)", color: "var(--color-accent)", dica: "Muito voto e pouca presença sua — é onde crescer." },
   deserto: { label: "Deserto", bg: "rgba(163,48,42,0.16)", color: "#E08079", dica: "Zero base cadastrada num lugar que vota — território em branco." },
 };
 
@@ -96,7 +96,7 @@ export default function ProjecaoClient({ eleicoes, municipios }: { eleicoes: Ele
             {(["zona", "regional"] as const).map((g) => (
               <button key={g} type="button" onClick={() => trocarGran(g)}
                 className="rounded-full px-3.5 py-1.5 text-xs font-semibold capitalize transition-colors"
-                style={gran === g ? { background: "#D7F36A", color: "#14181F" } : { color: "rgba(255,255,255,0.75)" }}>
+                style={gran === g ? { background: "var(--color-accent)", color: "#14181F" } : { color: "rgba(255,255,255,0.75)" }}>
                 {g}
               </button>
             ))}
@@ -107,11 +107,11 @@ export default function ProjecaoClient({ eleicoes, municipios }: { eleicoes: Ele
 
       {/* Explicação didática da régua */}
       <div className="flex items-start gap-2.5 rounded-xl p-3.5" style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.1)" }}>
-        <Info className="mt-0.5 h-4 w-4 shrink-0" aria-hidden style={{ color: "#D7F36A" }} />
+        <Info className="mt-0.5 h-4 w-4 shrink-0" aria-hidden style={{ color: "var(--color-accent)" }} />
         <p className="text-[13px] leading-relaxed" style={{ color: "rgba(255,255,255,0.72)" }}>
           <strong style={{ color: "#fff" }}>Como ler:</strong> <strong style={{ color: "#fff" }}>Universo</strong> = votos que o cargo teve na {unidade} (o tamanho do mercado eleitoral ali).{" "}
           <strong style={{ color: "#fff" }}>Sua base</strong> = contatos do seu CRM mapeados nessa {unidade}. <strong style={{ color: "#fff" }}>Cobertura</strong> = sua presença frente ao volume de voto.
-          A <strong style={{ color: "#fff" }}>classificação</strong> aponta onde defender (Reduto), reforçar (Consolidar) e, principalmente, <strong style={{ color: "#D7F36A" }}>onde crescer</strong> (Oportunidade/Deserto: muito voto, pouca presença sua).
+          A <strong style={{ color: "#fff" }}>classificação</strong> aponta onde defender (Reduto), reforçar (Consolidar) e, principalmente, <strong style={{ color: "var(--color-accent)" }}>onde crescer</strong> (Oportunidade/Deserto: muito voto, pouca presença sua).
         </p>
       </div>
 
@@ -132,7 +132,7 @@ export default function ProjecaoClient({ eleicoes, municipios }: { eleicoes: Ele
           {/* KPIs */}
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
             <Kpi label="Universo de votos" value={resumoAtivo.universoTotal.toLocaleString("pt-BR")} sub={`cargo em ${munNome}`} />
-            <Kpi label="Sua base de contatos" value={resumoAtivo.baseTotal.toLocaleString("pt-BR")} sub="contatos mapeados" accent="#D7F36A" />
+            <Kpi label="Sua base de contatos" value={resumoAtivo.baseTotal.toLocaleString("pt-BR")} sub="contatos mapeados" accent="var(--color-accent)" />
             <Kpi label="Cobertura média" value={pct(resumoAtivo.coberturaMedia)} sub="base / universo" />
             <Kpi label={emRegional ? "Regionais" : "Zonas"} value={String(itens.length)} sub="no município" />
           </div>
@@ -140,7 +140,7 @@ export default function ProjecaoClient({ eleicoes, municipios }: { eleicoes: Ele
           {/* Tabela por zona/regional */}
           <section className="gip-glass p-0">
             <div className="flex items-center gap-2 px-5 pt-4 pb-2">
-              <TrendingUp className="h-4 w-4" aria-hidden style={{ color: "#D7F36A" }} />
+              <TrendingUp className="h-4 w-4" aria-hidden style={{ color: "var(--color-accent)" }} />
               <h3 className="font-heading text-base font-bold" style={{ color: "#fff" }}>Projeção por {unidade} — {munNome}</h3>
             </div>
             <div className="overflow-auto" style={{ maxHeight: 560 }}>
@@ -169,7 +169,7 @@ export default function ProjecaoClient({ eleicoes, municipios }: { eleicoes: Ele
                         <td className="px-4 py-3 text-right align-top tabular-nums">
                           <div className="font-bold" style={{ color: "#fff" }}>{it.universo.toLocaleString("pt-BR")}</div>
                           <div className="mt-1 h-1.5 w-full overflow-hidden rounded-full" style={{ background: "rgba(255,255,255,0.08)" }}>
-                            <div className="h-full rounded-full" style={{ width: `${(it.universo / maxUniverso) * 100}%`, background: "#D7F36A" }} />
+                            <div className="h-full rounded-full" style={{ width: `${(it.universo / maxUniverso) * 100}%`, background: "var(--color-accent)" }} />
                           </div>
                         </td>
                         <td className="px-4 py-3 text-right align-top tabular-nums font-semibold" style={{ color: it.base > 0 ? "#fff" : "rgba(255,255,255,0.4)" }}>
@@ -200,7 +200,7 @@ export default function ProjecaoClient({ eleicoes, municipios }: { eleicoes: Ele
           <section className="gip-glass p-5">
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div className="flex items-center gap-2.5">
-                <Sparkles className="h-5 w-5 shrink-0" style={{ color: "#D7F36A" }} aria-hidden />
+                <Sparkles className="h-5 w-5 shrink-0" style={{ color: "var(--color-accent)" }} aria-hidden />
                 <div>
                   <h3 className="font-heading text-base font-bold" style={{ color: "#fff" }}>Leitura estratégica (IA)</h3>
                   <p className="text-xs" style={{ color: "rgba(255,255,255,0.55)" }}>Onde focar em {munNome}: redutos a defender e oportunidades a conquistar.</p>
@@ -208,7 +208,7 @@ export default function ProjecaoClient({ eleicoes, municipios }: { eleicoes: Ele
               </div>
               <button type="button" onClick={gerarAnalise} disabled={gerandoIA}
                 className="flex items-center gap-2 rounded-full px-4 py-2 text-sm font-semibold transition-opacity disabled:opacity-60"
-                style={{ background: "#D7F36A", color: "#16181D" }}>
+                style={{ background: "var(--color-accent)", color: "#16181D" }}>
                 {gerandoIA
                   ? <><Loader2 className="h-4 w-4 animate-spin" aria-hidden /> Analisando…</>
                   : <><Sparkles className="h-4 w-4" aria-hidden /> {analise ? "Refazer análise" : "Gerar análise"}</>}

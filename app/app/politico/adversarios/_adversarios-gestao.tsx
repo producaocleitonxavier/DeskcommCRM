@@ -63,7 +63,7 @@ export default function AdversariosGestao({ adversarios, sinais }: { adversarios
         <div className="flex flex-wrap items-end gap-2">
           <input value={nome} onChange={(e) => setNome(e.target.value)} onKeyDown={(e) => e.key === "Enter" && adicionar()} placeholder="Nome do adversário (ex.: Fulano de Tal)" className="wr-input min-w-[200px] flex-1" />
           <input value={handle} onChange={(e) => setHandle(e.target.value)} onKeyDown={(e) => e.key === "Enter" && adicionar()} placeholder="@instagram (opcional)" className="wr-input min-w-[150px]" style={{ flex: "0 1 180px" }} />
-          <button type="button" onClick={adicionar} disabled={addPend || !nome.trim()} className="inline-flex items-center gap-1.5 rounded-full px-4 py-2 text-sm font-semibold disabled:opacity-50" style={{ background: "#D7F36A", color: "#16181D" }}>
+          <button type="button" onClick={adicionar} disabled={addPend || !nome.trim()} className="inline-flex items-center gap-1.5 rounded-full px-4 py-2 text-sm font-semibold disabled:opacity-50" style={{ background: "var(--color-accent)", color: "#16181D" }}>
             <UserPlus className="h-4 w-4" aria-hidden /> Adicionar
           </button>
           <button type="button" onClick={varrer} disabled={sinPend || adversarios.length === 0} className="inline-flex items-center gap-1.5 rounded-full px-4 py-2 text-sm font-semibold disabled:opacity-50" style={{ border: "1px solid var(--color-border)", color: "var(--color-text-muted)" }}>

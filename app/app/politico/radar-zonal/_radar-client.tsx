@@ -131,19 +131,19 @@ export default function RadarClient({ eleicoes, municipios }: { eleicoes: Eleica
 
           {/* Cabeçalho */}
           <header className="wr-card overflow-hidden p-0">
-            <div className="flex flex-wrap items-center justify-between gap-4 p-6 sm:p-7" style={{ background: "linear-gradient(135deg,#0E1116 0%,#14181F 55%,#1A2410 100%)" }}>
+            <div className="flex flex-wrap items-center justify-between gap-4 p-6 sm:p-7" style={{ background: "var(--hero-grad)" }}>
               <div className="flex items-center gap-4">
-                <div style={{ border: "2px solid rgba(215,243,106,0.35)", borderRadius: "9999px" }}>
+                <div style={{ border: "2px solid color-mix(in srgb, var(--color-accent) 35%, transparent)", borderRadius: "9999px" }}>
                   <CandFoto sq={cand.sq} ano={eleicaoAno} nome={cand.nomeUrna} size={56} />
                 </div>
                 <div>
-                  <div className="text-[11px] font-bold uppercase tracking-[0.18em]" style={{ color: "#D7F36A" }}>{munNome} · {zonas.length} zonas</div>
+                  <div className="text-[11px] font-bold uppercase tracking-[0.18em]" style={{ color: "var(--color-accent)" }}>{munNome} · {zonas.length} zonas</div>
                   <h2 className="font-heading text-2xl font-bold leading-tight" style={{ color: "#FFFFFF" }}>{cand.nomeUrna}</h2>
                   <div className="text-sm" style={{ color: "rgba(255,255,255,0.55)" }}>nº {cand.nr}{cand.partido ? ` · ${cand.partido}` : ""}</div>
                 </div>
               </div>
               <div className="flex gap-6">
-                <Kpi valor={totVotos.toLocaleString("pt-BR")} label="votos no município" cor="#D7F36A" />
+                <Kpi valor={totVotos.toLocaleString("pt-BR")} label="votos no município" cor="var(--color-accent)" />
                 <Kpi valor={topZona ? `Zona ${topZona.zona}` : "—"} label="zona líder" cor="#FFFFFF" />
                 <Kpi valor={totLeads.toLocaleString("pt-BR")} label="leads do CRM" cor="#84cc16" />
               </div>
@@ -206,7 +206,7 @@ export default function RadarClient({ eleicoes, municipios }: { eleicoes: Eleica
                     <h4 className="mb-1.5 flex items-center gap-1 text-xs font-bold uppercase tracking-wide" style={{ color: "var(--color-text-subtle)" }}><MapPin className="h-3 w-3" aria-hidden /> Bairros abrangidos ({zonaAtual.bairros.length})</h4>
                     <div className="flex flex-wrap gap-1.5">
                       {zonaAtual.bairros.slice(0, 24).map((b) => (
-                        <span key={b} className="rounded-full px-2 py-0.5 text-[11px]" style={{ background: "rgba(215,243,106,0.12)", color: "var(--color-text)" }}>{b}</span>
+                        <span key={b} className="rounded-full px-2 py-0.5 text-[11px]" style={{ background: "color-mix(in srgb, var(--color-accent) 12%, transparent)", color: "var(--color-text)" }}>{b}</span>
                       ))}
                       {zonaAtual.bairros.length === 0 && <span className="text-xs" style={{ color: "var(--color-text-subtle)" }}>Sem bairros mapeados.</span>}
                     </div>

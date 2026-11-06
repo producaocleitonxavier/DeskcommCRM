@@ -138,15 +138,15 @@ export default function RaioXClient({ eleicoes, municipios: municipiosLista }: {
 
         {/* Cabeçalho do candidato */}
         <header className="wr-card overflow-hidden p-0">
-          <div className="p-6 sm:p-7" style={{ background: "linear-gradient(135deg,#0E1116 0%,#14181F 55%,#1A2410 100%)" }}>
+          <div className="p-6 sm:p-7" style={{ background: "var(--hero-grad)" }}>
             <div className="flex flex-wrap items-start justify-between gap-4">
               <div className="flex min-w-0 items-start gap-4">
-                <div style={{ border: "2px solid rgba(215,243,106,0.35)", borderRadius: "9999px" }}>
+                <div style={{ border: "2px solid color-mix(in srgb, var(--color-accent) 35%, transparent)", borderRadius: "9999px" }}>
                   <CandFoto sq={cand.sq} ano={eleicaoAno} nome={cand.nomeUrna} size={64} />
                 </div>
                 <div className="min-w-0">
                 <div className="flex items-center gap-2">
-                  <span className="text-[11px] font-bold uppercase tracking-[0.18em]" style={{ color: "#D7F36A" }}>
+                  <span className="text-[11px] font-bold uppercase tracking-[0.18em]" style={{ color: "var(--color-accent)" }}>
                     nº {cand.nr}{cand.partido ? ` · ${cand.partido}` : ""}
                   </span>
                   {cand.situacao && (
@@ -162,7 +162,7 @@ export default function RaioXClient({ eleicoes, municipios: municipiosLista }: {
               </div>
               <div className="flex gap-6">
                 <div className="text-right">
-                  <div className="font-heading text-3xl font-bold tabular-nums" style={{ color: "#D7F36A" }}>{cand.votos.toLocaleString("pt-BR")}</div>
+                  <div className="font-heading text-3xl font-bold tabular-nums" style={{ color: "var(--color-accent)" }}>{cand.votos.toLocaleString("pt-BR")}</div>
                   <div className="text-[11px] uppercase tracking-wide" style={{ color: "rgba(255,255,255,0.5)" }}>votos (total)</div>
                 </div>
                 <div className="text-right">
@@ -243,7 +243,7 @@ export default function RaioXClient({ eleicoes, municipios: municipiosLista }: {
       <section className="gip-glass overflow-hidden p-0">
         <div className="flex items-center justify-between px-5 pt-4 pb-2">
           <h3 className="font-heading text-base font-bold" style={{ color: "var(--color-text)" }}>
-            <Trophy className="mr-1 inline h-4 w-4" aria-hidden style={{ color: "#D7F36A" }} />
+            <Trophy className="mr-1 inline h-4 w-4" aria-hidden style={{ color: "var(--color-accent)" }} />
             {q ? "Resultados" : "Mais votados"}
           </h3>
           <span className="text-xs" style={{ color: "var(--color-text-subtle)" }}>clique para o raio-x</span>
@@ -340,7 +340,7 @@ function ListaDrill({ linhas, selecionavel, selecionado, onSelecionar, placehold
             {selecionavel ? (
               <button type="button" onClick={() => onSelecionar?.(l)}
                 className="flex w-full items-center gap-3 px-5 py-2.5 text-left transition-colors hover:bg-[rgba(0,0,0,0.03)]"
-                style={selecionado === l.chave ? { background: "rgba(215,243,106,0.12)" } : undefined}>
+                style={selecionado === l.chave ? { background: "color-mix(in srgb, var(--color-accent) 12%, transparent)" } : undefined}>
                 {conteudo}
               </button>
             ) : (

@@ -40,7 +40,7 @@ const STATUS_LABELS: Record<string, string> = {
 
 const STATUS_COR: Record<string, { bg: string; fg: string }> = {
   scheduled: { bg: "rgba(59,130,246,0.16)", fg: "#93C5FD" },
-  confirmed: { bg: "rgba(215,243,106,0.16)", fg: "#D7F36A" },
+  confirmed: { bg: "color-mix(in srgb, var(--color-accent) 16%, transparent)", fg: "var(--color-accent)" },
   in_progress: { bg: "rgba(245,158,11,0.16)", fg: "#FBBF24" },
   completed: { bg: "rgba(74,222,128,0.16)", fg: "#4ADE80" },
   cancelled: { bg: "rgba(239,68,68,0.16)", fg: "#F87171" },
@@ -160,7 +160,7 @@ export default async function EventosPage({
 
               <div className="flex flex-wrap items-center gap-2">
                 {e.type && (
-                  <span className="rounded-full px-2.5 py-0.5 text-xs font-semibold" style={{ background: "rgba(215,243,106,0.14)", color: "#B7C96A" }}>
+                  <span className="rounded-full px-2.5 py-0.5 text-xs font-semibold" style={{ background: "color-mix(in srgb, var(--color-accent) 14%, transparent)", color: "#B7C96A" }}>
                     {TYPE_LABELS[e.type] ?? e.type}
                   </span>
                 )}
@@ -174,7 +174,7 @@ export default async function EventosPage({
                   </span>
                 )}
                 {e.estimated_audience != null && <span>Estimado: <strong style={{ color: "var(--color-text)" }}>{e.estimated_audience.toLocaleString("pt-BR")}</strong></span>}
-                {e.actual_attendance != null && <span>Presença: <strong style={{ color: "#D7F36A" }}>{e.actual_attendance.toLocaleString("pt-BR")}</strong></span>}
+                {e.actual_attendance != null && <span>Presença: <strong style={{ color: "var(--color-accent)" }}>{e.actual_attendance.toLocaleString("pt-BR")}</strong></span>}
               </div>
             </div>
           ))}
@@ -203,7 +203,7 @@ function FilterLink({ href, label, active }: { href: string; label: string; acti
       className="rounded-full px-3 py-1 text-xs font-semibold transition-colors"
       style={
         active
-          ? { background: "#D7F36A", color: "#1B2206" }
+          ? { background: "var(--color-accent)", color: "#1B2206" }
           : { background: "var(--color-surface-elevated)", color: "var(--color-text-muted)", border: "1px solid var(--color-border)" }
       }
     >

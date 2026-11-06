@@ -190,7 +190,7 @@ export function FunnelBoard({ data, className, showConversion = true }: FunnelBo
               {d.href && (
                 <span
                   className="w-4 shrink-0 text-right text-base opacity-0 transition-opacity group-hover:opacity-70"
-                  style={{ color: "var(--color-accent, #D7F36A)" }}
+                  style={{ color: "var(--color-accent, var(--color-accent))" }}
                   aria-hidden
                 >
                   →
