@@ -67,12 +67,14 @@ interface LinhaDeContato {
   is_personal: boolean;
   is_anonymized: boolean;
   consent: unknown;
+  /** `contacts.em_quarentena` (9091) — contato frio de lista importada. */
+  em_quarentena: boolean;
   /** Só quando o texto pede `{{contato.x}}` — ver `colunasDeContato`. */
   custom_fields?: unknown;
 }
 
 /** As colunas de sempre, mais os campos personalizados quando o TEXTO os usa. */
-const COLUNAS_DO_CONTATO = "id, name, display_name, phone_number, is_blocked, is_personal, is_anonymized, consent";
+const COLUNAS_DO_CONTATO = "id, name, display_name, phone_number, is_blocked, is_personal, is_anonymized, consent, em_quarentena";
 
 /**
  * Os candidatos do recorte, e o recibo de truncamento.
@@ -315,6 +317,7 @@ export async function buscarCandidatos(
       pessoal: l.is_personal === true,
       anonimizado: l.is_anonymized,
       recusouMarketing: recusouMarketing(l.consent),
+      quarentena: l.em_quarentena === true,
       ...(camposDoTexto.contato ? { contato: mapaDeJson(l.custom_fields) } : {}),
       ...(leads ? { lead: leads.get(l.id) ?? null } : {}),
     })),

@@ -218,6 +218,11 @@ export async function importarContatos(formData: FormData): Promise<ResultadoImp
       source_metadata: { importado_em: new Date().toISOString(), lote },
       consent: {},
       custom_fields: custom,
+      // ANTI-BAN (9091): lista importada nasce FRIA = em quarentena. Não entra no
+      // disparo em massa até esquentar por engajamento (a pessoa responder). É o
+      // que impede repetir os 184 disparos que queimaram o chip do Gabinete
+      // Digital. Origem morna (QR/inbound/evento/cadastro manual) nasce sem isto.
+      em_quarentena: true,
     };
     const cpf = col(linha, "cpf");
     if (cpf) Object.assign(insertRow, await camposCpfParaGravar(admin, cpf));

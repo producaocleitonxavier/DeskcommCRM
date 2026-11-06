@@ -78,6 +78,12 @@ export const MOTIVOS_DE_EXCLUSAO = [
   "suprimido",
   /** Spec 21: o contato virou pessoal e saiu da campanha com a saída própria. */
   "contato_pessoal",
+  /**
+   * Anti-ban (9091): contato FRIO de lista importada, ainda não esquentado por
+   * engajamento. Não entra no disparo em massa — é o que impede repetir o blast
+   * de lista fria que queima chip/BM. Sai da quarentena quando a pessoa responde.
+   */
+  "quarentena",
 ] as const;
 
 export type MotivoDeExclusao = (typeof MOTIVOS_DE_EXCLUSAO)[number];
@@ -95,4 +101,5 @@ export const TEXTO_DA_EXCLUSAO: Record<MotivoDeExclusao, string> = {
   ja_em_campanha: "Já está em outra campanha ainda não concluída",
   suprimido: "Está na lista de exclusão de campanhas",
   contato_pessoal: "Contato marcado como pessoal",
+  quarentena: "Em quarentena — contato frio ainda não aceitou o relacionamento",
 };

@@ -37,6 +37,13 @@ export interface ContatoParaDecidir {
   anonimizado: boolean;
   /** `consent.marketing.declined_at` — recusa REGISTRADA, diferente de ausência. */
   recusouMarketing: boolean;
+  /**
+   * `contacts.em_quarentena` (9091) — contato FRIO de lista importada que ainda
+   * não esquentou por engajamento. Não recebe disparo em massa. É obrigatório
+   * (não opcional) de propósito: todo ponto que decide quem recebe TEM de dizer
+   * se o contato está em quarentena — esquecer essa decisão é como furar a trava.
+   */
+  quarentena: boolean;
 }
 
 /** O telefone que o canal aceita: E.164 com `+`, o mesmo CHECK de `contacts.phone_number`. */
@@ -55,6 +62,12 @@ export function motivoParaExcluir(c: ContatoParaDecidir): MotivoDeExclusao | nul
   if (c.pessoal) return "contato_pessoal";
   if (c.anonimizado) return "anonimizado";
   if (c.recusouMarketing) return "recusou_marketing";
+  // Anti-ban: contato frio de lista importada não recebe disparo em massa até
+  // esquentar. Vem DEPOIS dos vetos irrevogáveis (opt-out/pessoal/anonimizado/
+  // recusa) — um bloqueado é "opt_out", não "quarentena" — e ANTES dos vetos de
+  // telefone, porque "em quarentena" é o motivo que o operador precisa ler para
+  // um cadastro frio, mesmo que ele também esteja sem telefone.
+  if (c.quarentena) return "quarentena";
   const telefone = c.telefone?.trim() ?? "";
   if (telefone === "") return "sem_telefone";
   if (!E164.test(telefone)) return "telefone_invalido";

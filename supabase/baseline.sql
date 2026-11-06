@@ -56597,4 +56597,15 @@ create policy tenant_isolation_pol_cobaia_semente_all on public.pol_cobaia_semen
 revoke all on public.pol_cobaia_semente from anon;
 grant select, insert, update, delete on public.pol_cobaia_semente to authenticated;
 
+-- ---- quarentena de contatos (migration 9091) ----
+-- Contato frio (lista importada) retido fora do disparo em massa até esquentar
+-- por engajamento. Trava anti-ban. Default false = base própria segue elegível.
+alter table public.contacts
+  add column if not exists em_quarentena boolean not null default false;
+comment on column public.contacts.em_quarentena is
+  'Contato frio (lista importada) retido FORA do disparo em massa até esquentar por engajamento. Trava anti-ban: impede repetir o blast de lista fria que queima chip/BM.';
+create index if not exists idx_contacts_em_quarentena
+  on public.contacts (organization_id)
+  where em_quarentena;
+
 notify pgrst, 'reload schema';

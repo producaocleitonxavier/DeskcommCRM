@@ -22,6 +22,7 @@ function candidato(over: Partial<CandidatoDaAudiencia> = {}): CandidatoDaAudienc
     anonimizado: over.anonimizado ?? false,
     pessoal: over.pessoal ?? false,
     recusouMarketing: over.recusouMarketing ?? false,
+    quarentena: over.quarentena ?? false,
   };
 }
 
@@ -72,6 +73,30 @@ describe("vetos por pessoa", () => {
 
   it("contato completo passa", () => {
     expect(motivoParaExcluir(candidato())).toBeNull();
+  });
+
+  it("contato FRIO em quarentena não recebe disparo em massa (anti-ban)", () => {
+    // A trava que impede repetir o blast de lista fria do Gabinete Digital.
+    expect(motivoParaExcluir(candidato({ quarentena: true }))).toBe("quarentena");
+  });
+
+  it("controle negativo: SEM a quarentena, o mesmo contato passa", () => {
+    // Anti-tautologia: prova que é a quarentena que segura — não outro veto.
+    expect(motivoParaExcluir(candidato({ quarentena: false }))).toBeNull();
+  });
+
+  it("opt-out, pessoal, anonimizado e recusa VENCEM a quarentena (vetos mais fortes)", () => {
+    // Um bloqueado que também é frio é "opt_out", não "quarentena": o motivo
+    // mais forte e irrevogável é o que o operador precisa ler.
+    expect(motivoParaExcluir(candidato({ quarentena: true, bloqueado: true }))).toBe("opt_out");
+    expect(motivoParaExcluir(candidato({ quarentena: true, pessoal: true }))).toBe("contato_pessoal");
+    expect(motivoParaExcluir(candidato({ quarentena: true, anonimizado: true }))).toBe("anonimizado");
+    expect(motivoParaExcluir(candidato({ quarentena: true, recusouMarketing: true }))).toBe("recusou_marketing");
+  });
+
+  it("a quarentena vem ANTES do telefone: um frio sem telefone é 'quarentena', não 'sem_telefone'", () => {
+    // O motivo útil para um cadastro frio é a quarentena, mesmo faltando telefone.
+    expect(motivoParaExcluir(candidato({ quarentena: true, telefone: null }))).toBe("quarentena");
   });
 
   it("recusa de marketing só conta quando REGISTRADA", () => {
@@ -159,6 +184,22 @@ describe("classificação da lista", () => {
       ctx({ suprimidos: new Set(["h:+5548999990000"]) }),
     );
     expect(linhas[0]!.motivo).toBe("suprimido");
+  });
+
+  it("lista com frios em quarentena: só o morno sai elegível, e a prévia conta a quarentena", () => {
+    // O caso central do anti-ban: uma lista importada (fria) + um contato morno.
+    // Nenhum frio entra no disparo; a prévia mostra ao operador "N em quarentena".
+    const linhas = classificarAudiencia(
+      [
+        candidato({ contactId: "frio1", telefone: "+5548999990001", quarentena: true }),
+        candidato({ contactId: "frio2", telefone: "+5548999990002", quarentena: true }),
+        candidato({ contactId: "morno", telefone: "+5548999990003", quarentena: false }),
+      ],
+      ctx(),
+    );
+    expect(linhas.map((l) => l.motivo)).toEqual(["quarentena", "quarentena", null]);
+    expect(linhas.filter((l) => l.elegivel)).toHaveLength(1);
+    expect(contarExclusoes(linhas)).toEqual({ quarentena: 2 });
   });
 
   it("conta os motivos para a prévia", () => {

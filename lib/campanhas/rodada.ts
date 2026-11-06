@@ -232,6 +232,7 @@ interface DestinatarioRow {
     is_personal: boolean;
     is_anonymized: boolean;
     consent: unknown;
+    em_quarentena: boolean;
   } | null;
 }
 
@@ -244,7 +245,7 @@ async function rodarUmaCampanha(
     .from("campaign_recipients")
     .select(
       "id, contact_id, recipient_address, rendered_body, " +
-        "contacts(id, name, display_name, phone_number, is_blocked, is_personal, is_anonymized, consent)",
+        "contacts(id, name, display_name, phone_number, is_blocked, is_personal, is_anonymized, consent, em_quarentena)",
     )
     .eq("campaign_id", campanha.id)
     .eq("status", "pending")
@@ -301,6 +302,7 @@ async function rodarUmaCampanha(
     pessoal: !!contato?.is_personal,
     anonimizado: !!contato?.is_anonymized,
     recusouMarketing: recusouMarketing(contato?.consent),
+    quarentena: !!contato?.em_quarentena,
   });
   if (motivo) {
     await admin

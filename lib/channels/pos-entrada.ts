@@ -157,6 +157,9 @@ export async function aplicarEfeitosPosEntrada(
   }
 
   await aplicarOptOut(admin, entrada);
+  // RELACIONAMENTO INSTANTÂNEO (9091): quem RESPONDE aceitou o contato → sai da
+  // quarentena. Depois do opt-out de propósito: um STOP bloqueia, não esquenta.
+  await esquentarPorEngajamento(admin, entrada);
   // Contato pessoal (spec 21, etapa 6): a mensagem já está gravada, com o
   // carimbo de não-lida que o ingest gravou — mas NADA nasce dela: sem negócio,
   // sem campanha, sem follow-up, sem IA (fila e resposta). O STOP continua na
@@ -276,6 +279,43 @@ async function ehContatoPessoal(admin: Admin, entrada: EntradaDeMensagem): Promi
       detail: err instanceof Error ? err.message.slice(0, 160) : "desconhecido",
     });
     return false;
+  }
+}
+
+/**
+ * RELACIONAMENTO INSTANTÂNEO (anti-ban, 9091): quem RESPONDE aceitou o contato e
+ * sai da quarentena — passa a poder receber o relacionamento. Um pedido de saída
+ * NÃO esquenta ninguém: `aplicarOptOut` já rodou acima e bloqueou, então aqui a
+ * gente nem toca. Só escreve quando a linha ESTAVA em quarentena (`.eq(...true)`),
+ * para não gerar escrita nem auditoria à toa no caso comum — a base morna, que
+ * nunca entrou em quarentena, responde o dia todo e isto não faz nada.
+ *
+ * Fail-open como o resto do arquivo: a mensagem já está gravada. Se a escrita
+ * falhar, o contato CONTINUA em quarentena — o lado seguro (no máximo não recebe
+ * disparo) — e a ingestão nunca vira 500.
+ */
+async function esquentarPorEngajamento(admin: Admin, entrada: EntradaDeMensagem): Promise<void> {
+  if (ehPedidoDeOptOut(entrada.texto)) return;
+  try {
+    const { error } = await admin
+      .from("contacts")
+      .update({ em_quarentena: false })
+      .eq("organization_id", entrada.organizationId)
+      .eq("id", entrada.contactId)
+      .eq("em_quarentena", true);
+    if (error) {
+      logger.warn("pos-entrada: contato nao saiu da quarentena (segue frio, lado seguro)", {
+        organization_id: entrada.organizationId,
+        contact_id: entrada.contactId,
+        detail: error.message.slice(0, 160),
+      });
+    }
+  } catch (err) {
+    logger.warn("pos-entrada: esquentar por engajamento falhou (segue frio)", {
+      organization_id: entrada.organizationId,
+      contact_id: entrada.contactId,
+      detail: err instanceof Error ? err.message.slice(0, 160) : "desconhecido",
+    });
   }
 }
 
