@@ -41,6 +41,8 @@ const NAV_ALLOWLIST: Record<string, string> = {
     "padrões de campanha da organização, alcançados pelo botão dentro da lista de Campanhas — é ajuste que se faz uma vez, não tela de uso diário",
   "/app/campaigns/saude":
     "Saúde dos Números (entregabilidade): o veredito do freio anti-bloqueio por número, alcançado pelo botão 'Saúde dos números' no topo da lista de Disparos — é onde se olha a saúde antes de disparar, não item de menu próprio",
+  "/app/campaigns/cobaia":
+    "Laboratório de disparo (cobaia): painel de controle do teste em escala — modo laboratório, botão de pânico e allowlist de telefones-semente; alcançado pelo botão no painel de Saúde dos Números, é ferramenta de admin do teste, não tela de uso diário",
   "/app/settings/tenant/whatsapp": "redirect legado para /app/connections; mantido por links salvos",
   "/app/settings/canal-oficial":
     "redirect para /app/connections?aba=oficial desde o PR #105 — conectar canal passou a ter um lugar só. Conexões é a porta; a aba é navegação interna dela",

@@ -101,6 +101,7 @@ export default function SaudeDosNumerosClient({
         acoes={[
           { href: "/app/campaigns", label: "Voltar aos Disparos" },
           { href: "/app/connections", label: "Ajustar proteção" },
+          { href: "/app/campaigns/cobaia", label: "Laboratório de teste" },
         ]}
         extra={
           <span
