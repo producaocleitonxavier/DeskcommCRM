@@ -74,6 +74,10 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   let orgFuso: string | null = null;
   let enrolled = false;
   let needsMfaGate = false;
+  // Tema claro da org (Névoa Pro) → rail marinho na casca. Passado por PROP até
+  // o Sidebar (mesmo caminho do `sidebarCollapsed`, que é confiável), em vez de
+  // depender do contexto de auth no cliente.
+  let temaClaro = false;
 
   if (activeOrg) {
     const admin = createAdminClient();
@@ -165,6 +169,8 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       // Mesma linha de `settings` já lida acima — nenhuma consulta a mais.
       capacidades_ligadas: capacidadesLigadas(orgRow?.settings, modulos),
     };
+    // Mesma leitura — vira a PROP temaClaro que desce até o Sidebar (rail marinho).
+    temaClaro = ((orgRow?.settings as { tema?: unknown } | null)?.tema) === "claro";
 
     // A faixa do teste grátis (spec da cobrança §9): uma consulta a mais SÓ com
     // a cobrança ligada (quem não administra só vê o atraso). Falha aberta na INFORMAÇÃO: sem a
@@ -295,6 +301,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       <VoiceCallProvider>
         <AppShell
           sidebarCollapsed={collapsed}
+          temaClaro={temaClaro}
           podeAtender={Boolean(activeOrg && roleAtLeast(activeOrg.role, "agent"))}
         >
           {children}
