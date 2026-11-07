@@ -85,16 +85,16 @@ export function FunnelBoard({ data, className, showConversion = true }: FunnelBo
             {showConversion && conv !== null && (
               <div className="flex py-1.5 sm:pl-[164px]">
                 <span
-                  className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-[11px]"
+                  className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs"
                   style={{
-                    background: "color-mix(in srgb, var(--color-accent) 12%, transparent)",
-                    border: "1px solid color-mix(in srgb, var(--color-accent) 22%, transparent)",
-                    color: "var(--color-text-muted, rgba(255,255,255,0.6))",
+                    background: "color-mix(in srgb, var(--accent-ink, var(--color-accent)) 12%, transparent)",
+                    border: "1px solid color-mix(in srgb, var(--accent-ink, var(--color-accent)) 28%, transparent)",
+                    color: "var(--color-text-muted, rgba(255,255,255,0.72))",
                   }}
                 >
-                  <span className="leading-none" aria-hidden style={{ color: "var(--color-accent)" }}>↓</span>
-                  <span className="tabular-nums font-bold" style={{ color: "var(--color-accent)" }}>{fmtPct(conv)}</span>
-                  <span className="font-medium opacity-80">conversão</span>
+                  <span className="leading-none" aria-hidden style={{ color: "var(--accent-ink, var(--color-accent))" }}>↓</span>
+                  <span className="tabular-nums font-bold" style={{ color: "var(--accent-ink, var(--color-accent))" }}>{fmtPct(conv)}</span>
+                  <span className="font-semibold">conversão</span>
                 </span>
               </div>
             )}
@@ -176,10 +176,10 @@ export function FunnelBoard({ data, className, showConversion = true }: FunnelBo
                   {d.value.toLocaleString("pt-BR")}
                 </div>
                 <span
-                  className="inline-block rounded-full px-1.5 py-0.5 text-[10px] font-semibold tabular-nums"
+                  className="inline-block rounded-full px-2 py-0.5 text-[11px] font-bold tabular-nums"
                   style={{
-                    background: vazio ? "color-mix(in srgb, var(--color-text) 6%, transparent)" : `${d.color}1f`,
-                    color: vazio ? "var(--color-text-subtle, rgba(255,255,255,0.5))" : "var(--color-text-muted, rgba(255,255,255,0.78))",
+                    background: vazio ? "color-mix(in srgb, var(--color-text) 6%, transparent)" : `${d.color}30`,
+                    color: vazio ? "var(--color-text-subtle, rgba(255,255,255,0.5))" : "var(--color-text, #E8E8E4)",
                   }}
                 >
                   {fmtPct(share)}

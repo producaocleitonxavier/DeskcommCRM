@@ -1065,10 +1065,12 @@
   --color-surface-elevated: #f5f7fa;
   --color-overlay: rgba(16,24,36,0.35);
 
-  /* Texto navy-tinta quase preto = NÚMEROS pretos + leitura máxima */
+  /* Texto navy-tinta quase preto = NÚMEROS pretos + leitura máxima.
+     O "subtle" era #8893a6 (cinza-claro demais sobre branco — legenda e
+     contagens dos quadros brancos sumiam); escurecido p/ leitura confortável. */
   --color-text: #141b26;
-  --color-text-muted: #56617a;
-  --color-text-subtle: #8893a6;
+  --color-text-muted: #4b5668;
+  --color-text-subtle: #5e6b80;
 
   --color-border: #dfe4ea;
   --color-border-strong: #cdd4dd;
