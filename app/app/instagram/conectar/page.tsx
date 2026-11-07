@@ -150,7 +150,7 @@ export default async function ConectarInstagramPage({
     <div className="mx-auto max-w-[1140px] px-4 py-7 space-y-5">
       {/* ── Hero ────────────────────────────────────────────────── */}
       <header>
-        <Link href="/app/instagram" className="text-sm font-semibold" style={{ color: "var(--color-accent)" }}>
+        <Link href="/app/instagram" className="text-sm font-semibold" style={{ color: "var(--accent-ink, var(--color-accent))" }}>
           ← Instagram
         </Link>
         <div className="flex items-center gap-3.5 mt-3">
@@ -218,7 +218,7 @@ export default async function ConectarInstagramPage({
                     // eslint-disable-next-line @next/next/no-img-element
                     <img src={perfil.fotoPerfil} alt={nomeConta} className="w-full h-full object-cover" />
                   ) : (
-                    <span className="text-2xl font-bold" style={{ color: "var(--color-accent)" }}>{nomeConta.slice(0, 1).toUpperCase()}</span>
+                    <span className="text-2xl font-bold" style={{ color: "var(--accent-ink, var(--color-accent))" }}>{nomeConta.slice(0, 1).toUpperCase()}</span>
                   )}
                 </span>
               </span>
@@ -228,7 +228,7 @@ export default async function ConectarInstagramPage({
                   <h2 className="font-heading text-[22px] font-bold leading-tight" style={{ color: "#F3F4EC" }}>@{nomeConta}</h2>
                   <span
                     className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[12px] font-bold"
-                    style={{ background: "color-mix(in srgb, var(--color-accent) 18%, transparent)", color: "var(--color-accent)" }}
+                    style={{ background: "color-mix(in srgb, var(--color-accent) 18%, transparent)", color: "var(--accent-ink, var(--color-accent))" }}
                   >
                     <span className="w-1.5 h-1.5 rounded-full" style={{ background: "var(--color-accent)" }} />
                     Conectado
@@ -346,7 +346,7 @@ export default async function ConectarInstagramPage({
             "App do Instagram configurado no servidor (IG_APP_ID e IG_APP_SECRET)",
           ].map((t) => (
             <li key={t} className="flex items-start gap-2">
-              <span className="mt-0.5 text-xs" style={{ color: "var(--color-accent)" }}>●</span>
+              <span className="mt-0.5 text-xs" style={{ color: "var(--accent-ink, var(--color-accent))" }}>●</span>
               {t}
             </li>
           ))}

@@ -77,10 +77,12 @@ function quando(visitaEm: string | null): string {
   return `em ${dias}d`;
 }
 
+// Cores legíveis no tema CLARO (texto escuro saturado sobre fundo-tinta claro).
+// Antes usavam o tom pastel do tema escuro (#F87171/#93B4EA/#7AD4AB) que lavava no branco.
 const STATUS_PILL: Record<string, { bg: string; color: string; label: string }> = {
-  atrasada: { bg: "rgba(239,68,68,0.16)", color: "#F87171", label: "Atrasada" },
-  agendada: { bg: "rgba(59,130,246,0.15)", color: "#93B4EA", label: "Agendada" },
-  realizada: { bg: "rgba(34,197,94,0.15)", color: "#7AD4AB", label: "Realizada" },
+  atrasada: { bg: "rgba(239,68,68,0.14)", color: "#C82333", label: "Atrasada" },
+  agendada: { bg: "rgba(59,130,246,0.14)", color: "#1D4ED8", label: "Agendada" },
+  realizada: { bg: "rgba(34,197,94,0.14)", color: "#15803D", label: "Realizada" },
 };
 
 export default function VisitasClient({ visitas, kpis, assessores, usuarioAtualId, temRelato, fotos, tipoMandato }: Props) {

@@ -98,7 +98,7 @@ function Padroes() {
   return (
     <section className="wr-card wr-anim-in space-y-5 p-5 sm:p-6" style={{ animationDelay: "0.04s" }}>
       <div className="flex items-center gap-2">
-        <Gauge className="h-5 w-5" style={{ color: "var(--color-accent)" }} />
+        <Gauge className="h-5 w-5" style={{ color: "var(--accent-ink, var(--color-accent))" }} />
         <h2 className="font-heading text-[18px] font-bold" style={{ color: "var(--color-text)" }}>{t("Velocidade padrão")}</h2>
       </div>
       <p className="text-sm" style={{ color: "var(--color-text-subtle)" }}>
@@ -112,7 +112,7 @@ function Padroes() {
               <div className="flex items-center gap-2">
                 <span className="text-lg">{v.emoji}</span>
                 <span className="font-heading text-sm font-bold" style={{ color: "var(--color-text)" }}>{t(v.label)}</span>
-                {ativo && <CheckCircle2 className="ml-auto h-4 w-4" style={{ color: "var(--color-accent)" }} />}
+                {ativo && <CheckCircle2 className="ml-auto h-4 w-4" style={{ color: "var(--accent-ink, var(--color-accent))" }} />}
               </div>
               <p className="mt-1 text-xs" style={{ color: "var(--color-text-subtle)" }}>{t(v.desc)}</p>
               <p className="mt-1.5 text-[11px] font-bold tabular-nums" style={{ color: ativo ? "var(--color-accent)" : "var(--color-text-muted)" }}>
@@ -126,7 +126,7 @@ function Padroes() {
       {/* Janela de resposta */}
       <div className="space-y-2 border-t pt-4" style={{ borderColor: "var(--color-border)" }}>
         <div className="flex items-center gap-2">
-          <Clock className="h-4 w-4" style={{ color: "var(--color-accent)" }} />
+          <Clock className="h-4 w-4" style={{ color: "var(--accent-ink, var(--color-accent))" }} />
           <span className="text-sm font-semibold" style={{ color: "var(--color-text-muted)" }}>{t("Até quando uma resposta conta como “respondeu ao disparo”?")}</span>
         </div>
         <div className="flex items-center gap-2">
@@ -151,7 +151,7 @@ function Padroes() {
         <div className="wr-anim-in space-y-3">
           <p className="text-xs" style={{ color: "var(--color-text-subtle)" }}>
             {t("Campo vazio = herda o número. A proteção do número inteiro fica em")}{" "}
-            <Link href="/app/connections" className="underline" style={{ color: "var(--color-accent)" }}>{t("Conexões › Proteção de envio")}</Link>.
+            <Link href="/app/connections" className="underline" style={{ color: "var(--accent-ink, var(--color-accent))" }}>{t("Conexões › Proteção de envio")}</Link>.
           </p>
           <div className="grid gap-3 sm:grid-cols-2">
             <CampoNum id="p-int" rotulo={t("Intervalo mínimo (segundos)")} valor={intervalo} onChange={setIntervalo} dica={t("Tempo de espera entre uma mensagem e a próxima.")} />
@@ -181,7 +181,7 @@ function TextosSalvos() {
   return (
     <section className="wr-card wr-anim-in space-y-4 p-5 sm:p-6" style={{ animationDelay: "0.08s" }}>
       <div className="flex items-center gap-2">
-        <BookText className="h-5 w-5" style={{ color: "var(--color-accent)" }} />
+        <BookText className="h-5 w-5" style={{ color: "var(--accent-ink, var(--color-accent))" }} />
         <h2 className="font-heading text-[18px] font-bold" style={{ color: "var(--color-text)" }}>{t("Modelos de mensagem")}</h2>
       </div>
       <p className="text-sm" style={{ color: "var(--color-text-subtle)" }}>
@@ -221,7 +221,7 @@ function ListaDeExclusao() {
   return (
     <section className="wr-card wr-anim-in space-y-4 p-5 sm:p-6" style={{ animationDelay: "0.12s" }}>
       <div className="flex items-center gap-2">
-        <UserX className="h-5 w-5" style={{ color: "var(--color-accent)" }} />
+        <UserX className="h-5 w-5" style={{ color: "var(--accent-ink, var(--color-accent))" }} />
         <h2 className="font-heading text-[18px] font-bold" style={{ color: "var(--color-text)" }}>{t("Números que nunca recebem disparo")}</h2>
       </div>
       <p className="text-sm" style={{ color: "var(--color-text-subtle)" }}>

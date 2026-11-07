@@ -39,6 +39,9 @@ const ROTAS_BASE_TEMA_GIP = [
   "/app/captacao-qr",
   "/app/contacts",
   "/app/tasks",
+  // Atendimento (base-CRM que faltava — ficavam sem tema, "horríveis")
+  "/app/radar",
+  "/app/templates",
   // Agente de IA
   "/app/ai",
   // Canais
@@ -109,7 +112,7 @@ export function AppShell({ sidebarCollapsed, podeAtender, temaClaro, children }:
         cima da lista.
       */}
       <div className="flex min-h-dvh min-w-0 flex-1 flex-col">
-        <TopBar />
+        <TopBar navy={telaNavy} />
         {/*
           O RODAPÉ DESCONTA O QUE AS PEÇAS FIXAS OCUPAM (issue #1305).
 

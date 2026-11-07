@@ -291,7 +291,7 @@ export function CaptacaoQrClient({ materiais, canais }: { materiais: Material[];
       ) : origens.length === 0 ? (
         <div className="wr-card flex flex-col items-center gap-3 p-10 text-center">
           <span className="flex h-14 w-14 items-center justify-center rounded-full" style={{ background: "rgba(215,243,106,0.12)" }}>
-            <QrCode className="h-7 w-7" style={{ color: "var(--color-accent)" }} />
+            <QrCode className="h-7 w-7" style={{ color: "var(--accent-ink, var(--color-accent))" }} />
           </span>
           <p className="max-w-md text-sm" style={{ color: "var(--color-text-subtle)" }}>
             {t("Crie seu primeiro ponto acima. Imprima o QR e cole na praça, na escola, no evento — ou use o link na bio do Instagram.")}
@@ -432,7 +432,7 @@ function CartaoOrigem({
             type="button"
             onClick={() => void alternarLista()}
             className="inline-flex items-center gap-1 text-xs font-semibold"
-            style={{ color: "var(--color-accent)" }}
+            style={{ color: "var(--accent-ink, var(--color-accent))" }}
           >
             {verLista ? t("Ocultar") : t("Ver quem se cadastrou")}
           </button>

@@ -129,7 +129,7 @@ export function ListaDeCampanhas() {
       ) : campanhas.length === 0 ? (
         <div className="wr-card flex flex-col items-center gap-3 p-10 text-center">
           <span className="flex h-14 w-14 items-center justify-center rounded-full" style={{ background: "rgba(215,243,106,0.12)" }}>
-            <Megaphone className="h-7 w-7" style={{ color: "var(--color-accent)" }} />
+            <Megaphone className="h-7 w-7" style={{ color: "var(--accent-ink, var(--color-accent))" }} />
           </span>
           <h2 className="font-heading text-lg font-bold" style={{ color: "var(--color-text)" }}>
             {t("Nenhum disparo ainda")}
@@ -197,7 +197,7 @@ export function ListaDeCampanhas() {
                     )}
                     <ArrowUpRight
                       className="h-4 w-4 opacity-40 transition-opacity group-hover:opacity-100"
-                      style={{ color: "var(--color-accent)" }}
+                      style={{ color: "var(--accent-ink, var(--color-accent))" }}
                     />
                   </div>
                 </Link>

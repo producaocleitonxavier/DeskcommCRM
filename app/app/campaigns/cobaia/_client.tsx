@@ -142,7 +142,7 @@ export default function CobaiaClient({
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div className="min-w-0">
             <p className="flex items-center gap-2 text-base font-bold" style={{ color: "var(--color-text)" }}>
-              <FlaskConical className="h-5 w-5" style={{ color: "var(--color-accent)" }} />
+              <FlaskConical className="h-5 w-5" style={{ color: "var(--accent-ink, var(--color-accent))" }} />
               Modo laboratório
             </p>
             <p className="mt-1 text-sm" style={{ color: "var(--color-text-muted)" }}>
@@ -170,7 +170,7 @@ export default function CobaiaClient({
       {/* SEMENTES — a allowlist */}
       <div className="gip-glass rounded-2xl p-5">
         <p className="flex items-center gap-2 text-base font-bold" style={{ color: "var(--color-text)" }}>
-          <Phone className="h-5 w-5" style={{ color: "var(--color-accent)" }} />
+          <Phone className="h-5 w-5" style={{ color: "var(--accent-ink, var(--color-accent))" }} />
           Telefones-semente ({sementes.length})
         </p>
         <p className="mt-1 text-sm" style={{ color: "var(--color-text-muted)" }}>

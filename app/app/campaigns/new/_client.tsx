@@ -420,7 +420,7 @@ export function NovaCampanha({
                     className="wr-hover flex w-full items-center gap-2 px-3 py-2 text-left text-sm"
                     style={{ color: "var(--color-text)" }}
                   >
-                    <UserPlus className="h-4 w-4 shrink-0" style={{ color: "var(--color-accent)" }} />
+                    <UserPlus className="h-4 w-4 shrink-0" style={{ color: "var(--accent-ink, var(--color-accent))" }} />
                     <span className="truncate">{rotuloDoContato(c, t)}</span>
                   </button>
                 ))}
@@ -514,7 +514,7 @@ export function NovaCampanha({
         {materiais.length === 0 ? (
           <p className="text-sm" style={{ color: "var(--color-text-subtle)" }}>
             {t("Nenhum material cadastrado.")}{" "}
-            <a href="/app/politico/materiais/novo" className="underline" style={{ color: "var(--color-accent)" }}>
+            <a href="/app/politico/materiais/novo" className="underline" style={{ color: "var(--accent-ink, var(--color-accent))" }}>
               {t("Cadastrar um ebook")}
             </a>
           </p>
@@ -568,7 +568,7 @@ export function NovaCampanha({
                 <div className="flex items-center gap-2">
                   <span className="text-lg">{v.emoji}</span>
                   <span className="font-heading text-sm font-bold" style={{ color: "var(--color-text)" }}>{t(v.label)}</span>
-                  {velocidade === v.id && <Check className="ml-auto h-4 w-4" style={{ color: "var(--color-accent)" }} />}
+                  {velocidade === v.id && <Check className="ml-auto h-4 w-4" style={{ color: "var(--accent-ink, var(--color-accent))" }} />}
                 </div>
                 <p className="mt-1 text-xs" style={{ color: "var(--color-text-subtle)" }}>{t(v.desc)}</p>
                 <p className="mt-1.5 text-[11px] font-bold tabular-nums" style={{ color: velocidade === v.id ? "var(--color-accent)" : "var(--color-text-muted)" }}>
@@ -701,7 +701,7 @@ function Passo({
           {numero}
         </span>
         <div className="flex items-center gap-2">
-          <Icone className="h-5 w-5" style={{ color: "var(--color-accent)" }} />
+          <Icone className="h-5 w-5" style={{ color: "var(--accent-ink, var(--color-accent))" }} />
           <h2 className="font-heading text-[18px] font-bold" style={{ color: "var(--color-text)" }}>{titulo}</h2>
         </div>
         {opcional && (
@@ -774,14 +774,14 @@ function CardEscolha({
           : { borderColor: "var(--color-border)" }
       }
     >
-      <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg" style={{ background: "rgba(215,243,106,0.12)", color: "var(--color-accent)" }}>
+      <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg" style={{ background: "rgba(215,243,106,0.12)", color: "var(--accent-ink, var(--color-accent))" }}>
         {icone ?? <span className="text-xs">—</span>}
       </span>
       <span className="min-w-0">
         <span className="block truncate font-heading text-sm font-bold" style={{ color: "var(--color-text)" }}>{titulo}</span>
         <span className="block text-xs" style={{ color: "var(--color-text-subtle)" }}>{sub}</span>
       </span>
-      {ativo && <Check className="ml-auto h-4 w-4 shrink-0" style={{ color: "var(--color-accent)" }} />}
+      {ativo && <Check className="ml-auto h-4 w-4 shrink-0" style={{ color: "var(--accent-ink, var(--color-accent))" }} />}
     </button>
   );
 }

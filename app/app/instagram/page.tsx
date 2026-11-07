@@ -259,7 +259,7 @@ function SecaoCard({
           className="inline-flex items-center justify-center w-10 h-10 rounded-[12px]"
           style={{
             background: "color-mix(in srgb, var(--color-accent) 12%, transparent)",
-            color: "var(--color-accent)",
+            color: "var(--accent-ink, var(--color-accent))",
           }}
         >
           <Icon name={icon} />
@@ -286,7 +286,7 @@ function SecaoCard({
       </div>
       <span
         className="inline-flex items-center gap-1 text-sm font-semibold mt-auto transition-transform group-hover:translate-x-0.5"
-        style={{ color: "var(--color-accent)" }}
+        style={{ color: "var(--accent-ink, var(--color-accent))" }}
       >
         Acessar <Icon name="arrow" className="w-4 h-4" />
       </span>
@@ -443,7 +443,7 @@ export default async function InstagramHubPage() {
           <Link
             href="/app/instagram/conectar"
             className="text-sm font-semibold transition-opacity hover:opacity-80"
-            style={{ color: "var(--color-accent)" }}
+            style={{ color: "var(--accent-ink, var(--color-accent))" }}
           >
             Gerenciar conexão →
           </Link>
@@ -455,7 +455,7 @@ export default async function InstagramHubPage() {
               className="inline-flex items-center justify-center w-11 h-11 rounded-[13px] shrink-0"
               style={{
                 background: "color-mix(in srgb, var(--color-accent) 16%, transparent)",
-                color: "var(--color-accent)",
+                color: "var(--accent-ink, var(--color-accent))",
               }}
             >
               <Icon name="plug" className="w-6 h-6" />
@@ -516,7 +516,7 @@ export default async function InstagramHubPage() {
               <Link
                 href="/app/instagram/webhooks"
                 className="font-semibold underline underline-offset-4"
-                style={{ color: "var(--color-accent)" }}
+                style={{ color: "var(--accent-ink, var(--color-accent))" }}
               >
                 Tokens de Webhook
               </Link>{" "}

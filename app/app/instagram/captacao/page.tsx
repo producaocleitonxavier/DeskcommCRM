@@ -109,7 +109,7 @@ function CardLead({ card, destaque, vinculoLabel }: { card: Card; destaque?: boo
       {card.whatsapp && (
         <div
           className="inline-flex items-center gap-1.5 text-xs font-semibold rounded-md px-2 py-1 w-fit"
-          style={{ background: "color-mix(in srgb, var(--color-accent) 16%, transparent)", color: "var(--color-accent)" }}
+          style={{ background: "color-mix(in srgb, var(--color-accent) 16%, transparent)", color: "var(--accent-ink, var(--color-accent))" }}
         >
           📱 {card.whatsapp}
         </div>
@@ -118,7 +118,7 @@ function CardLead({ card, destaque, vinculoLabel }: { card: Card; destaque?: boo
       {(card.vinculoBh || card.tags.length > 0) && (
         <div className="flex flex-wrap gap-1">
           {card.vinculoBh && (
-            <span className="text-[10px] font-bold rounded-full px-2 py-0.5" style={{ background: "color-mix(in srgb, var(--color-accent) 20%, transparent)", color: "var(--color-accent)" }}>
+            <span className="text-[10px] font-bold rounded-full px-2 py-0.5" style={{ background: "color-mix(in srgb, var(--color-accent) 20%, transparent)", color: "var(--accent-ink, var(--color-accent))" }}>
               {vinculoLabel}
             </span>
           )}
@@ -136,7 +136,7 @@ function CardLead({ card, destaque, vinculoLabel }: { card: Card; destaque?: boo
           target="_blank"
           rel="noopener noreferrer"
           className="text-[11px] font-medium"
-          style={{ color: "var(--color-accent)" }}
+          style={{ color: "var(--accent-ink, var(--color-accent))" }}
         >
           Abrir perfil →
         </a>
@@ -238,7 +238,7 @@ export default async function CaptacaoInstagramPage() {
       {/* Header */}
       <header className="flex flex-wrap items-start justify-between gap-4">
         <div>
-          <Link href="/app/instagram" className="text-sm font-semibold" style={{ color: "var(--color-accent)" }}>
+          <Link href="/app/instagram" className="text-sm font-semibold" style={{ color: "var(--accent-ink, var(--color-accent))" }}>
             ← Instagram
           </Link>
           <h1 className="font-heading text-[30px] font-bold leading-tight mt-2" style={{ color: "var(--color-text)" }}>
@@ -290,7 +290,7 @@ export default async function CaptacaoInstagramPage() {
             {ehAdmin ? " Configure a cidade/estado do candidato na Personalização." : " Peça a um administrador para configurar."}
           </p>
           {ehAdmin && (
-            <Link href="/app/instagram/captacao/config" className="text-sm font-bold whitespace-nowrap" style={{ color: "var(--color-accent)" }}>
+            <Link href="/app/instagram/captacao/config" className="text-sm font-bold whitespace-nowrap" style={{ color: "var(--accent-ink, var(--color-accent))" }}>
               ⚙ Configurar agora →
             </Link>
           )}

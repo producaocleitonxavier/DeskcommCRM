@@ -494,8 +494,17 @@ export default async function GabinetePage({
                     <Link
                       key={o.orgao}
                       href={`/app/politico/demandas${montarQuery({ orgao: ativo ? undefined : o.orgao, cobrar: undefined, pagina: "1" })}#lista-demandas`}
-                      className="flex items-center justify-between gap-2 rounded-xl px-3 py-2.5 transition-colors hover:bg-white/[0.04]"
-                      style={{ background: "var(--color-surface-elevated)", border: ativo ? "1px solid color-mix(in srgb, var(--color-accent) 50%, transparent)" : queima ? "1px solid rgba(239,68,68,0.35)" : "1px solid var(--color-border)" }}
+                      className="flex items-center justify-between gap-2 rounded-xl px-3 py-2.5 transition-shadow hover:shadow-md"
+                      style={{
+                        background: "var(--color-surface)",
+                        borderTop: "1px solid var(--color-border)",
+                        borderRight: "1px solid var(--color-border)",
+                        borderBottom: "1px solid var(--color-border)",
+                        borderLeft: `4px solid ${queima ? "#EF4444" : cor.color}`,
+                        boxShadow: ativo
+                          ? "0 0 0 2px color-mix(in srgb, var(--color-accent) 55%, transparent)"
+                          : "var(--wr-glow, 0 1px 2px rgba(20,30,40,0.05))",
+                      }}
                     >
                       <span className="flex min-w-0 items-center gap-1.5">
                         {queima && <span className="h-2 w-2 shrink-0 rounded-full" style={{ background: "#EF4444" }} aria-hidden title="Tem demanda atrasada" />}
@@ -504,14 +513,14 @@ export default async function GabinetePage({
                         </span>
                       </span>
                       <span className="flex shrink-0 items-center gap-1.5 text-xs tabular-nums">
-                        <span style={{ color: "var(--color-text-muted)" }}>{o.total}</span>
+                        <span className="text-sm font-bold" style={{ color: "var(--color-text)" }} title={`${o.total} demanda${o.total > 1 ? "s" : ""}`}>{o.total}</span>
                         {o.atrasadas > 0 && (
-                          <span className="rounded-full px-1.5 py-0.5 font-bold" style={{ background: "rgba(239,68,68,0.16)", color: "#F87171" }}>
+                          <span className="rounded-full px-1.5 py-0.5 font-bold" style={{ background: "rgba(239,68,68,0.14)", color: "#C82333" }}>
                             {o.atrasadas} atrasada{o.atrasadas > 1 ? "s" : ""}
                           </span>
                         )}
                         {temRespondeu && o.semResposta > 0 && (
-                          <span className="rounded-full px-1.5 py-0.5 font-semibold" style={{ background: "rgba(245,158,11,0.16)", color: "#E4B96E" }}>
+                          <span className="rounded-full px-1.5 py-0.5 font-semibold" style={{ background: "rgba(217,164,75,0.18)", color: "#8A6516" }}>
                             {o.semResposta} s/ resposta
                           </span>
                         )}

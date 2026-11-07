@@ -81,7 +81,9 @@ export default function OficiosClient({
                 </span>
                 <div className="min-w-0 flex-1">
                   <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
-                    <span className="font-semibold" style={{ color: "var(--color-text)" }}>{o.rotulo}</span>
+                    <span className="font-bold" style={{ color: "var(--color-text)" }}>
+                      {o.numero != null ? `Ofício nº ${o.numero}${o.ano != null ? `/${o.ano}` : ""}` : o.rotulo}
+                    </span>
                     <span className="text-xs" style={{ color: "var(--color-text-subtle)" }}>· {fmtData(o.emitidoEm)}</span>
                   </div>
                   {o.assunto && (

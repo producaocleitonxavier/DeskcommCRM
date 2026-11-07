@@ -9,9 +9,10 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Globe, Copy, ExternalLink, Building2, HandCoins, ShieldCheck } from "lucide-react";
+import { Copy, ExternalLink, Building2, HandCoins, ShieldCheck } from "lucide-react";
 
 import { salvarPortalAtivo, type PortalConfig } from "@/app/actions/politico/transparencia-actions";
+import { CommandHero } from "@/components/politico/command-hero";
 
 export default function TransparenciaClient({ config }: { config: PortalConfig }) {
   const router = useRouter();
@@ -50,17 +51,11 @@ export default function TransparenciaClient({ config }: { config: PortalConfig }
 
   return (
     <div className="gip-ambient-bg mx-auto max-w-[840px] px-4 py-7 space-y-5">
-      <header>
-        <div className="flex items-center gap-2.5">
-          <span className="flex h-10 w-10 items-center justify-center rounded-full" style={{ background: "color-mix(in srgb, var(--color-accent) 16%, transparent)", color: "#7E8F2B" }} aria-hidden>
-            <Globe className="h-5 w-5" />
-          </span>
-          <div>
-            <h1 className="font-heading text-[26px] font-bold leading-tight" style={{ color: "var(--color-text)" }}>Portal da Transparência</h1>
-            <p className="text-sm" style={{ color: "var(--color-text-muted)" }}>Sua vitrine pública de prestação de contas: obras e emendas, com valores e mapa de entregas.</p>
-          </div>
-        </div>
-      </header>
+      <CommandHero
+        eyebrow="Gabinete · Prestação de contas"
+        titulo="Portal da Transparência"
+        subtitulo="Sua vitrine pública de prestação de contas: obras e emendas, com valores e mapa de entregas."
+      />
 
       {/* Liga/desliga + link */}
       <section className="gip-glass p-6">

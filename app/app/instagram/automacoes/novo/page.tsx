@@ -319,7 +319,7 @@ export default function NovoFlowPage() {
         <div className="wr-card space-y-4 p-5">
           <div className="flex items-center justify-between">
             <p style={sectionLabelStyle}>O que fazer</p>
-            <button type="button" onClick={addAcao} className="text-xs font-semibold" style={{ color: "var(--color-accent)" }}>+ Adicionar ação</button>
+            <button type="button" onClick={addAcao} className="text-xs font-semibold" style={{ color: "var(--accent-ink, var(--color-accent))" }}>+ Adicionar ação</button>
           </div>
 
           {acoes.length === 0 && (

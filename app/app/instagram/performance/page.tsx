@@ -44,7 +44,7 @@ function Kpi({ label, valor, sub }: { label: string; valor: string; sub?: string
       </div>
       <div
         className="font-heading text-[30px] font-bold mt-1 tabular-nums leading-none"
-        style={{ color: "var(--color-accent)" }}
+        style={{ color: "var(--accent-ink, var(--color-accent))" }}
       >
         {valor}
       </div>
@@ -97,7 +97,7 @@ function PostCard({ m }: { m: PerfilProprio["midias"][number] }) {
             {nf(m.likes)}
           </span>
           <span className="inline-flex items-center gap-1.5" style={{ color: "var(--color-text)" }}>
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ color: "var(--color-accent)" }}>
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ color: "var(--accent-ink, var(--color-accent))" }}>
               <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z" />
             </svg>
             {nf(m.comentarios)}
@@ -134,7 +134,7 @@ export default async function MinhaPerformancePage() {
   return (
     <div className="mx-auto max-w-[1140px] px-4 py-7 space-y-5">
       <header className="flex items-center gap-3">
-        <Link href="/app/instagram" className="text-sm font-medium" style={{ color: "var(--color-accent)" }}>
+        <Link href="/app/instagram" className="text-sm font-medium" style={{ color: "var(--accent-ink, var(--color-accent))" }}>
           ← Instagram
         </Link>
       </header>
@@ -169,7 +169,7 @@ export default async function MinhaPerformancePage() {
                 // eslint-disable-next-line @next/next/no-img-element
                 <img src={perfil.fotoPerfil} alt={perfil.username} className="w-full h-full object-cover" />
               ) : (
-                <span className="text-xl font-bold" style={{ color: "var(--color-accent)" }}>
+                <span className="text-xl font-bold" style={{ color: "var(--accent-ink, var(--color-accent))" }}>
                   {perfil.username.slice(0, 1).toUpperCase()}
                 </span>
               )}

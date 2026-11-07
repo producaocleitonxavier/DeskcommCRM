@@ -30,7 +30,7 @@ export default async function PersonalizacaoCaptacaoPage() {
   return (
     <div className="mx-auto max-w-[760px] px-4 py-7 space-y-5">
       <header>
-        <Link href="/app/instagram/captacao" className="text-sm font-semibold" style={{ color: "var(--color-accent)" }}>
+        <Link href="/app/instagram/captacao" className="text-sm font-semibold" style={{ color: "var(--accent-ink, var(--color-accent))" }}>
           ← Captação
         </Link>
         <h1 className="font-heading text-[28px] font-bold leading-tight mt-2" style={{ color: "var(--color-text)" }}>

@@ -267,7 +267,7 @@ export default function EditarFlowPage() {
           <span className="text-2xl">🔍</span>
         </div>
         <p className="font-heading text-lg font-semibold" style={{ color: "var(--color-text)" }}>Automação não encontrada</p>
-        <Link href="/app/instagram/automacoes" className="text-sm font-semibold underline underline-offset-4" style={{ color: "var(--color-accent)" }}>
+        <Link href="/app/instagram/automacoes" className="text-sm font-semibold underline underline-offset-4" style={{ color: "var(--accent-ink, var(--color-accent))" }}>
           Voltar para automações
         </Link>
       </div>
@@ -357,7 +357,7 @@ export default function EditarFlowPage() {
         <div className="wr-card space-y-4 p-5">
           <div className="flex items-center justify-between">
             <p style={sectionLabelStyle}>O que fazer</p>
-            <button type="button" onClick={addAcao} className="text-xs font-semibold" style={{ color: "var(--color-accent)" }}>+ Adicionar ação</button>
+            <button type="button" onClick={addAcao} className="text-xs font-semibold" style={{ color: "var(--accent-ink, var(--color-accent))" }}>+ Adicionar ação</button>
           </div>
 
           {acoes.length === 0 && (

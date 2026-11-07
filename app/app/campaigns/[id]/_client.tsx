@@ -211,7 +211,7 @@ export function DetalheDaCampanha({ id }: { id: string }) {
         <div className="wr-card wr-anim-in space-y-2 p-5">
           <div className="flex items-baseline justify-between">
             <h2 className="font-heading text-[15px] font-bold" style={{ color: "var(--color-text)" }}>{t("Progresso do envio")}</h2>
-            <span className="text-sm font-bold tabular-nums" style={{ color: "var(--color-accent)" }}>{Math.round(m.progresso * 100)}%</span>
+            <span className="text-sm font-bold tabular-nums" style={{ color: "var(--accent-ink, var(--color-accent))" }}>{Math.round(m.progresso * 100)}%</span>
           </div>
           <div className="h-2.5 w-full overflow-hidden rounded-full" style={{ background: "var(--color-surface-elevated)" }}>
             <div className="h-full rounded-full transition-all duration-500" style={{ width: `${Math.round(m.progresso * 100)}%`, background: "linear-gradient(90deg,#8AA62E,#D7F36A)" }} role="progressbar" aria-valuenow={Math.round(m.progresso * 100)} aria-valuemin={0} aria-valuemax={100} />
@@ -345,7 +345,7 @@ function VelocidadeDaCampanha({ campanha }: { campanha: CampanhaDetalhada }) {
               <div className="flex items-center gap-2">
                 <span className="text-lg">{v.emoji}</span>
                 <span className="font-heading text-sm font-bold" style={{ color: "var(--color-text)" }}>{t(v.label)}</span>
-                {ativo && <CheckCircle2 className="ml-auto h-4 w-4" style={{ color: "var(--color-accent)" }} />}
+                {ativo && <CheckCircle2 className="ml-auto h-4 w-4" style={{ color: "var(--accent-ink, var(--color-accent))" }} />}
               </div>
               <p className="mt-1 text-xs" style={{ color: "var(--color-text-subtle)" }}>{t(v.desc)}</p>
               <p className="mt-1.5 text-[11px] font-bold tabular-nums" style={{ color: ativo ? "var(--color-accent)" : "var(--color-text-muted)" }}>
@@ -506,7 +506,7 @@ function MiniKpi({ icone: Icone, label, valor, cor }: { icone: typeof Users; lab
           <div className="mt-2 text-sm" style={{ color: "var(--color-text-muted)" }}>{label}</div>
         </div>
         <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full" style={{ background: "rgba(215,243,106,0.1)" }}>
-          <Icone className="h-5 w-5" style={{ color: "var(--color-accent)" }} />
+          <Icone className="h-5 w-5" style={{ color: "var(--accent-ink, var(--color-accent))" }} />
         </span>
       </div>
     </div>

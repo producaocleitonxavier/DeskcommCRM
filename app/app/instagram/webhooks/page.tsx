@@ -175,7 +175,7 @@ export default function WebhooksInstagramPage() {
           <li>Gere um token abaixo e copie a URL completa</li>
           <li>
             No{" "}
-            <a href="https://developers.facebook.com/apps" target="_blank" rel="noopener noreferrer" className="font-semibold underline underline-offset-4" style={{ color: "var(--color-accent)" }}>
+            <a href="https://developers.facebook.com/apps" target="_blank" rel="noopener noreferrer" className="font-semibold underline underline-offset-4" style={{ color: "var(--accent-ink, var(--color-accent))" }}>
               Meta for Developers
             </a>
             , vá em seu App → Instagram → Webhooks
