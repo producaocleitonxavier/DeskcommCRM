@@ -43,6 +43,13 @@ export const ROTAS_NAVY = [
   "/app/politico/decisao",
   "/app/politico/briefing",
   "/app/politico/motor-viral",
+  // Operação / Modo Campanha — telas ESTRATÉGICAS (peso + "defesa" + contorno
+  // premium, decisão do cliente 07/nov). Casam com Disparos (base, já navy).
+  "/app/politico/grupos-origem",
+  "/app/politico/multiplicadores",
+  "/app/politico/materiais",
+  "/app/politico/kanban", // Mobilização (quadro da campanha)
+  "/app/politico/funil-invisivel", // Termômetro de Base
   // Voz do Mandato NÃO entra aqui: é uma FERRAMENTA que se opera (gravar/ler
   // roteiro/gerar), não um painel de análise. Fica como página de TRABALHO
   // (hero marinho + corpo branco), igual Demandas/Visitas/Ofícios.
