@@ -553,7 +553,7 @@ export default async function GabinetePage({
                   className="inline-flex items-center h-9 px-4 rounded-full text-sm font-semibold transition-colors"
                   style={
                     !verAuto
-                      ? { background: "#16181D", color: "#FFFFFF" }
+                      ? { background: "var(--chip-active-bg)", color: "#FFFFFF" }
                       : { background: "var(--color-surface-elevated)", color: "var(--color-text-muted)" }
                   }
                 >
@@ -564,7 +564,7 @@ export default async function GabinetePage({
                   className="inline-flex items-center h-9 px-4 rounded-full text-sm font-semibold transition-colors"
                   style={
                     verAuto
-                      ? { background: "#16181D", color: "#FFFFFF" }
+                      ? { background: "var(--chip-active-bg)", color: "#FFFFFF" }
                       : { background: "var(--color-surface-elevated)", color: "var(--color-text-muted)" }
                   }
                   title="Zeladoria que o cidadão resolve sozinho pelo link da Prefeitura. A IA registrou só para o gabinete acompanhar o bairro — não é trabalho a fazer."
@@ -587,7 +587,7 @@ export default async function GabinetePage({
                 className="inline-flex items-center h-9 px-3.5 rounded-full text-sm font-medium transition-colors"
                 style={
                   !filtroEstado && !filtroCobrar
-                    ? { background: "#16181D", color: "#FFFFFF" }
+                    ? { background: "var(--chip-active-bg)", color: "#FFFFFF" }
                     : { background: "var(--color-surface-elevated)", color: "var(--color-text-muted)" }
                 }
               >
@@ -615,7 +615,7 @@ export default async function GabinetePage({
                   className="inline-flex items-center h-9 px-3.5 rounded-full text-sm font-medium transition-colors"
                   style={
                     filtroEstado === est
-                      ? { background: "#16181D", color: "#FFFFFF" }
+                      ? { background: "var(--chip-active-bg)", color: "#FFFFFF" }
                       : { background: "var(--color-surface-elevated)", color: "var(--color-text-muted)" }
                   }
                 >
@@ -631,7 +631,7 @@ export default async function GabinetePage({
                 <Link
                   href={`/app/politico/demandas${montarQuery({ orgao: undefined, cobrar: undefined, pagina: "1" })}`}
                   className="inline-flex items-center h-8 px-3 rounded-full text-xs font-medium transition-colors"
-                  style={!filtroOrgao ? { background: "#16181D", color: "#FFFFFF" } : { background: "var(--color-surface-elevated)", color: "var(--color-text-muted)" }}
+                  style={!filtroOrgao ? { background: "var(--chip-active-bg)", color: "#FFFFFF" } : { background: "var(--color-surface-elevated)", color: "var(--color-text-muted)" }}
                 >
                   Todos
                 </Link>

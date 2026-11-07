@@ -91,10 +91,10 @@ export function KpiCard({ label, valor, icone: Icone, variacao, cor, sufixo, var
 
         <span
           className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full"
-          style={{ background: "color-mix(in srgb, var(--color-accent) 10%, transparent)" }}
+          style={{ background: "var(--icon-accent-soft, color-mix(in srgb, var(--color-accent) 10%, transparent))" }}
           aria-hidden
         >
-          <Icone className="h-5 w-5" style={{ color: "var(--color-accent)" }} />
+          <Icone className="h-5 w-5" style={{ color: "var(--icon-accent, var(--color-accent))" }} />
         </span>
       </div>
     </div>

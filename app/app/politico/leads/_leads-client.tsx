@@ -104,7 +104,7 @@ export default function LeadsClient({ leads, total, contagens, cidades, mapaResu
         className="inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-semibold transition-colors"
         style={
           ativo
-            ? { background: "#16181D", color: "#FFFFFF", borderColor: "#16181D" }
+            ? { background: "var(--chip-active-bg)", color: "#FFFFFF", borderColor: "#16181D" }
             : { background: "var(--color-surface)", color: "var(--color-text-muted)", borderColor: "var(--color-border)" }
         }
       >

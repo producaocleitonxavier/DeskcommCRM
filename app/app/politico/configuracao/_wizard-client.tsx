@@ -191,7 +191,7 @@ export default function SetupWizard({ inicial }: { inicial: SetupInicial }) {
                     feito
                       ? { background: "var(--color-accent)", color: "#16181D" }
                       : atual
-                        ? { background: "#16181D", color: "#FFFFFF", border: "2px solid var(--color-accent)" }
+                        ? { background: "var(--chip-active-bg)", color: "#FFFFFF", border: "2px solid var(--color-accent)" }
                         : { background: "var(--color-surface-elevated)", color: "var(--color-text-subtle)" }
                   }
                 >

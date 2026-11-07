@@ -89,7 +89,7 @@ function GaugeResolucao({ pct, resolvidas, total }: { pct: number; resolvidas: n
           <defs>
             <linearGradient id="gaugeGrad" x1="0" y1="0" x2="1" y2="1">
               <stop offset="0%" stopColor="#E5F89E" />
-              <stop offset="100%" stopColor="#9fd30f" />
+              <stop offset="100%" stopColor="var(--icon-accent)" />
             </linearGradient>
             <filter id="gaugeGlow" x="-50%" y="-50%" width="200%" height="200%">
               <feGaussianBlur stdDeviation="3" result="b" />
@@ -213,7 +213,7 @@ export default function HojeClient({
               href="/app/inbox"
               className="gip-glass gip-glass-hover flex items-center gap-3 p-4"
             >
-              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl" style={{ background: "color-mix(in srgb, var(--color-accent) 14%, transparent)", color: "#9fd30f" }} aria-hidden>
+              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl" style={{ background: "color-mix(in srgb, var(--color-accent) 14%, transparent)", color: "var(--icon-accent)" }} aria-hidden>
                 <Sparkles className="h-5 w-5" />
               </span>
               <span className="min-w-0 flex-1">
@@ -330,7 +330,7 @@ export default function HojeClient({
         {/* Aniversariantes */}
         <div className="gip-glass p-5 sm:p-6">
           <div className="mb-3 flex items-center gap-2">
-            <span className="flex h-8 w-8 items-center justify-center rounded-full" style={{ background: "color-mix(in srgb, var(--color-accent) 18%, transparent)", color: "#7E8F2B" }} aria-hidden>
+            <span className="flex h-8 w-8 items-center justify-center rounded-full" style={{ background: "color-mix(in srgb, var(--color-accent) 18%, transparent)", color: "var(--icon-accent)" }} aria-hidden>
               <Gift className="h-4 w-4" />
             </span>
             <h2 className="font-heading text-base font-bold" style={{ color: "var(--color-text)" }}>Aniversariantes (lideranças)</h2>

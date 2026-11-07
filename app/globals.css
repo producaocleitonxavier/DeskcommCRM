@@ -1037,6 +1037,11 @@
   /* Aba ATIVA (PageTabs: Hoje/Painel/Prestação). No escuro = lima da marca. */
   --tab-active-bg: var(--color-accent);
   --tab-active-fg: #16181D;
+  /* Ícone de card (KPI) e chip ativo (Todas/Agendadas...). No escuro = lima/preto. */
+  --icon-accent: var(--color-accent);
+  --icon-accent-soft: color-mix(in srgb, var(--color-accent) 12%, transparent);
+  --chip-active-bg: #16181D;
+  --chip-active-fg: #FFFFFF;
 
   /* Fundo aplicado diretamente ao wrapper */
   background-color: #14161c;
@@ -1151,6 +1156,12 @@
   /* Aba ATIVA (PageTabs) = MESMO fundo do hero marinho, texto branco. */
   --tab-active-bg: var(--hero-grad);
   --tab-active-fg: #ffffff;
+  /* Ícones de card (KPI) e chips ativos = MARINHO (contrasta no branco; lima
+     apaga). Lima fica só na AÇÃO (botões). */
+  --icon-accent: #234a73;
+  --icon-accent-soft: rgba(35,74,115,0.10);
+  --chip-active-bg: #234a73;
+  --chip-active-fg: #FFFFFF;
 
   background-color: #eceff3;
   color: #141b26;
