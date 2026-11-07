@@ -391,9 +391,15 @@ export function SidebarContent({
 }
 
 export function Sidebar({ collapsed }: { collapsed: boolean }) {
+  // Rail MARINHO quando a org liga o tema claro (Névoa Pro): navy rail + conteúdo
+  // claro (padrão John Don). O override de tokens mora na classe `wr-sidebar-marinho`
+  // (globals.css), escopada neste <aside> — cascateia aos filhos sem editar classe.
+  const { activeOrg } = useAuth();
+  const marinho = activeOrg?.tema === "claro";
   return (
     <aside
       className={cn(
+        marinho && "wr-sidebar-marinho",
         // ⚠️ `sticky`, e NUNCA `fixed`.
         //
         // Com `fixed` a barra sai do fluxo: ela não ocupa lugar nenhum na linha,

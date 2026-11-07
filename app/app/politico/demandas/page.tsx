@@ -17,6 +17,7 @@ import DemandasCharts from "./_demandas-charts";
 import AvisoAutoToggle from "./_aviso-auto-toggle";
 import { RelatorioPdfButton } from "@/components/politico/relatorio-pdf-button";
 import { ExcelDemandasButton } from "@/components/politico/excel-demandas-button";
+import { CommandHero } from "@/components/politico/command-hero";
 import { corDoOrgao, normalizarOrgao, rollupPorOrgao, ordenarUrgencia, alertaCobranca, type DemandaCobranca, type OrgaoRollup, type AlertaCobranca } from "@/lib/politico/demanda-cobranca";
 
 export const dynamic = "force-dynamic";
@@ -428,27 +429,18 @@ export default async function GabinetePage({
 
   return (
     <div className="gip-ambient-bg mx-auto max-w-[1140px] px-4 py-7 space-y-[18px]">
-      {/* ── Header card ─────────────────────────────────────────── */}
-      <header className="gip-glass p-6 sm:p-7 flex flex-wrap items-center justify-between gap-4">
-        <div>
-          <h1 className="font-heading text-[36px] font-bold leading-tight">Gabinete</h1>
-          <p className="mt-1.5 text-base" style={{ color: "var(--color-text-muted)" }}>
-            Demandas, lideranças e projetos de lei do mandato.
-          </p>
-        </div>
-        <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto sm:justify-end">
-          {ehAdmin && <AvisoAutoToggle ligadoInicial={avisoLigado} />}
-          <RelatorioPdfButton filtroEstado={filtroEstado} />
-          <ExcelDemandasButton filtros={{ estado: filtroEstado, orgao: filtroOrgao, cobrar: filtroCobrar }} />
-          <Link
-            href="/app/politico/demandas/nova"
-            className="inline-flex shrink-0 items-center justify-center whitespace-nowrap rounded-full px-5 py-2.5 text-sm font-bold transition-opacity hover:opacity-90"
-            style={{ background: "var(--color-accent)", color: "#16181D" }}
-          >
-            + Nova demanda
-          </Link>
-        </div>
-      </header>
+      {/* ── Hero + barra de ferramentas ─────────────────────────── */}
+      <CommandHero
+        eyebrow="GIP · Gabinete"
+        titulo="Gabinete"
+        subtitulo="Demandas, lideranças e projetos de lei do mandato."
+        acoes={[{ href: "/app/politico/demandas/nova", label: "+ Nova demanda", primary: true }]}
+      />
+      <div className="flex flex-wrap items-center justify-end gap-2">
+        {ehAdmin && <AvisoAutoToggle ligadoInicial={avisoLigado} />}
+        <RelatorioPdfButton filtroEstado={filtroEstado} />
+        <ExcelDemandasButton filtros={{ estado: filtroEstado, orgao: filtroOrgao, cobrar: filtroCobrar }} />
+      </div>
 
       {/* ── Demandas ────────────────────────────────────────────── */}
       <>

@@ -230,6 +230,13 @@ export interface ActiveOrg {
    */
   cliente_pela_agenda?: boolean;
   /**
+   * Tema de interface que ESTA organização escolheu (`settings.tema`): "claro"
+   * liga o Névoa Pro no módulo político E o rail marinho na casca. Opcional e
+   * preenchido só pelo layout de `/app`; ausente/"escuro" = tema escuro padrão.
+   * Não é autorização — só pintura.
+   */
+  tema?: "claro" | "escuro" | null;
+  /**
    * Os módulos opcionais LIGADOS na instalação (`lib/instalacao/modulos.ts`).
    * É da instalação, não da organização — mora aqui porque este é o contexto
    * que o layout de `/app` entrega à casca. Ausente vale como nenhum: a porta

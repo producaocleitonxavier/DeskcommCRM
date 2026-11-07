@@ -20,7 +20,7 @@ export default function PageTabs({ abas, active, maxW = "1040px" }: { abas: Page
               key={a.id}
               href={a.href}
               className="whitespace-nowrap rounded-full px-4 py-1.5 text-sm font-semibold transition-colors"
-              style={on ? { background: "var(--color-accent)", color: "#16181D" } : { color: "var(--color-text-muted)" }}
+              style={on ? { background: "var(--tab-active-bg)", color: "var(--tab-active-fg)" } : { color: "var(--color-text-muted)" }}
             >
               {a.label}
             </Link>

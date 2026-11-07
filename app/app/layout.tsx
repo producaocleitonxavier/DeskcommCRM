@@ -158,6 +158,9 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       visibility_mode: mode ?? DEFAULT_VISIBILITY_MODE,
       // Mesma linha de `settings` já lida acima — nenhuma consulta a mais.
       cliente_pela_agenda: clientePelaAgendaLigado(orgRow?.settings),
+      // Tema da org (claro/escuro) — mesma linha de `settings`; a casca usa p/
+      // pintar o rail marinho quando a org liga o tema claro (Névoa Pro).
+      tema: ((orgRow?.settings as { tema?: "claro" | "escuro" | null } | null)?.tema) ?? null,
       modulos_ligados: modulos,
       // Mesma linha de `settings` já lida acima — nenhuma consulta a mais.
       capacidades_ligadas: capacidadesLigadas(orgRow?.settings, modulos),

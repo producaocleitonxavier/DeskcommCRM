@@ -1034,6 +1034,10 @@
   --hero-btn-outline: rgba(255,255,255,0.18);
   --hero-btn-outline-fg: rgba(255,255,255,0.9);
 
+  /* Aba ATIVA (PageTabs: Hoje/Painel/Prestação). No escuro = lima da marca. */
+  --tab-active-bg: var(--color-accent);
+  --tab-active-fg: #16181D;
+
   /* Fundo aplicado diretamente ao wrapper */
   background-color: #14161c;
   color: #f0f1ec;
@@ -1139,6 +1143,10 @@
   --hero-btn-outline: rgba(255,255,255,0.42);
   --hero-btn-outline-fg: #ffffff;
 
+  /* Aba ATIVA (PageTabs) = MESMO fundo do hero marinho, texto branco. */
+  --tab-active-bg: var(--hero-grad);
+  --tab-active-fg: #ffffff;
+
   background-color: #eceff3;
   color: #141b26;
 }
@@ -1160,19 +1168,46 @@
   -webkit-backdrop-filter: none !important;
 }
 .war-room.wr-claro .gip-glass::after { opacity: 0 !important; }
-/* O card "selecionado"/escuro (wr-card-dark) no claro vira acento tijolo suave,
-   não preto. */
+/* No claro, TODO card é branco sólido — inclusive os "dark"/"accent" (gráficos
+   do painel e KPI destacado tipo Votos Certos). Antes viravam um tijolo/laranja
+   suave que destoava dos vizinhos brancos; a uniformidade é a regra. O destaque
+   do número continua pela tipografia (grande + preto), não pelo fundo. */
 .war-room.wr-claro .wr-card-dark,
 .war-room.wr-claro .wr-card-accent {
-  background: var(--color-accent-soft) !important;
-  border: 1px solid color-mix(in srgb, var(--color-accent) 35%, transparent) !important;
+  background: var(--color-surface) !important;
+  border: 1px solid var(--color-border) !important;
   box-shadow: var(--wr-card-shadow) !important;
+  background-image: none !important;
 }
 /* NÚMEROS em PRETO no claro (dado = tinta neutra, não acento; sem glow lima).
    Disciplina de dados: a cor forte fica só na AÇÃO. Escuro mantém lima+glow. */
 .war-room.wr-claro .wr-kpi-value {
   color: var(--color-text) !important;
   text-shadow: none !important;
+}
+
+/* ===== RAIL MARINHO (tema claro) =======================================
+   Navy rail + conteúdo claro (padrão John Don). A classe fica no <aside> do
+   Sidebar (fora do escopo .war-room), e aqui sobrescrevemos SÓ os tokens que
+   o Sidebar lê — eles cascateiam aos filhos, então o rail inteiro fica marinho
+   sem editar cada classe. O ativo segue lima (elmo da marca) sobre o navy. */
+.wr-sidebar-marinho {
+  --color-surface: #182a3e;
+  --color-surface-elevated: #20374f;
+  --color-border: rgba(255,255,255,0.10);
+  --color-text: #eaf0f6;
+  --color-text-muted: #a7b6c9;
+  --color-text-subtle: #7e90a6;
+  --foreground: #eaf0f6;
+  --muted-foreground: #a7b6c9;
+  --accent: rgba(255,255,255,0.06);
+  --accent-foreground: #eaf0f6;
+  --color-accent: #D7F36A;
+  --color-accent-fg: #16181D;
+  --wr-nav-active: #D7F36A;
+  --wr-btn-dark-bg: #0f2033;
+  --primary: #D7F36A;
+  color: #eaf0f6;
 }
 
 .wr-card-dark {
