@@ -25,6 +25,7 @@ import { ROLE_RANK } from "@/lib/auth/types";
 import { traduzir } from "@/lib/i18n/dicionario";
 import { existeConexaoDeLeitura } from "@/lib/plataformas-de-anuncio/credenciais-de-leitura";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { CommandHero } from "@/components/politico/command-hero";
 
 import { MetaAdsClient } from "./_components/MetaAdsClient";
 
@@ -59,14 +60,11 @@ export default async function MetaAdsPage() {
       data-superficie="clara"
       className="-m-6 flex min-h-[calc(100%+3rem)] flex-col gap-6 bg-bg p-6 text-text"
     >
-      <header>
-        <h1 className="text-2xl font-semibold tracking-tight">{t("Meta Ads")}</h1>
-        <p className="max-w-3xl text-sm text-muted-foreground">
-          {t(
-            "O desempenho das campanhas que estão trazendo gente para cá. Os números vêm da plataforma no momento em que você clica em Atualizar — nada fica guardado aqui.",
-          )}
-        </p>
-      </header>
+      <CommandHero
+        eyebrow="Análise · Meta Ads"
+        titulo="Meta Ads"
+        subtitulo="O desempenho das campanhas que estão trazendo gente para cá. Os números vêm da plataforma no momento em que você clica em Atualizar — nada fica guardado aqui."
+      />
 
       {conexao.conectada ? (
         <MetaAdsClient contaPadrao={conexao.contaPadrao} idioma={idioma} />

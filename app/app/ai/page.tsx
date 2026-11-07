@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { NavHub } from "@/components/shell/NavHub";
+import { CommandHero } from "@/components/politico/command-hero";
 import { requireAuth, resolveActiveOrg } from "@/lib/auth/server";
-import { traduzir } from "@/lib/i18n/dicionario";
 import { modulosLigados } from "@/lib/instalacao/modulos";
 import { createAdminClient } from "@/lib/supabase/admin";
 
@@ -25,18 +25,27 @@ export default async function AiHubPage() {
   const idioma = user.idioma;
 
   return (
-    <NavHub
-      group="ia"
-      isPlatformAdmin={user.is_platform_admin && !user.support}
-      role={activeOrg?.role ?? null}
-      interfaceSettings={activeOrg?.interface_settings}
-      modulosLigados={await modulosLigados(createAdminClient())}
-      title={traduzir("Agente de IA", idioma)}
-      subtitle={traduzir(
-        "Tudo que define quem atende por você — e como acompanhar o que ele faz.",
-        idioma,
-      )}
-      locale={idioma}
-    />
+    <>
+      <div className="px-6 pt-6">
+        <CommandHero
+          eyebrow="Agente de IA · Agentes"
+          titulo="Agentes de IA"
+          subtitulo="Tudo que define quem atende por você — e como acompanhar o que ele faz."
+        />
+      </div>
+      {/* O cabeçalho do NavHub é suprimido (title/subtitle vazios): o banner
+          acima é a nova apresentação. O NavHub é compartilhado por outros hubs
+          (CRM, Análise, Configurações), então não se edita aqui. */}
+      <NavHub
+        group="ia"
+        isPlatformAdmin={user.is_platform_admin && !user.support}
+        role={activeOrg?.role ?? null}
+        interfaceSettings={activeOrg?.interface_settings}
+        modulosLigados={await modulosLigados(createAdminClient())}
+        title=""
+        subtitle=""
+        locale={idioma}
+      />
+    </>
   );
 }

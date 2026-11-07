@@ -16,6 +16,7 @@ import { redirect } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { requireAuth, resolveActiveOrg } from "@/lib/auth/server";
+import { CommandHero } from "@/components/politico/command-hero";
 
 export const dynamic = "force-dynamic";
 
@@ -372,52 +373,35 @@ export default async function InstagramHubPage() {
   return (
     <div className="mx-auto max-w-[1140px] px-4 py-7 space-y-5">
       {/* ── Header ───────────────────────────────────────────────── */}
-      <header className="flex flex-wrap items-start justify-between gap-4">
-        <div className="flex items-start gap-3.5">
+      <CommandHero
+        eyebrow="Canais · Instagram"
+        titulo="Instagram"
+        subtitulo="GIPCHAT — comentários e DMs no automático, o seu motor próprio de captação."
+        extra={
+          /* Pílula de status da conexão — é informação (badge), não navegação,
+             por isso vai em `extra` e não em `acoes`. */
           <span
-            className="inline-flex items-center justify-center w-12 h-12 rounded-[14px] shrink-0"
+            className="inline-flex items-center gap-2 rounded-full px-3.5 py-1.5 text-[13px] font-semibold self-center"
             style={{
-              background: "linear-gradient(135deg, #833AB4 0%, #FD1D1D 55%, #FCB045 100%)",
-              color: "#FFFFFF",
+              background: conectado
+                ? "color-mix(in srgb, var(--color-accent) 16%, transparent)"
+                : "color-mix(in srgb, #F59E0B 16%, transparent)",
+              color: conectado ? "var(--color-accent)" : "#F59E0B",
+              border: `1px solid ${
+                conectado
+                  ? "color-mix(in srgb, var(--color-accent) 35%, transparent)"
+                  : "color-mix(in srgb, #F59E0B 35%, transparent)"
+              }`,
             }}
           >
-            <Icon name="instagram" className="w-6 h-6" />
+            <span
+              className="inline-block w-2 h-2 rounded-full"
+              style={{ background: conectado ? "var(--color-accent)" : "#F59E0B" }}
+            />
+            {conectado ? "Conta conectada" : "Não conectado"}
           </span>
-          <div>
-            <h1
-              className="font-heading text-[32px] font-bold leading-tight"
-              style={{ color: "var(--color-text)" }}
-            >
-              Instagram
-            </h1>
-            <p className="mt-0.5 text-[15px]" style={{ color: "var(--color-text-muted)" }}>
-              GIPCHAT — comentários e DMs no automático, o seu motor próprio de captação.
-            </p>
-          </div>
-        </div>
-
-        {/* Pílula de status da conexão */}
-        <span
-          className="inline-flex items-center gap-2 rounded-full px-3.5 py-1.5 text-[13px] font-semibold self-center"
-          style={{
-            background: conectado
-              ? "color-mix(in srgb, var(--color-accent) 16%, transparent)"
-              : "color-mix(in srgb, #F59E0B 16%, transparent)",
-            color: conectado ? "var(--color-accent)" : "#F59E0B",
-            border: `1px solid ${
-              conectado
-                ? "color-mix(in srgb, var(--color-accent) 35%, transparent)"
-                : "color-mix(in srgb, #F59E0B 35%, transparent)"
-            }`,
-          }}
-        >
-          <span
-            className="inline-block w-2 h-2 rounded-full"
-            style={{ background: conectado ? "var(--color-accent)" : "#F59E0B" }}
-          />
-          {conectado ? "Conta conectada" : "Não conectado"}
-        </span>
-      </header>
+        }
+      />
 
       {/* ── Hero de conexão ─────────────────────────────────────── */}
       {conectado ? (

@@ -88,8 +88,11 @@ function GaugeResolucao({ pct, resolvidas, total }: { pct: number; resolvidas: n
         <svg width={size} height={size}>
           <defs>
             <linearGradient id="gaugeGrad" x1="0" y1="0" x2="1" y2="1">
+              {/* Anel todo em LIMA (verde do elmo) — antes ia até --icon-accent,
+                  que na tela Hoje (branca) = navy → metade do anel sumia no hero
+                  marinho. Agora pop total no hero. */}
               <stop offset="0%" stopColor="#E5F89E" />
-              <stop offset="100%" stopColor="var(--icon-accent)" />
+              <stop offset="100%" stopColor="#C4E64A" />
             </linearGradient>
             <filter id="gaugeGlow" x="-50%" y="-50%" width="200%" height="200%">
               <feGaussianBlur stdDeviation="3" result="b" />
@@ -116,8 +119,8 @@ function GaugeResolucao({ pct, resolvidas, total }: { pct: number; resolvidas: n
           />
         </svg>
         <div className="absolute inset-0 flex flex-col items-center justify-center">
-          <span className="font-heading text-2xl font-bold" style={{ color: "#FFFFFF" }}>{pct}%</span>
-          <span className="text-[10px] uppercase tracking-wide" style={{ color: "rgba(255,255,255,0.5)" }}>resolvidas</span>
+          <span className="font-heading text-[32px] font-bold leading-none" style={{ color: "#FFFFFF" }}>{pct}%</span>
+          <span className="mt-1 text-[10px] font-semibold uppercase tracking-wide" style={{ color: "rgba(255,255,255,0.72)" }}>resolvidas</span>
         </div>
       </div>
       <div className="hidden sm:block">

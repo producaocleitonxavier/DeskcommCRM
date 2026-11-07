@@ -16,6 +16,8 @@ import { cn } from "@/lib/utils";
 import { useTasks } from "@/hooks/tasks/useTasks";
 import type { NovaTarefa, SituacaoDaTarefa, Tarefa } from "@/lib/tarefas/tipos";
 
+import { CommandHero } from "@/components/politico/command-hero";
+
 import { CalendarioDeTarefas } from "./CalendarioDeTarefas";
 import { FormularioDeTarefa } from "./FormularioDeTarefa";
 import { ListaDeTarefas } from "./ListaDeTarefas";
@@ -70,17 +72,13 @@ export function TarefasClient({ podeEditar }: { podeEditar: boolean }) {
 
   return (
     <div className="mx-auto flex w-full max-w-5xl flex-col gap-6 p-4 sm:p-6">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight">{t("Tarefas")}</h1>
-          <p className="mt-1 text-sm text-muted-foreground">
-            {t(
-              "O que ficou combinado, com prazo. Tarefa ligada a uma pessoa aparece na linha do tempo dela.",
-            )}
-          </p>
-        </div>
+      <CommandHero
+        eyebrow="Operação · Tarefas"
+        titulo="Tarefas"
+        subtitulo="O que ficou combinado, com prazo. Tarefa ligada a uma pessoa aparece na linha do tempo dela."
+      />
 
-        <div className="flex flex-wrap items-center gap-2">
+      <div className="flex flex-wrap items-center justify-end gap-2">
           <Select
             value={situacao}
             onValueChange={(v) => setSituacao(v as FiltroDeSituacao)}
@@ -145,7 +143,6 @@ export function TarefasClient({ podeEditar }: { podeEditar: boolean }) {
               {t("Nova tarefa")}
             </Button>
           )}
-        </div>
       </div>
 
       {falhou ? (

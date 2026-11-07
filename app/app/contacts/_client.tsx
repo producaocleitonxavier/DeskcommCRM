@@ -26,6 +26,7 @@ import { TAG_DE_CLIENTE } from "@/lib/contacts/cliente";
 import { type ModoDeEtiqueta } from "@/lib/inbox/marcador-da-conversa";
 import { useActiveOrg } from "@/hooks/auth/AuthProvider";
 import { MergeDialog } from "@/components/contacts/MergeDialog";
+import { CommandHero } from "@/components/politico/command-hero";
 import { EmptyContacts } from "@/components/empty";
 import type { ContactOrderBy } from "@/lib/schemas/contacts";
 
@@ -122,39 +123,32 @@ export function ContactsListClient() {
 
   return (
     <div className="space-y-4 p-6">
-      <header className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
-        <div className="min-w-0">
-          <h1 className="text-2xl font-semibold tracking-tight">{t("Contatos")}</h1>
-          <p className="text-sm text-muted-foreground">
-            {t("Customer 360 — busque, filtre e gerencie contatos.")}
-          </p>
-        </div>
-        {/*
-          A estrutura é a da main (o "Importar CSV" do PR #313); o `shrink-0`
-          vem do PR #267, e vale para os DOIS botões agora: numa tela de 390px
-          uma linha de dois botões sem isso comprime os rótulos.
-        */}
-        <div className="flex shrink-0 items-center gap-2">
-          {/*
-            A porta do recurso de duplicados fica AQUI, na tela que já existe, e
-            não num item de menu novo: quem descobre que tem contato repetido
-            descobre olhando a lista, e a barra lateral não precisa crescer para
-            um trabalho que se faz de vez em quando.
-          */}
-          <Button variant="outline" onClick={() => setDuplicadosOpen(true)}>
-            <UsersThree size={16} weight="bold" aria-hidden />
-            <span>{t("Duplicados")}</span>
-          </Button>
-          <Button variant="outline" onClick={() => setImportOpen(true)}>
-            <UploadSimple size={16} weight="bold" aria-hidden />
-            <span>{t("Importar CSV")}</span>
-          </Button>
-          <Button onClick={() => setCreateOpen(true)}>
-            <Plus size={16} weight="bold" aria-hidden />
-            <span>{t("Novo contato")}</span>
-          </Button>
-        </div>
-      </header>
+      <CommandHero
+        eyebrow="Operação · Contatos"
+        titulo="Contatos"
+        subtitulo="Customer 360 — busque, filtre e gerencie contatos."
+      />
+      {/*
+        Botões de ação do cabeçalho — abrem diálogos (onClick), por isso ficam
+        numa barra logo abaixo do banner e não nas `acoes` do CommandHero (que
+        só aceita navegação por Link). O `shrink-0` vem do PR #267: numa tela de
+        390px uma linha de botões sem isso comprime os rótulos. A porta dos
+        duplicados fica aqui, na tela que já existe, e não num item de menu novo.
+      */}
+      <div className="flex flex-wrap items-center justify-end gap-2">
+        <Button variant="outline" onClick={() => setDuplicadosOpen(true)}>
+          <UsersThree size={16} weight="bold" aria-hidden />
+          <span>{t("Duplicados")}</span>
+        </Button>
+        <Button variant="outline" onClick={() => setImportOpen(true)}>
+          <UploadSimple size={16} weight="bold" aria-hidden />
+          <span>{t("Importar CSV")}</span>
+        </Button>
+        <Button onClick={() => setCreateOpen(true)}>
+          <Plus size={16} weight="bold" aria-hidden />
+          <span>{t("Novo contato")}</span>
+        </Button>
+      </div>
 
       <div className="flex flex-wrap items-center gap-2 rounded-lg border border-border bg-surface p-2">
         <div className="relative w-full sm:w-72">

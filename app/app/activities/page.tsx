@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { requireAuth } from "@/lib/auth/server";
-import { traduzir } from "@/lib/i18n/dicionario";
+import { CommandHero } from "@/components/politico/command-hero";
 
 import { Relatorios } from "./_components/Relatorios";
 
@@ -22,21 +22,17 @@ export default async function ActivitiesReportPage({
 }: {
   searchParams: Promise<{ aba?: string }>;
 }) {
-  const user = await requireAuth();
-  // `t` local e não o hook: componente de SERVIDOR — o idioma já vem resolvido
-  // pela cadeia pessoa → organização → padrão em `lib/auth/server.ts`.
-  const t = (texto: string) => traduzir(texto, user.idioma);
+  await requireAuth();
   const { aba } = await searchParams;
   const abaInicial = ABAS[aba ?? ""] ?? "atividades";
 
   return (
     <div className="flex h-full flex-col gap-6 p-6">
-      <header>
-        <h1 className="text-2xl font-semibold tracking-tight">{t("Atividades")}</h1>
-        <p className="text-sm text-muted-foreground">
-          {t("O que aconteceu na operação no período — e quanto disso foi a equipe.")}
-        </p>
-      </header>
+      <CommandHero
+        eyebrow="Análise · Atividades"
+        titulo="Atividades"
+        subtitulo="O que aconteceu na operação no período — e quanto disso foi a equipe."
+      />
 
       <Relatorios abaInicial={abaInicial} />
     </div>

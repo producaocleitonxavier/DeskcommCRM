@@ -58,6 +58,7 @@ const ROTAS_BASE_TEMA_GIP = [
  * (regra do Leandro). Exceção funcional dentro do Atendimento. */
 const ROTAS_BASE_BRANCO = [
   "/app/inbox",
+  "/app/agenda", // Gabinete (papelada do mandato) — branco + hero marinho
 ];
 
 export function AppShell({ sidebarCollapsed, podeAtender, temaClaro, children }: AppShellProps) {
