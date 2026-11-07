@@ -298,7 +298,7 @@ export default function VozClient({ inicial }: { inicial: Inicial }) {
               type="button"
               onClick={copiarRoteiro}
               className="inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold"
-              style={{ border: "1px solid var(--color-border)", background: "var(--color-surface-elevated)", color: copiado ? "var(--color-accent)" : "var(--color-text-muted)" }}
+              style={{ border: "1px solid var(--color-border)", background: "var(--color-surface-elevated)", color: copiado ? "var(--accent-ink, var(--color-accent))" : "var(--color-text-muted)" }}
             >
               {copiado ? <Check className="h-3.5 w-3.5" aria-hidden /> : <Copy className="h-3.5 w-3.5" aria-hidden />}
               {copiado ? "Copiado!" : "Copiar texto"}
@@ -380,12 +380,12 @@ export default function VozClient({ inicial }: { inicial: Inicial }) {
             <label
               htmlFor="amostra-voz"
               className="flex cursor-pointer flex-col items-center justify-center gap-2 rounded-[16px] px-4 py-6 text-center transition-transform hover:scale-[1.01]"
-              style={{ border: `2px dashed ${nomeArquivo ? "var(--color-accent)" : "var(--color-border)"}`, background: "var(--color-surface-elevated)" }}
+              style={{ border: `2px dashed ${nomeArquivo ? "var(--accent-ink, var(--color-accent))" : "var(--color-border)"}`, background: "var(--color-surface-elevated)" }}
             >
               <span className="flex h-11 w-11 items-center justify-center rounded-full" style={{ background: "color-mix(in srgb, var(--color-accent) 12%, transparent)", color: "var(--accent-ink, var(--color-accent))" }} aria-hidden>
                 {nomeArquivo ? <Check className="h-6 w-6" /> : <Upload className="h-6 w-6" />}
               </span>
-              <span className="text-[15px] font-bold" style={{ color: nomeArquivo ? "var(--color-accent)" : "var(--color-text)" }}>
+              <span className="text-[15px] font-bold" style={{ color: nomeArquivo ? "var(--accent-ink, var(--color-accent))" : "var(--color-text)" }}>
                 {nomeArquivo ?? "Clique para subir o áudio"}
               </span>
               <span className="text-xs" style={{ color: "var(--color-text-subtle)" }}>
@@ -449,9 +449,9 @@ export default function VozClient({ inicial }: { inicial: Inicial }) {
                     disabled={pending}
                     className="rounded-full px-3.5 py-1.5 text-[13px] font-semibold transition-colors disabled:opacity-60"
                     style={{
-                      border: `1px solid ${ativoSel ? "var(--color-accent)" : "var(--color-border)"}`,
+                      border: `1px solid ${ativoSel ? "var(--accent-ink, var(--color-accent))" : "var(--color-border)"}`,
                       background: ativoSel ? "color-mix(in srgb, var(--color-accent) 16%, transparent)" : "var(--color-surface-elevated)",
-                      color: ativoSel ? "var(--color-accent)" : "var(--color-text-muted)",
+                      color: ativoSel ? "var(--accent-ink, var(--color-accent))" : "var(--color-text-muted)",
                     }}
                   >
                     {p.rotulo}
@@ -482,7 +482,7 @@ export default function VozClient({ inicial }: { inicial: Inicial }) {
       )}
 
       {msg && (
-        <div className="flex items-center gap-2 rounded-[12px] px-4 py-3 text-sm" style={{ background: msg.tipo === "ok" ? "color-mix(in srgb, var(--color-accent) 14%, transparent)" : "rgba(239,68,68,0.14)", color: msg.tipo === "ok" ? "var(--color-accent)" : "#F87171" }}>
+        <div className="flex items-center gap-2 rounded-[12px] px-4 py-3 text-sm" style={{ background: msg.tipo === "ok" ? "color-mix(in srgb, var(--color-accent) 14%, transparent)" : "rgba(239,68,68,0.14)", color: msg.tipo === "ok" ? "var(--accent-ink, var(--color-accent))" : "#C82333" }}>
           {msg.tipo === "ok" && <Check className="h-4 w-4" aria-hidden />} {msg.texto}
         </div>
       )}

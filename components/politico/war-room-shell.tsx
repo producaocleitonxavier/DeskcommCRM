@@ -43,7 +43,9 @@ export const ROTAS_NAVY = [
   "/app/politico/decisao",
   "/app/politico/briefing",
   "/app/politico/motor-viral",
-  "/app/politico/voz",
+  // Voz do Mandato NÃO entra aqui: é uma FERRAMENTA que se opera (gravar/ler
+  // roteiro/gerar), não um painel de análise. Fica como página de TRABALHO
+  // (hero marinho + corpo branco), igual Demandas/Visitas/Ofícios.
 ];
 
 export default function WarRoomShell({
