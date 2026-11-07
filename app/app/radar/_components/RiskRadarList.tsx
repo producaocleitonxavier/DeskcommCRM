@@ -261,14 +261,25 @@ function RadarRow({ lead }: { lead: AtRiskLead }) {
     <li
       data-testid="radar-item"
       data-risk={lead.risk}
-      className="flex items-start gap-2 pr-3 transition-colors hover:bg-accent/50"
+      className="relative flex items-start gap-2 pr-3 transition-colors hover:bg-white/[0.05]"
+      style={{
+        borderLeft: `4px solid ${meta.variant === "error" ? "#F8716B" : "#FBBF24"}`,
+        background: meta.variant === "error" ? "rgba(239,68,68,0.07)" : "rgba(245,158,11,0.06)",
+      }}
     >
       <Link href={href} className="flex min-w-0 flex-1 items-start gap-3 px-4 py-3">
-        <Badge variant={meta.variant} className="mt-0.5 shrink-0">
+        <span
+          className="mt-0.5 shrink-0 inline-flex items-center rounded-full px-2.5 py-0.5 text-[11px] font-bold"
+          style={
+            meta.variant === "error"
+              ? { background: "rgba(239,68,68,0.22)", color: "#FCA5A5", border: "1px solid rgba(239,68,68,0.5)" }
+              : { background: "rgba(245,158,11,0.20)", color: "#FBBF24", border: "1px solid rgba(245,158,11,0.48)" }
+          }
+        >
           {t(meta.label)}
-        </Badge>
+        </span>
         <div className="min-w-0 flex-1">
-          <p className="truncate text-sm font-medium">{lead.title}</p>
+          <p className="truncate text-sm font-semibold">{lead.title}</p>
           <p className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted-foreground">
             {lead.contact_name ? <span className="truncate">{lead.contact_name}</span> : null}
             <span className="inline-flex items-center gap-1">

@@ -1347,9 +1347,9 @@
   letter-spacing: 0.05em;
 }
 .wr-section-tactical {
-  /* Sidebar marinho: títulos de seção em BRANCO bold (antes lima/verde) —
-     pedido do cliente "deixe só as palavras em branco bold". */
-  color: #FFFFFF;
+  /* Títulos de SEÇÃO do sidebar em VERDE (lima) pra DIFERENCIAR dos itens
+     (que são brancos bold). O cliente confirmou: seção verde, item branco. */
+  color: var(--color-accent);
   font-size: 0.7rem;
   font-weight: 700;
   letter-spacing: 0.15em;

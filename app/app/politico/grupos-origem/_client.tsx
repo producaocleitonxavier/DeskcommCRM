@@ -185,7 +185,7 @@ export default function GruposOrigemClient({ grupos, aClassificar, outrasPoucas,
                 >
                   <div
                     className="h-full rounded-full"
-                    style={{ width: `${Math.max(o.pct, 2)}%`, background: corDaOrigem(o.source) }}
+                    style={{ width: `${Math.max(o.pct, 2)}%`, background: "var(--color-accent)" }}
                   />
                 </div>
                 <span className="w-28 shrink-0 text-right text-sm tabular-nums">

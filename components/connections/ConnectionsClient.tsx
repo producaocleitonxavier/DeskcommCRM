@@ -586,7 +586,23 @@ export function ConnectionsClient({ wahaConfigured }: { wahaConfigured: boolean 
                       </p>
                     )}
                   </div>
-                  <Badge variant={info.variant}>{info.label}</Badge>
+                  {/* Selo vívido no marinho (o Badge padrao lavava). Conectado =
+                      verde forte; Parado/Caiu = laranja (sem o vermelho apagado,
+                      mas ainda "precisa de atencao"); QR/conectando = ambar. */}
+                  <span
+                    className="shrink-0 inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-bold"
+                    style={
+                      info.variant === "success"
+                        ? { background: "rgba(34,197,94,0.20)", color: "#4ADE80", border: "1px solid rgba(34,197,94,0.45)" }
+                        : info.variant === "warning"
+                          ? { background: "rgba(245,158,11,0.18)", color: "#FBBF24", border: "1px solid rgba(245,158,11,0.40)" }
+                          : info.variant === "error"
+                            ? { background: "rgba(249,115,22,0.20)", color: "#FB923C", border: "1px solid rgba(249,115,22,0.45)" }
+                            : { background: "rgba(255,255,255,0.08)", color: "rgba(255,255,255,0.75)", border: "1px solid rgba(255,255,255,0.16)" }
+                    }
+                  >
+                    {info.label}
+                  </span>
                   {pausado && <Badge variant="neutral">{t("Pausado")}</Badge>}
                 </div>
                 <p className="text-[11px] text-muted-foreground">

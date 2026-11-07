@@ -6,6 +6,7 @@ import { traduzir } from "@/lib/i18n/dicionario";
 import { createClient } from "@/lib/supabase/server";
 import type { AgentRow } from "@/hooks/ai/useAgent";
 import { AgentsList } from "./_components/AgentsList";
+import { CommandHero } from "@/components/politico/command-hero";
 import { logger } from "@/lib/logger";
 
 export const dynamic = "force-dynamic";
@@ -54,16 +55,11 @@ export default async function AgentsListPage() {
 
   return (
     <div className="flex h-full flex-col gap-6 p-6">
-      <header className="flex flex-wrap items-end justify-between gap-2">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight">
-            {traduzir("Agentes de IA", idioma)}
-          </h1>
-          <p className="text-sm text-muted-foreground">
-            {traduzir("Configure o comportamento dos agentes que respondem no WhatsApp.", idioma)}
-          </p>
-        </div>
-      </header>
+      <CommandHero
+        eyebrow="Agente de IA · Agentes"
+        titulo={traduzir("Agentes de IA", idioma)}
+        subtitulo={traduzir("Configure o comportamento dos agentes que respondem no WhatsApp.", idioma)}
+      />
       <AgentsList initialData={agents} canWrite={canWrite} />
     </div>
   );

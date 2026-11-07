@@ -404,8 +404,8 @@ export default function DetalheDemandaClient({ demanda, assessores, eventos, voz
                 router.refresh();
               } else setErro(res.erro);
             }}
-            className="wr-btn inline-flex items-center gap-1.5 disabled:opacity-50"
-            style={{ background: "rgba(37,211,102,0.14)", color: "#25D366", borderColor: "rgba(37,211,102,0.35)" }}
+            className="wr-btn inline-flex items-center gap-1.5 font-semibold disabled:opacity-50"
+            style={{ background: "rgba(18,140,75,0.12)", color: "#0E7A40", borderColor: "rgba(18,140,75,0.45)" }}
           >
             <MessageCircle className="h-4 w-4" aria-hidden /> {avisando ? "Enviando…" : "Avisar cidadão"}
           </button>
@@ -595,8 +595,8 @@ export default function DetalheDemandaClient({ demanda, assessores, eventos, voz
                   setErro(res.erro);
                 }
               }}
-              className="wr-btn inline-flex items-center gap-1.5 disabled:opacity-50"
-              style={{ background: "color-mix(in srgb, var(--color-accent) 14%, transparent)", color: "var(--accent-ink, var(--color-accent))", borderColor: "color-mix(in srgb, var(--color-accent) 30%, transparent)" }}
+              className="wr-btn inline-flex items-center gap-1.5 font-semibold disabled:opacity-50"
+              style={{ background: "rgba(18,140,75,0.12)", color: "#0E7A40", borderColor: "rgba(18,140,75,0.45)" }}
             >
               <Sparkles className="h-4 w-4" aria-hidden /> {gerandoIA ? "Gerando…" : "Gerar com IA"}
             </button>

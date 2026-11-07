@@ -187,7 +187,13 @@ export default function DetalheLiderancaClient({ lideranca, fotoUrl, territorios
         </Link>
       </div>
 
-      <header className="gip-glass p-6 sm:p-7">
+      {/* Card de cabeçalho no padrão HERO (navy): as 3 classes dão o escopo
+          marinho e os filhos (nome, botões, contadores) herdam texto branco. */}
+      <header
+        className="gip-glass war-room wr-claro wr-navy-section p-6 sm:p-7"
+        data-theme="light"
+        style={{ background: "var(--hero-grad)", border: "1px solid var(--hero-border)" }}
+      >
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div className="flex min-w-0 items-center gap-4">
             {/* Avatar com botão de trocar foto */}
