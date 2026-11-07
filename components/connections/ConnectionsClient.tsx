@@ -485,10 +485,10 @@ export function ConnectionsClient({ wahaConfigured }: { wahaConfigured: boolean 
             </div>
           }
           aviso={
-            <>
+            <span style={{ color: "#4ADE80" }}>
               {t("Não compartilhe esta sessão.")}{" "}
               {t("Crie uma conexão separada por QR no outro sistema.")}
-            </>
+            </span>
           }
         />
       ) : null}

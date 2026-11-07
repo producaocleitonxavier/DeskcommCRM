@@ -11,7 +11,6 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
   ArrowLeft,
-  MapPin,
   Users,
   CalendarCheck,
   UserPlus,
@@ -29,6 +28,7 @@ import {
   excluirLocal,
 } from "@/app/actions/politico/eventos-actions";
 import { KpiCard } from "@/components/politico/kpi-card";
+import { CommandHero } from "@/components/politico/command-hero";
 
 export interface LocalDetalhe {
   id: string;
@@ -212,23 +212,25 @@ export default function LocalDetalheClient({
         <Link href="/app/politico/locais" className="inline-flex items-center gap-1 text-sm transition-colors" style={{ color: "var(--color-text-muted)" }}>
           <ArrowLeft className="h-4 w-4" aria-hidden /> Locais & Eventos
         </Link>
-        <div className="mt-3 flex flex-wrap items-center gap-3">
-          <h1 className="font-heading text-3xl font-bold leading-tight">{local.nome}</h1>
-          <span className="rounded-full px-2.5 py-0.5 text-xs font-semibold" style={{ background: "color-mix(in srgb, var(--color-accent) 16%, transparent)", color: "#5B6B16" }}>
-            {TIPO_LABEL[local.tipo] ?? "Local"}
-          </span>
-          {local.zona && (
-            <span className="rounded-full px-2.5 py-0.5 text-xs font-semibold" style={{ background: "var(--color-surface-elevated)", color: "var(--color-text-subtle)" }}>
-              Zona {local.zona}
-            </span>
-          )}
-        </div>
-        {(localImo || local.endereco) && (
-          <p className="mt-1.5 inline-flex items-center gap-1.5 text-sm" style={{ color: "var(--color-text-muted)" }}>
-            <MapPin className="h-4 w-4" aria-hidden /> {[local.endereco, localImo].filter(Boolean).join(" — ")}
-          </p>
-        )}
       </div>
+
+      <CommandHero
+        eyebrow="Gabinete · Locais & Eventos"
+        titulo={local.nome}
+        subtitulo={[local.endereco, localImo].filter(Boolean).join(" — ") || undefined}
+        extra={
+          <>
+            <span className="rounded-full px-2.5 py-0.5 text-xs font-semibold" style={{ background: "color-mix(in srgb, var(--color-accent) 16%, transparent)", color: "#5B6B16" }}>
+              {TIPO_LABEL[local.tipo] ?? "Local"}
+            </span>
+            {local.zona && (
+              <span className="rounded-full px-2.5 py-0.5 text-xs font-semibold" style={{ background: "var(--color-surface-elevated)", color: "var(--color-text-subtle)" }}>
+                Zona {local.zona}
+              </span>
+            )}
+          </>
+        }
+      />
 
       <section className="grid grid-cols-2 gap-4 sm:grid-cols-3">
         <KpiCard label="Eventos" valor={eventos.length} icone={CalendarCheck} />

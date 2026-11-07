@@ -8,12 +8,6 @@
  */
 
 import { useMemo } from "react";
-import dynamic from "next/dynamic";
-
-const MapaObrasPublico = dynamic(() => import("@/components/politico/mapa-obras-publico"), {
-  ssr: false,
-  loading: () => <div className="h-[460px] w-full rounded-2xl" style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.1)" }} />,
-});
 
 export interface ObraPublica {
   id: string;
@@ -88,7 +82,20 @@ function local(bairro: string | null, municipio: string | null): string {
 
 export default function PortalTransparenciaClient({ politicoNome, politicoCargo, logoUrl, plataformaNome, obras, emendas }: Props) {
   const titulo = politicoNome || "Gabinete";
-  const obrasComGeo = useMemo(() => obras.filter((o) => o.latitude != null && o.longitude != null), [obras]);
+  // Ranking "Entregas por bairro" — mais escaneável e premium que o mapa (decisão
+  // do cliente): agrupa obras por bairro somando valor + contagem.
+  const porBairro = useMemo(() => {
+    const m = new Map<string, { valor: number; obras: number }>();
+    for (const o of obras) {
+      const b = o.bairro?.trim() || "Sem bairro";
+      const cur = m.get(b) ?? { valor: 0, obras: 0 };
+      cur.valor += o.valorCents || 0;
+      cur.obras += 1;
+      m.set(b, cur);
+    }
+    return [...m.entries()].map(([bairro, v]) => ({ bairro, ...v })).sort((a, b) => b.valor - a.valor).slice(0, 8);
+  }, [obras]);
+  const maxBairro = Math.max(...porBairro.map((b) => b.valor), 1);
 
   const investidoObras = obras.reduce((s, o) => s + (o.valorCents || 0), 0);
   const aplicadoEmendas = emendas.reduce((s, e) => s + (e.valorPagoCents || 0), 0);
@@ -98,7 +105,7 @@ export default function PortalTransparenciaClient({ politicoNome, politicoCargo,
   const vazio = obras.length === 0 && emendas.length === 0;
 
   return (
-    <div className="min-h-screen" style={{ background: "linear-gradient(170deg,#0E1116 0%,#14181F 55%,#1A2410 100%)", color: "#E8E8E4" }}>
+    <div className="min-h-screen" style={{ background: "linear-gradient(170deg,#0d1b2b 0%,#16293c 55%,#102235 100%)", color: "#E8E8E4" }}>
       <div className="mx-auto max-w-[1040px] px-4 py-10 sm:py-14">
         {/* Cabeçalho do mandato */}
         <header className="flex flex-col items-center text-center">
@@ -133,22 +140,25 @@ export default function PortalTransparenciaClient({ politicoNome, politicoCargo,
               <Kpi valor={String(emendas.length)} label="Emendas destinadas" />
             </section>
 
-            {/* Mapa de entregas */}
-            {obrasComGeo.length > 0 && (
+            {/* Entregas por bairro (ranking) */}
+            {porBairro.length > 0 && (
               <section className="mt-10">
-                <h2 className="mb-3 font-heading text-xl font-bold" style={{ color: "#FFFFFF" }}>Mapa de entregas</h2>
-                <MapaObrasPublico
-                  obras={obrasComGeo.map((o) => ({
-                    id: o.id,
-                    titulo: o.titulo,
-                    status: o.status,
-                    percentual: o.percentual,
-                    lat: o.latitude as number,
-                    lng: o.longitude as number,
-                    bairro: o.bairro,
-                    municipio: o.municipio,
-                  }))}
-                />
+                <h2 className="mb-3 font-heading text-xl font-bold" style={{ color: "#FFFFFF" }}>Entregas por bairro</h2>
+                <div className="rounded-2xl p-5" style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.1)" }}>
+                  <ul className="flex flex-col gap-3.5">
+                    {porBairro.map((b) => (
+                      <li key={b.bairro} className="flex items-center gap-3">
+                        <span className="w-24 shrink-0 truncate text-sm font-semibold sm:w-32" style={{ color: "#FFFFFF" }} title={b.bairro}>{b.bairro}</span>
+                        <div className="h-2.5 flex-1 overflow-hidden rounded-full" style={{ background: "rgba(255,255,255,0.08)" }}>
+                          <div className="h-full rounded-full" style={{ width: `${Math.max((b.valor / maxBairro) * 100, 4)}%`, background: "#D7F36A" }} />
+                        </div>
+                        <span className="w-32 shrink-0 text-right text-sm tabular-nums sm:w-40" style={{ color: "rgba(255,255,255,0.88)" }}>
+                          {moeda(b.valor)} <span style={{ color: "rgba(255,255,255,0.5)" }}>· {b.obras} obra{b.obras > 1 ? "s" : ""}</span>
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
               </section>
             )}
 

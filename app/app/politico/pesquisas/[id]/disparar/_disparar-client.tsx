@@ -214,7 +214,7 @@ export default function DispararClient({ surveyId, titulo, numPerguntas, nomeMan
             </p>
             <textarea className="wr-input w-full" rows={5} value={mensagem} onChange={(e) => setMensagem(e.target.value)} />
             <div className="rounded-lg p-3 text-sm" style={{ background: "#1a472a", color: "#dcfce7", maxWidth: 420 }}>
-              {mensagem.replace("{{primeiro_nome}}", "Maria").replace(VARIAVEL_LINK, "warromcleitonxavier.cloud/pesquisa/abc123")}
+              {mensagem.replace("{{primeiro_nome}}", "Maria").replace(VARIAVEL_LINK, "[link da pesquisa]")}
             </div>
           </div>
 

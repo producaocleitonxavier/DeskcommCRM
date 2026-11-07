@@ -97,31 +97,41 @@ export function RiskRadarList() {
           viola o invariante 5. Esta é a lista que responde "e daí?". */}
       {semPasso.length > 0 ? (
         <section
-          className="rounded-lg border border-warning-border bg-warning-bg/40 p-3"
+          className="rounded-xl p-4"
           data-testid="radar-sem-proximo-passo"
+          style={{ border: "1px solid rgba(245,158,11,0.35)", borderLeft: "4px solid #FBBF24", background: "rgba(245,158,11,0.08)" }}
         >
-          <p className="text-sm font-medium">
-            {semPasso.length}{" "}
-            {semPasso.length === 1
-              ? t("demanda aberta sem próximo passo")
-              : t("demandas abertas sem próximo passo")}
-          </p>
-          <p className="mb-2 text-xs text-muted-foreground">
-            {t(
-              "Ninguém marcou o que acontece a seguir. Cada uma é alguém esperando sem que nada esteja combinado.",
-            )}
-          </p>
-          <ul className="flex flex-col gap-1">
+          <div className="mb-3 flex items-center gap-3">
+            <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full" style={{ background: "rgba(245,158,11,0.20)" }}>
+              <Warning size={22} style={{ color: "#FBBF24" }} aria-hidden />
+            </span>
+            <div className="min-w-0">
+              <p className="font-heading text-xl font-bold leading-tight">
+                <span className="tabular-nums" style={{ color: "#FBBF24" }}>{semPasso.length}</span>{" "}
+                <span className="text-sm font-semibold" style={{ color: "var(--color-text)" }}>
+                  {semPasso.length === 1 ? t("demanda aberta sem próximo passo") : t("demandas abertas sem próximo passo")}
+                </span>
+              </p>
+              <p className="text-xs" style={{ color: "var(--color-text-muted)" }}>
+                {t("Ninguém marcou o que acontece a seguir. Cada uma é alguém esperando sem que nada esteja combinado.")}
+              </p>
+            </div>
+          </div>
+          <ul className="flex flex-col gap-1.5">
             {semPasso.slice(0, 8).map((d) => (
-              <li key={d.id} className="flex items-baseline justify-between gap-3 text-xs">
+              <li key={d.id} className="flex items-center justify-between gap-3 rounded-lg px-2.5 py-1.5 text-xs transition-colors hover:bg-white/[0.04]" style={{ background: "rgba(255,255,255,0.03)" }}>
                 <Link
                   href={destinoDaDemandaSemPasso(d)}
-                  className="truncate hover:underline"
+                  className="truncate font-medium hover:underline"
                   data-testid="radar-sem-passo-link"
+                  style={{ color: "var(--color-text)" }}
                 >
                   {d.contact_name ?? t("Contato sem nome")}
                 </Link>
-                <span className="shrink-0 tabular-nums text-muted-foreground">
+                <span
+                  className="shrink-0 rounded-full px-2 py-0.5 text-[11px] font-bold tabular-nums"
+                  style={d.horas_aberta >= 720 ? { background: "rgba(239,68,68,0.16)", color: "#FCA5A5" } : { background: "rgba(255,255,255,0.06)", color: "var(--color-text-muted)" }}
+                >
                   {t("aberta há")} {d.horas_aberta}h
                 </span>
               </li>

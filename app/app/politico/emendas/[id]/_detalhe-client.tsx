@@ -15,6 +15,7 @@ import { ArrowLeft, Check, Pencil, Trash2, X, Users, Copy } from "lucide-react";
 import { atualizarRegistro, excluirRegistro } from "@/app/actions/politico/gabinete-actions";
 import { listarBeneficiariosEmenda, type BeneficiarioObra } from "@/app/actions/politico/obras-actions";
 import { BotaoRecadoVoz } from "@/components/politico/botao-recado-voz";
+import { CommandHero } from "@/components/politico/command-hero";
 
 interface Opcao {
   id: string;
@@ -258,52 +259,49 @@ export default function DetalheEmendaClient({ emenda, liderancas, peso, mandatoN
         </Link>
       </div>
 
-      <header className="gip-glass p-6 sm:p-7">
-        <div className="flex flex-wrap items-start justify-between gap-3">
-          <div className="min-w-0">
-            <div className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--color-text-subtle)" }}>
-              {e.numero ?? "s/nº"} · {e.ano} · {rotulo(TIPOS, e.tipo)} · {rotulo(ESFERAS, e.esfera)}
-            </div>
-            <h1 className="mt-1 font-heading text-2xl font-bold leading-tight" style={{ color: "var(--color-text)" }}>{destino}</h1>
-            <p className="mt-1 text-sm" style={{ color: "var(--color-text-muted)" }}>{rotulo(AREAS, e.area_tematica)} · {e.descricao}</p>
-          </div>
-          <div className="flex items-center gap-2">
-            {proximaAcao && !editando && (
-              <button type="button" disabled={salvando} onClick={() => { setAvValor(""); setAvAberto((v) => !v); }} className="wr-btn-dark">
-                {proximaAcao.label}
-              </button>
-            )}
-            {!editando && (
-              <button type="button" onClick={() => setEditando(true)} className="wr-btn inline-flex items-center gap-2">
-                <Pencil className="h-4 w-4" aria-hidden /> Editar
-              </button>
-            )}
-            {!editando && (
-              <button
-                type="button"
-                disabled={excluindo}
-                onClick={async () => {
-                  if (!window.confirm("Excluir esta emenda? Esta ação não pode ser desfeita.")) return;
-                  setErro(null);
-                  setExcluindo(true);
-                  const res = await excluirRegistro("pol_emendas", e.id);
-                  if (!res.ok) {
-                    setExcluindo(false);
-                    setErro(res.erro);
-                    return;
-                  }
-                  router.push("/app/politico/emendas");
-                  router.refresh();
-                }}
-                className="wr-btn inline-flex items-center gap-2 disabled:opacity-50"
-                style={{ color: "#EF4444", borderColor: "rgba(239,68,68,0.35)" }}
-              >
-                <Trash2 className="h-4 w-4" aria-hidden /> {excluindo ? "Excluindo…" : "Excluir"}
-              </button>
-            )}
-          </div>
-        </div>
+      <CommandHero
+        eyebrow={`${e.numero ?? "s/nº"} · ${e.ano} · ${rotulo(TIPOS, e.tipo)} · ${rotulo(ESFERAS, e.esfera)}`}
+        titulo={destino}
+        subtitulo={`${rotulo(AREAS, e.area_tematica)} · ${e.descricao}`}
+      />
 
+      <div className="flex flex-wrap items-center justify-end gap-2">
+        {proximaAcao && !editando && (
+          <button type="button" disabled={salvando} onClick={() => { setAvValor(""); setAvAberto((v) => !v); }} className="wr-btn-dark">
+            {proximaAcao.label}
+          </button>
+        )}
+        {!editando && (
+          <button type="button" onClick={() => setEditando(true)} className="wr-btn inline-flex items-center gap-2">
+            <Pencil className="h-4 w-4" aria-hidden /> Editar
+          </button>
+        )}
+        {!editando && (
+          <button
+            type="button"
+            disabled={excluindo}
+            onClick={async () => {
+              if (!window.confirm("Excluir esta emenda? Esta ação não pode ser desfeita.")) return;
+              setErro(null);
+              setExcluindo(true);
+              const res = await excluirRegistro("pol_emendas", e.id);
+              if (!res.ok) {
+                setExcluindo(false);
+                setErro(res.erro);
+                return;
+              }
+              router.push("/app/politico/emendas");
+              router.refresh();
+            }}
+            className="wr-btn inline-flex items-center gap-2 disabled:opacity-50"
+            style={{ color: "#EF4444", borderColor: "rgba(239,68,68,0.35)" }}
+          >
+            <Trash2 className="h-4 w-4" aria-hidden /> {excluindo ? "Excluindo…" : "Excluir"}
+          </button>
+        )}
+      </div>
+
+      <header className="gip-glass p-6 sm:p-7">
         {/* Pipeline de execução */}
         {!terminal && (
           <div className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-4">

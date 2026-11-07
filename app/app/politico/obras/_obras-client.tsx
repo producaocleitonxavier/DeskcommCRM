@@ -77,7 +77,7 @@ export default function ObrasClient({ obras, executivo, eleicoes, mandatoInicial
       {/* KPIs */}
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
         <Kpi label="Total" value={String(obras.length)} sub="obras & contratos" />
-        <Kpi label="Em andamento" value={String(emAndamento)} sub={paralisadas ? `${paralisadas} paralisada(s)` : "em execução"} accent="var(--color-accent)" />
+        <Kpi label="Em andamento" value={String(emAndamento)} sub={paralisadas ? `${paralisadas} paralisada(s)` : "em execução"} accent="var(--accent-ink, var(--color-accent))" />
         <Kpi label="Concluídas" value={String(concluidas)} sub="entregues" accent="#58C08A" />
         <Kpi label="Valor acompanhado" value={brl(valorTotal)} sub="soma dos contratos" />
       </div>
@@ -208,7 +208,7 @@ function Kpi({ label, value, sub, accent }: { label: string; value: string; sub?
   return (
     <div className="rounded-[18px] p-4" style={{ background: "var(--color-surface-elevated)", border: "1px solid var(--color-border)" }}>
       <div className="text-[12px] font-medium" style={{ color: "var(--color-text-subtle)" }}>{label}</div>
-      <div className="mt-0.5 font-heading text-[22px] font-bold tabular-nums" style={{ color: accent ?? "#fff" }}>{value}</div>
+      <div className="mt-0.5 font-heading text-[22px] font-bold tabular-nums" style={{ color: accent ?? "var(--color-text)" }}>{value}</div>
       {sub && <div className="text-[11px]" style={{ color: "var(--color-text-subtle)" }}>{sub}</div>}
     </div>
   );

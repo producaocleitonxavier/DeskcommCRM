@@ -14,6 +14,7 @@ import { ArrowLeft, ExternalLink, Pencil, X } from "lucide-react";
 
 import { atualizarRegistro } from "@/app/actions/politico/gabinete-actions";
 import { RelatorioGabineteButton } from "@/components/politico/relatorio-gabinete-button";
+import { CommandHero } from "@/components/politico/command-hero";
 
 interface Opcao {
   id: string;
@@ -216,34 +217,32 @@ export default function DetalheProjetoClient({ projeto }: { projeto: ProjetoDeta
         </Link>
       </div>
 
+      <CommandHero
+        eyebrow={`${p.numero} · ${rotulo(TIPOS, p.tipo)} · ${rotulo(ESFERAS, p.esfera)}`}
+        titulo={p.titulo}
+        subtitulo={p.ementa ?? undefined}
+      />
+
+      <div className="flex flex-wrap items-center justify-end gap-2">
+        {p.url_oficial && (
+          <a href={p.url_oficial} target="_blank" rel="noopener noreferrer" className="wr-btn inline-flex items-center gap-1.5">
+            <ExternalLink className="h-4 w-4" aria-hidden /> Oficial
+          </a>
+        )}
+        <RelatorioGabineteButton dados={pdfDados} label="Baixar PDF" />
+        {podeAvancar && !terminal && !editando && (
+          <button type="button" disabled={salvando} onClick={registrarMovimentacao} className="wr-btn-dark">Registrar movimentação</button>
+        )}
+        {!editando && (
+          <button type="button" onClick={() => setEditando(true)} className="wr-btn inline-flex items-center gap-2"><Pencil className="h-4 w-4" aria-hidden /> Editar</button>
+        )}
+      </div>
+
       <header className="gip-glass p-6 sm:p-7">
-        <div className="flex flex-wrap items-start justify-between gap-3">
-          <div className="min-w-0">
-            <div className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--color-text-subtle)" }}>
-              {p.numero} · {rotulo(TIPOS, p.tipo)} · {rotulo(ESFERAS, p.esfera)}
-            </div>
-            <h1 className="mt-1 font-heading text-2xl font-bold leading-tight" style={{ color: "var(--color-text)" }}>{p.titulo}</h1>
-            {p.ementa && <p className="mt-1 text-sm" style={{ color: "var(--color-text-muted)" }}>{p.ementa}</p>}
-            <div className="mt-2 flex flex-wrap gap-2">
-              {p.autor_mandatario && <span className="rounded-full px-2 py-0.5 text-xs font-medium" style={{ background: "#E4E7F8", color: "#2F3DA8" }}>De autoria</span>}
-              {p.alinhamento_campanha && <span className="rounded-full px-2 py-0.5 text-xs font-medium" style={{ background: "#E2F5EC", color: "#17784F" }}>Alinhado</span>}
-              {p.comissao_atual && <span className="rounded-full px-2 py-0.5 text-xs font-medium" style={{ background: "var(--color-surface-elevated)", color: "var(--color-text-subtle)" }}>{p.comissao_atual}</span>}
-            </div>
-          </div>
-          <div className="flex items-center gap-2">
-            {p.url_oficial && (
-              <a href={p.url_oficial} target="_blank" rel="noopener noreferrer" className="wr-btn inline-flex items-center gap-1.5">
-                <ExternalLink className="h-4 w-4" aria-hidden /> Oficial
-              </a>
-            )}
-            <RelatorioGabineteButton dados={pdfDados} label="Baixar PDF" />
-            {podeAvancar && !terminal && !editando && (
-              <button type="button" disabled={salvando} onClick={registrarMovimentacao} className="wr-btn-dark">Registrar movimentação</button>
-            )}
-            {!editando && (
-              <button type="button" onClick={() => setEditando(true)} className="wr-btn inline-flex items-center gap-2"><Pencil className="h-4 w-4" aria-hidden /> Editar</button>
-            )}
-          </div>
+        <div className="flex flex-wrap gap-2">
+          {p.autor_mandatario && <span className="rounded-full px-2 py-0.5 text-xs font-medium" style={{ background: "#E4E7F8", color: "#2F3DA8" }}>De autoria</span>}
+          {p.alinhamento_campanha && <span className="rounded-full px-2 py-0.5 text-xs font-medium" style={{ background: "#E2F5EC", color: "#17784F" }}>Alinhado</span>}
+          {p.comissao_atual && <span className="rounded-full px-2 py-0.5 text-xs font-medium" style={{ background: "var(--color-surface-elevated)", color: "var(--color-text-subtle)" }}>{p.comissao_atual}</span>}
         </div>
 
         {/* Timeline de tramitação */}

@@ -9,11 +9,12 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, Loader2, Plus, Trash2, MapPin, Camera, X, HardHat, ShieldCheck, ClipboardCheck, Pencil, Users, Copy } from "lucide-react";
+import { ArrowLeft, Loader2, Plus, Trash2, MapPin, Camera, X, ClipboardCheck, Pencil, Users, Copy } from "lucide-react";
 
 import { atualizarRegistro, excluirRegistro } from "@/app/actions/politico/gabinete-actions";
 import { registrarVistoria, listarVistorias, uploadFotoObra, listarFotosObra, removerFotoObra, listarBeneficiariosObra, type VistoriaObra, type FotoObra, type ChecklistItem, type PesoBairro, type BeneficiarioObra } from "@/app/actions/politico/obras-actions";
 import { BotaoRecadoVoz } from "@/components/politico/botao-recado-voz";
+import { CommandHero } from "@/components/politico/command-hero";
 import { STATUS, TIPO } from "../_obras-client";
 
 type Obra = Record<string, unknown> & { id: string; titulo: string; natureza: "execucao" | "fiscalizacao"; tipo: string; status: string; percentual: number; valor_cents: number };
@@ -92,36 +93,31 @@ export default function ObraDetalhe({ data }: { data: ObraDetalheData }) {
       </Link>
 
       {/* Cabeçalho */}
-      <section className="gip-glass p-5">
-        <div className="flex flex-wrap items-start justify-between gap-3">
-          <div className="min-w-0">
-            <div className="flex items-center gap-2 text-xs font-semibold" style={{ color: obra.natureza === "execucao" ? "#7da9bf" : "var(--color-accent)" }}>
-              {obra.natureza === "execucao" ? <HardHat className="h-3.5 w-3.5" aria-hidden /> : <ShieldCheck className="h-3.5 w-3.5" aria-hidden />}
-              {obra.natureza === "execucao" ? "Execução" : "Fiscalização"} · {TIPO[obra.tipo] ?? obra.tipo}
-            </div>
-            <h1 className="mt-1 font-heading text-xl font-bold" style={{ color: "var(--color-text)" }}>{obra.titulo}</h1>
-            <div className="mt-1.5 flex flex-wrap items-center gap-2 text-xs" style={{ color: "var(--color-text-muted)" }}>
-              {(str("bairro") || str("municipio")) && <span className="inline-flex items-center gap-1"><MapPin className="h-3 w-3" aria-hidden />{[str("bairro"), str("municipio")].filter(Boolean).join(" · ")}</span>}
-              {data.regional && <span className="rounded-full px-2 py-0.5" style={{ background: "color-mix(in srgb, var(--color-accent) 14%, transparent)", color: "var(--accent-ink, var(--color-accent))" }}>Regional {data.regional}</span>}
-              {obra.valor_cents > 0 && <span>{brl(obra.valor_cents)}</span>}
-            </div>
-            {data.emendaRotulo && <div className="mt-1 text-xs" style={{ color: "var(--color-text-subtle)" }}>Recurso: {data.emendaRotulo}</div>}
-          </div>
-          <span className="shrink-0 rounded-full px-3 py-1 text-xs font-semibold" style={{ background: st.bg, color: st.color }}>{st.label}</span>
-        </div>
-        {/* Pipeline */}
-        <div className="mt-4 flex flex-wrap items-center gap-2">
-          {salvando && <Loader2 className="h-4 w-4 animate-spin" aria-hidden style={{ color: "var(--color-text-subtle)" }} />}
-          {(AVANCA[obra.status] ?? []).map((a) => (
-            <button key={a.para} type="button" onClick={() => mudarStatus(a.para)} disabled={salvando}
-              className="rounded-full px-3.5 py-1.5 text-xs font-semibold disabled:opacity-50"
-              style={a.para === "concluida" ? { background: "#17784F", color: "#fff" } : a.para === "cancelada" ? { border: "1px solid rgba(224,128,121,0.5)", color: "#E08079" } : { background: "var(--color-accent)", color: "#16181D" }}>
-              {a.label}
-            </button>
-          ))}
-          <button type="button" onClick={excluir} className="ml-auto inline-flex items-center gap-1 text-xs" style={{ color: "#A3302A" }}><Trash2 className="h-3.5 w-3.5" aria-hidden /> Excluir</button>
-        </div>
-      </section>
+      <CommandHero
+        eyebrow={`${obra.natureza === "execucao" ? "Execução" : "Fiscalização"} · ${TIPO[obra.tipo] ?? obra.tipo}`}
+        titulo={obra.titulo}
+        subtitulo={[[str("bairro"), str("municipio")].filter(Boolean).join(" · "), obra.valor_cents > 0 ? brl(obra.valor_cents) : ""].filter(Boolean).join(" · ") || undefined}
+        extra={<span className="shrink-0 rounded-full px-3 py-1 text-xs font-semibold" style={{ background: st.bg, color: st.color }}>{st.label}</span>}
+      />
+
+      <div className="flex flex-wrap items-center justify-end gap-2">
+        {salvando && <Loader2 className="h-4 w-4 animate-spin" aria-hidden style={{ color: "var(--color-text-subtle)" }} />}
+        {(AVANCA[obra.status] ?? []).map((a) => (
+          <button key={a.para} type="button" onClick={() => mudarStatus(a.para)} disabled={salvando}
+            className="rounded-full px-3.5 py-1.5 text-xs font-semibold disabled:opacity-50"
+            style={a.para === "concluida" ? { background: "#17784F", color: "#fff" } : a.para === "cancelada" ? { border: "1px solid rgba(224,128,121,0.5)", color: "#E08079" } : { background: "var(--color-accent)", color: "#16181D" }}>
+            {a.label}
+          </button>
+        ))}
+        <button type="button" onClick={excluir} className="ml-auto inline-flex items-center gap-1 text-xs" style={{ color: "#A3302A" }}><Trash2 className="h-3.5 w-3.5" aria-hidden /> Excluir</button>
+      </div>
+
+      {(data.regional || data.emendaRotulo) && (
+        <section className="gip-glass flex flex-wrap items-center gap-2 p-4 text-xs" style={{ color: "var(--color-text-muted)" }}>
+          {data.regional && <span className="rounded-full px-2 py-0.5" style={{ background: "color-mix(in srgb, var(--color-accent) 14%, transparent)", color: "var(--accent-ink, var(--color-accent))" }}>Regional {data.regional}</span>}
+          {data.emendaRotulo && <span style={{ color: "var(--color-text-subtle)" }}>Recurso: {data.emendaRotulo}</span>}
+        </section>
+      )}
 
       {/* Peso eleitoral do território — "você investiu onde te elegeu?" */}
       {data.peso && (data.peso.meusVotos > 0 || data.peso.leads > 0) && (

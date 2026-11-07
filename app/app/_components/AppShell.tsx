@@ -51,6 +51,10 @@ const ROTAS_BASE_TEMA_GIP = [
   // Análise
   "/app/ads",
   "/app/activities",
+  // Hubs de seção (grades de cards) — marinho pra casar com o resto
+  "/app/crm",
+  "/app/analise",
+  "/app/settings",
 ];
 
 /** Rotas base que adotam a pele GIP BRANCA (Névoa Pro), NÃO marinho: telas onde
