@@ -1,5 +1,6 @@
 "use client";
 import type { ReactNode } from "react";
+import { usePathname } from "next/navigation";
 import { Sidebar } from "@/components/shell/Sidebar";
 import { TopBar } from "@/components/shell/TopBar";
 import { BarraInferior } from "@/components/shell/BarraInferior";
@@ -27,7 +28,32 @@ interface AppShellProps {
   children: ReactNode;
 }
 
+/** Rotas do CRM BASE (fora de /app/politico) que, num gabinete em tema claro,
+ * adotam a pele GIP (Névoa Pro) p/ casar com o resto. Lista branca = risco zero
+ * nas telas complexas (Inbox, IA, Config) e nos instaladores não-políticos. */
+const ROTAS_BASE_TEMA_GIP = [
+  // Operação
+  "/app/campaigns",
+  "/app/kanban",
+  "/app/captacao-qr",
+  "/app/contacts",
+  "/app/tasks",
+  // Agente de IA
+  "/app/ai",
+  // Canais
+  "/app/connections",
+  "/app/instagram",
+  "/app/webhooks",
+  // Análise
+  "/app/ads",
+  "/app/activities",
+];
+
 export function AppShell({ sidebarCollapsed, podeAtender, temaClaro, children }: AppShellProps) {
+  const pathname = usePathname() ?? "";
+  // Político se auto-embrulha (WarRoomShell); aqui só vestimos o CRM base listado.
+  const vestirBase =
+    !!temaClaro && ROTAS_BASE_TEMA_GIP.some((r) => pathname.startsWith(r));
   useInboundMessageAlerts();
   useInboundCallAlerts();
   useCrmAlerts();
@@ -104,7 +130,13 @@ export function AppShell({ sidebarCollapsed, podeAtender, temaClaro, children }:
           style={estiloDaReserva(ocupacaoDoRodape)}
           data-rodape-ocupado={ocupacaoDoRodape}
         >
-          {children}
+          {vestirBase ? (
+            <div className="war-room wr-claro" data-theme="light">
+              {children}
+            </div>
+          ) : (
+            children
+          )}
         </main>
       </div>
       {/*

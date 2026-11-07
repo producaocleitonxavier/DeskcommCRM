@@ -151,13 +151,16 @@ export default function AutomacoesInstagramPage() {
       >
         <div aria-hidden className="pointer-events-none absolute left-1/2 -top-24 h-72 w-72 -translate-x-1/2 rounded-full" style={{ background: "radial-gradient(closest-side,rgba(215,243,106,0.20),transparent)" }} />
         <div className="relative flex flex-col items-center gap-4 text-center">
-          {/* Elmo da Guerrilheiros em destaque (hero centralizado). */}
-          <span
-            className="flex h-32 w-32 shrink-0 items-center justify-center overflow-hidden rounded-[28px]"
-            style={{ background: "#0A0C10", boxShadow: "0 0 40px rgba(215,243,106,0.40)", border: "1px solid rgba(215,243,106,0.32)" }}
-          >
+          {/* Elmo da Guerrilheiros SOLTO (sem quadrado) — mais imponente; o brilho
+              segue a silhueta do elmo via drop-shadow, não uma caixa. */}
+          <span className="flex h-44 w-44 shrink-0 items-center justify-center" aria-hidden>
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/gipchat-elmo.png" alt="GIPCHAT" className="h-full w-full object-contain" />
+            <img
+              src="/gipchat-elmo.png"
+              alt="GIPCHAT"
+              className="h-full w-full object-contain"
+              style={{ filter: "drop-shadow(0 0 34px rgba(215,243,106,0.5))" }}
+            />
           </span>
           <div>
             <span className="text-[11px] font-bold uppercase tracking-[0.24em]" style={{ color: "#D7F36A" }}>Instagram · Automação</span>
