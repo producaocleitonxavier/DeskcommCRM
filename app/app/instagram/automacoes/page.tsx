@@ -147,7 +147,7 @@ export default function AutomacoesInstagramPage() {
       {/* Header branded GIPCHAT (com o elmo da Guerrilheiros) */}
       <header
         className="wr-card relative overflow-hidden p-6 sm:p-7"
-        style={{ background: "linear-gradient(135deg,#0E1116 0%,#14181F 55%,#1A2410 100%)", border: "1px solid rgba(215,243,106,0.22)" }}
+        style={{ background: "var(--hero-grad)", border: "1px solid var(--hero-border)" }}
       >
         <div aria-hidden className="pointer-events-none absolute left-1/2 -top-24 h-72 w-72 -translate-x-1/2 rounded-full" style={{ background: "radial-gradient(closest-side,rgba(215,243,106,0.20),transparent)" }} />
         <div className="relative flex flex-col items-center gap-4 text-center">
