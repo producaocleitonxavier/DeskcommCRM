@@ -11,6 +11,7 @@ import Link from "next/link";
 import { Sparkles, MapPin, AlertTriangle, TrendingUp, ListChecks, Clock, RefreshCw } from "lucide-react";
 
 import { MiniMarkdown } from "@/components/politico/mini-markdown";
+import { CommandHero } from "@/components/politico/command-hero";
 import { recortesMunicipio, type MunicipioOpcao } from "@/app/actions/politico/raioX";
 import { gerarNarrativa, obterNarrativaRecente, obterNarrativaPorId, type NarrativaTerritorial } from "@/app/actions/politico/narrativa";
 
@@ -105,17 +106,11 @@ export default function NarrativasClient({ temMandato, mandatoNome, electionId, 
   return (
     <div className="gip-ambient-bg mx-auto max-w-[1040px] px-4 py-7 space-y-5">
       {/* Cabeçalho */}
-      <header>
-        <div className="flex items-center gap-2.5">
-          <span className="flex h-10 w-10 items-center justify-center rounded-full" style={{ background: "color-mix(in srgb, var(--color-accent) 16%, transparent)", color: "#7E8F2B" }} aria-hidden>
-            <Sparkles className="h-5 w-5" />
-          </span>
-          <div>
-            <h1 className="font-heading text-[26px] font-bold leading-tight" style={{ color: "var(--color-text)" }}>Narrativas Territoriais</h1>
-            <p className="text-sm" style={{ color: "var(--color-text-muted)" }}>A IA lê um bairro inteiro — voto, sua base, demandas, lideranças e a disputa — e escreve a estratégia do território.</p>
-          </div>
-        </div>
-      </header>
+      <CommandHero
+        eyebrow="Inteligência · Narrativas"
+        titulo="Narrativas Territoriais"
+        subtitulo="A IA lê um bairro inteiro — voto, sua base, demandas, lideranças e a disputa — e escreve a estratégia do território."
+      />
 
       {!temMandato ? (
         <div className="gip-glass p-6 text-sm" style={{ color: "var(--color-text-muted)" }}>

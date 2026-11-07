@@ -1226,6 +1226,32 @@
   color: #eaf0f6;
 }
 
+/* ===== SEÇÃO NAVY (tema claro) — Inteligência/Território ==================
+   Telas de ANÁLISE/IMPRESSÃO: cards MARINHOS (texto branco + ícone verde) sobre
+   o fundo cinza-frio. As telas de TRABALHO (Gabinete/Pessoas/Demandas) seguem
+   claras. Escopado por rota pela classe `.wr-navy-section` (WarRoomShell). Três
+   classes = mais específico que `.war-room.wr-claro`, então vence os overrides. */
+.war-room.wr-claro.wr-navy-section {
+  --color-text: #ffffff;
+  --color-text-muted: rgba(255,255,255,0.78);
+  --color-text-subtle: rgba(255,255,255,0.58);
+  --color-border: rgba(255,255,255,0.12);
+  --color-surface: #182a3e;
+  --color-surface-elevated: #20374f;
+  --icon-accent: #D7F36A;
+  --icon-accent-soft: rgba(215,243,106,0.16);
+  --chip-active-bg: #D7F36A;
+  --chip-active-fg: #16181D;
+}
+.war-room.wr-claro.wr-navy-section .gip-glass,
+.war-room.wr-claro.wr-navy-section .wr-card-dark,
+.war-room.wr-claro.wr-navy-section .wr-card-accent {
+  background: #182a3e !important;
+  border: 1px solid rgba(255,255,255,0.12) !important;
+  box-shadow: 0 10px 30px -14px rgba(10,16,24,0.55) !important;
+  color: #ffffff !important;
+}
+
 .wr-card-dark {
   background: var(--color-surface);
   border: 1px solid var(--color-border);

@@ -9,6 +9,7 @@
 
 import { redirect } from "next/navigation";
 import Link from "next/link";
+import { CommandHero } from "@/components/politico/command-hero";
 import { createClient } from "@/lib/supabase/server";
 import { requireAuth, resolveActiveOrg, exigirPapelNaOrg } from "@/lib/auth/server";
 import CopiarLink from "./_copiar-link";
@@ -123,26 +124,16 @@ export default async function PesquisasPage({
 
   return (
     <div className="mx-auto max-w-5xl px-4 py-8 space-y-6">
-      {/* Voltar */}
-      <Link
-        href="/app/politico"
-        className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors"
-      >
-        &larr; War Room
-      </Link>
-
-      {/* Cabecalho */}
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">Pesquisas</h1>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Pesquisas de opinião e intenção de voto com links públicos e contagem de respostas.
-          </p>
-        </div>
-        <Link href="/app/politico/pesquisas/nova" className="wr-btn-dark inline-flex items-center gap-1.5 whitespace-nowrap">
-          + Nova pesquisa
-        </Link>
-      </div>
+      {/* Cabeçalho */}
+      <CommandHero
+        eyebrow="Inteligência · Pesquisas"
+        titulo="Pesquisas"
+        subtitulo="Pesquisas de opinião e intenção de voto com links públicos e contagem de respostas."
+        acoes={[
+          { href: "/app/politico/pesquisas/nova", label: "+ Nova pesquisa", primary: true },
+          { href: "/app/politico", label: "← War Room" },
+        ]}
+      />
 
       {/* Filtro */}
       <div className="flex flex-wrap gap-2">

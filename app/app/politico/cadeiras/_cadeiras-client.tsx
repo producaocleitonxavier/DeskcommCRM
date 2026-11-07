@@ -9,6 +9,7 @@
 
 import { useMemo, useState, useTransition } from "react";
 import { Landmark, Info, Search, Target } from "lucide-react";
+import { CommandHero } from "@/components/politico/command-hero";
 import type { MunicipioOpcao } from "@/app/actions/politico/raioX";
 import { dadosCadeiras, type DadosCadeiras, type CandidatoCadeira } from "@/app/actions/politico/projecaoCadeiras";
 
@@ -121,13 +122,11 @@ export default function CadeirasClient({ eleicoes, municipios }: { eleicoes: Ele
 
   return (
     <div className="gip-ambient-bg mx-auto max-w-[1040px] px-4 py-7 space-y-4">
-      <header className="flex items-center gap-2.5">
-        <span className="flex h-10 w-10 items-center justify-center rounded-xl" style={{ background: "color-mix(in srgb, var(--color-accent) 16%, transparent)", color: "#7E8F2B" }} aria-hidden><Landmark className="h-5 w-5" /></span>
-        <div>
-          <h1 className="font-heading text-[26px] font-bold leading-tight" style={{ color: "var(--color-text)" }}>Projeção de Cadeiras</h1>
-          <p className="text-sm" style={{ color: "var(--color-text-muted)" }}>Quociente eleitoral e partidário: quantos votos pegam a cadeira — e quanto falta pra você entrar.</p>
-        </div>
-      </header>
+      <CommandHero
+        eyebrow="Território · Projeção de Cadeiras"
+        titulo="Projeção de Cadeiras"
+        subtitulo="Quociente eleitoral e partidário: quantos votos pegam a cadeira — e quanto falta pra você entrar."
+      />
 
       {/* Seletores */}
       <section className="gip-glass p-5">
