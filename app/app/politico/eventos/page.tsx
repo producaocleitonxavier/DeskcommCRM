@@ -174,7 +174,7 @@ export default async function EventosPage({
                   </span>
                 )}
                 {e.estimated_audience != null && <span>Estimado: <strong style={{ color: "var(--color-text)" }}>{e.estimated_audience.toLocaleString("pt-BR")}</strong></span>}
-                {e.actual_attendance != null && <span>Presença: <strong style={{ color: "var(--color-accent)" }}>{e.actual_attendance.toLocaleString("pt-BR")}</strong></span>}
+                {e.actual_attendance != null && <span>Presença: <strong style={{ color: "var(--accent-ink, var(--color-accent))" }}>{e.actual_attendance.toLocaleString("pt-BR")}</strong></span>}
               </div>
             </div>
           ))}

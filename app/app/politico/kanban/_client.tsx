@@ -335,7 +335,7 @@ function CardView({ card, onAbrir }: { card: CardPessoa; onAbrir: () => void }) 
         </p>
         <span
           className="inline-flex shrink-0 items-center gap-0.5 rounded-full px-1.5 py-0.5 text-[10px] font-bold tabular-nums"
-          style={{ background: "color-mix(in srgb, var(--color-accent) 16%, transparent)", color: "var(--color-accent)" }}
+          style={{ background: "color-mix(in srgb, var(--color-accent) 16%, transparent)", color: "var(--accent-ink, var(--color-accent))" }}
           title="Índice de engajamento"
         >
           <ChartLineUp size={10} weight="bold" aria-hidden /> {card.score}
@@ -511,7 +511,7 @@ function DetalheDrawer({
                           </span>
                           <span
                             className="shrink-0 rounded-md px-2 py-0.5 text-xs font-bold tabular-nums"
-                            style={{ background: "color-mix(in srgb, var(--color-accent) 16%, transparent)", color: "var(--color-accent)" }}
+                            style={{ background: "color-mix(in srgb, var(--color-accent) 16%, transparent)", color: "var(--accent-ink, var(--color-accent))" }}
                           >
                             {r.pts}
                           </span>

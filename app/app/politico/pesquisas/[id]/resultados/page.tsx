@@ -124,7 +124,7 @@ export default async function ResultadosPage({ params }: { params: Promise<{ id:
 
       {aguardando > 0 && (
         <p className="-mt-2 px-1 text-[12px]" style={{ color: "var(--color-text-subtle)" }}>
-          Disparo: <strong style={{ color: "var(--color-text-muted)" }}>{enviadas}</strong> enviada{enviadas !== 1 ? "s" : ""} · <strong style={{ color: "var(--color-text)" }}>{total}</strong> respondida{total !== 1 ? "s" : ""} <span style={{ color: "var(--color-accent)" }}>({taxaResposta}%)</span> · {aguardando} aguardando resposta
+          Disparo: <strong style={{ color: "var(--color-text-muted)" }}>{enviadas}</strong> enviada{enviadas !== 1 ? "s" : ""} · <strong style={{ color: "var(--color-text)" }}>{total}</strong> respondida{total !== 1 ? "s" : ""} <span style={{ color: "var(--accent-ink, var(--color-accent))" }}>({taxaResposta}%)</span> · {aguardando} aguardando resposta
         </p>
       )}
 

@@ -20,7 +20,7 @@ import { MiniMarkdown } from "@/components/politico/mini-markdown";
 const CLASSE: Record<ClasseZona, { label: string; bg: string; color: string; dica: string }> = {
   reduto: { label: "Reduto", bg: "rgba(23,120,79,0.18)", color: "#58C08A", dica: "Você é forte aqui — defenda a base." },
   consolidar: { label: "Consolidar", bg: "rgba(255,255,255,0.08)", color: "rgba(255,255,255,0.75)", dica: "Presença média — reforce para virar reduto." },
-  oportunidade: { label: "Oportunidade", bg: "color-mix(in srgb, var(--color-accent) 16%, transparent)", color: "var(--color-accent)", dica: "Muito voto e pouca presença sua — é onde crescer." },
+  oportunidade: { label: "Oportunidade", bg: "color-mix(in srgb, var(--color-accent) 16%, transparent)", color: "var(--accent-ink, var(--color-accent))", dica: "Muito voto e pouca presença sua — é onde crescer." },
   deserto: { label: "Deserto", bg: "rgba(163,48,42,0.16)", color: "#E08079", dica: "Zero base cadastrada num lugar que vota — território em branco." },
 };
 
@@ -107,11 +107,11 @@ export default function ProjecaoClient({ eleicoes, municipios }: { eleicoes: Ele
 
       {/* Explicação didática da régua */}
       <div className="flex items-start gap-2.5 rounded-xl p-3.5" style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.1)" }}>
-        <Info className="mt-0.5 h-4 w-4 shrink-0" aria-hidden style={{ color: "var(--color-accent)" }} />
+        <Info className="mt-0.5 h-4 w-4 shrink-0" aria-hidden style={{ color: "var(--accent-ink, var(--color-accent))" }} />
         <p className="text-[13px] leading-relaxed" style={{ color: "rgba(255,255,255,0.72)" }}>
           <strong style={{ color: "#fff" }}>Como ler:</strong> <strong style={{ color: "#fff" }}>Universo</strong> = votos que o cargo teve na {unidade} (o tamanho do mercado eleitoral ali).{" "}
           <strong style={{ color: "#fff" }}>Sua base</strong> = contatos do seu CRM mapeados nessa {unidade}. <strong style={{ color: "#fff" }}>Cobertura</strong> = sua presença frente ao volume de voto.
-          A <strong style={{ color: "#fff" }}>classificação</strong> aponta onde defender (Reduto), reforçar (Consolidar) e, principalmente, <strong style={{ color: "var(--color-accent)" }}>onde crescer</strong> (Oportunidade/Deserto: muito voto, pouca presença sua).
+          A <strong style={{ color: "#fff" }}>classificação</strong> aponta onde defender (Reduto), reforçar (Consolidar) e, principalmente, <strong style={{ color: "var(--accent-ink, var(--color-accent))" }}>onde crescer</strong> (Oportunidade/Deserto: muito voto, pouca presença sua).
         </p>
       </div>
 
@@ -140,7 +140,7 @@ export default function ProjecaoClient({ eleicoes, municipios }: { eleicoes: Ele
           {/* Tabela por zona/regional */}
           <section className="gip-glass p-0">
             <div className="flex items-center gap-2 px-5 pt-4 pb-2">
-              <TrendingUp className="h-4 w-4" aria-hidden style={{ color: "var(--color-accent)" }} />
+              <TrendingUp className="h-4 w-4" aria-hidden style={{ color: "var(--accent-ink, var(--color-accent))" }} />
               <h3 className="font-heading text-base font-bold" style={{ color: "#fff" }}>Projeção por {unidade} — {munNome}</h3>
             </div>
             <div className="overflow-auto" style={{ maxHeight: 560 }}>
@@ -200,7 +200,7 @@ export default function ProjecaoClient({ eleicoes, municipios }: { eleicoes: Ele
           <section className="gip-glass p-5">
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div className="flex items-center gap-2.5">
-                <Sparkles className="h-5 w-5 shrink-0" style={{ color: "var(--color-accent)" }} aria-hidden />
+                <Sparkles className="h-5 w-5 shrink-0" style={{ color: "var(--accent-ink, var(--color-accent))" }} aria-hidden />
                 <div>
                   <h3 className="font-heading text-base font-bold" style={{ color: "#fff" }}>Leitura estratégica (IA)</h3>
                   <p className="text-xs" style={{ color: "rgba(255,255,255,0.55)" }}>Onde focar em {munNome}: redutos a defender e oportunidades a conquistar.</p>

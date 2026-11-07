@@ -137,7 +137,7 @@ export default function RadarClient({ eleicoes, municipios }: { eleicoes: Eleica
                   <CandFoto sq={cand.sq} ano={eleicaoAno} nome={cand.nomeUrna} size={56} />
                 </div>
                 <div>
-                  <div className="text-[11px] font-bold uppercase tracking-[0.18em]" style={{ color: "var(--color-accent)" }}>{munNome} · {zonas.length} zonas</div>
+                  <div className="text-[11px] font-bold uppercase tracking-[0.18em]" style={{ color: "var(--accent-ink, var(--color-accent))" }}>{munNome} · {zonas.length} zonas</div>
                   <h2 className="font-heading text-2xl font-bold leading-tight" style={{ color: "#FFFFFF" }}>{cand.nomeUrna}</h2>
                   <div className="text-sm" style={{ color: "rgba(255,255,255,0.55)" }}>nº {cand.nr}{cand.partido ? ` · ${cand.partido}` : ""}</div>
                 </div>

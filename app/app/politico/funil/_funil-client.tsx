@@ -141,7 +141,7 @@ export default function FunilClient({
                   <span className="inline-flex items-center gap-2 text-sm font-semibold" style={{ color: "var(--color-text)" }}>
                     <span className="text-lg">{t.emoji}</span> {t.label}
                   </span>
-                  <span className="text-[11px] opacity-0 transition-opacity group-hover:opacity-70" style={{ color: "var(--color-accent)" }}>ver →</span>
+                  <span className="text-[11px] opacity-0 transition-opacity group-hover:opacity-70" style={{ color: "var(--accent-ink, var(--color-accent))" }}>ver →</span>
                 </div>
                 <div className="mt-2 flex items-end gap-2">
                   <span className="wr-kpi-value text-3xl leading-none" style={{ color: t.cor }}>{n.toLocaleString("pt-BR")}</span>
@@ -206,7 +206,7 @@ export default function FunilClient({
                 </span>
                 <span className="min-w-0 flex-1 truncate text-sm font-semibold" style={{ color: "var(--color-text)" }}>{m.nome}</span>
                 <span className="flex shrink-0 items-center gap-2 text-sm font-bold tabular-nums">
-                  <span style={{ color: "var(--color-accent)" }}>trouxe {m.trouxe}</span>
+                  <span style={{ color: "var(--accent-ink, var(--color-accent))" }}>trouxe {m.trouxe}</span>
                   {m.alcancou > 0 && (
                     <span
                       className="rounded-full px-2 py-0.5 text-xs font-semibold"

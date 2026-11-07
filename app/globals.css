@@ -1079,6 +1079,9 @@
   --color-accent-fg: #16181D;
   --color-accent-soft: rgba(215,243,106,0.16);
   --color-accent-hover: #C4E64A;
+  /* Acento como TEXTO/ÍCONE no claro = NAVY (verde apaga no branco). Botões/fills
+     seguem lima (--color-accent). Dentro de card navy isto volta a ser lima. */
+  --accent-ink: #234a73;
   --color-accent-50: #F8FDE6;
   --color-accent-100: #F0FBCC;
   --color-accent-200: #E5F89E;
@@ -1232,17 +1235,15 @@
    claras. Escopado por rota pela classe `.wr-navy-section` (WarRoomShell). Três
    classes = mais específico que `.war-room.wr-claro`, então vence os overrides. */
 .war-room.wr-claro.wr-navy-section {
-  --color-text: #ffffff;
-  --color-text-muted: rgba(255,255,255,0.78);
-  --color-text-subtle: rgba(255,255,255,0.58);
-  --color-border: rgba(255,255,255,0.12);
+  /* Superfícies navy (cards + inputs). O TEXTO não vira branco aqui: os rótulos
+     que ficam sobre o FUNDO CLARO (ex.: "Eleição"/"Município" acima dos selects)
+     seguem escuros/legíveis. O branco mora só DENTRO das superfícies navy. */
   --color-surface: #182a3e;
   --color-surface-elevated: #20374f;
-  --icon-accent: #D7F36A;
-  --icon-accent-soft: rgba(215,243,106,0.16);
   --chip-active-bg: #D7F36A;
   --chip-active-fg: #16181D;
 }
+/* Dentro dos cards navy: texto branco + ícone verde. */
 .war-room.wr-claro.wr-navy-section .gip-glass,
 .war-room.wr-claro.wr-navy-section .wr-card-dark,
 .war-room.wr-claro.wr-navy-section .wr-card-accent {
@@ -1250,7 +1251,20 @@
   border: 1px solid rgba(255,255,255,0.12) !important;
   box-shadow: 0 10px 30px -14px rgba(10,16,24,0.55) !important;
   color: #ffffff !important;
+  --color-text: #ffffff;
+  --color-text-muted: rgba(255,255,255,0.78);
+  --color-text-subtle: rgba(255,255,255,0.6);
+  --color-border: rgba(255,255,255,0.14);
+  --icon-accent: #D7F36A;
+  --icon-accent-soft: rgba(215,243,106,0.16);
+  --accent-ink: var(--color-accent); /* dentro do card navy, acento = lima (pop) */
 }
+/* Inputs/selects navy (Eleição, Município, busca) na seção navy: texto branco. */
+.war-room.wr-claro.wr-navy-section .wr-input {
+  color: #ffffff;
+  --color-text: #ffffff;
+}
+.war-room.wr-claro.wr-navy-section .wr-input::placeholder { color: rgba(255,255,255,0.5); }
 
 .wr-card-dark {
   background: var(--color-surface);

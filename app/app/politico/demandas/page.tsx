@@ -539,7 +539,7 @@ export default async function GabinetePage({
                 <Link
                   href={`/app/politico/demandas${montarQuery({ municipio: undefined, bairro: undefined, cobrar: undefined, estado: undefined, orgao: undefined, pagina: "1" })}`}
                   className="shrink-0 text-sm font-bold"
-                  style={{ color: "var(--color-accent)" }}
+                  style={{ color: "var(--accent-ink, var(--color-accent))" }}
                 >
                   Ver todas →
                 </Link>

@@ -172,7 +172,7 @@ export default function CadeirasClient({ eleicoes, municipios }: { eleicoes: Ele
 
             {/* Simulador por candidato */}
             <section className="gip-glass p-5">
-              <div className="mb-3 flex items-center gap-1.5 text-sm font-bold" style={{ color: "var(--color-text)" }}><Target className="h-4 w-4" style={{ color: "var(--color-accent)" }} aria-hidden /> Simule o seu candidato</div>
+              <div className="mb-3 flex items-center gap-1.5 text-sm font-bold" style={{ color: "var(--color-text)" }}><Target className="h-4 w-4" style={{ color: "var(--accent-ink, var(--color-accent))" }} aria-hidden /> Simule o seu candidato</div>
               <div className="relative">
                 <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2" style={{ color: "var(--color-text-subtle)" }} aria-hidden />
                 <input value={busca} onChange={(e) => setBusca(e.target.value)} placeholder="Busque o candidato pelo nome…" className="wr-input w-full" style={{ paddingLeft: 36 }} />
@@ -217,7 +217,7 @@ export default function CadeirasClient({ eleicoes, municipios }: { eleicoes: Ele
 
                   {!dentroSel && faltam > 0 && (
                     <div className="mt-3 text-sm" style={{ color: "var(--color-text)" }}>
-                      Faltam <strong style={{ color: "var(--color-accent)" }}>~{moeda0(faltam)} votos</strong> para entrar (mantendo os demais). Arraste acima para simular.
+                      Faltam <strong style={{ color: "var(--accent-ink, var(--color-accent))" }}>~{moeda0(faltam)} votos</strong> para entrar (mantendo os demais). Arraste acima para simular.
                     </div>
                   )}
                   {!dentroSel && faltam === -1 && <div className="mt-3 text-sm" style={{ color: "var(--color-text-subtle)" }}>Entrada exige um salto grande de votos neste cenário.</div>}

@@ -251,7 +251,7 @@ export default function VozClient({ inicial }: { inicial: Inicial }) {
 
       {/* Regras TSE */}
       <section className="rounded-[16px] p-4" style={{ background: "color-mix(in srgb, var(--color-accent) 8%, transparent)", border: "1px solid color-mix(in srgb, var(--color-accent) 25%, transparent)" }}>
-        <p className="flex items-center gap-2 text-sm font-semibold" style={{ color: "var(--color-accent)" }}>
+        <p className="flex items-center gap-2 text-sm font-semibold" style={{ color: "var(--accent-ink, var(--color-accent))" }}>
           <ShieldCheck className="h-4 w-4" aria-hidden /> Regras obrigatórias (Lei eleitoral — TSE 23.755/2026)
         </p>
         <ul className="mt-2 space-y-1 text-[13px]" style={{ color: "var(--color-text-muted)" }}>
@@ -279,14 +279,14 @@ export default function VozClient({ inicial }: { inicial: Inicial }) {
 
         {/* GUIA DE GRAVAÇÃO — dicas + roteiro pronto pra ler (ninguém sabe o que falar) */}
         <div className="rounded-[16px] p-4" style={{ border: "1px solid color-mix(in srgb, var(--color-accent) 30%, transparent)", background: "color-mix(in srgb, var(--color-accent) 6%, transparent)" }}>
-          <p className="flex items-center gap-1.5 text-sm font-bold" style={{ color: "var(--color-accent)" }}>
+          <p className="flex items-center gap-1.5 text-sm font-bold" style={{ color: "var(--accent-ink, var(--color-accent))" }}>
             <FileText className="h-4 w-4" aria-hidden /> Não sabe o que falar? É só ler este texto
           </p>
 
           <ul className="mt-3 space-y-1.5 text-[13px]" style={{ color: "var(--color-text-muted)" }}>
             {DICAS_GRAVACAO.map((d) => (
               <li key={d} className="flex gap-2">
-                <Check className="mt-0.5 h-3.5 w-3.5 shrink-0" style={{ color: "var(--color-accent)" }} aria-hidden />
+                <Check className="mt-0.5 h-3.5 w-3.5 shrink-0" style={{ color: "var(--accent-ink, var(--color-accent))" }} aria-hidden />
                 <span>{d}</span>
               </li>
             ))}
@@ -328,10 +328,10 @@ export default function VozClient({ inicial }: { inicial: Inicial }) {
               className="flex w-full cursor-pointer flex-col items-center justify-center gap-2 rounded-[14px] px-4 py-7 text-center transition-transform hover:scale-[1.01]"
               style={{ border: "2px dashed color-mix(in srgb, var(--color-accent) 50%, transparent)", background: "color-mix(in srgb, var(--color-accent) 7%, transparent)" }}
             >
-              <span className="flex h-14 w-14 items-center justify-center rounded-full" style={{ background: "color-mix(in srgb, var(--color-accent) 16%, transparent)", color: "var(--color-accent)" }} aria-hidden>
+              <span className="flex h-14 w-14 items-center justify-center rounded-full" style={{ background: "color-mix(in srgb, var(--color-accent) 16%, transparent)", color: "var(--accent-ink, var(--color-accent))" }} aria-hidden>
                 <Mic className="h-7 w-7" />
               </span>
-              <span className="text-[16px] font-bold" style={{ color: "var(--color-accent)" }}>Toque para gravar a voz</span>
+              <span className="text-[16px] font-bold" style={{ color: "var(--accent-ink, var(--color-accent))" }}>Toque para gravar a voz</span>
               <span className="text-xs" style={{ color: "var(--color-text-subtle)" }}>Permita o microfone quando pedir · fale 2 a 3 min</span>
             </button>
           )}
@@ -356,7 +356,7 @@ export default function VozClient({ inicial }: { inicial: Inicial }) {
 
           {!gravando && gravacao && (
             <div className="flex flex-col gap-3 rounded-[14px] px-4 py-4" style={{ border: "2px solid var(--color-accent)", background: "color-mix(in srgb, var(--color-accent) 8%, transparent)" }}>
-              <span className="flex items-center gap-2 text-[15px] font-bold" style={{ color: "var(--color-accent)" }}>
+              <span className="flex items-center gap-2 text-[15px] font-bold" style={{ color: "var(--accent-ink, var(--color-accent))" }}>
                 <Check className="h-5 w-5" aria-hidden /> Gravação pronta {gravacaoSeg > 0 ? `(${fmtTempo(gravacaoSeg)})` : ""}
               </span>
               {gravacaoUrl && <audio controls src={gravacaoUrl} className="w-full" />}
@@ -382,7 +382,7 @@ export default function VozClient({ inicial }: { inicial: Inicial }) {
               className="flex cursor-pointer flex-col items-center justify-center gap-2 rounded-[16px] px-4 py-6 text-center transition-transform hover:scale-[1.01]"
               style={{ border: `2px dashed ${nomeArquivo ? "var(--color-accent)" : "var(--color-border)"}`, background: "var(--color-surface-elevated)" }}
             >
-              <span className="flex h-11 w-11 items-center justify-center rounded-full" style={{ background: "color-mix(in srgb, var(--color-accent) 12%, transparent)", color: "var(--color-accent)" }} aria-hidden>
+              <span className="flex h-11 w-11 items-center justify-center rounded-full" style={{ background: "color-mix(in srgb, var(--color-accent) 12%, transparent)", color: "var(--accent-ink, var(--color-accent))" }} aria-hidden>
                 {nomeArquivo ? <Check className="h-6 w-6" /> : <Upload className="h-6 w-6" />}
               </span>
               <span className="text-[15px] font-bold" style={{ color: nomeArquivo ? "var(--color-accent)" : "var(--color-text)" }}>

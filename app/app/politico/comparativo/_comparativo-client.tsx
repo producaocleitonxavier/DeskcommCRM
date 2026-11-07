@@ -36,13 +36,13 @@ function MiniMarkdown({ texto }: { texto: string }) {
       const txt = h[2]!.replace(/\*\*/g, "");
       return h[1]!.length === 1
         ? <h3 key={i} className="mb-1 font-heading text-base font-bold" style={{ color: "var(--color-text)" }}>{txt}</h3>
-        : <h4 key={i} className="mt-3 mb-1 font-heading text-sm font-bold" style={{ color: "var(--color-accent)" }}>{txt}</h4>;
+        : <h4 key={i} className="mt-3 mb-1 font-heading text-sm font-bold" style={{ color: "var(--accent-ink, var(--color-accent))" }}>{txt}</h4>;
     }
     const partes = linha.split(/(\*\*[^*]+\*\*)/g).filter(Boolean);
     const soNegrito = partes.length === 1 && /^\*\*[^*]+\*\*$/.test(partes[0]!);
     const nodes = inline(linha);
     const bullet = /^\s*[-*]\s+/.test(linha);
-    if (soNegrito) return <h4 key={i} className="mt-3 mb-1 font-heading text-sm font-bold" style={{ color: "var(--color-accent)" }}>{partes[0]!.slice(2, -2)}</h4>;
+    if (soNegrito) return <h4 key={i} className="mt-3 mb-1 font-heading text-sm font-bold" style={{ color: "var(--accent-ink, var(--color-accent))" }}>{partes[0]!.slice(2, -2)}</h4>;
     if (bullet) return <li key={i} className="ml-4 list-disc text-sm leading-relaxed" style={{ color: "var(--color-text-muted)" }}>{inline(linha.replace(/^\s*[-*]\s+/, ""))}</li>;
     if (linha.trim() === "") return <div key={i} className="h-1.5" />;
     return <p key={i} className="text-sm leading-relaxed" style={{ color: "var(--color-text-muted)" }}>{nodes}</p>;
@@ -341,7 +341,7 @@ export default function ComparativoClient({ eleicoes, municipios }: { eleicoes: 
         <section className="gip-glass p-5">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div className="flex items-center gap-2.5">
-              <Sparkles className="h-5 w-5 shrink-0" style={{ color: "var(--color-accent)" }} aria-hidden />
+              <Sparkles className="h-5 w-5 shrink-0" style={{ color: "var(--accent-ink, var(--color-accent))" }} aria-hidden />
               <div>
                 <h3 className="font-heading text-base font-bold" style={{ color: "var(--color-text)" }}>Leitura estratégica (IA)</h3>
                 <p className="text-xs" style={{ color: "var(--color-text-subtle)" }}>

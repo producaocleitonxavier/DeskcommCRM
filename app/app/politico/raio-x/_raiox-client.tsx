@@ -146,7 +146,7 @@ export default function RaioXClient({ eleicoes, municipios: municipiosLista }: {
                 </div>
                 <div className="min-w-0">
                 <div className="flex items-center gap-2">
-                  <span className="text-[11px] font-bold uppercase tracking-[0.18em]" style={{ color: "var(--color-accent)" }}>
+                  <span className="text-[11px] font-bold uppercase tracking-[0.18em]" style={{ color: "var(--accent-ink, var(--color-accent))" }}>
                     nº {cand.nr}{cand.partido ? ` · ${cand.partido}` : ""}
                   </span>
                   {cand.situacao && (
@@ -162,7 +162,7 @@ export default function RaioXClient({ eleicoes, municipios: municipiosLista }: {
               </div>
               <div className="flex gap-6">
                 <div className="text-right">
-                  <div className="font-heading text-3xl font-bold tabular-nums" style={{ color: "var(--color-accent)" }}>{cand.votos.toLocaleString("pt-BR")}</div>
+                  <div className="font-heading text-3xl font-bold tabular-nums" style={{ color: "var(--accent-ink, var(--color-accent))" }}>{cand.votos.toLocaleString("pt-BR")}</div>
                   <div className="text-[11px] uppercase tracking-wide" style={{ color: "rgba(255,255,255,0.5)" }}>votos (total)</div>
                 </div>
                 <div className="text-right">
@@ -243,7 +243,7 @@ export default function RaioXClient({ eleicoes, municipios: municipiosLista }: {
       <section className="gip-glass overflow-hidden p-0">
         <div className="flex items-center justify-between px-5 pt-4 pb-2">
           <h3 className="font-heading text-base font-bold" style={{ color: "var(--color-text)" }}>
-            <Trophy className="mr-1 inline h-4 w-4" aria-hidden style={{ color: "var(--color-accent)" }} />
+            <Trophy className="mr-1 inline h-4 w-4" aria-hidden style={{ color: "var(--accent-ink, var(--color-accent))" }} />
             {q ? "Resultados" : "Mais votados"}
           </h3>
           <span className="text-xs" style={{ color: "var(--color-text-subtle)" }}>clique para o raio-x</span>

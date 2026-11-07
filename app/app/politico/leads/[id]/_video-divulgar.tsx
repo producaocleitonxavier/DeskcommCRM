@@ -84,7 +84,7 @@ export default function VideoDivulgar({
             }}
           >
             <span className="min-w-0 truncate">{v.titulo}</span>
-            <span className="shrink-0 text-xs" style={{ color: "var(--color-accent)" }}>
+            <span className="shrink-0 text-xs" style={{ color: "var(--accent-ink, var(--color-accent))" }}>
               {carregando && selId === v.id ? "…" : selId === v.id && link ? "ok" : "gerar"}
             </span>
           </button>

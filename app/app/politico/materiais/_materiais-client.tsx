@@ -140,7 +140,7 @@ export default function MateriaisClient({ materiais }: MateriaisClientProps) {
                             className="flex h-14 w-14 items-center justify-center rounded-full"
                             style={{ background: "color-mix(in srgb, var(--color-accent) 12%, transparent)", border: "1px solid color-mix(in srgb, var(--color-accent) 25%, transparent)" }}
                           >
-                            <Icone className="h-6 w-6" style={{ color: "var(--color-accent)" }} aria-hidden />
+                            <Icone className="h-6 w-6" style={{ color: "var(--accent-ink, var(--color-accent))" }} aria-hidden />
                           </span>
                           <span className="line-clamp-3 text-sm font-semibold" style={{ color: "rgba(255,255,255,0.85)" }}>
                             {m.titulo}

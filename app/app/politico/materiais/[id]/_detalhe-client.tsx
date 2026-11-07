@@ -156,7 +156,7 @@ export default function MaterialDetalheClient({ material }: { material: Material
       {tipo === "video" && (
         <section className="gip-glass space-y-3 p-5 sm:p-6">
           <div className="flex items-center gap-2">
-            <Link2 className="h-4 w-4" style={{ color: "var(--color-accent)" }} aria-hidden />
+            <Link2 className="h-4 w-4" style={{ color: "var(--accent-ink, var(--color-accent))" }} aria-hidden />
             <h2 className="font-heading text-base font-bold">Link rastreável do vídeo</h2>
           </div>
           <p className="text-sm" style={{ color: "var(--color-text-muted)" }}>

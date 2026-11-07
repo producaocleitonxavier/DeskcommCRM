@@ -304,7 +304,7 @@ export default function DetalheDemandaClient({ demanda, assessores, eventos, voz
             borderBottom: "1px solid color-mix(in srgb, var(--color-accent) 22%, transparent)",
           }}
         >
-          <span className="text-[11px] font-bold uppercase tracking-[0.2em]" style={{ color: "var(--color-accent)" }}>
+          <span className="text-[11px] font-bold uppercase tracking-[0.2em]" style={{ color: "var(--accent-ink, var(--color-accent))" }}>
             Gabinete · Atendimento ao cidadão
           </span>
         </div>
@@ -596,7 +596,7 @@ export default function DetalheDemandaClient({ demanda, assessores, eventos, voz
                 }
               }}
               className="wr-btn inline-flex items-center gap-1.5 disabled:opacity-50"
-              style={{ background: "color-mix(in srgb, var(--color-accent) 14%, transparent)", color: "var(--color-accent)", borderColor: "color-mix(in srgb, var(--color-accent) 30%, transparent)" }}
+              style={{ background: "color-mix(in srgb, var(--color-accent) 14%, transparent)", color: "var(--accent-ink, var(--color-accent))", borderColor: "color-mix(in srgb, var(--color-accent) 30%, transparent)" }}
             >
               <Sparkles className="h-4 w-4" aria-hidden /> {gerandoIA ? "Gerando…" : "Gerar com IA"}
             </button>

@@ -468,14 +468,14 @@ function CaptacaoEmendaCard({ emendaId, beneficiarios, vozArmada, politicoNome }
     <section className="gip-glass p-5">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-2.5">
-          <Users className="h-5 w-5 shrink-0" aria-hidden style={{ color: "var(--color-accent)" }} />
+          <Users className="h-5 w-5 shrink-0" aria-hidden style={{ color: "var(--accent-ink, var(--color-accent))" }} />
           <div>
             <h2 className="font-heading text-base font-bold" style={{ color: "var(--color-text)" }}>Captação de beneficiários</h2>
             <p className="text-xs" style={{ color: "var(--color-text-subtle)" }}>Dê este link à entidade beneficiada: cada cadastro vira base sua, no bairro. O link aceita cadastros ilimitados.</p>
           </div>
         </div>
         <div className="text-right">
-          <div className="font-heading text-2xl font-bold tabular-nums" style={{ color: "var(--color-accent)" }}>{beneficiarios.toLocaleString("pt-BR")}</div>
+          <div className="font-heading text-2xl font-bold tabular-nums" style={{ color: "var(--accent-ink, var(--color-accent))" }}>{beneficiarios.toLocaleString("pt-BR")}</div>
           <div className="text-[11px]" style={{ color: "var(--color-text-subtle)" }}>cadastrados</div>
         </div>
       </div>

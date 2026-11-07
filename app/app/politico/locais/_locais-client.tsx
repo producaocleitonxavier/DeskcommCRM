@@ -144,7 +144,7 @@ export default function LocaisClient({ locais, kpis }: LocaisClientProps) {
                       className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl"
                       style={{ background: "color-mix(in srgb, var(--color-accent) 12%, transparent)", border: "1px solid color-mix(in srgb, var(--color-accent) 22%, transparent)" }}
                     >
-                      <Icone className="h-5 w-5" style={{ color: "var(--color-accent)" }} aria-hidden />
+                      <Icone className="h-5 w-5" style={{ color: "var(--accent-ink, var(--color-accent))" }} aria-hidden />
                     </span>
                     <div className="min-w-0">
                       <div className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--color-text-subtle)" }}>

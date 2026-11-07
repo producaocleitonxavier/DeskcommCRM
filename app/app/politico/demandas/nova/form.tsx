@@ -317,7 +317,7 @@ export default function NovaDemandaForm({ assessores, tipoMandato }: NovaDemanda
                     </button>
                   ))}
                   {!buscando && (
-                    <button type="button" onClick={abrirNovo} className="flex w-full items-center gap-2 px-4 py-2 text-left text-sm font-medium transition-colors hover:bg-[var(--color-surface-elevated)]" style={{ color: "var(--color-accent)" }}>
+                    <button type="button" onClick={abrirNovo} className="flex w-full items-center gap-2 px-4 py-2 text-left text-sm font-medium transition-colors hover:bg-[var(--color-surface-elevated)]" style={{ color: "var(--accent-ink, var(--color-accent))" }}>
                       <UserPlus className="h-4 w-4" aria-hidden /> Cadastrar novo cidadão{busca.trim() ? `: "${busca.trim()}"` : ""}
                     </button>
                   )}
@@ -482,7 +482,7 @@ export default function NovaDemandaForm({ assessores, tipoMandato }: NovaDemanda
                   className="flex items-center gap-3 rounded-xl px-3 py-2.5"
                   style={{ background: "var(--color-surface-elevated)", border: "1px solid var(--color-border)" }}
                 >
-                  <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg" style={{ background: "color-mix(in srgb, var(--color-accent) 12%, transparent)", color: "var(--color-accent)" }} aria-hidden>
+                  <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg" style={{ background: "color-mix(in srgb, var(--color-accent) 12%, transparent)", color: "var(--accent-ink, var(--color-accent))" }} aria-hidden>
                     <FileText className="h-5 w-5" />
                   </span>
                   <div className="min-w-0 flex-1">

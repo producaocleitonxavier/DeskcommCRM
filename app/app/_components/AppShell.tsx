@@ -131,7 +131,7 @@ export function AppShell({ sidebarCollapsed, podeAtender, temaClaro, children }:
           data-rodape-ocupado={ocupacaoDoRodape}
         >
           {vestirBase ? (
-            <div className="war-room wr-claro" data-theme="light">
+            <div className="war-room wr-claro wr-navy-section" data-theme="light">
               {children}
             </div>
           ) : (

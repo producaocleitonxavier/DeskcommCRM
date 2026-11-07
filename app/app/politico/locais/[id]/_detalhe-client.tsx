@@ -238,7 +238,7 @@ export default function LocalDetalheClient({
 
       {/* Cadastrar pessoa */}
       <section className="gip-glass space-y-4 p-5 sm:p-6">
-        <h2 className="flex items-center gap-2 font-heading text-lg font-bold"><UserPlus className="h-5 w-5" style={{ color: "var(--color-accent)" }} aria-hidden /> Cadastrar pessoa</h2>
+        <h2 className="flex items-center gap-2 font-heading text-lg font-bold"><UserPlus className="h-5 w-5" style={{ color: "var(--accent-ink, var(--color-accent))" }} aria-hidden /> Cadastrar pessoa</h2>
         {eventos.length === 0 ? (
           <p className="text-sm" style={{ color: "var(--color-text-muted)" }}>
             Crie um evento neste local primeiro — as pessoas são cadastradas dentro de um evento.
@@ -263,7 +263,7 @@ export default function LocalDetalheClient({
       {/* Eventos */}
       <section className="gip-glass space-y-4 p-5 sm:p-6">
         <div className="flex items-center justify-between gap-2">
-          <h2 className="flex items-center gap-2 font-heading text-lg font-bold"><CalendarCheck className="h-5 w-5" style={{ color: "var(--color-accent)" }} aria-hidden /> Eventos neste local</h2>
+          <h2 className="flex items-center gap-2 font-heading text-lg font-bold"><CalendarCheck className="h-5 w-5" style={{ color: "var(--accent-ink, var(--color-accent))" }} aria-hidden /> Eventos neste local</h2>
           <button type="button" onClick={() => setAbrirEvento((v) => !v)} className="wr-btn inline-flex items-center gap-1.5 text-sm"><CalendarPlus className="h-4 w-4" aria-hidden /> Novo evento</button>
         </div>
 
@@ -325,7 +325,7 @@ export default function LocalDetalheClient({
 
       {/* Pessoas cadastradas */}
       <section className="gip-glass space-y-4 p-5 sm:p-6">
-        <h2 className="flex items-center gap-2 font-heading text-lg font-bold"><Users className="h-5 w-5" style={{ color: "var(--color-accent)" }} aria-hidden /> Pessoas cadastradas ({pessoas.length})</h2>
+        <h2 className="flex items-center gap-2 font-heading text-lg font-bold"><Users className="h-5 w-5" style={{ color: "var(--accent-ink, var(--color-accent))" }} aria-hidden /> Pessoas cadastradas ({pessoas.length})</h2>
         {pessoas.length === 0 ? (
           <p className="text-sm" style={{ color: "var(--color-text-muted)" }}>Nenhuma pessoa cadastrada ainda. Use o formulário acima.</p>
         ) : (
