@@ -220,7 +220,7 @@ export default function LocalDetalheClient({
         subtitulo={[local.endereco, localImo].filter(Boolean).join(" — ") || undefined}
         extra={
           <>
-            <span className="rounded-full px-2.5 py-0.5 text-xs font-semibold" style={{ background: "color-mix(in srgb, var(--color-accent) 16%, transparent)", color: "#5B6B16" }}>
+            <span className="rounded-full px-2.5 py-0.5 text-xs font-bold" style={{ background: "color-mix(in srgb, var(--color-accent) 22%, transparent)", color: "var(--color-accent)" }}>
               {TIPO_LABEL[local.tipo] ?? "Local"}
             </span>
             {local.zona && (

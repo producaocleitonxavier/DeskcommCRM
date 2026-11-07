@@ -282,8 +282,8 @@ function FunilProgresso({ current }: { current: string }) {
               style={{
                 width: 28,
                 height: 28,
-                background: ativo ? etapaCor(etapa.value) : "#F0F0EB",
-                color: ativo && etapa.idx >= 3 ? "#FFFFFF" : ativo ? "#1E2A80" : "#9A9D8F",
+                background: ativo ? "#D7F36A" : "#F0F0EB",
+                color: "#16181D",
               }}
             >
               {etapa.idx + 1}
@@ -293,7 +293,7 @@ function FunilProgresso({ current }: { current: string }) {
                 className="h-[3px] rounded-full"
                 style={{
                   width: 20,
-                  background: etapa.idx < idx ? etapaCor(ETAPAS_FUNIL[etapa.idx + 1]?.value ?? "") : "#F0F0EB",
+                  background: etapa.idx < idx ? "#D7F36A" : "#F0F0EB",
                 }}
               />
             )}
@@ -424,8 +424,12 @@ export default async function FichaPage({
         </div>
       )}
 
-      {/* ── Header card ─────────────────────────────────────────── */}
-      <header className="gip-glass p-6 sm:p-7">
+      {/* ── Header card (padrão HERO navy) ──────────────────────── */}
+      <header
+        className="gip-glass war-room wr-claro wr-navy-section p-6 sm:p-7"
+        data-theme="light"
+        style={{ background: "var(--hero-grad)", border: "1px solid var(--hero-border)" }}
+      >
         <div className="flex flex-wrap items-start gap-5">
           {/* Avatar */}
           <div
