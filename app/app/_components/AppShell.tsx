@@ -53,12 +53,23 @@ const ROTAS_BASE_TEMA_GIP = [
   "/app/activities",
 ];
 
+/** Rotas base que adotam a pele GIP BRANCA (Névoa Pro), NÃO marinho: telas onde
+ * o humano MORA por horas lendo/digitando (Inbox). Branco cansa menos a vista
+ * (regra do Leandro). Exceção funcional dentro do Atendimento. */
+const ROTAS_BASE_BRANCO = [
+  "/app/inbox",
+];
+
 export function AppShell({ sidebarCollapsed, podeAtender, temaClaro, children }: AppShellProps) {
   const pathname = usePathname() ?? "";
   // Político se auto-embrulha (WarRoomShell); aqui só vestimos o CRM base listado.
   const vestirBase =
     !!temaClaro && ROTAS_BASE_TEMA_GIP.some((r) => pathname.startsWith(r));
+  // Base em branco GIP (Inbox): pele clara, sem marinho.
+  const vestirBranco =
+    !!temaClaro && ROTAS_BASE_BRANCO.some((r) => pathname.startsWith(r));
   // Tela NAVY (base OU político navy): o marinho preenche a tela inteira.
+  // O branco (vestirBranco) NÃO é navy.
   const telaNavy =
     vestirBase ||
     (!!temaClaro && ROTAS_POLITICO_NAVY.some((r) => pathname.startsWith(r)));
@@ -145,6 +156,10 @@ export function AppShell({ sidebarCollapsed, podeAtender, temaClaro, children }:
         >
           {vestirBase ? (
             <div className="war-room wr-claro wr-navy-section min-h-full" data-theme="light">
+              {children}
+            </div>
+          ) : vestirBranco ? (
+            <div className="war-room wr-claro min-h-full" data-theme="light">
               {children}
             </div>
           ) : (

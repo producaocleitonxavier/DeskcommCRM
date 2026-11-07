@@ -50,9 +50,10 @@ export const ROTAS_NAVY = [
   "/app/politico/materiais",
   "/app/politico/kanban", // Mobilização (quadro da campanha)
   "/app/politico/funil-invisivel", // Termômetro de Base
-  // Voz do Mandato NÃO entra aqui: é uma FERRAMENTA que se opera (gravar/ler
-  // roteiro/gerar), não um painel de análise. Fica como página de TRABALHO
-  // (hero marinho + corpo branco), igual Demandas/Visitas/Ofícios.
+  // Voz do Mandato: VOLTA pro marinho (07/nov) — pertence à SALA DE OPERAÇÃO
+  // (Atendimento: Inbox/Radar/Respostas/Casos, todos marinho). A seção é uma
+  // unidade e tem uma pele só. Regra: GABINETE=branco, resto=marinho.
+  "/app/politico/voz",
 ];
 
 export default function WarRoomShell({

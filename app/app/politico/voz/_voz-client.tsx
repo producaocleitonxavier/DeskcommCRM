@@ -482,7 +482,7 @@ export default function VozClient({ inicial }: { inicial: Inicial }) {
       )}
 
       {msg && (
-        <div className="flex items-center gap-2 rounded-[12px] px-4 py-3 text-sm" style={{ background: msg.tipo === "ok" ? "color-mix(in srgb, var(--color-accent) 14%, transparent)" : "rgba(239,68,68,0.14)", color: msg.tipo === "ok" ? "var(--accent-ink, var(--color-accent))" : "#C82333" }}>
+        <div className="flex items-center gap-2 rounded-[12px] px-4 py-3 text-sm" style={{ background: msg.tipo === "ok" ? "color-mix(in srgb, var(--color-accent) 14%, transparent)" : "rgba(239,68,68,0.14)", color: msg.tipo === "ok" ? "var(--accent-ink, var(--color-accent))" : "#F87171" }}>
           {msg.tipo === "ok" && <Check className="h-4 w-4" aria-hidden />} {msg.texto}
         </div>
       )}
