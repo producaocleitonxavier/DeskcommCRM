@@ -1015,6 +1015,13 @@
   --agenda-pessoa-7: #be9ef6;
   --agenda-pessoa-8: #cc77b1;
 
+  /* Paleta CATEGÓRICA dos gráficos (funil, pizza) — brilhante p/ o escuro */
+  --chart-1: #60A5FA;
+  --chart-2: #22D3EE;
+  --chart-3: #A78BFA;
+  --chart-4: #F59E0B;
+  --chart-5: #34D399;
+
   /* Hero "Centro de Comando" — CommandHero lê estes tokens (antes eram hex inline) */
   --hero-grad: linear-gradient(135deg,#0E1116 0%,#14181F 55%,#1A2410 100%);
   --hero-border: rgba(215,243,106,0.22);
@@ -1079,6 +1086,15 @@
   --color-error: #c0392b; --color-error-bg: rgba(192,57,43,0.10); --color-error-fg: #a32e22;
   --color-info: #2a4056; --color-info-bg: rgba(42,64,86,0.12); --color-info-fg: #223447;
 
+  /* Paleta CATEGÓRICA dos gráficos — VALIDADA no claro (dataviz: lightness, CVD,
+     contraste >=3:1, piso de visão normal — tudo passa). Alterna quente/frio p/
+     cada estágio vizinho do funil ficar distinto. */
+  --chart-1: #2f66d6;
+  --chart-2: #c0661a;
+  --chart-3: #0e9aa8;
+  --chart-4: #7b4fd0;
+  --chart-5: #17885a;
+
   --shadow-xs: 0 1px 2px 0 rgba(20,30,40,0.06);
   --shadow-sm: 0 1px 2px 0 rgba(20,30,40,0.08), 0 1px 1px 0 rgba(20,30,40,0.04);
   --shadow-md: 0 4px 12px -2px rgba(20,30,40,0.10), 0 2px 4px -1px rgba(20,30,40,0.06);
@@ -1095,7 +1111,8 @@
   --card-foreground: #141b26;
   --popover: #ffffff;
   --popover-foreground: #141b26;
-  --primary: #234a73;
+  /* AÇÃO = LARANJA (pop). Navy fica na estrutura; o botão primário SALTA. */
+  --primary: #d26e18;
   --primary-foreground: #ffffff;
   --secondary: #f5f7fa;
   --secondary-foreground: #141b26;
@@ -1116,10 +1133,10 @@
   --hero-eyebrow: #9ec3e8;
   --hero-title: #ffffff;
   --hero-sub: rgba(255,255,255,0.74);
-  --hero-btn-bg: #3f72ab;
+  --hero-btn-bg: #e07c1c;
   --hero-btn-fg: #ffffff;
-  --hero-btn-outline: rgba(255,255,255,0.24);
-  --hero-btn-outline-fg: rgba(255,255,255,0.92);
+  --hero-btn-outline: rgba(255,255,255,0.42);
+  --hero-btn-outline-fg: #ffffff;
 
   background-color: #eceff3;
   color: #141b26;

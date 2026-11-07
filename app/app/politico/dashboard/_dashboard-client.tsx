@@ -35,7 +35,13 @@ import type { CallQueueStatus, DashboardData, FunilKpis } from "./page";
 // paleta pinta o funil E a pizza "Distribuição por Nível", então a cor vira a
 // identidade de cada nível. Antes eram 5 tons de índigo quase iguais — não
 // diferenciavam o público. Progressão fria→quente→conquista, vívida no escuro.
-const FUNIL_HEX = ["#60A5FA", "#22D3EE", "#A78BFA", "#F59E0B", "#34D399"];
+// Paleta categórica dos 5 estágios, em DUAS versões: ESCURA (brilhante p/ o
+// preto) e CLARA (validada no dataviz — lightness/CVD/contraste>=3:1/piso de
+// visão normal TODOS passam; alterna quente/frio p/ cada estágio vizinho ser
+// distinto). Hex REAL por tema (não var()): recharts usa `fill` como ATRIBUTO
+// SVG, e var(--token) não resolve em atributo.
+const FUNIL_HEX_ESCURO = ["#60A5FA", "#22D3EE", "#A78BFA", "#F59E0B", "#34D399"];
+const FUNIL_HEX_CLARO = ["#2f66d6", "#c0661a", "#0e9aa8", "#7b4fd0", "#17885a"];
 // Gradiente de 6 passos (claro → escuro) para o funil invisível.
 const INVISIVEL_HEX = ["#DCE0F7", "#B4BCF0", "#8A95E6", "#6372DD", "#4352C4", "#26318F"];
 
@@ -43,6 +49,8 @@ export interface DashboardClientProps {
   dash: DashboardData | null;
   funil: FunilKpis | null;
   calls: CallQueueStatus | null;
+  /** Org em tema claro? Escolhe a paleta de gráfico validada p/ o claro. */
+  claro: boolean;
 }
 
 function Badge({ children }: { children: React.ReactNode }) {
@@ -56,7 +64,8 @@ function Badge({ children }: { children: React.ReactNode }) {
   );
 }
 
-export default function DashboardClient({ dash, funil, calls }: DashboardClientProps) {
+export default function DashboardClient({ dash, funil, calls, claro }: DashboardClientProps) {
+  const FUNIL_HEX = claro ? FUNIL_HEX_CLARO : FUNIL_HEX_ESCURO;
   const [invisivelAberto, setInvisivelAberto] = useState(true);
   // "Fila de Ligações" exige um serviço de call-center configurado. Sem chamadas
   // reais o card ficava VAZIO no painel (parece quebrado, promete o que o

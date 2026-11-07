@@ -126,10 +126,20 @@ export default async function DashboardPage() {
 
   const { dash, funil, calls } = await buscarDashboard(org.orgId);
 
+  // Tema da org (claro?) p/ o client escolher a paleta de gráfico REAL por tema
+  // (recharts usa fill como ATRIBUTO SVG — var(--token) não resolve ali).
+  const dbTema = await createClient();
+  const { data: orgRow } = await dbTema
+    .from("organizations")
+    .select("settings")
+    .eq("id", org.orgId)
+    .maybeSingle();
+  const claro = ((orgRow?.settings ?? null) as { tema?: unknown } | null)?.tema === "claro";
+
   return (
     <>
       <PageTabs abas={COMANDO_TABS} active="painel" maxW="1140px" />
-      <DashboardClient dash={dash} funil={funil} calls={calls} />
+      <DashboardClient dash={dash} funil={funil} calls={calls} claro={claro} />
     </>
   );
 }
