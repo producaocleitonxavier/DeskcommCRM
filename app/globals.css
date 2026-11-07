@@ -1042,37 +1042,37 @@
   color-scheme: light;
   --wr-glow: 0 1px 2px rgba(20,30,40,0.05);
 
-  /* Fundo um pouco mais fundo que os cards, p/ os cards brancos SALTAREM (o
-     patchwork anterior sofria de creme-sobre-creme, contraste lavado). */
-  --color-bg: #ebe7dd;
+  /* NÉVOA PRO: cinza-frio (os cards brancos saltam) + navy. Fundo mais fundo
+     que os cards de propósito. */
+  --color-bg: #eceff3;
   --color-surface: #ffffff;
-  --color-surface-elevated: #f6f3ea;
-  --color-overlay: rgba(20,30,40,0.35);
+  --color-surface-elevated: #f5f7fa;
+  --color-overlay: rgba(16,24,36,0.35);
 
-  --color-text: #19222e;
-  --color-text-muted: #596170;
-  --color-text-subtle: #828a98;
+  /* Texto navy-tinta quase preto = NÚMEROS pretos + leitura máxima */
+  --color-text: #141b26;
+  --color-text-muted: #56617a;
+  --color-text-subtle: #8893a6;
 
-  --color-border: #dbd5c8;
-  --color-border-strong: #c7c0b0;
+  --color-border: #dfe4ea;
+  --color-border-strong: #cdd4dd;
 
-  /* Acento TIJOLO — base + rampa (componentes que usam -300 pegam o primário).
-     Em escuro a rampa é lima; aqui espelha em terracota p/ não vazar verde. */
-  --color-accent: #b0542a;
+  /* Acento NAVY — só em AÇÃO (botão, item ativo). Rampa navy p/ não vazar verde. */
+  --color-accent: #234a73;
   --color-accent-fg: #ffffff;
-  --color-accent-soft: rgba(176,84,42,0.12);
-  --color-accent-hover: #9a4a25;
-  --color-accent-50: #f8ece3;
-  --color-accent-100: #efd4c2;
-  --color-accent-200: #e0ac8c;
-  --color-accent-300: #b0542a;
-  --color-accent-400: #9f4b26;
-  --color-accent-500: #8c4221;
-  --color-accent-600: #78381c;
-  --color-accent-700: #632f18;
-  --color-accent-800: #4f2613;
-  --color-accent-900: #3c1d0f;
-  --color-accent-950: #26120a;
+  --color-accent-soft: rgba(35,74,115,0.10);
+  --color-accent-hover: #1d3f63;
+  --color-accent-50: #eaf0f7;
+  --color-accent-100: #cfdeee;
+  --color-accent-200: #9fbcdc;
+  --color-accent-300: #234a73;
+  --color-accent-400: #1f4267;
+  --color-accent-500: #1b3a5a;
+  --color-accent-600: #17324d;
+  --color-accent-700: #132940;
+  --color-accent-800: #0f2133;
+  --color-accent-900: #0b1826;
+  --color-accent-950: #070f19;
 
   --color-success: #1f7a52; --color-success-bg: rgba(31,122,82,0.12); --color-success-fg: #1a6646;
   --color-warning: #b0741b; --color-warning-bg: rgba(176,116,27,0.14); --color-warning-fg: #8c5c15;
@@ -1086,43 +1086,43 @@
   --shadow-xl: 0 24px 48px -12px rgba(20,30,40,0.16), 0 8px 16px -4px rgba(20,30,40,0.10);
 
   --wr-nav-bg: #ffffff;
-  --wr-nav-fg: #1e2a38;
-  --wr-card-shadow: 0 1px 3px rgba(20,30,40,0.08), 0 1px 2px rgba(20,30,40,0.05);
+  --wr-nav-fg: #141b26;
+  --wr-card-shadow: 0 1px 3px rgba(16,24,36,0.08), 0 1px 2px rgba(16,24,36,0.05);
 
-  --background: #f4f2ec;
-  --foreground: #1e2a38;
+  --background: #eceff3;
+  --foreground: #141b26;
   --card: #ffffff;
-  --card-foreground: #1e2a38;
+  --card-foreground: #141b26;
   --popover: #ffffff;
-  --popover-foreground: #1e2a38;
-  --primary: #b0542a;
+  --popover-foreground: #141b26;
+  --primary: #234a73;
   --primary-foreground: #ffffff;
-  --secondary: #faf8f3;
-  --secondary-foreground: #1e2a38;
-  --muted: #f1efe9;
-  --muted-foreground: #5c6474;
-  --accent: #faf8f3;
-  --accent-foreground: #1e2a38;
-  --border: rgba(20,30,40,0.13);
-  --input: rgba(20,30,40,0.14);
-  --ring: #b0542a;
+  --secondary: #f5f7fa;
+  --secondary-foreground: #141b26;
+  --muted: #eef1f5;
+  --muted-foreground: #56617a;
+  --accent: #f5f7fa;
+  --accent-foreground: #141b26;
+  --border: rgba(16,24,36,0.12);
+  --input: rgba(16,24,36,0.14);
+  --ring: #234a73;
   --destructive: #c0392b;
   --destructive-foreground: #ffffff;
 
-  /* Hero fica MARINHO (momento de marca) mesmo no tema claro — só o workspace clareia */
-  --hero-grad: linear-gradient(135deg,#1b2a38 0%,#223447 55%,#2b4158 100%);
-  --hero-border: rgba(43,65,88,0.28);
-  --hero-glow: rgba(176,84,42,0.20);
-  --hero-eyebrow: #dd9057;
+  /* Hero MARINHO (momento de marca); botão em azul mais claro p/ POPAR no navy */
+  --hero-grad: linear-gradient(135deg,#152335 0%,#1d344b 55%,#24415e 100%);
+  --hero-border: rgba(62,92,132,0.30);
+  --hero-glow: rgba(63,114,171,0.22);
+  --hero-eyebrow: #9ec3e8;
   --hero-title: #ffffff;
-  --hero-sub: rgba(255,255,255,0.72);
-  --hero-btn-bg: #b0542a;
+  --hero-sub: rgba(255,255,255,0.74);
+  --hero-btn-bg: #3f72ab;
   --hero-btn-fg: #ffffff;
   --hero-btn-outline: rgba(255,255,255,0.24);
   --hero-btn-outline-fg: rgba(255,255,255,0.92);
 
-  background-color: #f4f2ec;
-  color: #1e2a38;
+  background-color: #eceff3;
+  color: #141b26;
 }
 /* Fundo ambiente claro: troca os glows frios (azul/violeta sobre preto) por um
    sopro marinho discreto sobre o creme. */
@@ -1149,6 +1149,12 @@
   background: var(--color-accent-soft) !important;
   border: 1px solid color-mix(in srgb, var(--color-accent) 35%, transparent) !important;
   box-shadow: var(--wr-card-shadow) !important;
+}
+/* NÚMEROS em PRETO no claro (dado = tinta neutra, não acento; sem glow lima).
+   Disciplina de dados: a cor forte fica só na AÇÃO. Escuro mantém lima+glow. */
+.war-room.wr-claro .wr-kpi-value {
+  color: var(--color-text) !important;
+  text-shadow: none !important;
 }
 
 .wr-card-dark {
