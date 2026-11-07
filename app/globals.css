@@ -1119,6 +1119,10 @@
   /* AÇÃO = LIMA (elmo). Navy fica na estrutura; o botão primário SALTA em verde. */
   --primary: #D7F36A;
   --primary-foreground: #16181D;
+  /* Botão "dark" (wr-btn-dark: Nova visita, Salvar...) no claro = LIMA, não preto,
+     p/ todos os botões de ação ficarem verdes e consistentes. */
+  --wr-btn-dark-bg: #D7F36A;
+  --wr-btn-dark-fg: #16181D;
   --secondary: #f5f7fa;
   --secondary-foreground: #141b26;
   --muted: #eef1f5;
@@ -1140,8 +1144,9 @@
   --hero-sub: rgba(255,255,255,0.74);
   --hero-btn-bg: #D7F36A;
   --hero-btn-fg: #14181F;
-  --hero-btn-outline: rgba(255,255,255,0.42);
-  --hero-btn-outline-fg: #ffffff;
+  /* Botão de VOLTA (outline do hero) = LIMA, p/ ter cor (antes era branco "sem cor"). */
+  --hero-btn-outline: rgba(215,243,106,0.55);
+  --hero-btn-outline-fg: #D7F36A;
 
   /* Aba ATIVA (PageTabs) = MESMO fundo do hero marinho, texto branco. */
   --tab-active-bg: var(--hero-grad);
