@@ -233,7 +233,7 @@ export default function VisitasClient({ visitas, kpis, assessores, usuarioAtualI
               type="button"
               onClick={() => setFiltro(f.id)}
               className="inline-flex items-center h-9 px-3.5 rounded-full text-sm font-medium transition-colors"
-              style={filtro === f.id ? { background: "var(--chip-active-bg)", color: "#FFFFFF" } : { background: "var(--color-surface-elevated)", color: "var(--color-text-muted)" }}
+              style={filtro === f.id ? { background: "var(--chip-active-bg)", color: "var(--chip-active-fg)" } : { background: "var(--color-surface-elevated)", color: "var(--color-text-muted)" }}
             >
               {f.label}
             </button>

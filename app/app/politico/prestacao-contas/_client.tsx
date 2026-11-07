@@ -77,7 +77,7 @@ export default function PrestacaoContasClient({ dados, ondeInvestir, ehAdmin }: 
                 key={p.id}
                 href={`/app/politico/prestacao-contas?periodo=${p.id}`}
                 className="inline-flex items-center h-9 px-4 rounded-full text-sm font-semibold transition-colors"
-                style={on ? { background: "var(--chip-active-bg)", color: "#FFFFFF" } : { background: "var(--color-surface-elevated)", color: "var(--color-text-muted)" }}
+                style={on ? { background: "var(--chip-active-bg)", color: "var(--chip-active-fg)" } : { background: "var(--color-surface-elevated)", color: "var(--color-text-muted)" }}
               >
                 {p.label}
               </Link>

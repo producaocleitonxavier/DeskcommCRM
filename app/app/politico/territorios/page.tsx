@@ -137,7 +137,7 @@ export default async function TerritoriosPage({
               className="inline-flex items-center rounded-full border px-3 py-1.5 text-xs font-semibold transition-colors"
               style={
                 ativo
-                  ? { background: "var(--chip-active-bg)", color: "#FFFFFF", borderColor: "#16181D" }
+                  ? { background: "var(--chip-active-bg)", color: "var(--chip-active-fg)", borderColor: "#16181D" }
                   : { background: "var(--color-surface)", color: "var(--color-text-muted)", borderColor: "var(--color-border)" }
               }
             >

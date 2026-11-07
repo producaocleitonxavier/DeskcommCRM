@@ -260,7 +260,7 @@ export default function ComparativoClient({ eleicoes, municipios }: { eleicoes: 
                   {DIMS.map((d) => (
                     <button key={d.key} type="button" onClick={() => trocarDim(d.key)}
                       className="rounded-full px-3 py-1.5 text-xs font-semibold transition-colors"
-                      style={dim === d.key ? { background: "var(--chip-active-bg)", color: "#FFFFFF" } : { color: "var(--color-text-muted)" }}>
+                      style={dim === d.key ? { background: "var(--chip-active-bg)", color: "var(--chip-active-fg)" } : { color: "var(--color-text-muted)" }}>
                       {d.label}
                     </button>
                   ))}

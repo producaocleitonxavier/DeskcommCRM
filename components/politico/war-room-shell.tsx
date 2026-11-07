@@ -42,6 +42,7 @@ const ROTAS_NAVY = [
   "/app/politico/decisao",
   "/app/politico/briefing",
   "/app/politico/motor-viral",
+  "/app/politico/voz",
 ];
 
 export default function WarRoomShell({

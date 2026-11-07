@@ -250,7 +250,7 @@ function FilterLink({
       className="inline-flex items-center rounded-full border px-4 py-2 text-sm font-semibold transition-colors"
       style={
         active
-          ? { background: "var(--chip-active-bg)", color: "#FFFFFF", borderColor: "#16181D" }
+          ? { background: "var(--chip-active-bg)", color: "var(--chip-active-fg)", borderColor: "#16181D" }
           : { background: "var(--color-surface)", color: "var(--color-text-muted)", borderColor: "var(--color-border)" }
       }
     >
