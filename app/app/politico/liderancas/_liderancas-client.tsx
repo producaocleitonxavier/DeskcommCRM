@@ -252,6 +252,7 @@ export default function LiderancasClient({ liderancas }: LiderancasClientProps) 
                   <div
                     key={l.id}
                     className="gip-glass gip-glass-hover flex flex-col gap-4 p-5 sm:flex-row sm:items-center"
+                    style={{ borderLeft: `4px solid ${eng.fg}` }}
                   >
                     <div className="flex min-w-0 flex-1 items-center gap-3">
                       {l.fotoUrl ? (

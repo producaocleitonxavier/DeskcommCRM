@@ -82,6 +82,7 @@ export default function LeadsClient({ leads, total, contagens, cidades, mapaResu
   const [carimboMsg, setCarimboMsg] = useState<string | null>(null);
   const [carimbandoCidade, setCarimbandoCidade] = useState(false);
   const [carimboCidadeMsg, setCarimboCidadeMsg] = useState<string | null>(null);
+  const [vista, setVista] = useState<"cards" | "lista">("cards");
   const totalPaginas = Math.max(1, Math.ceil(total / porPagina));
 
   function href(overrides: Partial<Filtros>): string {
@@ -293,6 +294,49 @@ export default function LeadsClient({ leads, total, contagens, cidades, mapaResu
         />
       ) : (
         <>
+          {/* Alternador cartões ↔ lista compacta */}
+          <div className="flex items-center justify-between gap-2">
+            <span className="text-xs" style={{ color: "var(--color-text-subtle)" }}>
+              {leads.length} de {total.toLocaleString("pt-BR")}
+            </span>
+            <div className="flex gap-1 rounded-full p-0.5" style={{ border: "1px solid var(--color-border)" }}>
+              {(["cards", "lista"] as const).map((v) => (
+                <button
+                  key={v}
+                  type="button"
+                  onClick={() => setVista(v)}
+                  className="rounded-full px-3 py-1 text-xs font-semibold transition-colors"
+                  style={vista === v ? { background: "var(--chip-active-bg)", color: "var(--chip-active-fg)" } : { color: "var(--color-text-muted)" }}
+                >
+                  {v === "cards" ? "Cartões" : "Lista"}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {vista === "lista" ? (
+            <div className="gip-glass overflow-hidden p-0">
+              {leads.map((lead) => {
+                const et = etapaDe(lead.support_level);
+                const temp = TEMPS.find((t) => t.value === lead.temperature);
+                const nome = lead.contacts?.name ?? "Sem nome";
+                return (
+                  <Link
+                    key={lead.id}
+                    href={`/app/politico/leads/${lead.id}`}
+                    className="flex items-center gap-3 border-b px-4 py-2.5 transition-colors hover:bg-black/[0.03]"
+                    style={{ borderColor: "var(--color-border)", borderLeft: `4px solid ${et.hex}` }}
+                  >
+                    <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-xs font-bold" style={{ background: `linear-gradient(135deg, ${et.hex} 0%, #26318F 100%)`, color: et.escuro ? "#FFFFFF" : "#16181D" }} aria-hidden>{iniciais(nome)}</span>
+                    <span className="min-w-0 flex-1 truncate font-semibold" style={{ color: "var(--color-text)" }}>{nome}</span>
+                    <span className="hidden shrink-0 text-xs sm:block" style={{ color: "var(--color-text-muted)" }}>{lead.contacts?.phone_number ?? ""}</span>
+                    <span className="hidden shrink-0 rounded-full px-2 py-0.5 text-[11px] font-semibold md:inline-flex" style={{ background: et.badge.bg, color: et.badge.fg }}>{et.label}</span>
+                    {temp && <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ background: temp.dot }} title={`Temperatura: ${temp.label}`} />}
+                  </Link>
+                );
+              })}
+            </div>
+          ) : (
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
             {leads.map((lead) => {
               const et = etapaDe(lead.support_level);
@@ -347,6 +391,7 @@ export default function LeadsClient({ leads, total, contagens, cidades, mapaResu
               );
             })}
           </div>
+          )}
 
           {/* Paginação */}
           <div className="flex flex-wrap items-center justify-between gap-3 text-sm" style={{ color: "var(--color-text-subtle)" }}>
