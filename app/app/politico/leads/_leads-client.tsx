@@ -139,7 +139,12 @@ export default function LeadsClient({ leads, total, contagens, cidades, mapaResu
 
       {/* ── Manutenção da base (só Gerente+): preencher cidade e zona que faltam ─ */}
       {podeManutencao && (
-      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+      <details className="gip-glass px-4 py-2.5 text-xs">
+        <summary className="flex cursor-pointer list-none items-center gap-1.5 font-semibold" style={{ color: "var(--color-text-muted)" }}>
+          <span aria-hidden>⚙</span> Manutenção da base
+          <span className="font-normal" style={{ color: "var(--color-text-subtle)" }}>— preencher cidade/zona que faltam</span>
+        </summary>
+        <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
         <p className="text-xs leading-relaxed" style={{ color: "var(--color-text-muted)", maxWidth: "46ch" }}>
           <strong>Manutenção da base.</strong> Depois de importar os contatos, algumas pessoas ficam sem a <strong>cidade</strong> ou sem a <strong>zona eleitoral</strong> ligada no sistema — e some do mapa e dos filtros. Estes botões preenchem automaticamente <strong>só quem está faltando</strong> (a cidade vem do cadastro; a zona, do bairro, com dados do TSE).
         </p>
@@ -190,7 +195,8 @@ export default function LeadsClient({ leads, total, contagens, cidades, mapaResu
           <MapPin className="h-4 w-4" aria-hidden /> {carimbando ? "Preenchendo zonas…" : "Preencher zonas pelo bairro"}
         </button>
         </div>
-      </div>
+        </div>
+      </details>
       )}
 
       {/* ── Filtros ─────────────────────────────────────────────── */}
@@ -293,7 +299,7 @@ export default function LeadsClient({ leads, total, contagens, cidades, mapaResu
               const temp = TEMPS.find((t) => t.value === lead.temperature);
               const nome = lead.contacts?.name ?? "Sem nome";
               return (
-                <div key={lead.id} className="gip-glass gip-glass-hover flex flex-col gap-3 p-5">
+                <div key={lead.id} className="gip-glass gip-glass-hover flex flex-col gap-3 p-5" style={{ borderLeft: `4px solid ${et.hex}` }}>
                   <div className="flex items-center gap-3">
                     <span
                       className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-sm font-bold"
@@ -333,8 +339,9 @@ export default function LeadsClient({ leads, total, contagens, cidades, mapaResu
                   </div>
 
                   <div className="border-t pt-2.5 text-xs text-muted-foreground" style={{ borderColor: "var(--color-border)" }}>
-                    {lead.pol_territories?.name ? `${lead.pol_territories.name} · ` : ""}
-                    Última atividade {tempoRelativo(lead.contacts?.last_activity_at ?? null)}
+                    {lead.contacts?.last_activity_at
+                      ? `${lead.pol_territories?.name ? lead.pol_territories.name + " · " : ""}Última atividade ${tempoRelativo(lead.contacts.last_activity_at)}`
+                      : (lead.pol_territories?.name ?? "—")}
                   </div>
                 </div>
               );
