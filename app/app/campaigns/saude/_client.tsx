@@ -20,22 +20,22 @@ const ESTILO: Record<
   saudavel: {
     rotulo: "Saudável",
     emoji: "🟢",
-    cor: "#17784F",
-    bg: "rgba(23,120,79,0.12)",
+    cor: "#4ADE80",
+    bg: "rgba(34,197,94,0.16)",
     Icon: CheckCircle2,
   },
   em_espera: {
     rotulo: "Em espera",
     emoji: "🟡",
-    cor: "#C0392B",
-    bg: "rgba(220,70,70,0.14)",
+    cor: "#F87171",
+    bg: "rgba(239,68,68,0.16)",
     Icon: PauseCircle,
   },
   aguardando_liberacao: {
     rotulo: "Aguardando liberação",
     emoji: "⏳",
-    cor: "#B7791F",
-    bg: "rgba(215,160,30,0.14)",
+    cor: "#FBBF24",
+    bg: "rgba(245,158,11,0.16)",
     Icon: Hourglass,
   },
   sem_dados: {

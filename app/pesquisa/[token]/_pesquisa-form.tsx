@@ -32,7 +32,7 @@ function escalaMax(raw: unknown): number {
 
 const campoStyle: React.CSSProperties = {
   width: "100%",
-  background: "#0E1116",
+  background: "#16293c",
   border: `1px solid ${BORDER}`,
   borderRadius: 12,
   color: "#E9EBF0",
@@ -154,7 +154,7 @@ export default function PesquisaForm({
                   {[{ k: true, t: "Sim" }, { k: false, t: "Não" }].map((o) => {
                     const on = val === o.k;
                     return (
-                      <button key={o.t} type="button" onClick={() => set(q.id, o.k)} style={{ flex: 1, padding: "10px 0", borderRadius: 12, fontWeight: 700, cursor: "pointer", border: `1px solid ${on ? ACCENT : BORDER}`, background: on ? ACCENT : "#0E1116", color: on ? "#1B2206" : "#E9EBF0" }}>
+                      <button key={o.t} type="button" onClick={() => set(q.id, o.k)} style={{ flex: 1, padding: "10px 0", borderRadius: 12, fontWeight: 700, cursor: "pointer", border: `1px solid ${on ? ACCENT : BORDER}`, background: on ? ACCENT : "#16293c", color: on ? "#1B2206" : "#E9EBF0" }}>
                         {o.t}
                       </button>
                     );
@@ -166,7 +166,7 @@ export default function PesquisaForm({
                   {Array.from({ length: escalaMax(q.options) }, (_, n) => n + 1).map((n) => {
                     const on = val === n;
                     return (
-                      <button key={n} type="button" onClick={() => set(q.id, n)} style={{ width: 44, height: 44, borderRadius: 12, fontWeight: 700, cursor: "pointer", border: `1px solid ${on ? ACCENT : BORDER}`, background: on ? ACCENT : "#0E1116", color: on ? "#1B2206" : "#E9EBF0" }}>
+                      <button key={n} type="button" onClick={() => set(q.id, n)} style={{ width: 44, height: 44, borderRadius: 12, fontWeight: 700, cursor: "pointer", border: `1px solid ${on ? ACCENT : BORDER}`, background: on ? ACCENT : "#16293c", color: on ? "#1B2206" : "#E9EBF0" }}>
                         {n}
                       </button>
                     );
@@ -178,7 +178,7 @@ export default function PesquisaForm({
                   {opts.map((o) => {
                     const on = val === o;
                     return (
-                      <button key={o} type="button" onClick={() => set(q.id, o)} style={{ textAlign: "left", padding: "10px 12px", borderRadius: 12, cursor: "pointer", fontSize: 15, border: `1px solid ${on ? ACCENT : BORDER}`, background: on ? "rgba(215,243,106,0.12)" : "#0E1116", color: "#E9EBF0" }}>
+                      <button key={o} type="button" onClick={() => set(q.id, o)} style={{ textAlign: "left", padding: "10px 12px", borderRadius: 12, cursor: "pointer", fontSize: 15, border: `1px solid ${on ? ACCENT : BORDER}`, background: on ? "rgba(215,243,106,0.12)" : "#16293c", color: "#E9EBF0" }}>
                         {on ? "●" : "○"} {o}
                       </button>
                     );
@@ -190,7 +190,7 @@ export default function PesquisaForm({
                   {opts.map((o) => {
                     const on = Array.isArray(val) && (val as string[]).includes(o);
                     return (
-                      <button key={o} type="button" onClick={() => toggleMulti(q.id, o)} style={{ textAlign: "left", padding: "10px 12px", borderRadius: 12, cursor: "pointer", fontSize: 15, border: `1px solid ${on ? ACCENT : BORDER}`, background: on ? "rgba(215,243,106,0.12)" : "#0E1116", color: "#E9EBF0" }}>
+                      <button key={o} type="button" onClick={() => toggleMulti(q.id, o)} style={{ textAlign: "left", padding: "10px 12px", borderRadius: 12, cursor: "pointer", fontSize: 15, border: `1px solid ${on ? ACCENT : BORDER}`, background: on ? "rgba(215,243,106,0.12)" : "#16293c", color: "#E9EBF0" }}>
                         {on ? "☑" : "☐"} {o}
                       </button>
                     );

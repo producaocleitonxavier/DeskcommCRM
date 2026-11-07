@@ -42,7 +42,7 @@ async function buscar(token: string): Promise<{ survey: Survey; perguntas: Pergu
 
 function Moldura({ children }: { children: React.ReactNode }) {
   return (
-    <div style={{ minHeight: "100dvh", background: "#0B0D11", color: "#E9EBF0", display: "flex", flexDirection: "column", alignItems: "center", padding: "32px 16px" }}>
+    <div style={{ minHeight: "100dvh", background: "#0b1726", color: "#E9EBF0", display: "flex", flexDirection: "column", alignItems: "center", padding: "32px 16px" }}>
       <div style={{ width: "100%", maxWidth: 620 }}>{children}</div>
     </div>
   );

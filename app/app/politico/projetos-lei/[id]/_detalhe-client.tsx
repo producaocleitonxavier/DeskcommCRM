@@ -240,7 +240,7 @@ export default function DetalheProjetoClient({ projeto }: { projeto: ProjetoDeta
 
       <header className="gip-glass p-6 sm:p-7">
         <div className="flex flex-wrap gap-2">
-          {p.autor_mandatario && <span className="rounded-full px-2 py-0.5 text-xs font-medium" style={{ background: "#E4E7F8", color: "#2F3DA8" }}>De autoria</span>}
+          {p.autor_mandatario && <span className="rounded-full px-2.5 py-1 text-xs font-bold" style={{ background: "color-mix(in srgb, var(--accent-ink, var(--color-accent)) 12%, transparent)", color: "var(--accent-ink, var(--color-accent))", border: "1px solid color-mix(in srgb, var(--accent-ink, var(--color-accent)) 30%, transparent)" }}>De autoria</span>}
           {p.alinhamento_campanha && <span className="rounded-full px-2 py-0.5 text-xs font-medium" style={{ background: "#E2F5EC", color: "#17784F" }}>Alinhado</span>}
           {p.comissao_atual && <span className="rounded-full px-2 py-0.5 text-xs font-medium" style={{ background: "var(--color-surface-elevated)", color: "var(--color-text-subtle)" }}>{p.comissao_atual}</span>}
         </div>

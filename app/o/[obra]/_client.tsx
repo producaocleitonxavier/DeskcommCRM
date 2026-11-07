@@ -54,7 +54,7 @@ export default function CaptacaoObraClient({ obraId, obraTitulo, cidade, bairro,
   }
 
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center px-4 py-10" style={{ background: "linear-gradient(160deg,#0E1116 0%,#14181F 55%,#1A2410 100%)" }}>
+    <div className="flex min-h-screen flex-col items-center justify-center px-4 py-10" style={{ background: "linear-gradient(160deg,#0d1b2b 0%,#16293c 55%,#102235 100%)" }}>
       <div className="w-full max-w-md">
         <div className="mb-6 flex flex-col items-center text-center">
           {logoUrl ? (

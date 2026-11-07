@@ -335,7 +335,10 @@ export default function LocalDetalheClient({
             {pessoas.map((p, i) => (
               <li key={`${p.contactId}-${i}`} className="flex flex-wrap items-center justify-between gap-2 py-3">
                 <div className="min-w-0">
-                  <div className="font-medium">{p.nome}{p.relacao ? <span className="ml-2 text-xs font-normal" style={{ color: "var(--color-text-subtle)" }}>· {p.relacao}</span> : null}</div>
+                  <div className="font-medium">
+                    <Link href={`/app/contacts/${p.contactId}`} className="transition-colors hover:underline" style={{ color: "var(--accent-ink, var(--color-accent))" }} title="Abrir o cadastro desta pessoa">{p.nome}</Link>
+                    {p.relacao ? <span className="ml-2 text-xs font-normal" style={{ color: "var(--color-text-subtle)" }}>· {p.relacao}</span> : null}
+                  </div>
                   <div className="flex flex-wrap items-center gap-3 text-xs" style={{ color: "var(--color-text-subtle)" }}>
                     {p.telefone && <span className="inline-flex items-center gap-1"><Phone className="h-3 w-3" aria-hidden /> {p.telefone}</span>}
                     <span>{p.eventoTitulo}</span>

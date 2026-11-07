@@ -116,7 +116,7 @@ export function DetalheDaCampanha({ id }: { id: string }) {
       {/* Cabeçalho que GUIA */}
       <header
         className="wr-card wr-anim-in relative overflow-hidden p-6 sm:p-7"
-        style={{ background: "linear-gradient(135deg,#0E1116 0%,#14181F 55%,#1A2410 100%)", border: "1px solid rgba(215,243,106,0.22)" }}
+        style={{ background: "linear-gradient(135deg,#0d1b2b 0%,#16293c 55%,#102235 100%)", border: "1px solid rgba(215,243,106,0.22)" }}
       >
         <div aria-hidden className="pointer-events-none absolute -right-16 -top-20 h-56 w-56 rounded-full" style={{ background: "radial-gradient(closest-side,rgba(215,243,106,0.16),transparent)" }} />
         <div className="relative space-y-4">

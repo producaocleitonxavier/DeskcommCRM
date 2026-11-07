@@ -33,7 +33,7 @@ export default function CardAcoes({ id, status }: { id: string; status: string }
         </button>
       )}
       {status === "active" && (
-        <button type="button" onClick={() => setStatus("completed")} disabled={busy} className={base} style={{ background: "rgba(14,122,64,0.14)", color: "#0E7A40" }}>
+        <button type="button" onClick={() => setStatus("completed")} disabled={busy} className={base} style={{ background: "rgba(34,197,94,0.18)", color: "#4ADE80" }}>
           <StopCircle className="h-3.5 w-3.5" /> Encerrar
         </button>
       )}
