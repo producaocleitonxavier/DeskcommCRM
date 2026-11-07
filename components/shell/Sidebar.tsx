@@ -392,11 +392,33 @@ export function SidebarContent({
 
 export function Sidebar({ collapsed, temaClaro }: { collapsed: boolean; temaClaro?: boolean }) {
   // Rail MARINHO quando a org liga o tema claro (Névoa Pro): navy rail + conteúdo
-  // claro (padrão John Don). O override de tokens mora na classe `wr-sidebar-marinho`
-  // (globals.css), escopada neste <aside> — cascateia aos filhos sem editar classe.
-  // `temaClaro` desce por PROP do layout servidor (mesmo caminho do collapsed).
+  // claro (padrão John Don). `temaClaro` desce por PROP do layout servidor (mesmo
+  // caminho do collapsed). Aplicamos os tokens INLINE (prioridade máxima — vence
+  // qualquer disputa de var/layer da casca) além da classe `wr-sidebar-marinho`.
+  const estiloMarinho = temaClaro
+    ? ({
+        backgroundColor: "#182a3e",
+        "--color-surface": "#182a3e",
+        "--color-surface-elevated": "#20374f",
+        "--color-border": "rgba(255,255,255,0.10)",
+        "--color-text": "#eaf0f6",
+        "--color-text-muted": "#a7b6c9",
+        "--color-text-subtle": "#7e90a6",
+        "--foreground": "#eaf0f6",
+        "--muted-foreground": "#a7b6c9",
+        "--accent": "rgba(255,255,255,0.06)",
+        "--accent-foreground": "#eaf0f6",
+        "--color-accent": "#D7F36A",
+        "--color-accent-fg": "#16181D",
+        "--wr-nav-active": "#D7F36A",
+        "--wr-btn-dark-bg": "#0f2033",
+        "--primary": "#D7F36A",
+      } as React.CSSProperties)
+    : undefined;
   return (
     <aside
+      style={estiloMarinho}
+      data-marinho={temaClaro ? "1" : "0"}
       className={cn(
         temaClaro && "wr-sidebar-marinho",
         // ⚠️ `sticky`, e NUNCA `fixed`.
@@ -434,6 +456,12 @@ export function Sidebar({ collapsed, temaClaro }: { collapsed: boolean; temaClar
         collapsed ? "w-16" : "w-60",
       )}
     >
+      {/* DEBUG temporário — remover depois de confirmar o rail marinho. */}
+      <div
+        style={{ background: temaClaro ? "#D7F36A" : "#EF4444", color: "#111", fontSize: 10, fontWeight: 700, textAlign: "center", padding: "2px 0" }}
+      >
+        tema={String(temaClaro)}
+      </div>
       <SidebarContent collapsed={collapsed} />
     </aside>
   );
