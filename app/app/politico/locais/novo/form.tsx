@@ -9,9 +9,10 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, Check, Search } from "lucide-react";
+import { Check, Search } from "lucide-react";
 
 import { criarLocalComEvento } from "@/app/actions/politico/eventos-actions";
+import { CommandHero } from "@/components/politico/command-hero";
 
 export interface MaterialOpcao {
   id: string;
@@ -188,13 +189,12 @@ export default function NovoLocalForm({ materiais, liderancas }: { materiais: Ma
 
   return (
     <div className="gip-ambient-bg mx-auto max-w-[820px] px-4 py-7 space-y-5">
-      <div>
-        <Link href="/app/politico/locais" className="inline-flex items-center gap-1 text-sm transition-colors" style={{ color: "var(--color-text-muted)" }}>
-          <ArrowLeft className="h-4 w-4" aria-hidden /> Locais & Eventos
-        </Link>
-        <h1 className="mt-3 font-heading text-3xl font-bold leading-tight">Novo local</h1>
-        <p className="mt-1 text-sm" style={{ color: "var(--color-text-muted)" }}>Escola, igreja ou associação onde o mandato faz eventos — e, se quiser, já registre o evento.</p>
-      </div>
+      <CommandHero
+        eyebrow="Gabinete · Locais & Eventos"
+        titulo="Novo local"
+        subtitulo="Escola, igreja ou associação onde o mandato faz eventos — e, se quiser, já registre o evento."
+        acoes={[{ href: "/app/politico/locais", label: "← Locais & Eventos" }]}
+      />
 
       <form onSubmit={salvar} className="space-y-5">
         <section className="gip-glass space-y-4 p-5 sm:p-6">

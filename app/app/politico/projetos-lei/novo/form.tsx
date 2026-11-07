@@ -9,10 +9,11 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, Check } from "lucide-react";
+import { Check } from "lucide-react";
 
 import { criarRegistro } from "@/app/actions/politico/gabinete-actions";
 import { classificarArea, rotuloArea } from "@/lib/politico/emenda-classificar";
+import { CommandHero } from "@/components/politico/command-hero";
 
 interface Opcao {
   id: string;
@@ -153,13 +154,12 @@ export default function NovoProjetoForm({}: { orgId: string }) {
 
   return (
     <div className="gip-ambient-bg mx-auto max-w-[820px] px-4 py-7 space-y-5">
-      <div>
-        <Link href="/app/politico/projetos-lei" className="inline-flex items-center gap-1 text-sm transition-colors" style={{ color: "var(--color-text-muted)" }}>
-          <ArrowLeft className="h-4 w-4" aria-hidden /> Projetos de Lei
-        </Link>
-        <h1 className="mt-3 font-heading text-3xl font-bold leading-tight">Novo projeto de lei</h1>
-        <p className="mt-1 text-sm" style={{ color: "var(--color-text-muted)" }}>Proposição legislativa e sua tramitação.</p>
-      </div>
+      <CommandHero
+        eyebrow="Gabinete · Projetos de Lei"
+        titulo="Novo projeto de lei"
+        subtitulo="Proposição legislativa e sua tramitação."
+        acoes={[{ href: "/app/politico/projetos-lei", label: "← Projetos de Lei" }]}
+      />
 
       <form onSubmit={salvar} className="space-y-5">
         <section className="gip-glass space-y-4 p-5 sm:p-6">

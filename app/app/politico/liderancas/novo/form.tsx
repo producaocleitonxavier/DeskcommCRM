@@ -9,7 +9,8 @@
 import { useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, Camera, Check } from "lucide-react";
+import { Camera, Check } from "lucide-react";
+import { CommandHero } from "@/components/politico/command-hero";
 
 import { criarRegistro } from "@/app/actions/politico/gabinete-actions";
 import { uploadFotoLideranca } from "@/lib/politico/foto-lideranca";
@@ -119,15 +120,12 @@ export default function NovaLiderancaForm({ territorios }: NovaLiderancaFormProp
 
   return (
     <div className="gip-ambient-bg mx-auto max-w-[760px] px-4 py-7 space-y-5">
-      <div>
-        <Link href="/app/politico/liderancas" className="inline-flex items-center gap-1 text-sm transition-colors" style={{ color: "var(--color-text-muted)" }}>
-          <ArrowLeft className="h-4 w-4" aria-hidden /> Lideranças
-        </Link>
-        <h1 className="mt-3 font-heading text-3xl font-bold leading-tight">Nova liderança</h1>
-        <p className="mt-1 text-sm" style={{ color: "var(--color-text-muted)" }}>
-          Cadastre um líder da sua rede de mobilização.
-        </p>
-      </div>
+      <CommandHero
+        eyebrow="Gabinete · Lideranças"
+        titulo="Nova liderança"
+        subtitulo="Cadastre um líder da sua rede de mobilização."
+        acoes={[{ href: "/app/politico/liderancas", label: "← Lideranças" }]}
+      />
 
       <form onSubmit={salvar} className="space-y-5">
         {/* Foto (opcional) */}

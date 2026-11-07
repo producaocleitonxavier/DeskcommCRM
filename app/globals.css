@@ -1064,22 +1064,23 @@
   --color-border: #dfe4ea;
   --color-border-strong: #cdd4dd;
 
-  /* Acento NAVY — só em AÇÃO (botão, item ativo). Rampa navy p/ não vazar verde. */
-  --color-accent: #234a73;
+  /* Acento = LARANJA (AÇÃO: botão, ícone, item ativo, link = POP). O navy fica só
+     na ESTRUTURA (sidebar, hero, texto, números). Combo navy + laranja. */
+  --color-accent: #d26e18;
   --color-accent-fg: #ffffff;
-  --color-accent-soft: rgba(35,74,115,0.10);
-  --color-accent-hover: #1d3f63;
-  --color-accent-50: #eaf0f7;
-  --color-accent-100: #cfdeee;
-  --color-accent-200: #9fbcdc;
-  --color-accent-300: #234a73;
-  --color-accent-400: #1f4267;
-  --color-accent-500: #1b3a5a;
-  --color-accent-600: #17324d;
-  --color-accent-700: #132940;
-  --color-accent-800: #0f2133;
-  --color-accent-900: #0b1826;
-  --color-accent-950: #070f19;
+  --color-accent-soft: rgba(210,110,24,0.12);
+  --color-accent-hover: #b85e12;
+  --color-accent-50: #fbf0e3;
+  --color-accent-100: #f5d9bd;
+  --color-accent-200: #ecb882;
+  --color-accent-300: #d26e18;
+  --color-accent-400: #bd6215;
+  --color-accent-500: #a35512;
+  --color-accent-600: #8a480f;
+  --color-accent-700: #713b0c;
+  --color-accent-800: #5a2f0a;
+  --color-accent-900: #442307;
+  --color-accent-950: #2a1504;
 
   --color-success: #1f7a52; --color-success-bg: rgba(31,122,82,0.12); --color-success-fg: #1a6646;
   --color-warning: #b0741b; --color-warning-bg: rgba(176,116,27,0.14); --color-warning-fg: #8c5c15;
@@ -1130,7 +1131,7 @@
   --hero-grad: linear-gradient(135deg,#152335 0%,#1d344b 55%,#24415e 100%);
   --hero-border: rgba(62,92,132,0.30);
   --hero-glow: rgba(63,114,171,0.22);
-  --hero-eyebrow: #9ec3e8;
+  --hero-eyebrow: #D7F36A;
   --hero-title: #ffffff;
   --hero-sub: rgba(255,255,255,0.74);
   --hero-btn-bg: #e07c1c;

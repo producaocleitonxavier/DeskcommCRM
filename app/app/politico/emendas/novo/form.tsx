@@ -8,11 +8,12 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, Check } from "lucide-react";
+import { Check } from "lucide-react";
 
 import { criarRegistro, criarCidadao } from "@/app/actions/politico/gabinete-actions";
 import { classificarArea, rotuloArea, AREAS_EMENDA } from "@/lib/politico/emenda-classificar";
 import { MODALIDADES } from "@/lib/politico/emenda-modalidade";
+import { CommandHero } from "@/components/politico/command-hero";
 
 interface Opcao {
   id: string;
@@ -160,15 +161,12 @@ export default function NovaEmendaForm({ liderancas, tipoMandato }: NovaEmendaFo
 
   return (
     <div className="gip-ambient-bg mx-auto max-w-[820px] px-4 py-7 space-y-5">
-      <div>
-        <Link href="/app/politico/emendas" className="inline-flex items-center gap-1 text-sm transition-colors" style={{ color: "var(--color-text-muted)" }}>
-          <ArrowLeft className="h-4 w-4" aria-hidden /> Emendas
-        </Link>
-        <h1 className="mt-3 font-heading text-3xl font-bold leading-tight">Nova emenda</h1>
-        <p className="mt-1 text-sm" style={{ color: "var(--color-text-muted)" }}>
-          Indicação parlamentar — valores, destino e execução.
-        </p>
-      </div>
+      <CommandHero
+        eyebrow="Gabinete · Emendas"
+        titulo="Nova emenda"
+        subtitulo="Indicação parlamentar — valores, destino e execução."
+        acoes={[{ href: "/app/politico/emendas", label: "← Emendas" }]}
+      />
 
       <form onSubmit={salvar} className="space-y-5">
         <section className="gip-glass space-y-4 p-5 sm:p-6">
