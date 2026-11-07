@@ -1068,23 +1068,23 @@
   --color-border: #dfe4ea;
   --color-border-strong: #cdd4dd;
 
-  /* Acento = LARANJA (AÇÃO: botão, ícone, item ativo, link = POP). O navy fica só
-     na ESTRUTURA (sidebar, hero, texto, números). Combo navy + laranja. */
-  --color-accent: #d26e18;
-  --color-accent-fg: #ffffff;
-  --color-accent-soft: rgba(210,110,24,0.12);
-  --color-accent-hover: #b85e12;
-  --color-accent-50: #fbf0e3;
-  --color-accent-100: #f5d9bd;
-  --color-accent-200: #ecb882;
-  --color-accent-300: #d26e18;
-  --color-accent-400: #bd6215;
-  --color-accent-500: #a35512;
-  --color-accent-600: #8a480f;
-  --color-accent-700: #713b0c;
-  --color-accent-800: #5a2f0a;
-  --color-accent-900: #442307;
-  --color-accent-950: #2a1504;
+  /* Acento = LIMA (elmo da marca) — AÇÃO: botão, ícone, item ativo, link, eyebrow.
+     Mantém a identidade GIP (verde), sem laranja. O navy fica na ESTRUTURA. */
+  --color-accent: #D7F36A;
+  --color-accent-fg: #16181D;
+  --color-accent-soft: rgba(215,243,106,0.16);
+  --color-accent-hover: #C4E64A;
+  --color-accent-50: #F8FDE6;
+  --color-accent-100: #F0FBCC;
+  --color-accent-200: #E5F89E;
+  --color-accent-300: #D7F36A;
+  --color-accent-400: #C4E64A;
+  --color-accent-500: #A8CC2E;
+  --color-accent-600: #8AB31E;
+  --color-accent-700: #6E9316;
+  --color-accent-800: #577510;
+  --color-accent-900: #43590D;
+  --color-accent-950: #2A3808;
 
   --color-success: #1f7a52; --color-success-bg: rgba(31,122,82,0.12); --color-success-fg: #1a6646;
   --color-warning: #b0741b; --color-warning-bg: rgba(176,116,27,0.14); --color-warning-fg: #8c5c15;
@@ -1116,9 +1116,9 @@
   --card-foreground: #141b26;
   --popover: #ffffff;
   --popover-foreground: #141b26;
-  /* AÇÃO = LARANJA (pop). Navy fica na estrutura; o botão primário SALTA. */
-  --primary: #d26e18;
-  --primary-foreground: #ffffff;
+  /* AÇÃO = LIMA (elmo). Navy fica na estrutura; o botão primário SALTA em verde. */
+  --primary: #D7F36A;
+  --primary-foreground: #16181D;
   --secondary: #f5f7fa;
   --secondary-foreground: #141b26;
   --muted: #eef1f5;
@@ -1131,15 +1131,15 @@
   --destructive: #c0392b;
   --destructive-foreground: #ffffff;
 
-  /* Hero MARINHO (momento de marca); botão em azul mais claro p/ POPAR no navy */
+  /* Hero MARINHO (momento de marca); botão em LIMA (elmo) p/ POPAR no navy */
   --hero-grad: linear-gradient(135deg,#152335 0%,#1d344b 55%,#24415e 100%);
   --hero-border: rgba(62,92,132,0.30);
   --hero-glow: rgba(63,114,171,0.22);
   --hero-eyebrow: #D7F36A;
   --hero-title: #ffffff;
   --hero-sub: rgba(255,255,255,0.74);
-  --hero-btn-bg: #e07c1c;
-  --hero-btn-fg: #ffffff;
+  --hero-btn-bg: #D7F36A;
+  --hero-btn-fg: #14181F;
   --hero-btn-outline: rgba(255,255,255,0.42);
   --hero-btn-outline-fg: #ffffff;
 

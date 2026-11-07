@@ -22,6 +22,8 @@ interface SidebarContentProps {
   collapsed: boolean;
   showCollapseControl?: boolean;
   onNavigate?: () => void;
+  /** Rail marinho (tema claro)? → itens de menu em branco bold sobre o navy. */
+  temaClaro?: boolean;
 }
 
 /**
@@ -36,6 +38,7 @@ export function SidebarContent({
   collapsed,
   showCollapseControl = true,
   onNavigate,
+  temaClaro,
 }: SidebarContentProps) {
   // A barra lateral aparece em TODA tela — traduzi-la aqui é o que faz a
   // escolha de idioma virar algo visível no primeiro clique.
@@ -290,7 +293,9 @@ export function SidebarContent({
                             "rounded-[--wr-nav-item-radius]",
                             isActive
                               ? "font-semibold text-[--color-accent]"
-                              : "text-muted-foreground hover:bg-[rgba(255,255,255,0.03)] hover:text-foreground",
+                              : temaClaro
+                                ? "font-semibold text-white hover:bg-[rgba(255,255,255,0.06)]"
+                                : "text-muted-foreground hover:bg-[rgba(255,255,255,0.03)] hover:text-foreground",
                             collapsed && "justify-center px-2",
                           )}
                           style={{
@@ -324,7 +329,9 @@ export function SidebarContent({
                           "flex items-center gap-3 rounded-[--wr-nav-item-radius] px-3 py-1.5 text-sm transition-colors",
                           pathname === group.hub.href
                             ? "font-semibold text-[--color-accent]"
-                            : "text-muted-foreground hover:bg-[rgba(255,255,255,0.03)] hover:text-foreground",
+                            : temaClaro
+                              ? "font-semibold text-white hover:bg-[rgba(255,255,255,0.06)]"
+                              : "text-muted-foreground hover:bg-[rgba(255,255,255,0.03)] hover:text-foreground",
                           collapsed && "justify-center px-2",
                         )}
                         style={{
@@ -456,13 +463,7 @@ export function Sidebar({ collapsed, temaClaro }: { collapsed: boolean; temaClar
         collapsed ? "w-16" : "w-60",
       )}
     >
-      {/* DEBUG temporário — remover depois de confirmar o rail marinho. */}
-      <div
-        style={{ background: temaClaro ? "#D7F36A" : "#EF4444", color: "#111", fontSize: 10, fontWeight: 700, textAlign: "center", padding: "2px 0" }}
-      >
-        tema={String(temaClaro)}
-      </div>
-      <SidebarContent collapsed={collapsed} />
+      <SidebarContent collapsed={collapsed} temaClaro={temaClaro} />
     </aside>
   );
 }
