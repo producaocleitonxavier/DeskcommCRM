@@ -1129,6 +1129,25 @@
     radial-gradient(90% 55% at 50% -15%, color-mix(in srgb, #2a4056 5%, transparent), transparent 58%),
     var(--color-bg);
 }
+/* O VIDRO é técnica de tema ESCURO (translúcido 46% sobre preto = premium). No
+   CLARO o mesmo vidro vira card LAVADO/fantasma. Aqui o claro recebe o PRÓPRIO
+   tratamento: card SÓLIDO branco + borda nítida + sombra leve, como o mockup. */
+.war-room.wr-claro .gip-glass {
+  background: var(--color-surface) !important;
+  border: 1px solid var(--color-border) !important;
+  box-shadow: var(--wr-card-shadow) !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+.war-room.wr-claro .gip-glass::after { opacity: 0 !important; }
+/* O card "selecionado"/escuro (wr-card-dark) no claro vira acento tijolo suave,
+   não preto. */
+.war-room.wr-claro .wr-card-dark,
+.war-room.wr-claro .wr-card-accent {
+  background: var(--color-accent-soft) !important;
+  border: 1px solid color-mix(in srgb, var(--color-accent) 35%, transparent) !important;
+  box-shadow: var(--wr-card-shadow) !important;
+}
 
 .wr-card-dark {
   background: var(--color-surface);
