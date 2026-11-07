@@ -22,8 +22,9 @@
 import { usePathname } from "next/navigation";
 
 /** Rotas de análise/impressão (Inteligência + Território) que recebem o fundo
- * MARINHO nos cards no tema claro. As telas de TRABALHO ficam de fora (claras). */
-const ROTAS_NAVY = [
+ * MARINHO no tema claro. As telas de TRABALHO ficam de fora (claras). Exportada
+ * p/ o AppShell preencher a TELA inteira de navy nessas rotas também. */
+export const ROTAS_NAVY = [
   // Território
   "/app/politico/raio-x",
   "/app/politico/comparativo",

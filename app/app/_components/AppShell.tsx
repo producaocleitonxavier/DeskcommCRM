@@ -1,6 +1,7 @@
 "use client";
 import type { ReactNode } from "react";
 import { usePathname } from "next/navigation";
+import { ROTAS_NAVY as ROTAS_POLITICO_NAVY } from "@/components/politico/war-room-shell";
 import { Sidebar } from "@/components/shell/Sidebar";
 import { TopBar } from "@/components/shell/TopBar";
 import { BarraInferior } from "@/components/shell/BarraInferior";
@@ -54,6 +55,10 @@ export function AppShell({ sidebarCollapsed, podeAtender, temaClaro, children }:
   // Político se auto-embrulha (WarRoomShell); aqui só vestimos o CRM base listado.
   const vestirBase =
     !!temaClaro && ROTAS_BASE_TEMA_GIP.some((r) => pathname.startsWith(r));
+  // Tela NAVY (base OU político navy): o marinho preenche a tela inteira.
+  const telaNavy =
+    vestirBase ||
+    (!!temaClaro && ROTAS_POLITICO_NAVY.some((r) => pathname.startsWith(r)));
   useInboundMessageAlerts();
   useInboundCallAlerts();
   useCrmAlerts();
@@ -127,11 +132,16 @@ export function AppShell({ sidebarCollapsed, podeAtender, temaClaro, children }:
         */}
         <main
           className="flex-1 overflow-auto p-4 pb-area-segura sm:p-6"
-          style={estiloDaReserva(ocupacaoDoRodape)}
+          style={{
+            ...(estiloDaReserva(ocupacaoDoRodape) ?? {}),
+            // Nas rotas navy (base + político), o marinho preenche a TELA inteira
+            // (edge-to-edge + altura cheia), não só a coluna de conteúdo.
+            ...(telaNavy ? { backgroundColor: "#0f1d2e" } : {}),
+          }}
           data-rodape-ocupado={ocupacaoDoRodape}
         >
           {vestirBase ? (
-            <div className="war-room wr-claro wr-navy-section" data-theme="light">
+            <div className="war-room wr-claro wr-navy-section min-h-full" data-theme="light">
               {children}
             </div>
           ) : (
