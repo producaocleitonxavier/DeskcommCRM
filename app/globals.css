@@ -1229,41 +1229,59 @@
   color: #eaf0f6;
 }
 
-/* ===== SEÇÃO NAVY (tema claro) — Inteligência/Território ==================
-   Telas de ANÁLISE/IMPRESSÃO: cards MARINHOS (texto branco + ícone verde) sobre
-   o fundo cinza-frio. As telas de TRABALHO (Gabinete/Pessoas/Demandas) seguem
-   claras. Escopado por rota pela classe `.wr-navy-section` (WarRoomShell). Três
-   classes = mais específico que `.war-room.wr-claro`, então vence os overrides. */
+/* ===== SEÇÃO NAVY (tema claro) — Inteligência/Território + CRM base =========
+   REGRA DO CLIENTE: fundo MARINHO → letras BRANCAS + ícones VERDES. Pra não
+   sobrar texto escuro sumido em card navy (as telas do CRM base usam tokens
+   shadcn), a seção fica TODA marinho: fundo navy + cards navy + TODO token de
+   texto branco (tanto --color-* quanto shadcn --foreground/--muted-foreground).
+   Os cards ficam um tom acima do fundo. Três classes = vence os overrides. */
 .war-room.wr-claro.wr-navy-section {
-  /* Superfícies navy (cards + inputs). O TEXTO não vira branco aqui: os rótulos
-     que ficam sobre o FUNDO CLARO (ex.: "Eleição"/"Município" acima dos selects)
-     seguem escuros/legíveis. O branco mora só DENTRO das superfícies navy. */
+  --color-bg: #0f1d2e;
   --color-surface: #182a3e;
   --color-surface-elevated: #20374f;
+  --color-text: #ffffff;
+  --color-text-muted: rgba(255,255,255,0.78);
+  --color-text-subtle: rgba(255,255,255,0.6);
+  --color-border: rgba(255,255,255,0.12);
+  --color-border-strong: rgba(255,255,255,0.2);
+  --icon-accent: #D7F36A;
+  --icon-accent-soft: rgba(215,243,106,0.16);
+  --accent-ink: var(--color-accent);
   --chip-active-bg: #D7F36A;
   --chip-active-fg: #16181D;
+  /* shadcn — as telas do CRM base leem estes */
+  --background: #0f1d2e;
+  --foreground: #ffffff;
+  --card: #182a3e;
+  --card-foreground: #ffffff;
+  --popover: #182a3e;
+  --popover-foreground: #ffffff;
+  --muted: #20374f;
+  --muted-foreground: rgba(255,255,255,0.72);
+  --secondary: #20374f;
+  --secondary-foreground: #ffffff;
+  --accent: rgba(255,255,255,0.08);
+  --accent-foreground: #ffffff;
+  --border: rgba(255,255,255,0.12);
+  --input: rgba(255,255,255,0.16);
+  background-color: #0f1d2e;
+  color: #ffffff;
 }
-/* Dentro dos cards navy: texto branco + ícone verde. */
+.war-room.wr-claro.wr-navy-section .gip-ambient-bg {
+  background:
+    radial-gradient(90% 55% at 50% -12%, rgba(63,114,171,0.14), transparent 60%),
+    #0f1d2e !important;
+}
+/* Cards um tom acima do fundo. */
 .war-room.wr-claro.wr-navy-section .gip-glass,
 .war-room.wr-claro.wr-navy-section .wr-card-dark,
 .war-room.wr-claro.wr-navy-section .wr-card-accent {
   background: #182a3e !important;
   border: 1px solid rgba(255,255,255,0.12) !important;
-  box-shadow: 0 10px 30px -14px rgba(10,16,24,0.55) !important;
+  box-shadow: 0 10px 30px -14px rgba(0,0,0,0.5) !important;
   color: #ffffff !important;
-  --color-text: #ffffff;
-  --color-text-muted: rgba(255,255,255,0.78);
-  --color-text-subtle: rgba(255,255,255,0.6);
-  --color-border: rgba(255,255,255,0.14);
-  --icon-accent: #D7F36A;
-  --icon-accent-soft: rgba(215,243,106,0.16);
-  --accent-ink: var(--color-accent); /* dentro do card navy, acento = lima (pop) */
 }
-/* Inputs/selects navy (Eleição, Município, busca) na seção navy: texto branco. */
-.war-room.wr-claro.wr-navy-section .wr-input {
-  color: #ffffff;
-  --color-text: #ffffff;
-}
+.war-room.wr-claro.wr-navy-section .wr-input { color: #ffffff; }
 .war-room.wr-claro.wr-navy-section .wr-input::placeholder { color: rgba(255,255,255,0.5); }
 
 .wr-card-dark {
