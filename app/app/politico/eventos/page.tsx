@@ -196,10 +196,14 @@ export default async function EventosPage({
                 {e.actual_attendance != null && <span>Presença: <strong style={{ color: "var(--accent-ink, var(--color-accent))" }}>{e.actual_attendance.toLocaleString("pt-BR")}</strong></span>}
               </div>
 
-              {/* "Quem vai" — a equipe marca presença neste evento (Incremento 3). */}
-              <div className="mt-1 border-t pt-3" style={{ borderColor: "var(--color-border)" }}>
-                <QuemVai kind="evento" tarefaId={e.id} usuarioAtualId={user.id} inicial={presencas[e.id] ?? []} compacto />
-              </div>
+              {/* "Quem vai" — a equipe marca presença neste evento (Incremento 3).
+                  Só faz sentido em evento que ainda vai acontecer: some no concluído
+                  e no cancelado (lá não há "quem vai"). */}
+              {e.status !== "completed" && e.status !== "cancelled" && (
+                <div className="mt-1 border-t pt-3" style={{ borderColor: "var(--color-border)" }}>
+                  <QuemVai kind="evento" tarefaId={e.id} usuarioAtualId={user.id} inicial={presencas[e.id] ?? []} compacto />
+                </div>
+              )}
             </div>
           ))}
         </div>

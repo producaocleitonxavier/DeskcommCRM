@@ -516,13 +516,19 @@ async function contarCaptacoesQr(organizationId: string, userId: string): Promis
 }
 
 /**
- * Visitas REALIZADAS que ainda não viraram ofício — o sinal "pronto pra ofício"
- * pro gabinete. "30s depois que a visita terminou, já aparece aqui." É a demanda
- * de visita com data de realização e SEM número de ofício ainda. Fail-soft: sem
- * as colunas de visita (9085/9087), a consulta erra e devolve 0.
+ * Visitas REALIZADAS RECENTES que ainda não viraram ofício — o sinal "pronto pra
+ * ofício" pro gabinete. "30s depois que a visita terminou, já aparece aqui." É a
+ * demanda de visita com data de realização e SEM número de ofício.
+ *
+ * JANELA de 21 dias: nem toda visita vira ofício (o gabinete decide). Sem o corte
+ * de tempo, as que nunca viram ofício ficariam ali pra sempre e o número viraria
+ * ruído crescente. Com a janela, é um "recém-feitas, talvez oficializar" que se
+ * limpa sozinho. Fail-soft: sem as colunas de visita (9085/9087), a consulta erra
+ * e devolve 0.
  */
 async function contarVisitasProntasOficio(organizationId: string): Promise<number> {
   const db = await createClient();
+  const desde = new Date(Date.now() - 21 * 24 * 60 * 60 * 1000).toISOString();
   const { count } = await db
     .from("demandas")
     .select("id", { count: "exact", head: true })
@@ -530,6 +536,7 @@ async function contarVisitasProntasOficio(organizationId: string): Promise<numbe
     .eq("pol_gabinete", true)
     .eq("pol_tipo", "visita_tecnica")
     .not("pol_visita_realizada_em", "is", null)
+    .gte("pol_visita_realizada_em", desde)
     .is("pol_oficio_rotulo", null);
   return count ?? 0;
 }
