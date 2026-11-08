@@ -55,6 +55,8 @@ const ROTAS_BASE_TEMA_GIP = [
   "/app/crm",
   "/app/analise",
   "/app/settings",
+  // Equipe (gestão de membros/papéis/atendimento) — tela de gestão, marinho
+  "/app/team",
 ];
 
 /** Rotas base que adotam a pele GIP BRANCA (Névoa Pro), NÃO marinho: telas onde
