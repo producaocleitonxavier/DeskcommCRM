@@ -22,7 +22,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { logger } from "@/lib/logger";
 import { recomputarEngajamento } from "@/lib/politico/engajamento";
 import { enviarMaterialComoDocumento, enviarTextoNoCanal } from "@/lib/politico/enviar-material";
-import { convidarAIndicar, extrairCodigoIndicacao, processarIndicacao } from "@/lib/politico/indicacao";
+import { extrairCodigoIndicacao, processarIndicacao } from "@/lib/politico/indicacao";
 import { convidarAPerfilar } from "@/lib/politico/perfil";
 
 /** `[qr:CODE]` — colchetes e prefixo próprio para não casar por acidente. */
@@ -269,10 +269,10 @@ async function capturarNomeEEntregar(
     logger.warn("[qr-cadastro] envio do material falhou", { organization_id: organizationId, contact_id: contactId, detail: r.erro });
     return { status: "error", detail: `envio_falhou:${r.erro ?? ""}` };
   }
-  // material_entregue_at já foi carimbado no reclaim. Convida a indicar (uma vez).
-  await convidarAIndicar(admin, { organizationId, contactId, canalId: origem.channel_session_id });
-  // Perfilamento progressivo: convida a completar cidade/bairro/aniversário por
-  // formulário (uma vez). Depois do material E do convite a indicar. Best-effort.
+  // material_entregue_at já foi carimbado no reclaim. PERFIL PRIMEIRO: convida a
+  // completar cidade/bairro/aniversário por formulário (uma vez, best-effort). O
+  // convite de INDICAÇÃO passou pra DEPOIS — dispara quando a pessoa COMPLETA o
+  // perfil (pico de engajamento), na rota /api/v1/perfil/public. Decisão 08/nov.
   await convidarAPerfilar(admin, { organizationId, contactId, canalId: origem.channel_session_id });
   return { status: "ok", detail: `entregue:${origem.nome}` };
 }
