@@ -58,6 +58,16 @@ export default async function DemandaDetalhePage({
     .eq("id", id)
     .maybeSingle();
 
+  // Relato de campo da visita (migrations 9085/9087) — a REFERÊNCIA pro gabinete
+  // escrever o ofício ("30s depois que a visita terminou, já está aqui"). Busca à
+  // parte e fail-soft: sem as colunas, o detalhe segue sem o bloco de relato.
+  const { data: relatoRow } = await db
+    .from("demandas")
+    .select("pol_visita_realizada_em, pol_visita_relato, pol_visita_presentes, pol_visita_decisoes, pol_visita_relato_por_nome")
+    .eq("organization_id", org.orgId)
+    .eq("id", id)
+    .maybeSingle();
+
   // Voz do Mandato armada? (liga a opção "incluir recado em áudio" no aviso.)
   const vozOk = vozArmada(await lerVozConfig(db, org.orgId));
 
@@ -85,7 +95,7 @@ export default async function DemandaDetalhePage({
 
   return (
     <DetalheDemandaClient
-      demanda={{ ...(demRes.data as Record<string, unknown>), ...(respRow ?? {}) } as unknown as DemandaDetalhe}
+      demanda={{ ...(demRes.data as Record<string, unknown>), ...(respRow ?? {}), ...(relatoRow ?? {}) } as unknown as DemandaDetalhe}
       assessores={assessores}
       eventos={eventos}
       vozArmada={vozOk}

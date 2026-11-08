@@ -47,6 +47,12 @@ export interface DemandaDetalhe {
   pol_prazo_dias: number | null;
   pol_respondeu?: boolean | null;
   pol_respondeu_em?: string | null;
+  // Relato de campo da visita (referência pro gabinete escrever o ofício).
+  pol_visita_realizada_em?: string | null;
+  pol_visita_relato?: string | null;
+  pol_visita_presentes?: string | null;
+  pol_visita_decisoes?: string | null;
+  pol_visita_relato_por_nome?: string | null;
   desfecho: string | null;
   fechada_em: string | null;
   created_at: string;
@@ -640,6 +646,33 @@ export default function DetalheDemandaClient({ demanda, assessores, eventos, voz
             </button>
           )}
         </div>
+
+        {/* Relato de campo da visita — REFERÊNCIA pro gabinete escrever o ofício.
+            "30s depois que a visita terminou, já está aqui." O assessor INFORMA;
+            o gabinete REDIGE (o texto abaixo é editável). Só aparece com relato. */}
+        {(d.pol_visita_relato || d.pol_visita_presentes || d.pol_visita_decisoes) && (
+          <div
+            className="mb-4 rounded-xl p-4"
+            style={{
+              background: "color-mix(in srgb, var(--color-accent) 7%, var(--color-surface-elevated))",
+              border: "1px solid color-mix(in srgb, var(--color-accent) 30%, var(--color-border))",
+            }}
+          >
+            <div className="mb-2 flex flex-wrap items-center gap-x-2 gap-y-1">
+              <span className="text-sm font-bold" style={{ color: "var(--color-text)" }}>📍 Relato de campo</span>
+              <span className="text-xs" style={{ color: "var(--color-text-subtle)" }}>
+                referência — o gabinete redige o ofício abaixo
+                {d.pol_visita_realizada_em ? ` · ${fmtData(d.pol_visita_realizada_em)}` : ""}
+                {d.pol_visita_relato_por_nome ? ` · por ${d.pol_visita_relato_por_nome}` : ""}
+              </span>
+            </div>
+            <div className="space-y-1.5 text-sm" style={{ color: "var(--color-text)" }}>
+              {d.pol_visita_relato && <p><span className="font-semibold">O que foi feito:</span> {d.pol_visita_relato}</p>}
+              {d.pol_visita_presentes && <p><span className="font-semibold">Presentes:</span> {d.pol_visita_presentes}</p>}
+              {d.pol_visita_decisoes && <p><span className="font-semibold">Decidido:</span> {d.pol_visita_decisoes}</p>}
+            </div>
+          </div>
+        )}
 
         {/* Dados do ofício — número MANUAL + destinatário (sempre visíveis, fáceis
             de preencher: quem opera no gabinete pode não ter intimidade com tela). */}
