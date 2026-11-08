@@ -27,42 +27,47 @@ export const PERFIS_DE_ACESSO: readonly PerfilDeAcesso[] = [
     chave: "rua",
     nome: "Assessor de rua",
     descricao:
-      "Campo: cadastrar pessoas, registrar demandas, ver a agenda, lideranças, locais e o QR dos eventos.",
+      "Campo: cadastrar pessoas, registrar demandas e visitas, ver a agenda, obras e locais. (Lideranças ficam com o gabinete; o QR dos eventos vem por link, enviado pelo gabinete.)",
     papelRecomendado: "agent",
     papelRotulo: "Atendente",
+    // Menu enxuto do campo (7 itens): Hoje(placar dele), Pessoas, Agenda,
+    // Demandas, Visitas Técnicas, Obras & Fiscalização, Locais & Eventos.
+    // NÃO: Lideranças (o político define — é do gabinete) nem QR no menu (o
+    // gabinete gera o link e manda no dia). Mapa travado com o cliente 07/nov.
     destinos: [
       "/app/politico",
       "/app/politico/leads",
-      "/app/politico/demandas",
       "/app/agenda",
-      "/app/politico/liderancas",
+      "/app/politico/demandas",
+      "/app/politico/visitas",
+      "/app/politico/obras",
       "/app/politico/locais",
-      "/app/captacao-qr",
     ],
   },
   {
     chave: "gabinete",
     nome: "Assessor de gabinete",
     descricao:
-      "Escritório: demandas, ofícios, projetos de lei, emendas, obras, materiais, atendimento e o QR.",
+      "Escritório: tudo do dia-a-dia do gabinete — demandas, visitas, ofícios, lideranças, projetos de lei, emendas, obras e locais. (Atendimento/Inbox é liberado à parte, só para 1-2 pessoas designadas.)",
     papelRecomendado: "agent",
     papelRotulo: "Atendente",
+    // Todo o dia-a-dia de Gabinete. NÃO entra aqui: Funil e Materiais (são
+    // Operação/estratégia, do gestor), QR no menu (gestor gera e manda), nem
+    // configuração do mandato (Identidade/Configurar/Portal = admin, já travados
+    // por papel). Atendimento (Inbox/Casos) NÃO vem no perfil-base: é liberado
+    // por pessoa, só para 1-2 designados. Mapa travado com o cliente 07/nov.
     destinos: [
       "/app/politico",
       "/app/politico/leads",
-      "/app/politico/funil",
+      "/app/agenda",
       "/app/politico/demandas",
+      "/app/politico/visitas",
       "/app/politico/oficios",
       "/app/politico/liderancas",
       "/app/politico/projetos-lei",
       "/app/politico/emendas",
       "/app/politico/obras",
-      "/app/agenda",
-      "/app/politico/materiais",
       "/app/politico/locais",
-      "/app/inbox",
-      "/app/ai/cases",
-      "/app/captacao-qr",
     ],
   },
   {

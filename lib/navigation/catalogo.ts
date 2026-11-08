@@ -1162,7 +1162,9 @@ export const NAV_CATALOG = [
     description: "Agenda de visitas do mandato ao território: o que está marcado, atrasado, sem responsável e já feito. O assessor marca a própria presença e registra o relato de campo.",
     icon: "MapPin",
     group: "gabinete",
-    minRole: "manager",
+    // agent: visita é trabalho de RUA — o assessor de rua registra a própria
+    // presença e o relato de campo (decisão do cliente, 07/nov).
+    minRole: "agent",
     sidebar: true,
   },
   {
