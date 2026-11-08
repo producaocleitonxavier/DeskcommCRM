@@ -56609,3 +56609,68 @@ create index if not exists idx_contacts_em_quarentena
   where em_quarentena;
 
 notify pgrst, 'reload schema';
+
+-- ---- Captação por QR (migrations 9052–9056) ----
+-- As 4 migrations do QR (9052–9055) não haviam sido baselinadas; consolidadas
+-- aqui (idempotentes) junto com a coluna assessor_user_id (9056: crédito do
+-- cadastro por QR ao assessor dono do ponto).
+create table if not exists public.pol_qr_origens (
+  id uuid primary key default gen_random_uuid(),
+  organization_id uuid not null references public.organizations(id) on delete cascade,
+  nome text not null,
+  codigo text not null,
+  material_id uuid references public.pol_materiais(id) on delete set null,
+  channel_session_id uuid references public.channel_sessions(id) on delete set null,
+  mensagem text not null,
+  ativo boolean not null default true,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  created_by uuid references auth.users(id) on delete set null,
+  unique (organization_id, codigo)
+);
+alter table public.pol_qr_origens add column if not exists endereco text;
+alter table public.pol_qr_origens add column if not exists bairro text;
+alter table public.pol_qr_origens add column if not exists assessor_user_id uuid references auth.users(id) on delete set null;
+
+create index if not exists idx_pol_qr_origens_org on public.pol_qr_origens(organization_id);
+create index if not exists idx_pol_qr_origens_ativo on public.pol_qr_origens(organization_id, ativo);
+create index if not exists idx_pol_qr_origens_assessor
+  on public.pol_qr_origens(organization_id, assessor_user_id)
+  where assessor_user_id is not null;
+
+alter table public.pol_qr_origens enable row level security;
+drop policy if exists tenant_isolation_pol_qr_origens_all on public.pol_qr_origens;
+create policy tenant_isolation_pol_qr_origens_all on public.pol_qr_origens
+  using (organization_id in (select public.fn_user_org_ids()));
+revoke all on public.pol_qr_origens from anon;
+grant select, insert, update, delete on public.pol_qr_origens to authenticated;
+
+create table if not exists public.pol_qr_cadastros (
+  id uuid primary key default gen_random_uuid(),
+  organization_id uuid not null references public.organizations(id) on delete cascade,
+  origem_id uuid not null references public.pol_qr_origens(id) on delete cascade,
+  contact_id uuid not null references public.contacts(id) on delete cascade,
+  material_entregue_at timestamptz,
+  created_at timestamptz not null default now(),
+  unique (origem_id, contact_id)
+);
+alter table public.pol_qr_cadastros add column if not exists aguardando_nome boolean not null default false;
+alter table public.pol_qr_cadastros add column if not exists nome_informado text;
+
+create index if not exists idx_pol_qr_cadastros_org on public.pol_qr_cadastros(organization_id);
+create index if not exists idx_pol_qr_cadastros_origem on public.pol_qr_cadastros(origem_id);
+create index if not exists idx_pol_qr_cadastros_aguardando
+  on public.pol_qr_cadastros(organization_id, contact_id)
+  where aguardando_nome;
+create index if not exists idx_pol_qr_cadastros_pendente
+  on public.pol_qr_cadastros(organization_id, contact_id)
+  where material_entregue_at is null;
+
+alter table public.pol_qr_cadastros enable row level security;
+drop policy if exists tenant_isolation_pol_qr_cadastros_all on public.pol_qr_cadastros;
+create policy tenant_isolation_pol_qr_cadastros_all on public.pol_qr_cadastros
+  using (organization_id in (select public.fn_user_org_ids()));
+revoke all on public.pol_qr_cadastros from anon;
+grant select, insert, update, delete on public.pol_qr_cadastros to authenticated;
+
+notify pgrst, 'reload schema';

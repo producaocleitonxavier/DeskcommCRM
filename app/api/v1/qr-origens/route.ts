@@ -21,7 +21,7 @@ import { createClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
 
-const COLUNAS = "id, nome, codigo, material_id, channel_session_id, mensagem, endereco, bairro, ativo, created_at";
+const COLUNAS = "id, nome, codigo, material_id, channel_session_id, mensagem, endereco, bairro, assessor_user_id, ativo, created_at";
 
 const criarSchema = z.object({
   nome: z.string().min(1).max(120),
@@ -30,6 +30,8 @@ const criarSchema = z.object({
   channel_session_id: z.string().uuid().nullable().optional(),
   endereco: z.string().max(240).nullable().optional(),
   bairro: z.string().max(120).nullable().optional(),
+  // Assessor responsável pelo ponto: todo cadastro por este QR credita ele.
+  assessor_user_id: z.string().uuid().nullable().optional(),
 });
 
 export async function GET(_req: NextRequest): Promise<Response> {
@@ -107,6 +109,7 @@ export async function POST(req: NextRequest): Promise<Response> {
       channel_session_id: entrada.channel_session_id ?? null,
       endereco: entrada.endereco ?? null,
       bairro: entrada.bairro ?? null,
+      assessor_user_id: entrada.assessor_user_id ?? null,
       created_by: authz.user.id,
     })
     .select(COLUNAS)

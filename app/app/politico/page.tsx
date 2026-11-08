@@ -498,6 +498,23 @@ function primeiroNome(nome: string | null | undefined): string {
   return nome.split(" ")[0] ?? nome;
 }
 
+/**
+ * Quantas pessoas ESTE usuário captou por QR — o placar pessoal do assessor
+ * ("quantas eu cadastrei"). Conta os cadastros ligados a origens de QR cujo
+ * `assessor_user_id` é ele. Join via origem (o crédito mora na origem, não no
+ * cadastro — ver migration 9056). É o único número do Hoje recortado por PESSOA;
+ * o resto segue por organização até o "Hoje pessoal" completo.
+ */
+async function contarCaptacoesQr(organizationId: string, userId: string): Promise<number> {
+  const db = await createClient();
+  const { count } = await db
+    .from("pol_qr_cadastros")
+    .select("id, pol_qr_origens!inner(assessor_user_id)", { count: "exact", head: true })
+    .eq("organization_id", organizationId)
+    .eq("pol_qr_origens.assessor_user_id", userId);
+  return count ?? 0;
+}
+
 // -- Componente (server) -----------------------------------------------------
 
 export default async function HojePage() {
@@ -510,10 +527,11 @@ export default async function HojePage() {
   // no portão do app (app/app/layout.tsx), pra cobrir TODAS as telas — não só
   // esta. Aqui não precisa mais checar.
 
-  const [metrics, gabineteHoje, filaAcao] = await Promise.all([
+  const [metrics, gabineteHoje, filaAcao, minhasCaptacoesQr] = await Promise.all([
     buscarMetricas(org.orgId),
     buscarGabineteHoje(org.orgId),
     buscarFilaDeAcao(org.orgId),
+    contarCaptacoesQr(org.orgId, user.id),
   ]);
 
   // As abas "Painel"/"Prestação de Contas" aparecem só se estiverem no MENU do
@@ -542,6 +560,7 @@ export default async function HojePage() {
         dataFormatada={dataFormatada()}
         horaAtualizacao={horaAgora()}
         podeLiderancas={hrefsVisiveis.has("/app/politico/liderancas")}
+        minhasCaptacoesQr={minhasCaptacoesQr}
       />
     </>
   );

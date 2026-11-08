@@ -18,6 +18,7 @@ import {
   Inbox,
   Send,
   Sparkles,
+  UserPlus,
   Users,
 } from "lucide-react";
 
@@ -50,6 +51,8 @@ export interface HojeClientProps {
   horaAtualizacao: string;
   /** Usuário tem Lideranças no menu? (perfil rua NÃO tem) → esconde "Nova liderança". */
   podeLiderancas?: boolean;
+  /** Quantas pessoas ESTE usuário captou por QR (placar pessoal). 0 = card some. */
+  minhasCaptacoesQr?: number;
 }
 
 function badgeAtencao(a: GabineteHoje["atencao"][number]): { label: string; tipo: Tipo } {
@@ -144,6 +147,7 @@ export default function HojeClient({
   dataFormatada,
   horaAtualizacao,
   podeLiderancas = false,
+  minhasCaptacoesQr = 0,
 }: HojeClientProps) {
   // Funil de ATENDIMENTO (ciclo de vida da demanda) — não o funil de campanha.
   const lifecycleData = g.lifecycle.map((s, i) => ({
@@ -397,6 +401,9 @@ export default function HojeClient({
 
       {/* ── 2. KPIs do gabinete ─────────────────────────────────── */}
       <section aria-label="Números principais" className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+        {minhasCaptacoesQr > 0 && (
+          <KpiCard label="Captei por QR" valor={minhasCaptacoesQr} icone={UserPlus} />
+        )}
         <KpiCard label="Base de contatos" valor={m.totalPessoas} icone={Users} />
         <KpiCard label="Demandas abertas" valor={g.resumo.abertas} icone={Inbox} />
         <KpiCard label="Resolvidas este mês" valor={g.resumo.resolvidasMes} icone={CheckCircle2} />

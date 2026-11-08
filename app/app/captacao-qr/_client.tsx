@@ -35,9 +35,14 @@ interface Origem {
   mensagem: string;
   endereco: string | null;
   bairro: string | null;
+  assessor_user_id: string | null;
   ativo: boolean;
   cadastros: number;
   materiais_entregues: number;
+}
+interface Assessor {
+  user_id: string;
+  full_name: string | null;
 }
 interface Cadastrado {
   contact_id: string;
@@ -64,6 +69,8 @@ export function CaptacaoQrClient({ materiais, canais }: { materiais: Material[];
   const [bairro, setBairro] = useState("");
   const [materialId, setMaterialId] = useState<string>(materiais[0]?.id ?? "");
   const [canalId, setCanalId] = useState<string>(canalPadrao?.id ?? "");
+  const [assessores, setAssessores] = useState<Assessor[]>([]);
+  const [assessorId, setAssessorId] = useState<string>("");
   const [mensagem, setMensagem] = useState(msgDoLocal(""));
   // A mensagem acompanha o nome do lugar até o usuário editá-la à mão.
   const [mensagemEditada, setMensagemEditada] = useState(false);
@@ -85,6 +92,20 @@ export function CaptacaoQrClient({ materiais, canais }: { materiais: Material[];
     void carregar();
   }, [carregar]);
 
+  // Assessores da equipe pro dropdown "responsável" (reusa a rota de transferência
+  // de conversa). Campo opcional: se a lista vier vazia, o dropdown não aparece.
+  useEffect(() => {
+    void (async () => {
+      try {
+        const r = await fetch("/api/v1/team/assignable", { credentials: "same-origin" });
+        const j = await r.json();
+        setAssessores(Array.isArray(j?.data) ? (j.data as Assessor[]) : []);
+      } catch {
+        /* silencioso */
+      }
+    })();
+  }, []);
+
   async function criar() {
     if (!nome.trim()) return;
     setSalvando(true);
@@ -101,6 +122,7 @@ export function CaptacaoQrClient({ materiais, canais }: { materiais: Material[];
           channel_session_id: canalId || null,
           endereco: endereco.trim() || null,
           bairro: bairro.trim() || null,
+          assessor_user_id: assessorId || null,
         }),
       });
       if (!r.ok) throw new Error("falha");
@@ -110,6 +132,7 @@ export function CaptacaoQrClient({ materiais, canais }: { materiais: Material[];
       setNome("");
       setEndereco("");
       setBairro("");
+      setAssessorId("");
       setMensagem(msgDoLocal(""));
       setMensagemEditada(false);
     } catch {
@@ -243,6 +266,27 @@ export function CaptacaoQrClient({ materiais, canais }: { materiais: Material[];
             />
           </label>
         </div>
+        {assessores.length > 0 && (
+          <label className="space-y-1.5">
+            <span className="text-xs font-semibold uppercase tracking-wide" style={{ color: "var(--color-text-subtle)" }}>
+              {t("Assessor responsável")} <span className="font-normal normal-case">({t("opcional")})</span>
+            </span>
+            <select
+              value={assessorId}
+              onChange={(e) => setAssessorId(e.target.value)}
+              className="block w-full rounded-xl border px-4 py-3 text-sm"
+              style={{ borderColor: "var(--color-border)", background: "var(--color-surface)", color: "var(--color-text)" }}
+            >
+              <option value="">{t("Ninguém — ponto geral")}</option>
+              {assessores.map((a) => (
+                <option key={a.user_id} value={a.user_id}>{a.full_name ?? t("Membro")}</option>
+              ))}
+            </select>
+            <span className="text-xs" style={{ color: "var(--color-text-subtle)" }}>
+              {t("Os cadastros feitos por este QR contam no placar deste assessor.")}
+            </span>
+          </label>
+        )}
         {canais.length > 1 && (
           <label className="space-y-1.5">
             <span className="text-xs font-semibold uppercase tracking-wide" style={{ color: "var(--color-text-subtle)" }}>
@@ -305,6 +349,7 @@ export function CaptacaoQrClient({ materiais, canais }: { materiais: Material[];
               origem={o}
               numero={numeroDe(o)}
               materialNome={materiais.find((m) => m.id === o.material_id)?.titulo ?? null}
+              assessorNome={assessores.find((a) => a.user_id === o.assessor_user_id)?.full_name ?? null}
               delay={Math.min(i, 8) * 0.04}
               onApagar={() => void apagar(o.id, o.nome)}
               onAlternar={() => void alternarAtivo(o)}
@@ -321,6 +366,7 @@ function CartaoOrigem({
   origem,
   numero,
   materialNome,
+  assessorNome,
   delay,
   onApagar,
   onAlternar,
@@ -329,6 +375,7 @@ function CartaoOrigem({
   origem: Origem;
   numero: string | null;
   materialNome: string | null;
+  assessorNome: string | null;
   delay: number;
   onApagar: () => void;
   onAlternar: () => void;
@@ -380,6 +427,11 @@ function CartaoOrigem({
           {(origem.bairro || origem.endereco) && (
             <p className="truncate text-[11px]" style={{ color: "var(--color-text-subtle)" }}>
               📍 {[origem.bairro, origem.endereco].filter(Boolean).join(" · ")}
+            </p>
+          )}
+          {assessorNome && (
+            <p className="truncate text-[11px]" style={{ color: "var(--color-text-subtle)" }}>
+              👤 {t("Assessor")}: <span style={{ color: "var(--color-text-muted)" }}>{assessorNome}</span>
             </p>
           )}
         </div>
