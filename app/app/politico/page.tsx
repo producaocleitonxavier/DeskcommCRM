@@ -541,6 +541,7 @@ export default async function HojePage() {
         saudacao={saudacao()}
         dataFormatada={dataFormatada()}
         horaAtualizacao={horaAgora()}
+        podeLiderancas={hrefsVisiveis.has("/app/politico/liderancas")}
       />
     </>
   );

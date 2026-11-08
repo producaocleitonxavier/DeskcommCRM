@@ -48,6 +48,8 @@ export interface HojeClientProps {
   saudacao: string;
   dataFormatada: string;
   horaAtualizacao: string;
+  /** Usuário tem Lideranças no menu? (perfil rua NÃO tem) → esconde "Nova liderança". */
+  podeLiderancas?: boolean;
 }
 
 function badgeAtencao(a: GabineteHoje["atencao"][number]): { label: string; tipo: Tipo } {
@@ -141,6 +143,7 @@ export default function HojeClient({
   saudacao,
   dataFormatada,
   horaAtualizacao,
+  podeLiderancas = false,
 }: HojeClientProps) {
   // Funil de ATENDIMENTO (ciclo de vida da demanda) — não o funil de campanha.
   const lifecycleData = g.lifecycle.map((s, i) => ({
@@ -191,7 +194,12 @@ export default function HojeClient({
               {[
                 { href: "/app/politico/demandas", label: "Demandas" },
                 { href: "/app/agenda", label: "Agenda" },
-                { href: "/app/politico/liderancas/novo", label: "Nova liderança" },
+                // "Nova liderança" só p/ quem tem Lideranças no menu (o gabinete
+                // define liderança — o assessor de rua não). Gatado pelo MENU,
+                // como as abas, pq rua e gabinete têm o mesmo papel (agent).
+                ...(podeLiderancas
+                  ? [{ href: "/app/politico/liderancas/novo", label: "Nova liderança" }]
+                  : []),
               ].map((a) => (
                 <Link
                   key={a.href}
