@@ -32,7 +32,10 @@ export default async function VisitasPage() {
   const user = await requireAuth();
   const org = await resolveActiveOrg(user);
   if (!org) redirect("/app/onboarding");
-  if (ROLE_RANK[org.role] < ROLE_RANK.manager) redirect("/app/politico");
+  // Visita é trabalho de RUA: o assessor (agent) vê a lista e marca presença
+  // (Incremento 3). Antes exigia manager+, o que contrariava o menu do assessor
+  // de rua (incremento 1, que já tem Visitas). viewer segue barrado.
+  if (ROLE_RANK[org.role] < ROLE_RANK.agent) redirect("/app/politico");
 
   const db = await createClient();
 
@@ -119,6 +122,22 @@ export default async function VisitasPage() {
   const { data: orgRow } = await db.from("organizations").select("settings").eq("id", org.orgId).maybeSingle();
   const tipoMandato = lerMandatoConfig((orgRow as { settings?: unknown } | null)?.settings)?.tipo ?? null;
 
+  // Presenças de equipe (quem vai) por visita — Incremento 3. Fail-soft: se a
+  // tabela pol_tarefa_presencas ainda não existe (SQL não aplicado), vem vazio.
+  const presencas: Record<string, { user_id: string; nome: string | null }[]> = {};
+  const idsVisita = visitas.map((v) => v.id);
+  if (idsVisita.length > 0) {
+    const { data: pres } = await db
+      .from("pol_tarefa_presencas")
+      .select("tarefa_id, user_id, nome")
+      .eq("organization_id", org.orgId)
+      .eq("tarefa_kind", "visita")
+      .in("tarefa_id", idsVisita);
+    for (const p of (pres ?? []) as { tarefa_id: string; user_id: string; nome: string | null }[]) {
+      (presencas[p.tarefa_id] ??= []).push({ user_id: p.user_id, nome: p.nome });
+    }
+  }
+
   return (
     <VisitasClient
       visitas={visitas}
@@ -128,6 +147,7 @@ export default async function VisitasPage() {
       temRelato={temRelato}
       fotos={fotos}
       tipoMandato={tipoMandato}
+      presencas={presencas}
     />
   );
 }

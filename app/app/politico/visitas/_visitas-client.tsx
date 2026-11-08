@@ -15,6 +15,7 @@ import { MapPin, CalendarClock, AlertTriangle, UserX, CheckCircle2, User, Check,
 import { CommandHero } from "@/components/politico/command-hero";
 import { KpiCard } from "@/components/politico/kpi-card";
 import { EmptyState } from "@/components/politico/empty-state";
+import { QuemVai } from "@/components/politico/quem-vai";
 import { corDoOrgao } from "@/lib/politico/demanda-cobranca";
 import { visitaPendente, visitaAgendada, visitaSemResponsavel, statusVisita, ordenarVisitas } from "@/lib/politico/visita-tecnica";
 import { definirResponsavelVisita, marcarVisitaRealizada, registrarRelatoVisita } from "@/app/actions/politico/gabinete-actions";
@@ -51,6 +52,8 @@ interface Props {
   temRelato: boolean;
   fotos: Record<string, FotoVisita[]>;
   tipoMandato: string | null;
+  /** Presenças de equipe por visita (Incremento 3): quem marcou "eu vou". */
+  presencas: Record<string, { user_id: string; nome: string | null }[]>;
 }
 
 type Filtro = "todas" | "agendadas" | "atrasadas" | "sem_responsavel" | "realizadas" | "minhas";
@@ -85,7 +88,7 @@ const STATUS_PILL: Record<string, { bg: string; color: string; label: string }> 
   realizada: { bg: "rgba(34,197,94,0.14)", color: "#15803D", label: "Realizada" },
 };
 
-export default function VisitasClient({ visitas, kpis, assessores, usuarioAtualId, temRelato, fotos, tipoMandato }: Props) {
+export default function VisitasClient({ visitas, kpis, assessores, usuarioAtualId, temRelato, fotos, tipoMandato, presencas }: Props) {
   const router = useRouter();
   const [novaAberta, setNovaAberta] = useState(false);
   const [filtro, setFiltro] = useState<Filtro>("todas");
@@ -361,8 +364,14 @@ export default function VisitasClient({ visitas, kpis, assessores, usuarioAtualI
                     </div>
                   </div>
                 ) : (
-                  /* Ações rápidas */
-                  <div className="mt-auto flex flex-wrap items-center gap-2 border-t pt-3" style={{ borderColor: "var(--color-border)" }}>
+                  <div className="mt-auto flex flex-col gap-3">
+                    {/* Quem vai (Incremento 3): VÁRIOS assessores marcam presença */}
+                    <div className="border-t pt-3" style={{ borderColor: "var(--color-border)" }}>
+                      <p className="mb-1.5 text-xs font-semibold uppercase tracking-wide" style={{ color: "var(--color-text-subtle)" }}>Quem vai</p>
+                      <QuemVai kind="visita" tarefaId={v.id} usuarioAtualId={usuarioAtualId} inicial={presencas[v.id] ?? []} />
+                    </div>
+                    {/* Ações rápidas */}
+                    <div className="flex flex-wrap items-center gap-2 border-t pt-3" style={{ borderColor: "var(--color-border)" }}>
                     {/* Presença: eu vou / sair */}
                     {euSou ? (
                       <button disabled={pendente} onClick={() => agir(() => definirResponsavelVisita(v.id, null))} className="wr-btn inline-flex items-center gap-1.5 text-sm disabled:opacity-60">
@@ -396,6 +405,7 @@ export default function VisitasClient({ visitas, kpis, assessores, usuarioAtualI
                         <CheckCircle2 className="h-4 w-4" /> {v.realizadaEm ? "Desmarcar" : "Marcar realizada"}
                       </button>
                     )}
+                    </div>
                   </div>
                 )}
               </div>

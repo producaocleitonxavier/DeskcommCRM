@@ -56683,3 +56683,28 @@ create unique index if not exists contacts_perfil_token_key
   where perfil_token is not null;
 
 notify pgrst, 'reload schema';
+
+-- ---- Presença de equipe em tarefa de campo (migration 9058) ----
+-- Vários assessores marcam "eu vou" numa visita/obra/evento (ref polimórfica).
+create table if not exists public.pol_tarefa_presencas (
+  id uuid primary key default gen_random_uuid(),
+  organization_id uuid not null references public.organizations(id) on delete cascade,
+  tarefa_kind text not null check (tarefa_kind in ('visita', 'obra', 'evento')),
+  tarefa_id uuid not null,
+  user_id uuid not null references auth.users(id) on delete cascade,
+  nome text,
+  marcado_em timestamptz not null default now(),
+  unique (organization_id, tarefa_kind, tarefa_id, user_id)
+);
+create index if not exists idx_pol_tarefa_presencas_tarefa
+  on public.pol_tarefa_presencas(organization_id, tarefa_kind, tarefa_id);
+create index if not exists idx_pol_tarefa_presencas_user
+  on public.pol_tarefa_presencas(organization_id, user_id);
+alter table public.pol_tarefa_presencas enable row level security;
+drop policy if exists tenant_isolation_pol_tarefa_presencas_all on public.pol_tarefa_presencas;
+create policy tenant_isolation_pol_tarefa_presencas_all on public.pol_tarefa_presencas
+  using (organization_id in (select public.fn_user_org_ids()));
+revoke all on public.pol_tarefa_presencas from anon;
+grant select, insert, update, delete on public.pol_tarefa_presencas to authenticated;
+
+notify pgrst, 'reload schema';
