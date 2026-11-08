@@ -299,7 +299,7 @@ export default function VisitasClient({ visitas, kpis, assessores, usuarioAtualI
                     </span>
                   ) : (
                     <span className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-semibold" style={{ background: "rgba(245,158,11,0.16)", color: "#B45309" }}>
-                      Ninguém marcou presença
+                      Sem responsável
                     </span>
                   )}
                 </div>
@@ -372,14 +372,15 @@ export default function VisitasClient({ visitas, kpis, assessores, usuarioAtualI
                     </div>
                     {/* Ações rápidas */}
                     <div className="flex flex-wrap items-center gap-2 border-t pt-3" style={{ borderColor: "var(--color-border)" }}>
-                    {/* Presença: eu vou / sair */}
+                    {/* Responsável (DONO da visita) — distinto do "Quem vai" acima (presença
+                        da equipe). Um responsável pelo relato; vários podem ir. */}
                     {euSou ? (
                       <button disabled={pendente} onClick={() => agir(() => definirResponsavelVisita(v.id, null))} className="wr-btn inline-flex items-center gap-1.5 text-sm disabled:opacity-60">
-                        <X className="h-4 w-4" /> Sair da visita
+                        <X className="h-4 w-4" /> Sair (responsável)
                       </button>
                     ) : (
-                      <button disabled={pendente} onClick={() => agir(() => definirResponsavelVisita(v.id, usuarioAtualId))} className="wr-btn-dark inline-flex items-center gap-1.5 text-sm disabled:opacity-60" style={semResp ? { background: "var(--color-accent)", color: "#16181D" } : undefined}>
-                        <User className="h-4 w-4" /> Eu vou
+                      <button disabled={pendente} onClick={() => agir(() => definirResponsavelVisita(v.id, usuarioAtualId))} className="wr-btn inline-flex items-center gap-1.5 text-sm disabled:opacity-60" style={semResp ? { borderColor: "var(--color-accent)", color: "var(--color-text)" } : undefined}>
+                        <User className="h-4 w-4" /> Ser responsável
                       </button>
                     )}
 
