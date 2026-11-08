@@ -77,6 +77,10 @@ export interface Props {
   vozArmada?: boolean;
   /** Gabinete usa a linha "Assunto:" no ofício? Liga o campo de assunto. */
   mostrarAssuntoOficio?: boolean;
+  /** Pode emitir ofício? (tem "Ofícios" no menu = GABINETE). O assessor de RUA
+   * não — vê a demanda, mas não a seção de ofício. Gato por menu pq rua e
+   * gabinete têm o mesmo papel (agent); o menu é que distingue. */
+  podeOficio?: boolean;
   /** Nome do parlamentar (saudação do recado em áudio). */
   politicoNome?: string | null;
 }
@@ -133,7 +137,7 @@ function paraInputDate(d: string | null): string {
   return new Date(d).toISOString().slice(0, 10);
 }
 
-export default function DetalheDemandaClient({ demanda, assessores, eventos, vozArmada, mostrarAssuntoOficio, politicoNome }: Props) {
+export default function DetalheDemandaClient({ demanda, assessores, eventos, vozArmada, mostrarAssuntoOficio, politicoNome, podeOficio = true }: Props) {
   const router = useRouter();
 
   const [d, setD] = useState<DemandaDetalhe>(demanda);
@@ -542,7 +546,9 @@ export default function DetalheDemandaClient({ demanda, assessores, eventos, voz
         )}
       </section>
 
-      {/* Encaminhamento (+ IA no próximo passo) */}
+      {/* Encaminhamento / ofício ao órgão — GABINETE-ONLY. O assessor de rua (sem
+          "Ofícios" no menu) NÃO emite ofício: vê a demanda, mas não esta seção. */}
+      {podeOficio && (
       <section className="gip-glass p-6 sm:p-7">
         <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
           <h2 className="font-heading text-base font-bold" style={{ color: "var(--color-text)" }}>Encaminhamento ao órgão</h2>
@@ -759,6 +765,7 @@ export default function DetalheDemandaClient({ demanda, assessores, eventos, voz
           </p>
         )}
       </section>
+      )}
 
       {/* Anexos (ofícios, fotos, documentos) */}
       <DemandaAnexos demandaId={d.id} refreshToken={anexoToken} />

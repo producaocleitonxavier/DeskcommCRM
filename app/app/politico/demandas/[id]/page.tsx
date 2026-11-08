@@ -11,6 +11,7 @@
 import { notFound, redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { requireAuth, resolveActiveOrg } from "@/lib/auth/server";
+import { destinosDaInterface } from "@/lib/navigation/interface";
 import { nomesDosAtendentes } from "@/lib/users/nome-do-atendente";
 import { lerVozConfig, vozArmada } from "@/lib/voz/config";
 import DetalheDemandaClient, { type DemandaDetalhe } from "./_detalhe-client";
@@ -80,6 +81,13 @@ export default async function DemandaDetalhePage({
   const mostrarAssuntoOficio = (gabRow?.oficio_mostrar_assunto as boolean | null) === true;
   const politicoNome = ((gabRow?.nome_parlamentar as string | null) ?? "").trim() || null;
 
+  // Ofício é GABINETE-ONLY: só quem tem "Ofícios" no menu (perfil gabinete) emite.
+  // Gato por menu pq rua e gabinete têm o mesmo papel (agent) — o menu distingue.
+  const ehPlataforma = !!user.is_platform_admin && !user.support;
+  const podeOficio = new Set(
+    destinosDaInterface(org.interface_settings, ehPlataforma, org.role).map((d) => d.href),
+  ).has("/app/politico/oficios");
+
   const membros = (membrosRes.data ?? []) as { user_id: string; role: string }[];
   const nomes = await nomesDosAtendentes(membros.map((m) => m.user_id));
   const assessores = membros
@@ -101,6 +109,7 @@ export default async function DemandaDetalhePage({
       vozArmada={vozOk}
       mostrarAssuntoOficio={mostrarAssuntoOficio}
       politicoNome={politicoNome}
+      podeOficio={podeOficio}
     />
   );
 }
