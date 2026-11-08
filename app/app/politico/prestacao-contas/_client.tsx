@@ -29,7 +29,7 @@ function reais(v: number): string {
 }
 
 const LEITURA_ESTILO: Record<Leitura, { rotulo: string; bg: string; cor: string }> = {
-  oportunidade: { rotulo: "🎯 Oportunidade", bg: "color-mix(in srgb, var(--color-accent) 18%, transparent)", cor: "var(--color-accent)" },
+  oportunidade: { rotulo: "🎯 Oportunidade", bg: "color-mix(in srgb, var(--accent-ink, var(--color-accent)) 14%, transparent)", cor: "var(--accent-ink, var(--color-accent))" },
   fortaleza: { rotulo: "💪 Fortaleza", bg: "rgba(23,120,79,0.12)", cor: "#17784F" },
   fraco: { rotulo: "⚠️ Ponto fraco", bg: "rgba(220,70,70,0.14)", cor: "#C0392B" },
   acompanhar: { rotulo: "Acompanhar", bg: "var(--color-surface-elevated)", cor: "var(--color-text-muted)" },
@@ -142,8 +142,8 @@ export default function PrestacaoContasClient({ dados, ondeInvestir, ehAdmin }: 
                   style={{ border: "1px solid var(--color-border)", background: "var(--color-surface-elevated)" }}
                 >
                   <div className="min-w-0">
-                    <p className="text-sm font-semibold truncate">{b.bairro}</p>
-                    <p className="text-[13px]" style={{ color: "var(--color-text-muted)" }}>
+                    <p className="text-sm font-bold truncate" style={{ color: "var(--color-text)" }}>{b.bairro}</p>
+                    <p className="text-[13px] font-medium" style={{ color: "var(--color-text)" }}>
                       {b.demandas} {b.demandas === 1 ? "pedido" : "pedidos"} · {b.votos.toLocaleString("pt-BR")} {b.votos === 1 ? "voto" : "votos"} seus aqui
                     </p>
                   </div>

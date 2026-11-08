@@ -70,12 +70,12 @@ function estadoLabel(estado: string): string {
 
 function estadoEstilo(estado: string): { bg: string; color: string } {
   const mapa: Record<string, { bg: string; color: string }> = {
-    aberta: { bg: "rgba(245,158,11,0.15)", color: "#E4B96E" },
-    em_atendimento: { bg: "rgba(129,140,248,0.16)", color: "#A5B4FC" },
-    encaminhada: { bg: "rgba(167,139,250,0.16)", color: "#C4B5FD" },
-    aguardando_cliente: { bg: "rgba(217,164,75,0.16)", color: "#E4B96E" },
-    resolvida: { bg: "rgba(94,195,148,0.16)", color: "#7AD4AB" },
-    encerrada: { bg: "rgba(255,255,255,0.07)", color: "var(--color-text-muted)" },
+    aberta: { bg: "rgba(245,158,11,0.15)", color: "#B45309" },
+    em_atendimento: { bg: "rgba(129,140,248,0.16)", color: "#4338CA" },
+    encaminhada: { bg: "rgba(167,139,250,0.16)", color: "#7C3AED" },
+    aguardando_cliente: { bg: "rgba(217,164,75,0.16)", color: "#92600E" },
+    resolvida: { bg: "rgba(94,195,148,0.16)", color: "#15803D" },
+    encerrada: { bg: "rgba(100,116,139,0.12)", color: "#475569" },
   };
   return mapa[estado] ?? { bg: "rgba(255,255,255,0.07)", color: "var(--color-text-muted)" };
 }
@@ -93,8 +93,8 @@ function prioridadeLabel(prioridade: string | null): string | null {
 function prioridadeEstilo(prioridade: string | null): { bg: string; color: string } | null {
   if (!prioridade || prioridade === "normal" || prioridade === "baixa") return null;
   const mapa: Record<string, { bg: string; color: string }> = {
-    alta: { bg: "rgba(217,164,75,0.14)", color: "#D9A44B" },
-    urgente: { bg: "rgba(245,158,11,0.18)", color: "#F0A742" },
+    alta: { bg: "rgba(217,164,75,0.16)", color: "#92600E" },
+    urgente: { bg: "rgba(245,158,11,0.18)", color: "#B45309" },
   };
   return mapa[prioridade] ?? null;
 }
@@ -463,7 +463,7 @@ export default async function GabinetePage({
               className="flex flex-wrap items-center justify-between gap-2 rounded-2xl px-4 py-3 transition-colors hover:bg-white/[0.04]"
               style={{ background: "rgba(239,68,68,0.10)", border: "1px solid rgba(239,68,68,0.35)" }}
             >
-              <span className="flex items-center gap-2 text-sm" style={{ color: "#F87171" }}>
+              <span className="flex items-center gap-2 text-sm" style={{ color: "#C82333" }}>
                 <span aria-hidden>⚠</span>
                 <span style={{ color: "var(--color-text)" }}>
                   <strong>{rollupOrgaos.alerta.total}</strong> demanda{rollupOrgaos.alerta.total > 1 ? "s" : ""} atrasada{rollupOrgaos.alerta.total > 1 ? "s" : ""} e sem resposta do órgão
@@ -474,7 +474,7 @@ export default async function GabinetePage({
                   )}
                 </span>
               </span>
-              <span className="shrink-0 text-sm font-bold" style={{ color: "#F87171" }}>Cobrar agora →</span>
+              <span className="shrink-0 text-sm font-bold" style={{ color: "#C82333" }}>Cobrar agora →</span>
             </Link>
           )}
 
@@ -508,7 +508,7 @@ export default async function GabinetePage({
                     >
                       <span className="flex min-w-0 items-center gap-1.5">
                         {queima && <span className="h-2 w-2 shrink-0 rounded-full" style={{ background: "#EF4444" }} aria-hidden title="Tem demanda atrasada" />}
-                        <span className="inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold" style={{ background: cor.bg, color: cor.color }}>
+                        <span className="inline-flex items-center rounded-full px-2.5 py-1 text-xs font-bold" style={{ background: cor.bg, color: cor.color }}>
                           {o.orgao}
                         </span>
                       </span>
@@ -610,7 +610,7 @@ export default async function GabinetePage({
                   style={
                     filtroCobrar
                       ? { background: "#B91C1C", color: "#FFFFFF" }
-                      : { background: "rgba(239,68,68,0.14)", color: "#F87171" }
+                      : { background: "rgba(239,68,68,0.14)", color: "#C82333" }
                   }
                   title="Demandas abertas em que o órgão ainda não respondeu — o que cobrar hoje."
                 >
@@ -721,7 +721,7 @@ export default async function GabinetePage({
                               {d.pol_autoatendimento && (
                                 <span
                                   className="inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold whitespace-nowrap"
-                                  style={{ background: "rgba(96,165,250,0.15)", color: "#93B4EA" }}
+                                  style={{ background: "rgba(96,165,250,0.15)", color: "#1D4ED8" }}
                                   title="O cidadão foi orientado a resolver pelo link da Prefeitura. Registro de inteligência — não é trabalho do gabinete."
                                 >
                                   ✨ autoatendimento
@@ -747,7 +747,7 @@ export default async function GabinetePage({
                               {atrasada && (
                                 <span
                                   className="inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-bold"
-                                  style={{ background: "rgba(239,68,68,0.16)", color: "#F87171" }}
+                                  style={{ background: "rgba(239,68,68,0.16)", color: "#C82333" }}
                                   title={`Passou do prazo acordado (${d.pol_prazo_dias ?? 30} dias)`}
                                 >
                                   Atrasada {Math.abs(prazoInfo.diasRestantes)}d
@@ -788,13 +788,13 @@ export default async function GabinetePage({
                           {temRespondeu && (
                             <td className="px-4 py-3.5 whitespace-nowrap">
                               {d.pol_respondeu ? (
-                                <span className="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold" style={{ background: "rgba(34,197,94,0.15)", color: "#7AD4AB" }}>
+                                <span className="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold" style={{ background: "rgba(34,197,94,0.15)", color: "#15803D" }}>
                                   Sim{d.pol_respondeu_em ? ` · ${formatarData(d.pol_respondeu_em)}` : ""}
                                 </span>
                               ) : fechadaRow ? (
                                 <span style={{ color: "var(--color-text-subtle)" }}>—</span>
                               ) : (
-                                <span className="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold" style={{ background: "rgba(239,68,68,0.14)", color: "#F87171" }}>
+                                <span className="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold" style={{ background: "rgba(239,68,68,0.14)", color: "#C82333" }}>
                                   Não
                                 </span>
                               )}

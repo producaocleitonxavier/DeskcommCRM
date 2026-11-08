@@ -33,19 +33,21 @@ export function normalizarOrgao(nome: string | null | undefined): string {
 }
 
 // Paleta suave (mesma linguagem das pílulas do sistema). bg translúcido + cor legível.
+// Texto ESCURO e saturado (lê no branco das telas de gabinete, sobre o fundo-
+// tinta claro). Antes era pastel-claro do tema escuro → lavava nas "caixinhas".
 const PALETA: { bg: string; color: string }[] = [
-  { bg: "rgba(59,130,246,0.15)", color: "#93B4EA" },   // azul
-  { bg: "rgba(34,197,94,0.15)", color: "#7AD4AB" },    // verde
-  { bg: "rgba(168,85,247,0.15)", color: "#C4B5FD" },   // roxo
-  { bg: "rgba(245,158,11,0.15)", color: "#E4B96E" },   // âmbar
-  { bg: "rgba(236,72,153,0.15)", color: "#F0A6C8" },   // rosa
-  { bg: "rgba(20,184,166,0.15)", color: "#6FD6C8" },   // teal
-  { bg: "rgba(129,140,248,0.16)", color: "#A5B4FC" },  // índigo
-  { bg: "rgba(217,164,75,0.16)", color: "#D9A44B" },   // ouro
-  { bg: "rgba(14,165,233,0.15)", color: "#7DC7EE" },   // ciano
-  { bg: "rgba(139,195,74,0.16)", color: "#B6D97A" },   // lima
+  { bg: "rgba(59,130,246,0.15)", color: "#1D4ED8" },   // azul
+  { bg: "rgba(34,197,94,0.15)", color: "#15803D" },    // verde
+  { bg: "rgba(168,85,247,0.15)", color: "#7C3AED" },   // roxo
+  { bg: "rgba(245,158,11,0.15)", color: "#B45309" },   // âmbar
+  { bg: "rgba(236,72,153,0.15)", color: "#BE185D" },   // rosa
+  { bg: "rgba(20,184,166,0.15)", color: "#0F766E" },   // teal
+  { bg: "rgba(129,140,248,0.16)", color: "#4338CA" },  // índigo
+  { bg: "rgba(217,164,75,0.16)", color: "#92600E" },   // ouro
+  { bg: "rgba(14,165,233,0.15)", color: "#0E7490" },   // ciano
+  { bg: "rgba(139,195,74,0.16)", color: "#4D7C0F" },   // lima
 ];
-const CINZA_NEUTRO = { bg: "rgba(255,255,255,0.07)", color: "#9CA3AF" };
+const CINZA_NEUTRO = { bg: "rgba(100,116,139,0.12)", color: "#475569" };
 
 /**
  * Cor determinística por órgão: mesmo nome → sempre a mesma pílula. Hash simples
