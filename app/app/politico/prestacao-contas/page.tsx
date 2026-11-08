@@ -30,6 +30,9 @@ export default async function PrestacaoContasPage({
   const user = await requireAuth();
   const org = await resolveActiveOrg(user);
   if (!org) redirect("/app/onboarding");
+  // Prestação de Contas é gestão = gerente+. Assessor (agent) cai no Hoje.
+  // Trava REAL de papel (não só a aba escondida).
+  if (ROLE_RANK[org.role] < ROLE_RANK.manager) redirect("/app/politico");
 
   const params = await searchParams;
   const periodo = normalizarPeriodo(typeof params.periodo === "string" ? params.periodo : undefined);

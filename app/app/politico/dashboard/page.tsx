@@ -12,6 +12,7 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { requireAuth, resolveActiveOrg } from "@/lib/auth/server";
+import { ROLE_RANK } from "@/lib/auth/types";
 import DashboardClient from "./_dashboard-client";
 import PageTabs from "@/components/politico/page-tabs";
 
@@ -123,6 +124,9 @@ export default async function DashboardPage() {
 
   const org = await resolveActiveOrg(user);
   if (!org) redirect("/app/onboarding");
+  // Painel gerencial = gerente+. Assessor (agent) cai no Hoje. Trava REAL de
+  // papel — o menu/aba escondidos são só apresentação; a rota precisa barrar.
+  if (ROLE_RANK[org.role] < ROLE_RANK.manager) redirect("/app/politico");
 
   const { dash, funil, calls } = await buscarDashboard(org.orgId);
 

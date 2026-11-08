@@ -12,6 +12,7 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { requireAuth, resolveActiveOrg } from "@/lib/auth/server";
+import { ROLE_RANK } from "@/lib/auth/types";
 import HojeClient from "./_hoje-client";
 import PageTabs from "@/components/politico/page-tabs";
 
@@ -515,9 +516,14 @@ export default async function HojePage() {
     buscarFilaDeAcao(org.orgId),
   ]);
 
+  // "Painel" (dashboard gerencial) e "Prestação de Contas" são de gestão —
+  // gerente+. O assessor (agent) vê só o "Hoje" (o placar dele), sem as abas de
+  // gestão. Sem gestor, nem renderiza a barra: um "Hoje" sozinho é pílula vazia.
+  const ehGestor = ROLE_RANK[org.role] >= ROLE_RANK.manager;
+
   return (
     <>
-      <PageTabs abas={COMANDO_TABS} active="hoje" maxW="1140px" />
+      {ehGestor && <PageTabs abas={COMANDO_TABS} active="hoje" maxW="1140px" />}
       <HojeClient
         metrics={metrics}
         gabineteHoje={gabineteHoje}
