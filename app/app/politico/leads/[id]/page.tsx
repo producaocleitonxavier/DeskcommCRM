@@ -129,6 +129,21 @@ function formatarData(data: string): string {
   return new Date(data).toLocaleDateString("pt-BR", { day: "2-digit", month: "short", year: "numeric" });
 }
 
+/**
+ * Nascimento guardado só como dia/mês usa o ANO SENTINELA 2000 (formulário de
+ * perfil, migration 9057): o ano é fictício, não revela idade. Nesse caso mostra
+ * só "22 de ago." (parse direto da string, sem fuso). Datas com ano real seguem
+ * completas por formatarData.
+ */
+const MESES_ABREV = ["jan.", "fev.", "mar.", "abr.", "mai.", "jun.", "jul.", "ago.", "set.", "out.", "nov.", "dez."];
+function formatarNascimento(data: string): string {
+  const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(data);
+  if (m && m[1] === "2000") {
+    return `${Number(m[3])} de ${MESES_ABREV[Number(m[2]) - 1] ?? ""}`.trim();
+  }
+  return formatarData(data);
+}
+
 function sourceLabel(source: string | null): string {
   if (!source) return "Manual";
   const m: Record<string, string> = {
@@ -490,7 +505,7 @@ export default async function FichaPage({
             <InfoRow label="Email" value={contact.email} />
             <InfoRow label="Cidade" value={cidadeContato} />
             <InfoRow label="Bairro" value={bairroContato} />
-            <InfoRow label="Nascimento" value={contact.birthdate ? formatarData(contact.birthdate) : null} />
+            <InfoRow label="Nascimento" value={contact.birthdate ? formatarNascimento(contact.birthdate) : null} />
             <InfoRow label="Profissão" value={profissaoContato} />
             <InfoRow
               label="Origem"
