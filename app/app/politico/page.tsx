@@ -517,24 +517,27 @@ async function contarCaptacoesQr(organizationId: string, userId: string): Promis
 
 /**
  * Visitas REALIZADAS RECENTES que ainda não viraram ofício — o sinal "pronto pra
- * ofício" pro gabinete. "30s depois que a visita terminou, já aparece aqui." É a
- * demanda de visita com data de realização e SEM número de ofício.
+ * ofício" pro gabinete. "30s depois que a visita terminou, já aparece aqui."
+ *
+ * DEFINIÇÃO de visita = a MESMA do módulo de Visitas (visitas/page.tsx): demanda
+ * do gabinete com data de realização marcada (`pol_visita_realizada_em`). NÃO se
+ * filtra por `pol_tipo='visita_tecnica'` — na prática as visitas nascem como
+ * demandas de qualquer tipo (infraestrutura, servico_publico…) com data; o que as
+ * torna "visita feita" é a `realizada_em` preenchida, não o tipo.
  *
  * JANELA de 21 dias: nem toda visita vira ofício (o gabinete decide). Sem o corte
- * de tempo, as que nunca viram ofício ficariam ali pra sempre e o número viraria
- * ruído crescente. Com a janela, é um "recém-feitas, talvez oficializar" que se
- * limpa sozinho. Fail-soft: sem as colunas de visita (9085/9087), a consulta erra
- * e devolve 0.
+ * as que nunca viram ofício ficariam ali pra sempre (ruído). `realizada_em` é DATE
+ * (9085) → comparo com DATA ("YYYY-MM-DD"), não timestamp. Fail-soft: sem a coluna
+ * a consulta erra e devolve 0.
  */
 async function contarVisitasProntasOficio(organizationId: string): Promise<number> {
   const db = await createClient();
-  const desde = new Date(Date.now() - 21 * 24 * 60 * 60 * 1000).toISOString();
+  const desde = new Date(Date.now() - 21 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
   const { count } = await db
     .from("demandas")
     .select("id", { count: "exact", head: true })
     .eq("organization_id", organizationId)
     .eq("pol_gabinete", true)
-    .eq("pol_tipo", "visita_tecnica")
     .not("pol_visita_realizada_em", "is", null)
     .gte("pol_visita_realizada_em", desde)
     .is("pol_oficio_rotulo", null);
