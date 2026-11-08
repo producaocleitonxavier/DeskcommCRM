@@ -56674,3 +56674,12 @@ revoke all on public.pol_qr_cadastros from anon;
 grant select, insert, update, delete on public.pol_qr_cadastros to authenticated;
 
 notify pgrst, 'reload schema';
+
+-- ---- Perfilamento progressivo do QR (migration 9057) ----
+-- Token opaco por contato p/ o formulário público /perfil/<token>.
+alter table public.contacts add column if not exists perfil_token text;
+create unique index if not exists contacts_perfil_token_key
+  on public.contacts(perfil_token)
+  where perfil_token is not null;
+
+notify pgrst, 'reload schema';

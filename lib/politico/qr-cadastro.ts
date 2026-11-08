@@ -23,6 +23,7 @@ import { logger } from "@/lib/logger";
 import { recomputarEngajamento } from "@/lib/politico/engajamento";
 import { enviarMaterialComoDocumento, enviarTextoNoCanal } from "@/lib/politico/enviar-material";
 import { convidarAIndicar, extrairCodigoIndicacao, processarIndicacao } from "@/lib/politico/indicacao";
+import { convidarAPerfilar } from "@/lib/politico/perfil";
 
 /** `[qr:CODE]` — colchetes e prefixo próprio para não casar por acidente. */
 export const PADRAO_QR = /\[qr:([A-Za-z0-9_-]{2,24})\]/i;
@@ -270,5 +271,8 @@ async function capturarNomeEEntregar(
   }
   // material_entregue_at já foi carimbado no reclaim. Convida a indicar (uma vez).
   await convidarAIndicar(admin, { organizationId, contactId, canalId: origem.channel_session_id });
+  // Perfilamento progressivo: convida a completar cidade/bairro/aniversário por
+  // formulário (uma vez). Depois do material E do convite a indicar. Best-effort.
+  await convidarAPerfilar(admin, { organizationId, contactId, canalId: origem.channel_session_id });
   return { status: "ok", detail: `entregue:${origem.nome}` };
 }
