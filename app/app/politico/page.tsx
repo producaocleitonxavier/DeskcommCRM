@@ -534,17 +534,20 @@ export default async function HojePage() {
     contarCaptacoesQr(org.orgId, user.id),
   ]);
 
-  // As abas "Painel"/"Prestação de Contas" aparecem só se estiverem no MENU do
-  // usuário — mesma fonte do sidebar (destinosDaInterface). Assim o perfil
-  // "Assessor de rua" (que não tem essas portas) esconde as abas junto, e um
-  // admin consegue PRÉ-VISUALIZAR a experiência do assessor trocando só o menu.
-  // A trava REAL de papel continua nas rotas /dashboard e /prestacao-contas.
-  // Barra só aparece com +de uma aba: um "Hoje" sozinho é pílula vazia.
+  // "Painel" e "Prestação de Contas" são as abas de GESTÃO. Mostra as DUAS quando
+  // o usuário vê o "Painel" (/app/politico/dashboard) no menu — o mesmo portão do
+  // sidebar (destinosDaInterface). A Prestação NÃO é item de menu (é subtela), por
+  // isso ela ACOMPANHA o Painel em vez de ser procurada no catálogo — senão sumia
+  // até do admin de menu cheio (bug 08/nov). "Hoje" é sempre a própria tela. Assim
+  // o perfil "Assessor de rua" (sem Painel) esconde as duas, e o admin ainda
+  // pré-visualiza o assessor trocando o menu. A trava REAL de papel segue nas
+  // rotas /dashboard e /prestacao-contas. Barra só com +de uma aba.
   const ehPlataforma = !!user.is_platform_admin && !user.support;
   const hrefsVisiveis = new Set(
     destinosDaInterface(org.interface_settings, ehPlataforma, org.role).map((d) => d.href),
   );
-  const abasVisiveis = COMANDO_TABS.filter((t) => hrefsVisiveis.has(t.href));
+  const veGestao = hrefsVisiveis.has("/app/politico/dashboard");
+  const abasVisiveis = COMANDO_TABS.filter((t) => t.id === "hoje" || veGestao);
 
   return (
     <>
