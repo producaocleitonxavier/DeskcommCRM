@@ -86,7 +86,7 @@ export default function LocaisClient({ locais, kpis }: LocaisClientProps) {
         ]}
       />
 
-      <section className="grid grid-cols-3 gap-4">
+      <section className="grid grid-cols-3 gap-2 sm:gap-4">
         <KpiCard label="Locais" valor={kpis.locais} icone={MapPin} />
         <KpiCard label="Eventos" valor={kpis.eventos} icone={CalendarCheck} />
         <KpiCard label="Pessoas cadastradas" valor={kpis.pessoas} icone={Users} />

@@ -4,7 +4,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { useT } from "@/hooks/i18n/useT";
-import { SidebarContent } from "@/components/shell/Sidebar";
+import { SidebarContent, ESTILO_SIDEBAR_MARINHO } from "@/components/shell/Sidebar";
 import { DotsThree, List } from "@/lib/ui/icons";
 import { cn } from "@/lib/utils";
 
@@ -42,7 +42,7 @@ import { cn } from "@/lib/utils";
  * navegação é uma gaveta temporária: abrir/fechar não escreve esse cookie, para
  * não trocar a preferência que a pessoa escolheu no laptop.
  */
-export function GavetaDeNavegacao({ comoAba = false }: { comoAba?: boolean }) {
+export function GavetaDeNavegacao({ comoAba = false, temaClaro = false }: { comoAba?: boolean; temaClaro?: boolean }) {
   const t = useT();
   const [open, setOpen] = useState(false);
 
@@ -77,12 +77,18 @@ export function GavetaDeNavegacao({ comoAba = false }: { comoAba?: boolean }) {
       </SheetTrigger>
       <SheetContent
         side="left"
-        className="flex w-72 max-w-[calc(100vw-2rem)] flex-col gap-0 p-0 sm:max-w-xs"
+        className={cn(
+          "flex w-72 max-w-[calc(100vw-2rem)] flex-col gap-0 p-0 sm:max-w-xs",
+          temaClaro && "wr-sidebar-marinho",
+        )}
+        style={temaClaro ? ESTILO_SIDEBAR_MARINHO : undefined}
+        data-marinho={temaClaro ? "1" : "0"}
       >
         <SheetTitle className="sr-only">{t("Navegação principal")}</SheetTitle>
         <SidebarContent
           collapsed={false}
           showCollapseControl={false}
+          temaClaro={temaClaro}
           onNavigate={() => setOpen(false)}
         />
       </SheetContent>
@@ -98,6 +104,6 @@ export function GavetaDeNavegacao({ comoAba = false }: { comoAba?: boolean }) {
  * atalho para as quatro de uso diário. Tirar o hambúrguer deixaria o resto do
  * produto alcançável só pelo "Mais".
  */
-export function MobileSidebar() {
-  return <GavetaDeNavegacao />;
+export function MobileSidebar({ temaClaro = false }: { temaClaro?: boolean }) {
+  return <GavetaDeNavegacao temaClaro={temaClaro} />;
 }

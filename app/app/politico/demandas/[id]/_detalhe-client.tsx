@@ -304,7 +304,7 @@ export default function DetalheDemandaClient({ demanda, assessores, eventos, voz
             borderBottom: "1px solid color-mix(in srgb, var(--color-accent) 22%, transparent)",
           }}
         >
-          <span className="text-[11px] font-bold uppercase tracking-[0.2em]" style={{ color: "var(--accent-ink, var(--color-accent))" }}>
+          <span className="text-[11px] font-bold uppercase tracking-[0.2em]" style={{ color: "var(--hero-eyebrow, var(--color-accent))" }}>
             Gabinete · Atendimento ao cidadão
           </span>
         </div>

@@ -97,7 +97,7 @@ const VAGAS = 4;
  * `SidebarContent`: ausente quer dizer "não filtra por área", e um `?? []`
  * esconderia Análise e Agente de IA de uma vez.
  */
-export function BarraInferior() {
+export function BarraInferior({ temaClaro = false }: { temaClaro?: boolean }) {
   const t = useT();
   const pathname = usePathname();
   const { user, activeOrg } = useAuth();
@@ -193,7 +193,7 @@ export function BarraInferior() {
           o faria acusar um botão correto. O porquê está em `MobileSidebar.tsx`.
         */}
         <li className="flex min-w-0 flex-1">
-          <GavetaDeNavegacao comoAba />
+          <GavetaDeNavegacao comoAba temaClaro={temaClaro} />
         </li>
       </ul>
     </nav>

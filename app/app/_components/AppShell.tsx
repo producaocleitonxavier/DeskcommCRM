@@ -128,7 +128,7 @@ export function AppShell({ sidebarCollapsed, podeAtender, temaClaro, children }:
         cima da lista.
       */}
       <div className="flex min-h-dvh min-w-0 flex-1 flex-col">
-        <TopBar navy={telaNavy} />
+        <TopBar navy={telaNavy} temaClaro={temaClaro} />
         {/*
           O RODAPÉ DESCONTA O QUE AS PEÇAS FIXAS OCUPAM (issue #1305).
 
@@ -185,7 +185,7 @@ export function AppShell({ sidebarCollapsed, podeAtender, temaClaro, children }:
         Ela própria se esconde acima de `md` — o mesmo corte em que a barra
         lateral aparece, logo acima.
       */}
-      <BarraInferior />
+      <BarraInferior temaClaro={temaClaro} />
     </div>
   );
 }

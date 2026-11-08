@@ -397,31 +397,32 @@ export function SidebarContent({
   );
 }
 
+/** Tokens navy do rail/menu quando a org está em tema claro (Névoa Pro). INLINE
+ *  = prioridade máxima (vence var/layer da casca). Usado no DESKTOP (aside) e no
+ *  DRAWER MOBILE (MobileSidebar) — mesma aparência nos dois. */
+export const ESTILO_SIDEBAR_MARINHO: React.CSSProperties = {
+  backgroundColor: "#182a3e",
+  "--color-surface": "#182a3e",
+  "--color-surface-elevated": "#20374f",
+  "--color-border": "rgba(255,255,255,0.10)",
+  "--color-text": "#eaf0f6",
+  "--color-text-muted": "#a7b6c9",
+  "--color-text-subtle": "#7e90a6",
+  "--foreground": "#eaf0f6",
+  "--muted-foreground": "#a7b6c9",
+  "--accent": "rgba(255,255,255,0.06)",
+  "--accent-foreground": "#eaf0f6",
+  "--color-accent": "#D7F36A",
+  "--color-accent-fg": "#16181D",
+  "--wr-nav-active": "#D7F36A",
+  "--wr-btn-dark-bg": "#0f2033",
+  "--primary": "#D7F36A",
+} as React.CSSProperties;
+
 export function Sidebar({ collapsed, temaClaro }: { collapsed: boolean; temaClaro?: boolean }) {
   // Rail MARINHO quando a org liga o tema claro (Névoa Pro): navy rail + conteúdo
-  // claro (padrão John Don). `temaClaro` desce por PROP do layout servidor (mesmo
-  // caminho do collapsed). Aplicamos os tokens INLINE (prioridade máxima — vence
-  // qualquer disputa de var/layer da casca) além da classe `wr-sidebar-marinho`.
-  const estiloMarinho = temaClaro
-    ? ({
-        backgroundColor: "#182a3e",
-        "--color-surface": "#182a3e",
-        "--color-surface-elevated": "#20374f",
-        "--color-border": "rgba(255,255,255,0.10)",
-        "--color-text": "#eaf0f6",
-        "--color-text-muted": "#a7b6c9",
-        "--color-text-subtle": "#7e90a6",
-        "--foreground": "#eaf0f6",
-        "--muted-foreground": "#a7b6c9",
-        "--accent": "rgba(255,255,255,0.06)",
-        "--accent-foreground": "#eaf0f6",
-        "--color-accent": "#D7F36A",
-        "--color-accent-fg": "#16181D",
-        "--wr-nav-active": "#D7F36A",
-        "--wr-btn-dark-bg": "#0f2033",
-        "--primary": "#D7F36A",
-      } as React.CSSProperties)
-    : undefined;
+  // claro. `temaClaro` desce por PROP do layout servidor (mesmo caminho do collapsed).
+  const estiloMarinho = temaClaro ? ESTILO_SIDEBAR_MARINHO : undefined;
   return (
     <aside
       style={estiloMarinho}

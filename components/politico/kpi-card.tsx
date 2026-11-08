@@ -60,15 +60,15 @@ export function KpiCard({ label, valor, icone: Icone, variacao, cor, sufixo, var
   const contado = useCountUp(isNum ? (valor as number) : 0, isNum);
 
   return (
-    <div className={cn(escuro ? "wr-card-accent" : "gip-glass gip-glass-hover", "p-6", className)}>
-      <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0">
+    <div className={cn(escuro ? "wr-card-accent" : "gip-glass gip-glass-hover", "p-4 sm:p-6", className)}>
+      <div className="flex items-start justify-between gap-2 sm:gap-3">
+        <div className="min-w-0 flex-1">
           <div
-            className={cn("wr-kpi-value text-3xl leading-none")}
+            className={cn("wr-kpi-value text-2xl leading-none sm:text-3xl")}
             style={cor ? { color: cor, textShadow: "none" } : undefined}
           >
             {isNum ? contado.toLocaleString("pt-BR") : valor}
-            {sufixo && <span className="ml-0.5 text-lg font-semibold">{sufixo}</span>}
+            {sufixo && <span className="ml-0.5 text-base font-semibold sm:text-lg">{sufixo}</span>}
           </div>
           <div className="mt-2 text-sm" style={{ color: "var(--color-text-muted)" }}>
             {label}
@@ -90,11 +90,11 @@ export function KpiCard({ label, valor, icone: Icone, variacao, cor, sufixo, var
         </div>
 
         <span
-          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full"
+          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full sm:h-10 sm:w-10"
           style={{ background: "var(--icon-accent-soft, color-mix(in srgb, var(--color-accent) 10%, transparent))" }}
           aria-hidden
         >
-          <Icone className="h-5 w-5" style={{ color: "var(--icon-accent, var(--color-accent))" }} />
+          <Icone className="h-4 w-4 sm:h-5 sm:w-5" style={{ color: "var(--icon-accent, var(--color-accent))" }} />
         </span>
       </div>
     </div>
