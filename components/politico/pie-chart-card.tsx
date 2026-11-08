@@ -2,9 +2,15 @@
 
 /**
  * Card com PieChart em donut (innerRadius 60). Total no centro, legenda embaixo.
+ *
+ * O balão de hover NÃO é o tooltip flutuante do Recharts (ele seguia o cursor e
+ * ora colava no número do centro — "6" ao lado de "8" virava "68" — ora sumia
+ * atrás dele). Em vez disso, ao passar o mouse numa fatia, mostramos a fatia num
+ * box FIXO logo abaixo do "total", sempre no mesmo lugar e sempre separado.
  */
 
-import { Cell, Pie, PieChart, ResponsiveContainer, Tooltip } from "recharts";
+import { useState } from "react";
+import { Cell, Pie, PieChart, ResponsiveContainer } from "recharts";
 
 import { cn } from "@/lib/utils";
 
@@ -21,31 +27,10 @@ export interface PieChartCardProps {
   className?: string;
 }
 
-interface TooltipProps {
-  active?: boolean;
-  payload?: Array<{ name?: string; value?: number; payload?: PieChartDatum }>;
-}
-
-function ChartTooltip({ active, payload }: TooltipProps) {
-  if (!active || !payload || payload.length === 0) return null;
-  const ponto = payload[0];
-  return (
-    <div
-      className="rounded-xl px-3 py-2 text-sm shadow-md"
-      style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)" }}
-    >
-      <div className="font-semibold" style={{ color: "var(--color-text)" }}>
-        {ponto?.name}
-      </div>
-      <div className="tabular-nums" style={{ color: "var(--color-text-muted)" }}>
-        {(ponto?.value ?? 0).toLocaleString("pt-BR")}
-      </div>
-    </div>
-  );
-}
-
 export function PieChartCard({ title, data, height = 280, className }: PieChartCardProps) {
   const total = data.reduce((acc, d) => acc + d.value, 0);
+  const [ativo, setAtivo] = useState<number | null>(null);
+  const fatia = ativo != null ? data[ativo] : null;
 
   return (
     <div className={cn("wr-card-dark p-6", className)}>
@@ -54,7 +39,6 @@ export function PieChartCard({ title, data, height = 280, className }: PieChartC
       <div className="relative">
         <ResponsiveContainer width="100%" height={height}>
           <PieChart>
-            <Tooltip content={<ChartTooltip />} />
             <Pie
               data={data}
               dataKey="value"
@@ -67,23 +51,44 @@ export function PieChartCard({ title, data, height = 280, className }: PieChartC
               stroke="var(--color-surface)"
               strokeWidth={2}
               isAnimationActive
+              onMouseEnter={(_, i) => setAtivo(i)}
+              onMouseLeave={() => setAtivo(null)}
             >
               {data.map((d, i) => (
-                <Cell key={`cell-${i}`} fill={d.fill} />
+                <Cell
+                  key={`cell-${i}`}
+                  fill={d.fill}
+                  opacity={ativo == null || ativo === i ? 1 : 0.45}
+                />
               ))}
             </Pie>
           </PieChart>
         </ResponsiveContainer>
 
-        {/* Total no centro do donut */}
+        {/* Centro: o total e, ao passar o mouse, a fatia num box fixo ABAIXO do
+            total — nunca colado, sempre no mesmo lugar. */}
         <div
-          className="pointer-events-none absolute inset-x-0 flex flex-col items-center justify-center"
+          className="pointer-events-none absolute inset-x-0 flex flex-col items-center justify-center px-2"
           style={{ top: 0, height }}
         >
           <span className="font-heading text-2xl font-bold tabular-nums leading-none">
             {total.toLocaleString("pt-BR")}
           </span>
           <span className="mt-0.5 text-xs text-muted-foreground">total</span>
+          {fatia && (
+            <div
+              className="mt-2.5 flex max-w-full items-center gap-1.5 rounded-lg px-2.5 py-1 text-xs shadow-sm"
+              style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)" }}
+            >
+              <span className="h-2 w-2 shrink-0 rounded-full" style={{ background: fatia.fill }} aria-hidden />
+              <span className="truncate font-semibold" style={{ color: "var(--color-text)" }}>
+                {fatia.name}
+              </span>
+              <span className="tabular-nums" style={{ color: "var(--color-text-muted)" }}>
+                {fatia.value.toLocaleString("pt-BR")}
+              </span>
+            </div>
+          )}
         </div>
       </div>
 
