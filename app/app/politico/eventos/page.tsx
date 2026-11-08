@@ -10,6 +10,7 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { CommandHero } from "@/components/politico/command-hero";
+import { QuemVai, type Presente } from "@/components/politico/quem-vai";
 import { createClient } from "@/lib/supabase/server";
 import { requireAuth, resolveActiveOrg } from "@/lib/auth/server";
 
@@ -106,6 +107,24 @@ export default async function EventosPage({
 
   const eventos = await buscarEventos(org.orgId, filtroStatus || undefined, filtroType || undefined);
 
+  // "Quem vai" (Incremento 3): presenças de equipe por evento. Fail-soft — sem a
+  // tabela pol_tarefa_presencas (SQL não aplicado) vem tudo vazio e os cards
+  // seguem mostrando só o botão "Eu vou".
+  const presencas: Record<string, Presente[]> = {};
+  const idsEvento = eventos.map((e) => e.id);
+  if (idsEvento.length > 0) {
+    const db = await createClient();
+    const { data: pres } = await db
+      .from("pol_tarefa_presencas")
+      .select("tarefa_id, user_id, nome")
+      .eq("organization_id", org.orgId)
+      .eq("tarefa_kind", "evento")
+      .in("tarefa_id", idsEvento);
+    for (const p of (pres ?? []) as { tarefa_id: string; user_id: string; nome: string | null }[]) {
+      (presencas[p.tarefa_id] ??= []).push({ user_id: p.user_id, nome: p.nome });
+    }
+  }
+
   return (
     <div className="gip-ambient-bg mx-auto max-w-5xl space-y-[18px] px-4 py-7">
       <CommandHero
@@ -175,6 +194,11 @@ export default async function EventosPage({
                 )}
                 {e.estimated_audience != null && <span>Estimado: <strong style={{ color: "var(--color-text)" }}>{e.estimated_audience.toLocaleString("pt-BR")}</strong></span>}
                 {e.actual_attendance != null && <span>Presença: <strong style={{ color: "var(--accent-ink, var(--color-accent))" }}>{e.actual_attendance.toLocaleString("pt-BR")}</strong></span>}
+              </div>
+
+              {/* "Quem vai" — a equipe marca presença neste evento (Incremento 3). */}
+              <div className="mt-1 border-t pt-3" style={{ borderColor: "var(--color-border)" }}>
+                <QuemVai kind="evento" tarefaId={e.id} usuarioAtualId={user.id} inicial={presencas[e.id] ?? []} compacto />
               </div>
             </div>
           ))}

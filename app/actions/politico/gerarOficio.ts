@@ -14,6 +14,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { requireAuth, resolveActiveOrg } from "@/lib/auth/server";
+import { destinosDaInterface } from "@/lib/navigation/interface";
 import { marcaDaOrganizacaoParaPdf } from "@/lib/propostas/marca-da-organizacao-para-pdf";
 import { renderOficioPdf } from "@/lib/politico/oficio-pdf";
 
@@ -27,6 +28,16 @@ export async function gerarOficioDemanda(demandaId: string): Promise<OficioResul
   const user = await requireAuth();
   const org = await resolveActiveOrg(user);
   if (!org) return { ok: false, erro: "Sessão ou organização inválida." };
+
+  // GABINETE-ONLY (trava de SERVIDOR, não só da tela): só emite ofício quem tem
+  // "Ofícios" no menu (perfil gabinete). Rua e gabinete são o mesmo papel (agent)
+  // → o menu distingue. A UI já esconde a seção; aqui ninguém força por fora.
+  const ehPlataforma = !!user.is_platform_admin && !user.support;
+  const podeOficio = destinosDaInterface(org.interface_settings, ehPlataforma, org.role).some(
+    (dst) => dst.href === "/app/politico/oficios",
+  );
+  if (!podeOficio) return { ok: false, erro: "O ofício é emitido pelo gabinete — você não tem acesso a esta ação." };
+
   const db = await createClient();
 
   const { data: dem, error } = await db

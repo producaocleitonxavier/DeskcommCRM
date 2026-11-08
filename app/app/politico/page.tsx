@@ -515,6 +515,25 @@ async function contarCaptacoesQr(organizationId: string, userId: string): Promis
   return count ?? 0;
 }
 
+/**
+ * Visitas REALIZADAS que ainda não viraram ofício — o sinal "pronto pra ofício"
+ * pro gabinete. "30s depois que a visita terminou, já aparece aqui." É a demanda
+ * de visita com data de realização e SEM número de ofício ainda. Fail-soft: sem
+ * as colunas de visita (9085/9087), a consulta erra e devolve 0.
+ */
+async function contarVisitasProntasOficio(organizationId: string): Promise<number> {
+  const db = await createClient();
+  const { count } = await db
+    .from("demandas")
+    .select("id", { count: "exact", head: true })
+    .eq("organization_id", organizationId)
+    .eq("pol_gabinete", true)
+    .eq("pol_tipo", "visita_tecnica")
+    .not("pol_visita_realizada_em", "is", null)
+    .is("pol_oficio_rotulo", null);
+  return count ?? 0;
+}
+
 // -- Componente (server) -----------------------------------------------------
 
 export default async function HojePage() {
@@ -549,6 +568,12 @@ export default async function HojePage() {
   const veGestao = hrefsVisiveis.has("/app/politico/dashboard");
   const abasVisiveis = COMANDO_TABS.filter((t) => t.id === "hoje" || veGestao);
 
+  // Sinal "pronto pra ofício" — SÓ pro gabinete (quem tem Ofícios no menu). O
+  // assessor de rua nem consulta (passa 0). É o "30s depois que a visita terminou"
+  // virando fila de trabalho do gabinete, sem precisar da ficha de papel.
+  const podeOficio = hrefsVisiveis.has("/app/politico/oficios");
+  const visitasProntasOficio = podeOficio ? await contarVisitasProntasOficio(org.orgId) : 0;
+
   return (
     <>
       {abasVisiveis.length > 1 && (
@@ -564,6 +589,7 @@ export default async function HojePage() {
         horaAtualizacao={horaAgora()}
         podeLiderancas={hrefsVisiveis.has("/app/politico/liderancas")}
         minhasCaptacoesQr={minhasCaptacoesQr}
+        visitasProntasOficio={visitasProntasOficio}
       />
     </>
   );

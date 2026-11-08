@@ -13,6 +13,7 @@ import {
   CheckCircle2,
   Clock,
   Construction,
+  FileText,
   Flame,
   Gift,
   Inbox,
@@ -53,6 +54,8 @@ export interface HojeClientProps {
   podeLiderancas?: boolean;
   /** Quantas pessoas ESTE usuário captou por QR (placar pessoal). 0 = card some. */
   minhasCaptacoesQr?: number;
+  /** Visitas realizadas prontas pra ofício (só gabinete). 0 = faixa some. */
+  visitasProntasOficio?: number;
 }
 
 function badgeAtencao(a: GabineteHoje["atencao"][number]): { label: string; tipo: Tipo } {
@@ -148,6 +151,7 @@ export default function HojeClient({
   horaAtualizacao,
   podeLiderancas = false,
   minhasCaptacoesQr = 0,
+  visitasProntasOficio = 0,
 }: HojeClientProps) {
   // Funil de ATENDIMENTO (ciclo de vida da demanda) — não o funil de campanha.
   const lifecycleData = g.lifecycle.map((s, i) => ({
@@ -221,8 +225,28 @@ export default function HojeClient({
       </header>
 
       {/* ── Fila de ação: o que espera a sua decisão AGORA ───────── */}
-      {(filaAcao.rascunhosIA > 0 || filaAcao.disparosRascunho > 0 || filaAcao.leadsQuentesSemContato > 0) && (
+      {(filaAcao.rascunhosIA > 0 || filaAcao.disparosRascunho > 0 || filaAcao.leadsQuentesSemContato > 0 || visitasProntasOficio > 0) && (
         <section aria-label="Esperando você" className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+          {/* Visitas de campo que já foram feitas e esperam o ofício do gabinete.
+              O relato do assessor está na demanda; aqui é só o "pronto pra oficializar". */}
+          {visitasProntasOficio > 0 && (
+            <Link
+              href="/app/politico/visitas"
+              className="gip-glass gip-glass-hover flex items-center gap-3 p-4"
+            >
+              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl" style={{ background: "rgba(16,185,129,0.14)", color: "#0E8A5F" }} aria-hidden>
+                <FileText className="h-5 w-5" />
+              </span>
+              <span className="min-w-0 flex-1">
+                <span className="block font-heading text-lg font-bold leading-none tabular-nums" style={{ color: "var(--color-text)" }}>
+                  {visitasProntasOficio.toLocaleString("pt-BR")}
+                </span>
+                <span className="mt-0.5 block text-sm" style={{ color: "var(--color-text-muted)" }}>
+                  {visitasProntasOficio === 1 ? "visita feita, pronta pra ofício" : "visitas feitas, prontas pra ofício"}
+                </span>
+              </span>
+            </Link>
+          )}
           {filaAcao.rascunhosIA > 0 && (
             <Link
               href="/app/inbox"

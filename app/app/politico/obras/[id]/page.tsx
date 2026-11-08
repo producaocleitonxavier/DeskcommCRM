@@ -52,6 +52,19 @@ export default async function ObraDetalhePage({ params }: { params: Promise<{ id
     .eq("organization_id", org.orgId)
     .eq("pol_obra_id", id);
 
+  // "Quem vai" (Incremento 3) — presenças de equipe nesta obra/fiscalização.
+  // Fail-soft: sem a tabela pol_tarefa_presencas (SQL não aplicado), vem vazio.
+  const { data: presRows } = await db
+    .from("pol_tarefa_presencas")
+    .select("user_id, nome")
+    .eq("organization_id", org.orgId)
+    .eq("tarefa_kind", "obra")
+    .eq("tarefa_id", id);
+  const presentes = ((presRows ?? []) as { user_id: string; nome: string | null }[]).map((p) => ({
+    user_id: p.user_id,
+    nome: p.nome,
+  }));
+
   // Voz do Mandato: liga o botão "Recado em áudio" na lista de beneficiários.
   const vozOk = vozArmada(await lerVozConfig(db, org.orgId));
   const { data: gabNome } = await db.from("pol_gabinete_config").select("nome_parlamentar").eq("organization_id", org.orgId).maybeSingle();
@@ -70,6 +83,8 @@ export default async function ObraDetalhePage({ params }: { params: Promise<{ id
     emendas: (emendasLista.data ?? []) as ObraDetalheData["emendas"],
     vozArmada: vozOk,
     politicoNome,
+    presentes,
+    usuarioAtualId: user.id,
   };
 
   return <ObraDetalhe data={data} />;

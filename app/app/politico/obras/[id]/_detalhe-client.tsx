@@ -15,6 +15,7 @@ import { atualizarRegistro, excluirRegistro } from "@/app/actions/politico/gabin
 import { registrarVistoria, listarVistorias, uploadFotoObra, listarFotosObra, removerFotoObra, listarBeneficiariosObra, type VistoriaObra, type FotoObra, type ChecklistItem, type PesoBairro, type BeneficiarioObra } from "@/app/actions/politico/obras-actions";
 import { BotaoRecadoVoz } from "@/components/politico/botao-recado-voz";
 import { CommandHero } from "@/components/politico/command-hero";
+import { QuemVai } from "@/components/politico/quem-vai";
 import { STATUS, TIPO } from "../_obras-client";
 
 type Obra = Record<string, unknown> & { id: string; titulo: string; natureza: "execucao" | "fiscalizacao"; tipo: string; status: string; percentual: number; valor_cents: number };
@@ -31,6 +32,9 @@ export interface ObraDetalheData {
   emendas: { id: string; numero: string | null; ano: number; descricao: string }[];
   vozArmada: boolean;
   politicoNome: string | null;
+  /** "Quem vai" (Incremento 3): assessores já confirmados nesta obra. */
+  presentes: { user_id: string; nome: string | null }[];
+  usuarioAtualId: string;
 }
 
 const AVANCA: Record<string, { para: string; label: string }[]> = {
@@ -111,6 +115,16 @@ export default function ObraDetalhe({ data }: { data: ObraDetalheData }) {
         ))}
         <button type="button" onClick={excluir} className="ml-auto inline-flex items-center gap-1 text-xs" style={{ color: "#A3302A" }}><Trash2 className="h-3.5 w-3.5" aria-hidden /> Excluir</button>
       </div>
+
+      {/* "Quem vai" (Incremento 3): a equipe marca presença na vistoria/fiscalização.
+          Vários assessores, cada um marca o seu — todo o gabinete vê quem confirmou. */}
+      <section className="gip-glass p-4">
+        <div className="mb-2 flex items-center gap-2">
+          <Users className="h-4 w-4" aria-hidden style={{ color: "var(--accent-ink, var(--color-accent))" }} />
+          <h2 className="font-heading text-sm font-bold" style={{ color: "var(--color-text)" }}>Quem vai nesta obra</h2>
+        </div>
+        <QuemVai kind="obra" tarefaId={obra.id} usuarioAtualId={data.usuarioAtualId} inicial={data.presentes} />
+      </section>
 
       {(data.regional || data.emendaRotulo) && (
         <section className="gip-glass flex flex-wrap items-center gap-2 p-4 text-xs" style={{ color: "var(--color-text-muted)" }}>
