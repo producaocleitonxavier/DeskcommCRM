@@ -27,6 +27,8 @@ export type TipoMultiplicador = "assessor" | "divulgador";
 
 export interface MultiplicadorRow {
   contactId: string;
+  /** Lead do multiplicador (pra abrir a ficha e ver quem ele trouxe). Resolvido na page. */
+  leadId?: string | null;
   nome: string;
   /** Cliques distintos nos vídeos que ELE compartilhou (alcance estimado). */
   alcancou: number;

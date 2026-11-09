@@ -9,6 +9,7 @@
  */
 
 import { useState, useTransition, type ReactNode } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 
@@ -726,7 +727,17 @@ function LinhaMultiplicador({
       </div>
 
       <div className="min-w-0 flex-1">
-        <p className="truncate text-[15px] font-semibold leading-tight text-foreground">{m.nome}</p>
+        {m.leadId ? (
+          <Link
+            href={`/app/politico/leads/${m.leadId}`}
+            className="block truncate text-[15px] font-semibold leading-tight text-foreground underline-offset-2 hover:underline"
+            title="Ver ficha e quem ele trouxe"
+          >
+            {m.nome}
+          </Link>
+        ) : (
+          <p className="truncate text-[15px] font-semibold leading-tight text-foreground">{m.nome}</p>
+        )}
         <div className="mt-1 flex flex-wrap items-center gap-1.5">
           {m.trouxe > 0 && (
             <span

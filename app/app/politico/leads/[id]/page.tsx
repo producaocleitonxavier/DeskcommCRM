@@ -255,6 +255,32 @@ async function buscarLead(organizationId: string, leadId: string) {
     if (l) origemLideranca = { id: l.id, nome: (l.apelido || l.nome || "Liderança").trim() };
   }
 
+  // INDICAÇÃO (multiplicador): fecha os dois lados.
+  //  - trazidoPor: quem TROUXE este contato (pol_indicacoes.indicado = este).
+  //  - trouxe: quem ESTE contato trouxe (pol_indicacoes.indicador = este).
+  // É a atribuição por código/enquete (distinta de liderança e obra/emenda).
+  let trazidoPor: { nome: string; leadId: string | null } | null = null;
+  let trouxe: { leadId: string | null; nome: string }[] = [];
+  {
+    const [{ data: origem }, { data: indicados }] = await Promise.all([
+      db.from("pol_indicacoes").select("indicador_contact_id").eq("organization_id", organizationId).eq("indicado_contact_id", pl.contact_id).maybeSingle(),
+      db.from("pol_indicacoes").select("indicado_contact_id").eq("organization_id", organizationId).eq("indicador_contact_id", pl.contact_id).limit(100),
+    ]);
+    const indicadorId = (origem as { indicador_contact_id: string } | null)?.indicador_contact_id ?? null;
+    const indicadoIds = ((indicados ?? []) as { indicado_contact_id: string }[]).map((r) => r.indicado_contact_id);
+    const idsParaResolver = [...new Set([indicadorId, ...indicadoIds].filter(Boolean))] as string[];
+    if (idsParaResolver.length) {
+      const [{ data: nomes }, { data: leadsRel }] = await Promise.all([
+        db.from("contacts").select("id, name").in("id", idsParaResolver),
+        db.from("pol_leads").select("id, contact_id").eq("organization_id", organizationId).in("contact_id", idsParaResolver),
+      ]);
+      const nomePorId = new Map(((nomes ?? []) as { id: string; name: string | null }[]).map((c) => [c.id, (c.name ?? "").trim() || "Sem nome"]));
+      const leadPorContato = new Map(((leadsRel ?? []) as { id: string; contact_id: string }[]).map((l) => [l.contact_id, l.id]));
+      if (indicadorId) trazidoPor = { nome: nomePorId.get(indicadorId) ?? "Multiplicador", leadId: leadPorContato.get(indicadorId) ?? null };
+      trouxe = indicadoIds.map((cid) => ({ leadId: leadPorContato.get(cid) ?? null, nome: nomePorId.get(cid) ?? "Sem nome" }));
+    }
+  }
+
   // Linha do tempo 360°: tudo que o cidadão viveu com o gabinete (origem,
   // demandas, ofícios, avisos, graduações) num feed único.
   const eventos360 = await buscarLinhaDoTempo(organizationId, pl.contact_id);
@@ -267,6 +293,8 @@ async function buscarLead(organizationId: string, leadId: string) {
     mobilizadorNome,
     origemCaptacao,
     origemLideranca,
+    trazidoPor,
+    trouxe,
   };
 }
 
@@ -361,7 +389,7 @@ export default async function FichaPage({
 
   if (!dados) notFound();
 
-  const { lead, contact, eventos360, mobilizadorNome, origemCaptacao, origemLideranca } = dados;
+  const { lead, contact, eventos360, mobilizadorNome, origemCaptacao, origemLideranca, trazidoPor, trouxe } = dados;
 
   // "Vídeo pra divulgar" é SÓ para quem divulga de fato: o multiplicador — liderança/
   // assessor marcado por função, ou apoiador+ que aceitou o convite (consentimento).
@@ -542,6 +570,25 @@ export default async function FichaPage({
                 }
               />
             )}
+            {trazidoPor && (
+              <InfoRow
+                label="Trazido por"
+                value={
+                  trazidoPor.leadId ? (
+                    <Link
+                      href={`/app/politico/leads/${trazidoPor.leadId}`}
+                      className="inline-flex items-center gap-1 hover:opacity-70 transition-opacity"
+                      style={{ color: "#8AA0E8" }}
+                    >
+                      <span className="truncate max-w-[220px]">🏆 {trazidoPor.nome}</span>
+                      <ArrowUpRight style={{ width: 13, height: 13 }} className="shrink-0" />
+                    </Link>
+                  ) : (
+                    <span>🏆 {trazidoPor.nome}</span>
+                  )
+                }
+              />
+            )}
             {contact.social_identity && <InfoRow label="Social" value={contact.social_identity} />}
           </InfoCard>
 
@@ -569,6 +616,34 @@ export default async function FichaPage({
             <InfoCard titulo="Relacionamento">
               <InfoRow label="Quem indicou" value={quemIndicou} />
               <InfoRow label="Observações" value={observacoes} />
+            </InfoCard>
+          )}
+
+          {trouxe.length > 0 && (
+            <InfoCard titulo={`Cadastros que trouxe (${trouxe.length})`}>
+              <div className="flex flex-wrap gap-2">
+                {trouxe.map((p, i) =>
+                  p.leadId ? (
+                    <Link
+                      key={p.leadId}
+                      href={`/app/politico/leads/${p.leadId}`}
+                      className="inline-flex items-center gap-1 rounded-full px-3 py-1.5 text-sm font-medium transition-opacity hover:opacity-70"
+                      style={{ background: "color-mix(in srgb, var(--color-text) 7%, transparent)", border: "1px solid color-mix(in srgb, var(--color-text) 13%, transparent)", color: "var(--color-text)" }}
+                    >
+                      {p.nome}
+                      <ArrowUpRight className="shrink-0" style={{ width: 13, height: 13, color: "var(--color-text-subtle)" }} />
+                    </Link>
+                  ) : (
+                    <span
+                      key={`s-${i}`}
+                      className="inline-flex items-center rounded-full px-3 py-1.5 text-sm font-medium"
+                      style={{ background: "color-mix(in srgb, var(--color-text) 7%, transparent)", border: "1px solid color-mix(in srgb, var(--color-text) 13%, transparent)", color: "var(--color-text)" }}
+                    >
+                      {p.nome}
+                    </span>
+                  ),
+                )}
+              </div>
             </InfoCard>
           )}
 
