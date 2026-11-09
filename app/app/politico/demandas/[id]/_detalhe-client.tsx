@@ -319,8 +319,10 @@ export default function DetalheDemandaClient({ demanda, assessores, eventos, voz
         }
       />
 
-      {/* Ações da demanda: transições + avisar + (editar/excluir à direita). */}
-      <div className="flex flex-wrap items-center gap-2">
+      {/* Ações da demanda: transições + avisar + (editar/excluir à direita).
+          Card MARINHO (navy-section), combinando com o hero. No navy: wr-btn=branco,
+          wr-btn-dark/verde ok, Excluir vermelho; só o "Avisar" foi clareado. */}
+      <div className="war-room wr-claro wr-navy-section flex flex-wrap items-center gap-2 rounded-2xl p-4">
         {acoes.map((a) => (
           <button
             key={a.estado + a.label}
@@ -373,7 +375,7 @@ export default function DetalheDemandaClient({ demanda, assessores, eventos, voz
             } else setErro(res.erro);
           }}
           className="wr-btn inline-flex items-center gap-1.5 font-semibold disabled:opacity-50"
-          style={{ background: "rgba(18,140,75,0.12)", color: "#0E7A40", borderColor: "rgba(18,140,75,0.45)" }}
+          style={{ background: "rgba(74,222,128,0.16)", color: "#86EFAC", borderColor: "rgba(74,222,128,0.45)" }}
         >
           <MessageCircle className="h-4 w-4" aria-hidden /> {avisando ? "Enviando…" : "Avisar cidadão"}
         </button>
