@@ -50,7 +50,7 @@ const DIAS_NO_MES = [31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
 const pad2 = (n: number) => String(n).padStart(2, "0");
 
 /** Campo curto de texto livre (cidade/bairro): higieniza; null se não serve. */
-function limparCampoCurto(texto: string | null): string | null {
+export function limparCampoCurto(texto: string | null): string | null {
   const t = (texto ?? "").trim().replace(/\s+/g, " ");
   if (t.length < 2 || t.length > 120) return null;
   if (!/\p{L}/u.test(t)) return null; // precisa ter letra (evita "👍"/números soltos)
@@ -67,7 +67,7 @@ const MESES: Record<string, number> = {
  * "14 de setembro". Brasil = DD/MM. Devolve {dia, mes} VÁLIDOS (dia cabe no mês),
  * ou null (aí o chamador re-pergunta).
  */
-function parseDiaMes(texto: string | null): { dia: number; mes: number } | null {
+export function parseDiaMes(texto: string | null): { dia: number; mes: number } | null {
   const t = (texto ?? "").toLowerCase();
   const nums = (t.match(/\d{1,2}/g) ?? []).map(Number);
   let dia: number | null = null;
