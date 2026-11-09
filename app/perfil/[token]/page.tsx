@@ -12,7 +12,14 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { PerfilForm } from "./_perfil-form";
 
 export const dynamic = "force-dynamic";
-export const metadata: Metadata = { title: "Complete seu perfil", robots: { index: false } };
+// `openGraph.images: []` de propósito: sem foto na prévia do WhatsApp (o cliente
+// não quer card com imagem — o link é só pra abrir o formulário). robots noindex
+// porque é página por-contato, não conteúdo de busca.
+export const metadata: Metadata = {
+  title: "Complete seu perfil",
+  robots: { index: false },
+  openGraph: { title: "Complete seu perfil", images: [] },
+};
 
 interface Contato {
   id: string;

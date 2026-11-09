@@ -43,6 +43,15 @@ export const PUBLIC_PATHS: RegExp[] = [
   // mostrar preview no WhatsApp sem enviar mídia (Opção B da capa). Só material
   // ATIVO, resolvido pelo id no servidor; sem dado pessoal. Âncora + forma de UUID.
   /^\/m\/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i,
+  // PERFILAMENTO PROGRESSIVO (2ª mensagem do QR). O cidadão recebe no WhatsApp o
+  // link /perfil/<token> e completa cidade/bairro/aniversário SEM login — o token
+  // opaco (contacts.perfil_token) identifica o contato e a org é resolvida SÓ no
+  // servidor (admin client), nunca do corpo. Sem estas duas linhas o proxy manda
+  // pro /login — e o crawler do WhatsApp pega a prévia da tela de login ("Entrar").
+  // O token é 32 hex (randomUUID sem hífens); âncora `$` + forma exata: nenhum
+  // sub-path nasce público de carona. Mesma natureza de /pesquisa/ e /m/ acima.
+  /^\/perfil\/[0-9a-f]{32}$/i,
+  /^\/api\/v1\/perfil\/public\/[0-9a-f]{32}$/i,
   /^\/$/,
   /^\/login(\/.*)?$/,
   /^\/signup$/,
