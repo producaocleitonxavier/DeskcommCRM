@@ -41,6 +41,15 @@ async function orgAtiva(): Promise<string | null> {
   return org?.orgId ?? null;
 }
 
+/** Como orgAtiva, mas também devolve o id do usuário logado — para carimbar
+ * autoria (quem REGISTROU a demanda, quem CRIOU o cidadão) no placar da equipe. */
+async function orgEUsuario(): Promise<{ org: string; userId: string } | null> {
+  const user = await requireAuth();
+  const org = await resolveActiveOrg(user);
+  if (!org) return null;
+  return { org: org.orgId, userId: user.id };
+}
+
 
 function traduzErro(error: { code?: string; message: string }): string {
   if (error.code === "23505") return "Já existe um registro com esse identificador.";
@@ -86,11 +95,14 @@ export async function criarCidadao(
   bairro?: string,
   cidade?: string,
 ): Promise<AcaoResultado> {
-  const org = await orgAtiva();
-  if (!org) return { ok: false, erro: "Sessão ou organização inválida." };
+  const sessao = await orgEUsuario();
+  if (!sessao) return { ok: false, erro: "Sessão ou organização inválida." };
   if (!nome.trim()) return { ok: false, erro: "Informe o nome do cidadão." };
+  const org = sessao.org;
   const db = await createClient();
-  const payload: Record<string, unknown> = { organization_id: org, name: nome.trim(), source: "gabinete" };
+  // created_by_user_id = quem cadastrou (placar por assessor). A coluna já existe
+  // em contacts; o fluxo do gabinete não a preenchia (só o endpoint REST preenchia).
+  const payload: Record<string, unknown> = { organization_id: org, name: nome.trim(), source: "gabinete", created_by_user_id: sessao.userId };
   const fone = telefone ? normalizarTelefone(telefone) : null;
   if (fone) payload.phone_number = fone;
   // Endereço vai no mesmo lugar que o resto do político usa (custom_fields.endereco_gip),
@@ -166,12 +178,19 @@ export async function carimbarCidadesDosLeads(): Promise<{ ok: true; carimbados:
 /** Insere um registro numa tabela do gabinete, escopado à org ativa. */
 export async function criarRegistro(tabela: string, dados: Record<string, unknown>): Promise<AcaoResultado> {
   if (!TABELAS.has(tabela)) return { ok: false, erro: "Tabela inválida." };
-  const org = await orgAtiva();
-  if (!org) return { ok: false, erro: "Sessão ou organização inválida." };
+  const sessao = await orgEUsuario();
+  if (!sessao) return { ok: false, erro: "Sessão ou organização inválida." };
+  // Carimba QUEM registrou (placar por assessor). Só na tabela `demandas`, que tem
+  // a coluna (9093) — as outras do whitelist não têm. Não sobrescreve se o caller
+  // já mandou explicitamente. Nova Demanda e Nova Visita passam por aqui.
+  const payload: Record<string, unknown> = { ...dados, organization_id: sessao.org };
+  if (tabela === "demandas" && payload.pol_registrado_por_id === undefined) {
+    payload.pol_registrado_por_id = sessao.userId;
+  }
   const db = await createClient();
   const { data, error } = await db
     .from(tabela)
-    .insert({ ...dados, organization_id: org })
+    .insert(payload)
     .select("id")
     .maybeSingle();
   if (error) return { ok: false, erro: traduzErro(error) };

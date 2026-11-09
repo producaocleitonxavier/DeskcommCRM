@@ -11,7 +11,10 @@
 
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
+import { isServiceRoleConfigured } from "@/lib/audit";
 import { requireAuth, resolveActiveOrg } from "@/lib/auth/server";
+import { nomesDosAtendentes } from "@/lib/users/nome-do-atendente";
 import { destinosDaInterface } from "@/lib/navigation/interface";
 import HojeClient from "./_hoje-client";
 import PageTabs from "@/components/politico/page-tabs";
@@ -499,23 +502,6 @@ function primeiroNome(nome: string | null | undefined): string {
 }
 
 /**
- * Quantas pessoas ESTE usuário captou por QR — o placar pessoal do assessor
- * ("quantas eu cadastrei"). Conta os cadastros ligados a origens de QR cujo
- * `assessor_user_id` é ele. Join via origem (o crédito mora na origem, não no
- * cadastro — ver migration 9056). É o único número do Hoje recortado por PESSOA;
- * o resto segue por organização até o "Hoje pessoal" completo.
- */
-async function contarCaptacoesQr(organizationId: string, userId: string): Promise<number> {
-  const db = await createClient();
-  const { count } = await db
-    .from("pol_qr_cadastros")
-    .select("id, pol_qr_origens!inner(assessor_user_id)", { count: "exact", head: true })
-    .eq("organization_id", organizationId)
-    .eq("pol_qr_origens.assessor_user_id", userId);
-  return count ?? 0;
-}
-
-/**
  * Visitas REALIZADAS RECENTES que ainda não viraram ofício — o sinal "pronto pra
  * ofício" pro gabinete. "30s depois que a visita terminou, já aparece aqui."
  *
@@ -552,6 +538,162 @@ async function buscarVisitasProntasOficio(
   return { total: count ?? 0, primeiraId };
 }
 
+// -- Placar por assessor (Comando do Gabinete) -------------------------------
+
+/** O que ESTE usuário produziu na semana — o "Hoje pessoal" do assessor. */
+export interface MeuTrabalho {
+  cadastros: number;
+  demandas: number;
+  visitas: number;
+  qr: number;
+}
+
+/** Uma linha do placar da equipe (um membro). */
+export interface PlacarMembro {
+  userId: string;
+  nome: string;
+  cadastros: number;
+  demandas: number;
+  visitas: number;
+  qr: number;
+  total: number;
+}
+
+/**
+ * Números DESTE usuário na semana (cadastros, demandas registradas, visitas em
+ * campo, captações por QR). Contagens baratas (head:true). Fail-soft: uma coluna
+ * que ainda não exista (ex.: pol_registrado_por_id antes da migration 9093) faz a
+ * query devolver erro → count null → 0, sem derrubar a tela.
+ */
+async function buscarMeuTrabalho(
+  orgId: string,
+  userId: string,
+  inicioSemanaISO: string,
+  inicioSemanaDate: string,
+): Promise<MeuTrabalho> {
+  const db = await createClient();
+  const [cad, dem, vis, qr] = await Promise.all([
+    db
+      .from("contacts")
+      .select("id", { count: "exact", head: true })
+      .eq("organization_id", orgId)
+      .eq("created_by_user_id", userId)
+      .gte("created_at", inicioSemanaISO),
+    db
+      .from("demandas")
+      .select("id", { count: "exact", head: true })
+      .eq("organization_id", orgId)
+      .eq("pol_gabinete", true)
+      .eq("pol_registrado_por_id", userId)
+      .gte("aberta_em", inicioSemanaISO),
+    db
+      .from("demandas")
+      .select("id", { count: "exact", head: true })
+      .eq("organization_id", orgId)
+      .eq("pol_visita_relato_por_id", userId)
+      .gte("pol_visita_realizada_em", inicioSemanaDate),
+    db
+      .from("pol_qr_cadastros")
+      .select("id, pol_qr_origens!inner(assessor_user_id)", { count: "exact", head: true })
+      .eq("organization_id", orgId)
+      .eq("pol_qr_origens.assessor_user_id", userId)
+      .gte("created_at", inicioSemanaISO),
+  ]);
+  return {
+    cadastros: cad.count ?? 0,
+    demandas: dem.count ?? 0,
+    visitas: vis.count ?? 0,
+    qr: qr.count ?? 0,
+  };
+}
+
+/**
+ * Placar da semana por membro da equipe — a visão do GESTOR ("Comando do
+ * Gabinete"): quem produziu o quê. Puxa as linhas da semana UMA vez e agrega por
+ * usuário em memória (barato: volume semanal é pequeno). Só membros ativos não
+ * viewer entram. Reconhecimento, não vigilância.
+ */
+async function buscarPlacarEquipe(
+  orgId: string,
+  inicioSemanaISO: string,
+  inicioSemanaDate: string,
+): Promise<PlacarMembro[]> {
+  const db = await createClient();
+  // Membros ativos (admin client + filtro de org de fonte confiável — a RLS de
+  // user_organizations só mostra o próprio membership a um agent).
+  const membrosDb = isServiceRoleConfigured() ? createAdminClient() : db;
+  const { data: membrosRows } = await membrosDb
+    .from("user_organizations")
+    .select("user_id, role")
+    .eq("organization_id", orgId)
+    .is("revoked_at", null)
+    .neq("role", "viewer");
+  const membros = (membrosRows ?? []) as { user_id: string; role: string }[];
+  if (membros.length === 0) return [];
+  const idsValidos = new Set(membros.map((m) => m.user_id));
+
+  const [demR, cadR, visR, qrR] = await Promise.all([
+    db
+      .from("demandas")
+      .select("pol_registrado_por_id")
+      .eq("organization_id", orgId)
+      .eq("pol_gabinete", true)
+      .not("pol_registrado_por_id", "is", null)
+      .gte("aberta_em", inicioSemanaISO)
+      .limit(5000),
+    db
+      .from("contacts")
+      .select("created_by_user_id")
+      .eq("organization_id", orgId)
+      .not("created_by_user_id", "is", null)
+      .gte("created_at", inicioSemanaISO)
+      .limit(5000),
+    db
+      .from("demandas")
+      .select("pol_visita_relato_por_id")
+      .eq("organization_id", orgId)
+      .not("pol_visita_relato_por_id", "is", null)
+      .gte("pol_visita_realizada_em", inicioSemanaDate)
+      .limit(5000),
+    db
+      .from("pol_qr_cadastros")
+      .select("pol_qr_origens!inner(assessor_user_id)")
+      .eq("organization_id", orgId)
+      .gte("created_at", inicioSemanaISO)
+      .limit(5000),
+  ]);
+
+  const zero = () => ({ cadastros: 0, demandas: 0, visitas: 0, qr: 0 });
+  const tally = new Map<string, { cadastros: number; demandas: number; visitas: number; qr: number }>();
+  const add = (uid: string | null | undefined, campo: "cadastros" | "demandas" | "visitas" | "qr") => {
+    if (!uid || !idsValidos.has(uid)) return;
+    const cur = tally.get(uid) ?? zero();
+    cur[campo] += 1;
+    tally.set(uid, cur);
+  };
+  for (const r of (demR.data ?? []) as { pol_registrado_por_id: string | null }[]) add(r.pol_registrado_por_id, "demandas");
+  for (const r of (cadR.data ?? []) as { created_by_user_id: string | null }[]) add(r.created_by_user_id, "cadastros");
+  for (const r of (visR.data ?? []) as { pol_visita_relato_por_id: string | null }[]) add(r.pol_visita_relato_por_id, "visitas");
+  for (const r of (qrR.data ?? []) as { pol_qr_origens: { assessor_user_id: string | null } | null }[]) {
+    add(r.pol_qr_origens?.assessor_user_id, "qr");
+  }
+
+  const nomes = await nomesDosAtendentes(membros.map((m) => m.user_id));
+  const linhas: PlacarMembro[] = membros.map((m) => {
+    const t = tally.get(m.user_id) ?? zero();
+    return {
+      userId: m.user_id,
+      nome: nomes.get(m.user_id) ?? "Equipe",
+      ...t,
+      total: t.cadastros + t.demandas + t.visitas + t.qr,
+    };
+  });
+  // Quem produziu mais no topo; quem não produziu nada ainda vai pro fim (mas
+  // aparece — faz parte do time). Ordena por total, depois nome.
+  linhas.sort((a, b) => b.total - a.total || a.nome.localeCompare(b.nome));
+  return linhas;
+}
+
 // -- Componente (server) -----------------------------------------------------
 
 export default async function HojePage() {
@@ -564,11 +706,20 @@ export default async function HojePage() {
   // no portão do app (app/app/layout.tsx), pra cobrir TODAS as telas — não só
   // esta. Aqui não precisa mais checar.
 
-  const [metrics, gabineteHoje, filaAcao, minhasCaptacoesQr] = await Promise.all([
+  // Início da semana (domingo 00:00, mesma convenção de buscarMetricas) — base do
+  // placar da equipe e do "Hoje pessoal".
+  const agoraSemana = new Date();
+  const inicioSemana = new Date(agoraSemana);
+  inicioSemana.setDate(agoraSemana.getDate() - agoraSemana.getDay());
+  inicioSemana.setHours(0, 0, 0, 0);
+  const inicioSemanaISO = inicioSemana.toISOString();
+  const inicioSemanaDate = inicioSemanaISO.slice(0, 10);
+
+  const [metrics, gabineteHoje, filaAcao, meuTrabalho] = await Promise.all([
     buscarMetricas(org.orgId),
     buscarGabineteHoje(org.orgId),
     buscarFilaDeAcao(org.orgId),
-    contarCaptacoesQr(org.orgId, user.id),
+    buscarMeuTrabalho(org.orgId, user.id, inicioSemanaISO, inicioSemanaDate),
   ]);
 
   // "Painel" e "Prestação de Contas" são as abas de GESTÃO. Mostra as DUAS quando
@@ -585,6 +736,12 @@ export default async function HojePage() {
   );
   const veGestao = hrefsVisiveis.has("/app/politico/dashboard");
   const abasVisiveis = COMANDO_TABS.filter((t) => t.id === "hoje" || veGestao);
+
+  // Placar da equipe (Comando do Gabinete) — SÓ pro gestor (quem vê o Painel). O
+  // assessor de rua vê só o "Hoje pessoal" (o próprio trabalho), não o dos outros.
+  const placarEquipe = veGestao
+    ? await buscarPlacarEquipe(org.orgId, inicioSemanaISO, inicioSemanaDate)
+    : null;
 
   // Sinal "pronto pra ofício" — SÓ pro gabinete (quem tem Ofícios no menu). O
   // assessor de rua nem consulta (passa 0). É o "30s depois que a visita terminou"
@@ -608,7 +765,8 @@ export default async function HojePage() {
         dataFormatada={dataFormatada()}
         horaAtualizacao={horaAgora()}
         podeLiderancas={hrefsVisiveis.has("/app/politico/liderancas")}
-        minhasCaptacoesQr={minhasCaptacoesQr}
+        meuTrabalho={meuTrabalho}
+        placarEquipe={placarEquipe}
         visitasProntasOficio={prontasOficio.total}
         visitaProntaId={prontasOficio.primeiraId}
       />

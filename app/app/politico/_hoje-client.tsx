@@ -28,7 +28,7 @@ import { FunnelBoard } from "@/components/politico/funnel-board";
 import { BarChartCard } from "@/components/politico/bar-chart-card";
 import { AreaChartCard } from "@/components/politico/area-chart-card";
 import { SectionHeader } from "@/components/politico/section-header";
-import type { MetricasHoje, GabineteHoje, FilaDeAcao } from "./page";
+import type { MetricasHoje, GabineteHoje, FilaDeAcao, MeuTrabalho, PlacarMembro } from "./page";
 
 // Hexes do funil (espelham --wr-funnel-1..5) — Recharts aplica fill como
 // atributo SVG, onde var(--x) não é confiável.
@@ -52,8 +52,10 @@ export interface HojeClientProps {
   horaAtualizacao: string;
   /** Usuário tem Lideranças no menu? (perfil rua NÃO tem) → esconde "Nova liderança". */
   podeLiderancas?: boolean;
-  /** Quantas pessoas ESTE usuário captou por QR (placar pessoal). 0 = card some. */
-  minhasCaptacoesQr?: number;
+  /** O que ESTE usuário produziu na semana (cadastros/demandas/visitas/QR). */
+  meuTrabalho: MeuTrabalho;
+  /** Placar da equipe (só pro gestor) — produção de cada membro na semana. null = não é gestor. */
+  placarEquipe?: PlacarMembro[] | null;
   /** Visitas realizadas prontas pra ofício (só gabinete). 0 = faixa some. */
   visitasProntasOficio?: number;
   /** Demanda da visita mais recente pronta — a faixa abre DIRETO nela. */
@@ -143,6 +145,90 @@ function GaugeResolucao({ pct, resolvidas, total }: { pct: number; resolvidas: n
   );
 }
 
+// Iniciais e cor por nome — avatar do placar (mesmo espírito dos Multiplicadores).
+function iniciaisDe(nome: string): string {
+  const p = nome.trim().split(/\s+/).filter(Boolean);
+  const ini = (p[0]?.[0] ?? "") + (p.length > 1 ? (p[p.length - 1]?.[0] ?? "") : "");
+  return ini.toUpperCase() || "?";
+}
+function hueDoNome(nome: string): number {
+  let h = 0;
+  for (let i = 0; i < nome.length; i++) h = (h * 31 + nome.charCodeAt(i)) % 360;
+  return h;
+}
+
+/**
+ * Placar da equipe (visão do GESTOR / Comando do Gabinete): quem produziu o quê
+ * na semana. Reconhecimento, não vigilância. #1 em destaque; quem ainda não
+ * produziu aparece mesmo assim (faz parte do time). No celular mostra nome +
+ * total; o detalhe por tipo aparece no desktop.
+ */
+function PlacarEquipe({ linhas }: { linhas: PlacarMembro[] }) {
+  const CHIPS = [
+    { key: "cadastros", label: "cadastros", Icone: UserPlus },
+    { key: "demandas", label: "demandas", Icone: Inbox },
+    { key: "visitas", label: "visitas", Icone: Calendar },
+    { key: "qr", label: "QR", Icone: Sparkles },
+  ] as const;
+  return (
+    <section aria-label="Placar da equipe" className="gip-glass p-6 sm:p-7">
+      <SectionHeader
+        title="Placar da equipe · esta semana"
+        subtitle="O que cada pessoa do gabinete registrou — reconhecimento, não cobrança"
+        action={{ label: "Ver equipe", href: "/app/team" }}
+        className="mb-4"
+      />
+      <ul className="space-y-2.5">
+        {linhas.map((l, i) => {
+          const hue = hueDoNome(l.nome);
+          const lider = i === 0 && l.total > 0;
+          return (
+            <li
+              key={l.userId}
+              className="flex items-center gap-3 rounded-xl p-2.5"
+              style={{ background: lider ? "color-mix(in srgb, var(--color-accent) 9%, transparent)" : "rgba(127,127,127,0.06)" }}
+            >
+              <span className="w-5 shrink-0 text-center text-sm font-bold" style={{ color: "var(--color-text-subtle)" }}>
+                {i + 1}
+              </span>
+              <span
+                className="grid h-10 w-10 shrink-0 place-items-center rounded-full text-sm font-bold text-white"
+                style={{ background: `linear-gradient(135deg, hsl(${hue} 60% 48%), hsl(${(hue + 40) % 360} 62% 40%))` }}
+              >
+                {iniciaisDe(l.nome)}
+              </span>
+              <span className="min-w-0 flex-1 truncate text-sm font-semibold" style={{ color: "var(--color-text)" }}>
+                {l.nome}
+              </span>
+              <div className="hidden items-center gap-3 sm:flex">
+                {CHIPS.map(({ key, label, Icone }) => (
+                  <span
+                    key={key}
+                    className="inline-flex items-center gap-1 text-xs"
+                    style={{ color: l[key] > 0 ? "var(--color-text-muted)" : "var(--color-text-subtle)" }}
+                  >
+                    <Icone className="h-3.5 w-3.5" aria-hidden />
+                    <strong style={{ color: l[key] > 0 ? "var(--color-text)" : "inherit" }}>{l[key]}</strong> {label}
+                  </span>
+                ))}
+              </div>
+              <span
+                className="ml-1 inline-flex min-w-[2.2rem] items-center justify-center rounded-full px-2.5 py-1 text-sm font-bold"
+                style={{
+                  background: l.total > 0 ? "var(--color-accent)" : "rgba(127,127,127,0.12)",
+                  color: l.total > 0 ? "#14181F" : "var(--color-text-subtle)",
+                }}
+              >
+                {l.total}
+              </span>
+            </li>
+          );
+        })}
+      </ul>
+    </section>
+  );
+}
+
 export default function HojeClient({
   metrics: m,
   gabineteHoje: g,
@@ -152,7 +238,8 @@ export default function HojeClient({
   dataFormatada,
   horaAtualizacao,
   podeLiderancas = false,
-  minhasCaptacoesQr = 0,
+  meuTrabalho,
+  placarEquipe = null,
   visitasProntasOficio = 0,
   visitaProntaId = null,
 }: HojeClientProps) {
@@ -226,6 +313,25 @@ export default function HojeClient({
           <GaugeResolucao pct={g.resumo.taxaResolucao} resolvidas={g.resumo.resolvidas} total={g.resumo.totalDemandas} />
         </div>
       </header>
+
+      {/* ── Meu trabalho esta semana (placar pessoal — todo mundo vê o SEU) ── */}
+      <section aria-label="Meu trabalho esta semana" className="space-y-3">
+        <div className="flex items-baseline justify-between">
+          <h2 className="font-heading text-sm font-bold uppercase tracking-wider" style={{ color: "var(--color-text-muted)" }}>
+            Meu trabalho · esta semana
+          </h2>
+          <span className="text-xs" style={{ color: "var(--color-text-subtle)" }}>o que você registrou</span>
+        </div>
+        <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+          <KpiCard label="Cadastros" valor={meuTrabalho.cadastros} icone={UserPlus} />
+          <KpiCard label="Demandas" valor={meuTrabalho.demandas} icone={Inbox} />
+          <KpiCard label="Visitas em campo" valor={meuTrabalho.visitas} icone={Calendar} />
+          <KpiCard label="Captados por QR" valor={meuTrabalho.qr} icone={Sparkles} />
+        </div>
+      </section>
+
+      {/* ── Placar da equipe (só pro gestor) ─────────────────────── */}
+      {placarEquipe && placarEquipe.length > 0 && <PlacarEquipe linhas={placarEquipe} />}
 
       {/* ── Fila de ação: o que espera a sua decisão AGORA ───────── */}
       {(filaAcao.rascunhosIA > 0 || filaAcao.disparosRascunho > 0 || filaAcao.leadsQuentesSemContato > 0 || visitasProntasOficio > 0) && (
@@ -428,9 +534,6 @@ export default function HojeClient({
 
       {/* ── 2. KPIs do gabinete ─────────────────────────────────── */}
       <section aria-label="Números principais" className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-        {minhasCaptacoesQr > 0 && (
-          <KpiCard label="Captei por QR" valor={minhasCaptacoesQr} icone={UserPlus} />
-        )}
         <KpiCard label="Base de contatos" valor={m.totalPessoas} icone={Users} />
         <KpiCard label="Demandas abertas" valor={g.resumo.abertas} icone={Inbox} />
         <KpiCard label="Resolvidas este mês" valor={g.resumo.resolvidasMes} icone={CheckCircle2} />

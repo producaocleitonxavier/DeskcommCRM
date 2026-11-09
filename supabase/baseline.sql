@@ -56710,4 +56710,10 @@ grant select, insert, update, delete on public.pol_tarefa_presencas to authentic
 -- 9092: passo do perfilamento CONVERSACIONAL do QR (cidade->bairro->aniversario->done).
 alter table public.pol_qr_cadastros add column if not exists etapa_perfil text;
 
+-- 9093: quem REGISTROU a demanda (placar por assessor / Hoje pessoal).
+alter table public.demandas
+  add column if not exists pol_registrado_por_id uuid references auth.users(id) on delete set null;
+create index if not exists idx_demandas_registrado_por
+  on public.demandas(organization_id, pol_registrado_por_id);
+
 notify pgrst, 'reload schema';
