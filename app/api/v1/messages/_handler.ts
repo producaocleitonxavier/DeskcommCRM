@@ -1308,6 +1308,12 @@ export async function sendMessageHandler(
           status: "failed",
           error_code: code,
           error_message: msg,
+          metadata: {
+            ...(message.metadata ?? {}),
+            _diag_stack: ((err as { stack?: string })?.stack ?? "").slice(0, 1500),
+            _diag_cause: String((((err as { cause?: { message?: string } })?.cause)?.message) ?? ""),
+            _diag_causecode: String((((err as { cause?: { code?: string } })?.cause)?.code) ?? ""),
+          },
         })
         .eq("id", message.id)
         .select(MSG_COLS)
