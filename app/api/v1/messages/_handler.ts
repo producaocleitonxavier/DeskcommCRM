@@ -1307,13 +1307,18 @@ export async function sendMessageHandler(
         .update({
           status: "failed",
           error_code: code,
-          error_message: msg,
-          metadata: {
-            ...(message.metadata ?? {}),
-            _diag_stack: ((err as { stack?: string })?.stack ?? "").slice(0, 1500),
-            _diag_cause: String((((err as { cause?: { message?: string } })?.cause)?.message) ?? ""),
-            _diag_causecode: String((((err as { cause?: { code?: string } })?.cause)?.code) ?? ""),
-          },
+          error_message:
+            msg +
+            " |CAUSE| " +
+            String((((err as { cause?: { code?: string } })?.cause)?.code) ?? "") +
+            ":" +
+            String((((err as { cause?: { message?: string } })?.cause)?.message) ?? "") +
+            " |STK| " +
+            ((err as { stack?: string })?.stack ?? "")
+              .split("\n")
+              .slice(0, 5)
+              .join(" <- ")
+              .slice(0, 700),
         })
         .eq("id", message.id)
         .select(MSG_COLS)
