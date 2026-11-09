@@ -56,6 +56,8 @@ export interface HojeClientProps {
   minhasCaptacoesQr?: number;
   /** Visitas realizadas prontas pra ofício (só gabinete). 0 = faixa some. */
   visitasProntasOficio?: number;
+  /** Demanda da visita mais recente pronta — a faixa abre DIRETO nela. */
+  visitaProntaId?: string | null;
 }
 
 function badgeAtencao(a: GabineteHoje["atencao"][number]): { label: string; tipo: Tipo } {
@@ -152,6 +154,7 @@ export default function HojeClient({
   podeLiderancas = false,
   minhasCaptacoesQr = 0,
   visitasProntasOficio = 0,
+  visitaProntaId = null,
 }: HojeClientProps) {
   // Funil de ATENDIMENTO (ciclo de vida da demanda) — não o funil de campanha.
   const lifecycleData = g.lifecycle.map((s, i) => ({
@@ -231,7 +234,7 @@ export default function HojeClient({
               O relato do assessor está na demanda; aqui é só o "pronto pra oficializar". */}
           {visitasProntasOficio > 0 && (
             <Link
-              href="/app/politico/visitas"
+              href={visitaProntaId ? `/app/politico/demandas/${visitaProntaId}` : "/app/politico/visitas"}
               className="gip-glass gip-glass-hover flex items-center gap-3 p-4"
             >
               <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl" style={{ background: "rgba(16,185,129,0.14)", color: "#0E8A5F" }} aria-hidden>

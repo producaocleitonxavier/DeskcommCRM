@@ -530,18 +530,26 @@ async function contarCaptacoesQr(organizationId: string, userId: string): Promis
  * (9085) → comparo com DATA ("YYYY-MM-DD"), não timestamp. Fail-soft: sem a coluna
  * a consulta erra e devolve 0.
  */
-async function contarVisitasProntasOficio(organizationId: string): Promise<number> {
+async function buscarVisitasProntasOficio(
+  organizationId: string,
+): Promise<{ total: number; primeiraId: string | null }> {
   const db = await createClient();
   const desde = new Date(Date.now() - 21 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
-  const { count } = await db
+  // Uma consulta: count = total, e a primeira linha = a visita MAIS RECENTE pronta
+  // (pra faixa abrir DIRETO essa demanda, não a lista inteira). Clicou → ofício →
+  // some da fila; a próxima vez a faixa mostra a seguinte.
+  const { data, count } = await db
     .from("demandas")
-    .select("id", { count: "exact", head: true })
+    .select("id", { count: "exact" })
     .eq("organization_id", organizationId)
     .eq("pol_gabinete", true)
     .not("pol_visita_realizada_em", "is", null)
     .gte("pol_visita_realizada_em", desde)
-    .is("pol_oficio_rotulo", null);
-  return count ?? 0;
+    .is("pol_oficio_rotulo", null)
+    .order("pol_visita_realizada_em", { ascending: false })
+    .limit(1);
+  const primeiraId = (data?.[0] as { id: string } | undefined)?.id ?? null;
+  return { total: count ?? 0, primeiraId };
 }
 
 // -- Componente (server) -----------------------------------------------------
@@ -582,7 +590,9 @@ export default async function HojePage() {
   // assessor de rua nem consulta (passa 0). É o "30s depois que a visita terminou"
   // virando fila de trabalho do gabinete, sem precisar da ficha de papel.
   const podeOficio = hrefsVisiveis.has("/app/politico/oficios");
-  const visitasProntasOficio = podeOficio ? await contarVisitasProntasOficio(org.orgId) : 0;
+  const prontasOficio = podeOficio
+    ? await buscarVisitasProntasOficio(org.orgId)
+    : { total: 0, primeiraId: null };
 
   return (
     <>
@@ -599,7 +609,8 @@ export default async function HojePage() {
         horaAtualizacao={horaAgora()}
         podeLiderancas={hrefsVisiveis.has("/app/politico/liderancas")}
         minhasCaptacoesQr={minhasCaptacoesQr}
-        visitasProntasOficio={visitasProntasOficio}
+        visitasProntasOficio={prontasOficio.total}
+        visitaProntaId={prontasOficio.primeiraId}
       />
     </>
   );

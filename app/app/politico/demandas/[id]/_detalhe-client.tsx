@@ -11,6 +11,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, Clock, Flag, MessageCircle, Mic, Pencil, Printer, Sparkles, Trash2, X } from "lucide-react";
 import { BotaoRecadoVoz } from "@/components/politico/botao-recado-voz";
+import { CommandHero } from "@/components/politico/command-hero";
 
 import { gerarEncaminhamento } from "@/app/actions/politico/gerarEncaminhamento";
 import { gerarOficioDemanda } from "@/app/actions/politico/gerarOficio";
@@ -304,131 +305,115 @@ export default function DetalheDemandaClient({ demanda, assessores, eventos, voz
         </Link>
       </div>
 
-      {/* Cabeçalho */}
-      <header className="gip-glass overflow-hidden p-6 sm:p-7">
-        {/* Faixa tactical (assinatura Centro de Comando) */}
-        <div
-          className="-mx-6 -mt-6 mb-5 px-6 py-2.5 sm:-mx-7 sm:-mt-7 sm:px-7"
-          style={{
-            background: "var(--hero-grad)",
-            borderBottom: "1px solid color-mix(in srgb, var(--color-accent) 22%, transparent)",
-          }}
-        >
-          <span className="text-[11px] font-bold uppercase tracking-[0.2em]" style={{ color: "var(--hero-eyebrow, var(--color-accent))" }}>
-            Gabinete · Atendimento ao cidadão
+      {/* Cabeçalho — hero MARINHO CHEIO (CommandHero), igual às telas de lista.
+          As ações vão numa linha ABAIXO, no fundo da página (legíveis em qualquer
+          tema) — não dentro do marinho, pra nenhum botão sumir no navy. */}
+      <CommandHero
+        eyebrow="Gabinete · Atendimento ao cidadão"
+        titulo={d.assunto || "Sem assunto"}
+        subtitulo={`${d.contacts?.name ?? "Cidadão sem nome"}${d.contacts?.phone_number ? ` · ${d.contacts.phone_number}` : ""}`}
+        extra={
+          <span className="inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold" style={{ background: ec.bg, color: ec.color }}>
+            {ESTADO_LABEL[d.estado] ?? d.estado}
           </span>
-        </div>
-        <div className="flex flex-wrap items-start justify-between gap-3">
-          <div className="min-w-0">
-            <span className="inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold" style={{ background: ec.bg, color: ec.color }}>
-              {ESTADO_LABEL[d.estado] ?? d.estado}
-            </span>
-            <h1 className="mt-2 font-heading text-2xl font-bold leading-tight" style={{ color: "var(--color-text)" }}>
-              {d.assunto || "Sem assunto"}
-            </h1>
-            <p className="mt-1 text-sm" style={{ color: "var(--color-text-muted)" }}>
-              {d.contacts?.name ?? "Cidadão sem nome"}
-              {d.contacts?.phone_number ? ` · ${d.contacts.phone_number}` : ""}
-            </p>
-          </div>
-          {!editando && (
-            <div className="flex items-center gap-2">
-              <button type="button" onClick={() => setEditando(true)} className="wr-btn inline-flex items-center gap-2">
-                <Pencil className="h-4 w-4" aria-hidden /> Editar
-              </button>
-              <button
-                type="button"
-                disabled={excluindo}
-                onClick={async () => {
-                  if (!window.confirm("Excluir esta demanda? Esta ação não pode ser desfeita (anexos e ofício também serão removidos).")) return;
-                  setErro(null);
-                  setExcluindo(true);
-                  const res = await excluirRegistro("demandas", d.id);
-                  if (!res.ok) {
-                    setExcluindo(false);
-                    setErro(res.erro);
-                    return;
-                  }
-                  router.push("/app/politico/demandas");
-                  router.refresh();
-                }}
-                className="wr-btn inline-flex items-center gap-2 disabled:opacity-50"
-                style={{ color: "#EF4444", borderColor: "rgba(239,68,68,0.35)" }}
-              >
-                <Trash2 className="h-4 w-4" aria-hidden /> {excluindo ? "Excluindo…" : "Excluir"}
-              </button>
-            </div>
-          )}
-        </div>
+        }
+      />
 
-        {/* Transições de estado + avisar cidadão */}
-        <div className="mt-4 flex flex-wrap gap-2">
-          {acoes.map((a) => (
-            <button
-              key={a.estado + a.label}
-              type="button"
-              disabled={salvando}
-              onClick={() => mudarEstado(a.estado)}
-              className={a.tom === "dark" ? "wr-btn-dark" : "wr-btn"}
-              style={a.tom === "ok" ? { background: "#17784F", color: "#FFFFFF", borderColor: "#17784F" } : undefined}
-            >
-              {a.label}
-            </button>
-          ))}
+      {/* Ações da demanda: transições + avisar + (editar/excluir à direita). */}
+      <div className="flex flex-wrap items-center gap-2">
+        {acoes.map((a) => (
           <button
+            key={a.estado + a.label}
             type="button"
-            disabled={avisando || !d.contacts?.phone_number}
-            title={!d.contacts?.phone_number ? "O cidadão não tem telefone cadastrado" : "Enviar aviso ao cidadão por WhatsApp"}
-            onClick={async () => {
-              if (!window.confirm("Enviar aviso ao cidadão por WhatsApp confirmando o registro da demanda?")) return;
-              setErro(null);
-              setAvisoMsg(null);
-              setAvisando(true);
-              const res = await avisarCidadao(d.id);
-              setAvisando(false);
-              if (res.ok) {
-                const audioNota =
-                  res.audio === "blackout"
-                    ? "O áudio ficou de fora (silêncio eleitoral de 72h)."
-                    : res.audio === "voz_desarmada"
-                      ? "O áudio ficou de fora (a Voz do Mandato não está ligada)."
-                      : res.audio === "falha"
-                        ? "O áudio falhou — tente de novo."
-                        : "";
-                let msg: string;
-                if (res.textoEnviado) {
-                  msg =
-                    `Cidadão avisado no WhatsApp (protocolo ${res.protocolo})` +
-                    (res.comOficio ? " com o ofício em anexo" : "") +
-                    (res.audio === "enviado" ? " + recado em áudio na voz do Cleiton" : "") +
-                    "." +
-                    (audioNota ? ` ${audioNota}` : "");
-                } else if (res.audio === "enviado") {
-                  msg = "Recado em áudio na voz do Cleiton enviado. (O aviso de texto já tinha ido antes.)";
-                } else if (audioNota) {
-                  msg = `O cidadão já tinha sido avisado por texto. ${audioNota}`;
-                } else {
-                  msg = "O cidadão já tinha sido avisado por texto — nada novo a enviar.";
-                }
-                setAvisoMsg(msg);
-                router.refresh();
-              } else setErro(res.erro);
-            }}
-            className="wr-btn inline-flex items-center gap-1.5 font-semibold disabled:opacity-50"
-            style={{ background: "rgba(18,140,75,0.12)", color: "#0E7A40", borderColor: "rgba(18,140,75,0.45)" }}
+            disabled={salvando}
+            onClick={() => mudarEstado(a.estado)}
+            className={a.tom === "dark" ? "wr-btn-dark" : "wr-btn"}
+            style={a.tom === "ok" ? { background: "#17784F", color: "#FFFFFF", borderColor: "#17784F" } : undefined}
           >
-            <MessageCircle className="h-4 w-4" aria-hidden /> {avisando ? "Enviando…" : "Avisar cidadão"}
+            {a.label}
           </button>
-          {vozArmada && d.contact_id && (
-            <BotaoRecadoVoz
-              contactId={d.contact_id}
-              nome={d.contacts?.name}
-              vozArmada={vozArmada}
-              politico={politicoNome ? `o vereador ${politicoNome}` : "o vereador"}
-            />
-          )}
-        </div>
-      </header>
+        ))}
+        <button
+          type="button"
+          disabled={avisando || !d.contacts?.phone_number}
+          title={!d.contacts?.phone_number ? "O cidadão não tem telefone cadastrado" : "Enviar aviso ao cidadão por WhatsApp"}
+          onClick={async () => {
+            if (!window.confirm("Enviar aviso ao cidadão por WhatsApp confirmando o registro da demanda?")) return;
+            setErro(null);
+            setAvisoMsg(null);
+            setAvisando(true);
+            const res = await avisarCidadao(d.id);
+            setAvisando(false);
+            if (res.ok) {
+              const audioNota =
+                res.audio === "blackout"
+                  ? "O áudio ficou de fora (silêncio eleitoral de 72h)."
+                  : res.audio === "voz_desarmada"
+                    ? "O áudio ficou de fora (a Voz do Mandato não está ligada)."
+                    : res.audio === "falha"
+                      ? "O áudio falhou — tente de novo."
+                      : "";
+              let msg: string;
+              if (res.textoEnviado) {
+                msg =
+                  `Cidadão avisado no WhatsApp (protocolo ${res.protocolo})` +
+                  (res.comOficio ? " com o ofício em anexo" : "") +
+                  (res.audio === "enviado" ? " + recado em áudio na voz do Cleiton" : "") +
+                  "." +
+                  (audioNota ? ` ${audioNota}` : "");
+              } else if (res.audio === "enviado") {
+                msg = "Recado em áudio na voz do Cleiton enviado. (O aviso de texto já tinha ido antes.)";
+              } else if (audioNota) {
+                msg = `O cidadão já tinha sido avisado por texto. ${audioNota}`;
+              } else {
+                msg = "O cidadão já tinha sido avisado por texto — nada novo a enviar.";
+              }
+              setAvisoMsg(msg);
+              router.refresh();
+            } else setErro(res.erro);
+          }}
+          className="wr-btn inline-flex items-center gap-1.5 font-semibold disabled:opacity-50"
+          style={{ background: "rgba(18,140,75,0.12)", color: "#0E7A40", borderColor: "rgba(18,140,75,0.45)" }}
+        >
+          <MessageCircle className="h-4 w-4" aria-hidden /> {avisando ? "Enviando…" : "Avisar cidadão"}
+        </button>
+        {vozArmada && d.contact_id && (
+          <BotaoRecadoVoz
+            contactId={d.contact_id}
+            nome={d.contacts?.name}
+            vozArmada={vozArmada}
+            politico={politicoNome ? `o vereador ${politicoNome}` : "o vereador"}
+          />
+        )}
+        {!editando && (
+          <div className="ml-auto flex items-center gap-2">
+            <button type="button" onClick={() => setEditando(true)} className="wr-btn inline-flex items-center gap-2">
+              <Pencil className="h-4 w-4" aria-hidden /> Editar
+            </button>
+            <button
+              type="button"
+              disabled={excluindo}
+              onClick={async () => {
+                if (!window.confirm("Excluir esta demanda? Esta ação não pode ser desfeita (anexos e ofício também serão removidos).")) return;
+                setErro(null);
+                setExcluindo(true);
+                const res = await excluirRegistro("demandas", d.id);
+                if (!res.ok) {
+                  setExcluindo(false);
+                  setErro(res.erro);
+                  return;
+                }
+                router.push("/app/politico/demandas");
+                router.refresh();
+              }}
+              className="wr-btn inline-flex items-center gap-2 disabled:opacity-50"
+              style={{ color: "#EF4444", borderColor: "rgba(239,68,68,0.35)" }}
+            >
+              <Trash2 className="h-4 w-4" aria-hidden /> {excluindo ? "Excluindo…" : "Excluir"}
+            </button>
+          </div>
+        )}
+      </div>
 
       {avisoMsg && (
         <div className="rounded-xl px-4 py-3 text-sm" style={{ background: "rgba(34,197,94,0.14)", color: "#22C55E" }}>
