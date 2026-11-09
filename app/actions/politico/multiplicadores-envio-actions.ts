@@ -25,7 +25,10 @@ import { sendMessageHandler } from "@/app/api/v1/messages/_handler";
 import { obterOuCriarShare, urlDoVideoShare } from "@/lib/politico/video-share";
 import { TAG_MULTIPLICADOR } from "@/lib/politico/multiplicadores";
 import { TAG_DIVULGADOR } from "@/lib/politico/divulgador";
+import { codigoDeIndicacao } from "@/lib/politico/indicacao";
 import { lerCanalMultiplicadores } from "@/lib/politico/multiplicadores-canal";
+import { env } from "@/lib/env";
+import { urlPublicaUsavel } from "@/lib/escalacao/url-publica";
 import { ApiError } from "@/lib/api/types";
 
 /** Teto por disparo — o cohort de multiplicadores é pequeno; guarda sã contra engano. */
@@ -241,6 +244,181 @@ export async function enviarVideoAosMultiplicadores(
     return {
       ok: false,
       erro: "Nenhum canal de WhatsApp conectado. Conecte um canal (em produção) para enviar aos multiplicadores.",
+    };
+  }
+
+  return { ok: true, total: cohort.length, enviados, pulados };
+}
+
+// ─── ENQUETE COMPARTILHÁVEL (o motor de CADASTRO) ────────────────────────────
+// Vídeo = alcance; ENQUETE = cadastro. Cada multiplicador recebe o link da enquete
+// com o CÓDIGO PESSOAL dele (?ind=): quem responder vira cadastro creditado a ele.
+
+export interface EnqueteParaEnviar {
+  id: string;
+  titulo: string;
+}
+
+/** Enquetes ATIVAS da org — as que podem ser espalhadas (têm link público). */
+export async function listarEnquetesParaEnviar(): Promise<EnqueteParaEnviar[]> {
+  const user = await requireAuth();
+  const org = await resolveActiveOrg(user);
+  if (!org) return [];
+  const db = await createClient();
+  const { data } = await db
+    .from("pol_surveys")
+    .select("id, title")
+    .eq("organization_id", org.orgId)
+    .eq("status", "active")
+    .order("created_at", { ascending: false })
+    .limit(100);
+  return ((data ?? []) as { id: string; title: string | null }[]).map((s) => ({
+    id: s.id,
+    titulo: (s.title ?? "").trim() || "Enquete sem título",
+  }));
+}
+
+/** Instrução da ENQUETE (1ª mensagem) — o multiplicador só encaminha o LINK (2ª). */
+function corpoInstrucaoEnquete(primeiroNome: string): string {
+  const ola = primeiroNome ? `Olá, ${primeiroNome}!` : "Olá!";
+  return (
+    `${ola} 👋 O nosso mandato quer ouvir a população numa *pesquisa rápida*.\n\n` +
+    `Cada pessoa que responder pelo *seu link* entra como um apoiador no seu placar. 🏆\n\n` +
+    `É só *encaminhar a mensagem abaixo* 👇 pra sua rede.`
+  );
+}
+
+/**
+ * Manda a ENQUETE (link personalizado) pra cada multiplicador do GRUPO escolhido —
+ * o link carrega o CÓDIGO PESSOAL de cada um (`?ind=`), então quem responde pelo
+ * link dele vira cadastro creditado a ele. Mesmo transporte/trava do envio de vídeo.
+ */
+export async function enviarEnqueteAosMultiplicadores(
+  surveyId: string,
+  grupo: GrupoMultiplicador = "todos",
+): Promise<EnvioMultiplicadoresResultado> {
+  const user = await requireAuth();
+  const org = await resolveActiveOrg(user);
+  if (!org) return { ok: false, erro: "Sessão ou organização inválida." };
+  const db = await createClient();
+  const admin = createAdminClient();
+
+  const sid = (surveyId ?? "").trim();
+  if (!sid) return { ok: false, erro: "Escolha uma enquete." };
+
+  // A enquete é desta org e está ATIVA (tem link público). Pega o public_token.
+  const { data: surv } = await admin
+    .from("pol_surveys")
+    .select("id, public_token, status")
+    .eq("organization_id", org.orgId)
+    .eq("id", sid)
+    .maybeSingle();
+  const survey = surv as { id: string; public_token: string | null; status: string | null } | null;
+  if (!survey || survey.status !== "active" || !survey.public_token) {
+    return { ok: false, erro: "Enquete não encontrada ou não está ativa (publique a enquete antes de espalhar)." };
+  }
+
+  const base = env.NEXT_PUBLIC_APP_URL.replace(/\/+$/, "");
+
+  const alvo: GrupoMultiplicador = grupo === "assessor" || grupo === "divulgador" ? grupo : "todos";
+  const { data: ctsData } = await db
+    .from("contacts")
+    .select("id, name, phone_number, tags")
+    .eq("organization_id", org.orgId)
+    .contains("tags", [TAG_MULTIPLICADOR])
+    .limit(CAP_ENVIO);
+  const todos = (ctsData ?? []) as {
+    id: string;
+    name: string | null;
+    phone_number: string | null;
+    tags: string[] | null;
+  }[];
+  const cohort = todos.filter((c) => {
+    if (alvo === "todos") return true;
+    const ehDivulgador = (c.tags ?? []).includes(TAG_DIVULGADOR);
+    return alvo === "divulgador" ? ehDivulgador : !ehDivulgador;
+  });
+  if (cohort.length === 0) {
+    return { ok: false, erro: "Nenhum multiplicador nesse grupo ainda." };
+  }
+
+  const { data: orgRow } = await db.from("organizations").select("settings").eq("id", org.orgId).maybeSingle();
+  const canal = lerCanalMultiplicadores((orgRow as { settings?: unknown } | null)?.settings) ?? undefined;
+
+  const pulados: { nome: string; motivo: string }[] = [];
+  let enviados = 0;
+  let semCanal = false;
+
+  for (const c of cohort) {
+    const nome = (c.name ?? "Sem nome").trim();
+    const primeiroNome = (c.name ?? "").trim().split(/\s+/)[0] ?? "";
+    const phone = (c.phone_number ?? "").trim();
+    if (!phone) {
+      pulados.push({ nome, motivo: "sem telefone" });
+      continue;
+    }
+    if (!isWhatsappBRPlausivel(phone)) {
+      pulados.push({ nome, motivo: "número inválido" });
+      continue;
+    }
+
+    // Código PESSOAL deste multiplicador (pega-ou-cria). Sem código = pula.
+    const { codigo } = await codigoDeIndicacao(admin, org.orgId, c.id);
+    if (!codigo) {
+      pulados.push({ nome, motivo: "falha ao gerar o código" });
+      continue;
+    }
+    const link = `${base}/pesquisa/${survey.public_token}?ind=${codigo}`;
+    if (!urlPublicaUsavel(link)) {
+      // URL pública não configurada (localhost/placeholder) — aborta uma vez.
+      semCanal = false;
+      return {
+        ok: false,
+        erro: "O endereço público do sistema não está configurado — não dá pra montar o link da enquete.",
+      };
+    }
+
+    let conversationId: string;
+    try {
+      const r = await openSharedContactConversation(admin, org.orgId, { contact_id: c.id, channel_session_id: canal });
+      conversationId = r.conversation_id;
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
+      if (msg === "session_not_found") {
+        semCanal = true;
+        break;
+      }
+      if (msg === "contact_personal") {
+        pulados.push({ nome, motivo: "contato pessoal" });
+        continue;
+      }
+      pulados.push({ nome, motivo: "não abriu a conversa" });
+      continue;
+    }
+
+    const msgBase = { organization_id: org.orgId, actor: { type: "user" as const, id: user.id }, idioma: user.idioma };
+    try {
+      await sendMessageHandler(db, { ...msgBase, requestId: randomUUID() }, {
+        conversation_id: conversationId,
+        type: "text",
+        body: corpoInstrucaoEnquete(primeiroNome),
+      });
+      await sendMessageHandler(db, { ...msgBase, requestId: randomUUID() }, {
+        conversation_id: conversationId,
+        type: "text",
+        body: link,
+      });
+      enviados += 1;
+    } catch (e) {
+      const msg = e instanceof ApiError ? e.message : e instanceof Error ? e.message : "falha no envio";
+      pulados.push({ nome, motivo: msg.slice(0, 60) });
+    }
+  }
+
+  if (semCanal && enviados === 0) {
+    return {
+      ok: false,
+      erro: "Nenhum canal de WhatsApp conectado. Conecte um canal (em produção) para espalhar a enquete.",
     };
   }
 

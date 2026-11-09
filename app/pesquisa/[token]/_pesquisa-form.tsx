@@ -46,11 +46,14 @@ export default function PesquisaForm({
   titulo,
   descricao,
   perguntas,
+  ind,
 }: {
   token: string;
   titulo: string;
   descricao: string | null;
   perguntas: Pergunta[];
+  /** Código pessoal do multiplicador que compartilhou (do ?ind= no link). */
+  ind?: string | null;
 }) {
   const inicio = useMemo(() => Date.now(), []);
   const [resp, setResp] = useState<Record<string, unknown>>({});
@@ -103,6 +106,7 @@ export default function PesquisaForm({
           bairro: bairro.trim(),
           state: estado.trim().toUpperCase().slice(0, 2) || null,
           duration_seconds: Math.round((Date.now() - inicio) / 1000),
+          ...(ind ? { ind } : {}),
         }),
       });
       if (!res.ok) throw new Error("falha");

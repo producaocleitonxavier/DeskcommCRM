@@ -50,10 +50,16 @@ function Moldura({ children }: { children: React.ReactNode }) {
 
 export default async function PesquisaPublicaPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ token: string }>;
+  searchParams: Promise<{ ind?: string | string[] }>;
 }) {
   const { token } = await params;
+  const sp = await searchParams;
+  const indRaw = Array.isArray(sp.ind) ? sp.ind[0] : sp.ind;
+  // Código do multiplicador que compartilhou (valida o formato antes de confiar).
+  const ind = indRaw && /^[A-Za-z0-9]{4,12}$/.test(indRaw) ? indRaw : null;
   const dados = await buscar(token);
 
   if (!dados) {
@@ -72,7 +78,7 @@ export default async function PesquisaPublicaPage({
 
   return (
     <Moldura>
-      <PesquisaForm token={token} titulo={dados.survey.title} descricao={dados.survey.description} perguntas={dados.perguntas} />
+      <PesquisaForm token={token} titulo={dados.survey.title} descricao={dados.survey.description} perguntas={dados.perguntas} ind={ind} />
     </Moldura>
   );
 }

@@ -37,7 +37,9 @@ import {
 } from "@/app/actions/politico/multiplicadores-actions";
 import {
   enviarVideoAosMultiplicadores,
+  enviarEnqueteAosMultiplicadores,
   type VideoDaBiblioteca,
+  type EnqueteParaEnviar,
   type GrupoMultiplicador,
 } from "@/app/actions/politico/multiplicadores-envio-actions";
 import { convidarDivulgadores } from "@/app/actions/politico/divulgador-actions";
@@ -65,6 +67,7 @@ interface Props {
   multiplicadores: MultiplicadorRow[];
   sugestoes: SugestaoMultiplicador[];
   videos: VideoDaBiblioteca[];
+  enquetes: EnqueteParaEnviar[];
   elegiveis: number;
   potenciais: number;
   canais: CanalDisponivel[];
@@ -75,6 +78,7 @@ export default function MultiplicadoresClient({
   multiplicadores,
   sugestoes,
   videos,
+  enquetes,
   elegiveis,
   potenciais,
   canais,
@@ -85,7 +89,8 @@ export default function MultiplicadoresClient({
   const [busca, setBusca] = useState("");
   const [resultados, setResultados] = useState<ContatoParaMarcar[]>([]);
   const [buscando, setBuscando] = useState(false);
-  const [videoSel, setVideoSel] = useState("");
+  // Conteúdo escolhido, prefixado: "enq:<id>" (enquete = cadastro) ou "vid:<id>" (vídeo = alcance).
+  const [conteudoSel, setConteudoSel] = useState("");
   const [grupoSel, setGrupoSel] = useState<GrupoMultiplicador>("todos");
   const [enviando, setEnviando] = useState(false);
   const [convidando, setConvidando] = useState(false);
@@ -107,6 +112,10 @@ export default function MultiplicadoresClient({
   // Quantos recebem o conteúdo, conforme o GRUPO escolhido (o botão mostra esse nº).
   const alvoCount =
     grupoSel === "assessor" ? assessores.length : grupoSel === "divulgador" ? divulgadores.length : total;
+  // Conteúdo escolhido: tipo (enquete/vídeo) + id, e se há algo pra espalhar.
+  const tipoConteudo = conteudoSel.startsWith("enq:") ? "enquete" : conteudoSel.startsWith("vid:") ? "video" : null;
+  const idConteudo = conteudoSel.includes(":") ? conteudoSel.slice(conteudoSel.indexOf(":") + 1) : "";
+  const semConteudo = videos.length === 0 && enquetes.length === 0;
 
   function onSalvarCanal(valor: string) {
     setCanalSel(valor);
@@ -140,15 +149,18 @@ export default function MultiplicadoresClient({
     });
   }
 
-  function onEnviarVideo() {
-    if (!videoSel) {
-      toast.error("Escolha um vídeo primeiro.");
+  function onEnviar() {
+    if (!tipoConteudo || !idConteudo) {
+      toast.error("Escolha uma enquete ou um vídeo primeiro.");
       return;
     }
     setEnviando(true);
     iniciar(async () => {
       try {
-        const r = await enviarVideoAosMultiplicadores(videoSel, grupoSel);
+        const r =
+          tipoConteudo === "enquete"
+            ? await enviarEnqueteAosMultiplicadores(idConteudo, grupoSel)
+            : await enviarVideoAosMultiplicadores(idConteudo, grupoSel);
         if (!r.ok) {
           toast.error(r.erro);
           return;
@@ -223,15 +235,16 @@ export default function MultiplicadoresClient({
             <li className="flex gap-2">
               <span className="font-bold text-accent">①</span>
               <span>
-                <strong className="text-foreground">Indica</strong> alguém que se cadastra (pelo código/QR pessoal) —
-                é <span className="text-foreground">o ouro</span>: vira cadastro na base.
+                <strong className="text-foreground">Traz cadastro</strong> — alguém responde a{" "}
+                <span className="text-foreground">enquete</span> dele (ou usa o código/QR pessoal) e entra na base. É{" "}
+                <span className="text-foreground">o ouro</span>.
               </span>
             </li>
             <li className="flex gap-2">
               <span className="font-bold text-accent">②</span>
               <span>
-                <strong className="text-foreground">Compartilha o link pessoal</strong> de um vídeo e a rede abre —
-                cada abertura conta como <span className="text-foreground">alcance dele</span>.
+                <strong className="text-foreground">Gera alcance</strong> — compartilha o{" "}
+                <span className="text-foreground">vídeo</span> dele e a rede abre; cada abertura conta.
               </span>
             </li>
           </ul>
@@ -266,13 +279,14 @@ export default function MultiplicadoresClient({
             <h2 className="text-base font-semibold text-foreground">Espalhar um conteúdo</h2>
           </div>
           <p className="mb-3 text-[13px] leading-snug text-text-muted">
-            Manda, no privado de cada um, o <strong className="font-semibold text-foreground">link pessoal dele</strong>{" "}
-            pra compartilhar. Cada abertura vira alcance dele.
+            Cada um recebe o <strong className="font-semibold text-foreground">link pessoal dele</strong> pra
+            compartilhar. <span className="text-text-subtle">Enquete traz cadastro · vídeo gera alcance.</span>
           </p>
-          {videos.length === 0 ? (
+          {semConteudo ? (
             <p className="rounded-xl px-3 py-4 text-center text-[13px] text-text-subtle"
               style={{ background: "color-mix(in srgb, var(--color-text) 4%, transparent)" }}>
-              Nenhum post do Instagram na biblioteca ainda. Adicione um na Biblioteca de Materiais.
+              Nada pra espalhar ainda. Crie uma <strong className="text-foreground">enquete</strong> (em Pesquisas) ou
+              adicione um <strong className="text-foreground">post do Instagram</strong> na Biblioteca.
             </p>
           ) : (
             <div className="mt-auto space-y-2.5">
@@ -313,34 +327,47 @@ export default function MultiplicadoresClient({
               </div>
               <select
                 className="wr-input w-full"
-                value={videoSel}
-                onChange={(e) => setVideoSel(e.target.value)}
+                value={conteudoSel}
+                onChange={(e) => setConteudoSel(e.target.value)}
               >
-                <option value="">Escolha um conteúdo do Instagram…</option>
-                {videos.map((v) => (
-                  <option key={v.id} value={v.id}>
-                    {v.titulo}
-                  </option>
-                ))}
+                <option value="">Escolha o que espalhar…</option>
+                {enquetes.length > 0 && (
+                  <optgroup label="🗳️ Enquetes — trazem cadastro">
+                    {enquetes.map((s) => (
+                      <option key={s.id} value={`enq:${s.id}`}>
+                        {s.titulo}
+                      </option>
+                    ))}
+                  </optgroup>
+                )}
+                {videos.length > 0 && (
+                  <optgroup label="🎬 Vídeos do Instagram — alcance">
+                    {videos.map((v) => (
+                      <option key={v.id} value={`vid:${v.id}`}>
+                        {v.titulo}
+                      </option>
+                    ))}
+                  </optgroup>
+                )}
               </select>
               <div className="flex items-center justify-between gap-2">
                 <button
                   type="button"
                   onClick={() => setVerPrevia((v) => !v)}
-                  disabled={!videoSel}
+                  disabled={!tipoConteudo}
                   className="text-[12px] font-medium text-text-subtle underline-offset-2 hover:underline disabled:opacity-40"
                 >
                   {verPrevia ? "ocultar prévia" : "ver prévia da mensagem"}
                 </button>
                 <Button
-                  onClick={onEnviarVideo}
-                  disabled={ocupado || enviando || !videoSel || alvoCount === 0}
+                  onClick={onEnviar}
+                  disabled={ocupado || enviando || !tipoConteudo || alvoCount === 0}
                 >
                   <PaperPlaneTilt size={15} weight="bold" aria-hidden />
                   Enviar aos {alvoCount}
                 </Button>
               </div>
-              {verPrevia && videoSel && (
+              {verPrevia && tipoConteudo && (
                 <div
                   className="rounded-xl p-3 text-[12.5px]"
                   style={{ background: "color-mix(in srgb, var(--color-text) 5%, transparent)" }}
@@ -349,14 +376,16 @@ export default function MultiplicadoresClient({
                     Vão 2 mensagens — ele só encaminha o link
                   </p>
                   <p className="whitespace-pre-line text-foreground">
-                    {"Olá, [nome]! 👋 Saiu um conteúdo novo do nosso mandato.\n\nÉ só encaminhar a mensagem abaixo 👇 pra sua rede.\n\nObrigado por multiplicar! 🙏"}
+                    {tipoConteudo === "enquete"
+                      ? "Olá, [nome]! 👋 O nosso mandato quer ouvir a população numa pesquisa rápida.\n\nCada pessoa que responder pelo seu link entra como apoiador no seu placar. 🏆\n\nÉ só encaminhar a mensagem abaixo 👇 pra sua rede."
+                      : "Olá, [nome]! 👋 Saiu um conteúdo novo do nosso mandato.\n\nÉ só encaminhar a mensagem abaixo 👇 pra sua rede.\n\nObrigado por multiplicar! 🙏"}
                   </p>
                   <p className="mb-1 mt-2 text-[10.5px] text-text-subtle">↓ 2ª mensagem (o que ele encaminha):</p>
                   <p
                     className="rounded-lg px-2 py-1 font-medium text-foreground"
                     style={{ background: "color-mix(in srgb, var(--color-accent) 12%, transparent)" }}
                   >
-                    [link do vídeo dele]
+                    {tipoConteudo === "enquete" ? "[link da enquete dele]" : "[link do vídeo dele]"}
                   </p>
                 </div>
               )}
@@ -648,6 +677,21 @@ function SecaoPlacar({
   );
 }
 
+/** Iniciais pro avatar (1ª + última palavra). Ex.: "Leonardo Cunha" → "LC". */
+function iniciaisDe(nome: string): string {
+  const p = nome.trim().split(/\s+/).filter(Boolean);
+  if (p.length === 0) return "?";
+  if (p.length === 1) return p[0]!.slice(0, 2).toUpperCase();
+  return (p[0]![0]! + p[p.length - 1]![0]!).toUpperCase();
+}
+
+/** Matiz estável a partir do nome — cada pessoa ganha a MESMA cor sempre. */
+function hueDoNome(nome: string): number {
+  let h = 0;
+  for (let i = 0; i < nome.length; i++) h = (h * 31 + nome.charCodeAt(i)) % 360;
+  return h;
+}
+
 function LinhaMultiplicador({
   m,
   ocupado,
@@ -658,32 +702,78 @@ function LinhaMultiplicador({
   onRemover: (contactId: string) => void;
 }) {
   const quando = tempoRelativo(m.ultimaAtividadeISO);
+  const hue = hueDoNome(m.nome || "?");
   return (
     <li
-      className="flex items-center gap-3 rounded-xl px-3 py-2.5"
-      style={{ background: "color-mix(in srgb, var(--color-surface-elevated) 45%, transparent)" }}
+      className="group flex items-center gap-3 rounded-2xl px-3.5 py-3 transition-all duration-150 hover:-translate-y-px"
+      style={{
+        background: "color-mix(in srgb, var(--color-surface-elevated) 45%, transparent)",
+        border: "1px solid color-mix(in srgb, var(--color-text) 7%, transparent)",
+      }}
     >
-      <UserCircle size={22} weight="fill" className="shrink-0 text-text-subtle" aria-hidden />
+      {/* Avatar: iniciais em gradiente próprio da pessoa; anel de destaque se já gerou alcance */}
+      <div
+        className="grid h-11 w-11 shrink-0 place-items-center rounded-full text-[13px] font-bold text-white"
+        style={{
+          background: `linear-gradient(135deg, hsl(${hue} 68% 54%), hsl(${(hue + 42) % 360} 70% 44%))`,
+          boxShadow: m.compartilhou
+            ? "0 0 0 2px color-mix(in srgb, #34D399 70%, transparent)"
+            : "0 2px 8px -2px rgba(0,0,0,0.45)",
+        }}
+        aria-hidden
+      >
+        {iniciaisDe(m.nome || "?")}
+      </div>
+
       <div className="min-w-0 flex-1">
-        <p className="truncate text-sm font-semibold text-foreground">{m.nome}</p>
-        <div className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[11px] text-text-muted">
-          {m.trouxe > 0 && <span className="font-semibold text-accent">trouxe {m.trouxe}</span>}
-          {m.alcancou > 0 && <span>alcançou {m.alcancou}</span>}
-          {m.recebeuLink && <span className="text-text-subtle">· recebeu o link ✓</span>}
-          {quando && <span className="text-text-subtle">· ativo {quando}</span>}
+        <p className="truncate text-[15px] font-semibold leading-tight text-foreground">{m.nome}</p>
+        <div className="mt-1 flex flex-wrap items-center gap-1.5">
+          {m.trouxe > 0 && (
+            <span
+              className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-bold tabular-nums"
+              style={{
+                background: "color-mix(in srgb, var(--color-accent) 16%, transparent)",
+                color: "var(--accent-ink, var(--color-accent))",
+              }}
+            >
+              <Trophy size={11} weight="fill" aria-hidden /> {m.trouxe} trazido{m.trouxe === 1 ? "" : "s"}
+            </span>
+          )}
+          {m.alcancou > 0 && (
+            <span
+              className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-semibold tabular-nums text-text-muted"
+              style={{ background: "color-mix(in srgb, var(--color-text) 7%, transparent)" }}
+            >
+              <ChartLineUp size={11} weight="bold" aria-hidden /> {m.alcancou} de alcance
+            </span>
+          )}
+          {m.recebeuLink && !m.trouxe && !m.alcancou && (
+            <span className="text-[11px] text-text-subtle">recebeu o link ✓</span>
+          )}
+          {quando && (
+            <span className="inline-flex items-center gap-1 text-[11px] text-text-subtle">
+              <span
+                className="inline-block h-1.5 w-1.5 rounded-full"
+                style={{ background: quando === "hoje" ? "#34D399" : "color-mix(in srgb, var(--color-text) 35%, transparent)" }}
+                aria-hidden
+              />
+              ativo {quando}
+            </span>
+          )}
         </div>
       </div>
+
       {m.compartilhou ? (
         <span
-          className="inline-flex shrink-0 items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-semibold"
-          style={{ background: "color-mix(in srgb, #34D399 20%, transparent)", color: "#34D399" }}
+          className="inline-flex shrink-0 items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-bold"
+          style={{ background: "color-mix(in srgb, #34D399 18%, transparent)", color: "#34D399" }}
         >
-          <CheckCircle size={12} weight="fill" aria-hidden /> Gerou alcance
+          <CheckCircle size={13} weight="fill" aria-hidden /> Gerou alcance
         </span>
       ) : (
         <span
-          className="inline-flex shrink-0 items-center rounded-full px-2 py-0.5 text-[11px] font-semibold"
-          style={{ background: "color-mix(in srgb, #FBBF24 18%, transparent)", color: "#FBBF24" }}
+          className="inline-flex shrink-0 items-center rounded-full px-2.5 py-1 text-[11px] font-semibold"
+          style={{ background: "color-mix(in srgb, #FBBF24 15%, transparent)", color: "#FBBF24" }}
         >
           Sem alcance ainda
         </span>
@@ -692,7 +782,7 @@ function LinhaMultiplicador({
         type="button"
         disabled={ocupado}
         onClick={() => onRemover(m.contactId)}
-        className="shrink-0 rounded-md p-1 text-text-muted transition-colors hover:bg-destructive/15 hover:text-destructive"
+        className="shrink-0 rounded-lg p-1.5 text-text-subtle opacity-0 transition-all hover:bg-destructive/15 hover:text-destructive focus:opacity-100 group-hover:opacity-100"
         title="Remover da lista de multiplicadores"
       >
         <Trash size={16} aria-hidden />

@@ -13,7 +13,10 @@ import { requireAuth, resolveActiveOrg } from "@/lib/auth/server";
 import { createClient } from "@/lib/supabase/server";
 import { listarMultiplicadores, sugestoesDeMultiplicador } from "@/lib/politico/multiplicadores";
 import { contarElegiveisParaConvite, contarPotenciaisParaConvite } from "@/lib/politico/divulgador";
-import { listarVideosDaBiblioteca } from "@/app/actions/politico/multiplicadores-envio-actions";
+import {
+  listarVideosDaBiblioteca,
+  listarEnquetesParaEnviar,
+} from "@/app/actions/politico/multiplicadores-envio-actions";
 import {
   canalMultiplicadoresAtual,
   listarCanaisDisponiveis,
@@ -31,9 +34,10 @@ export default async function MultiplicadoresPage() {
   const db = await createClient();
   const multiplicadores = await listarMultiplicadores(db, org.orgId);
   const jaNoCohort = new Set(multiplicadores.map((m) => m.contactId));
-  const [sugestoes, videos, elegiveis, potenciais, canais, canalAtual] = await Promise.all([
+  const [sugestoes, videos, enquetes, elegiveis, potenciais, canais, canalAtual] = await Promise.all([
     sugestoesDeMultiplicador(db, org.orgId, jaNoCohort),
     listarVideosDaBiblioteca(),
+    listarEnquetesParaEnviar(),
     contarElegiveisParaConvite(db, org.orgId),
     contarPotenciaisParaConvite(db, org.orgId),
     listarCanaisDisponiveis(),
@@ -45,6 +49,7 @@ export default async function MultiplicadoresPage() {
       multiplicadores={multiplicadores}
       sugestoes={sugestoes}
       videos={videos}
+      enquetes={enquetes}
       elegiveis={elegiveis}
       potenciais={potenciais}
       canais={canais}

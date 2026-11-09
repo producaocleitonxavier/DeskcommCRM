@@ -20,6 +20,8 @@ import { ok, fail } from "@/lib/api/wrappers";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { canonicalPhoneBR } from "@/lib/channels/phone-variants";
 import { encontrarContatoPorTelefone } from "@/lib/channels/contato-por-telefone";
+import { registrarIndicacao } from "@/lib/politico/indicacao";
+import { recomputarEngajamento } from "@/lib/politico/engajamento";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -36,6 +38,9 @@ const submeterRespostaSchema = z.object({
   bairro: z.string().trim().min(2).max(120),
   state: z.string().trim().length(2).nullable().optional(),
   duration_seconds: z.number().int().min(0).nullable().optional(),
+  // ENQUETE COMPARTILHÁVEL: código pessoal do multiplicador que espalhou (do ?ind=
+  // no link). Quem responde vira cadastro CREDITADO a ele (pol_indicacoes, +10).
+  ind: z.string().trim().regex(/^[A-Za-z0-9]{4,12}$/).optional(),
 });
 
 /**
@@ -197,6 +202,35 @@ export async function POST(
 
   if (error) {
     return fail("internal_error", "Erro ao registrar resposta", 500, { requestId });
+  }
+
+  // ENQUETE COMPARTILHÁVEL: credita o multiplicador que espalhou (código do ?ind=).
+  // Best-effort — a resposta JÁ foi salva; nada aqui pode derrubá-la. Vira "trouxe
+  // +1" no placar dele (+10 no engajamento, via pol_indicacoes). O respondente vira
+  // um lead simpatizante (cadastro de verdade no funil).
+  if (parsed.data.ind && contactId) {
+    try {
+      const cred = await registrarIndicacao(db, orgId, contactId, parsed.data.ind.toUpperCase());
+      if (cred.creditou) {
+        const { data: leadExiste } = await db
+          .from("pol_leads")
+          .select("id")
+          .eq("organization_id", orgId)
+          .eq("contact_id", contactId)
+          .maybeSingle();
+        if (!leadExiste) {
+          await db
+            .from("pol_leads")
+            .insert({ organization_id: orgId, contact_id: contactId, support_level: "simpatizante" });
+        }
+        await recomputarEngajamento(db, orgId, contactId, {
+          reason: "Respondeu enquete por indicação",
+          engajouAgora: true,
+        });
+      }
+    } catch {
+      // ignora — a resposta já está salva
+    }
   }
 
   return ok({ response }, { status: 201, headers: { "x-request-id": requestId } });
