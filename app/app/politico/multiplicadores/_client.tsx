@@ -38,6 +38,7 @@ import {
 import {
   enviarVideoAosMultiplicadores,
   type VideoDaBiblioteca,
+  type GrupoMultiplicador,
 } from "@/app/actions/politico/multiplicadores-envio-actions";
 import { convidarDivulgadores } from "@/app/actions/politico/divulgador-actions";
 import {
@@ -85,6 +86,7 @@ export default function MultiplicadoresClient({
   const [resultados, setResultados] = useState<ContatoParaMarcar[]>([]);
   const [buscando, setBuscando] = useState(false);
   const [videoSel, setVideoSel] = useState("");
+  const [grupoSel, setGrupoSel] = useState<GrupoMultiplicador>("todos");
   const [enviando, setEnviando] = useState(false);
   const [convidando, setConvidando] = useState(false);
   const [canalSel, setCanalSel] = useState(canalAtual ?? "");
@@ -102,6 +104,9 @@ export default function MultiplicadoresClient({
   const espalhando = multiplicadores.filter((m) => m.compartilhou).length;
   const alcanceTotal = multiplicadores.reduce((s, m) => s + (m.alcancou || 0), 0);
   const trouxeTotal = multiplicadores.reduce((s, m) => s + (m.trouxe || 0), 0);
+  // Quantos recebem o conteúdo, conforme o GRUPO escolhido (o botão mostra esse nº).
+  const alvoCount =
+    grupoSel === "assessor" ? assessores.length : grupoSel === "divulgador" ? divulgadores.length : total;
 
   function onSalvarCanal(valor: string) {
     setCanalSel(valor);
@@ -143,7 +148,7 @@ export default function MultiplicadoresClient({
     setEnviando(true);
     iniciar(async () => {
       try {
-        const r = await enviarVideoAosMultiplicadores(videoSel);
+        const r = await enviarVideoAosMultiplicadores(videoSel, grupoSel);
         if (!r.ok) {
           toast.error(r.erro);
           return;
@@ -271,6 +276,41 @@ export default function MultiplicadoresClient({
             </p>
           ) : (
             <div className="mt-auto space-y-2.5">
+              {/* Para QUEM vai — escolhe o GRUPO, não as pessoas (obrigação do assessor
+                  × exclusivo do divulgador). Single-select = exclusivo. */}
+              <div>
+                <p className="mb-1 text-[11px] font-medium uppercase tracking-wide text-text-subtle">Enviar para</p>
+                <div
+                  className="flex gap-0.5 rounded-full p-0.5 text-[12px] font-semibold"
+                  style={{ background: "color-mix(in srgb, var(--color-text) 6%, transparent)" }}
+                >
+                  {([
+                    { v: "todos", t: "Todos", n: total },
+                    { v: "assessor", t: "Assessores", n: assessores.length },
+                    { v: "divulgador", t: "Divulgadores", n: divulgadores.length },
+                  ] as const).map((g) => {
+                    const ativo = grupoSel === g.v;
+                    return (
+                      <button
+                        key={g.v}
+                        type="button"
+                        onClick={() => setGrupoSel(g.v)}
+                        className="flex-1 rounded-full px-2 py-1.5 transition-colors"
+                        style={
+                          ativo
+                            ? {
+                                background: "color-mix(in srgb, var(--color-accent) 20%, transparent)",
+                                color: "var(--accent-ink, var(--color-accent))",
+                              }
+                            : { color: "var(--color-text-muted)" }
+                        }
+                      >
+                        {g.t} <span className="tabular-nums opacity-70">{g.n}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
               <select
                 className="wr-input w-full"
                 value={videoSel}
@@ -294,10 +334,10 @@ export default function MultiplicadoresClient({
                 </button>
                 <Button
                   onClick={onEnviarVideo}
-                  disabled={ocupado || enviando || !videoSel || total === 0}
+                  disabled={ocupado || enviando || !videoSel || alvoCount === 0}
                 >
                   <PaperPlaneTilt size={15} weight="bold" aria-hidden />
-                  Enviar aos {total}
+                  Enviar aos {alvoCount}
                 </Button>
               </div>
               {verPrevia && videoSel && (

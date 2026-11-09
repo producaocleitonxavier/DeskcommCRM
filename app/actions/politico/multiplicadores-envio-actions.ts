@@ -24,6 +24,7 @@ import { openSharedContactConversation } from "@/lib/messaging/open-shared-conta
 import { sendMessageHandler } from "@/app/api/v1/messages/_handler";
 import { obterOuCriarShare, urlDoVideoShare } from "@/lib/politico/video-share";
 import { TAG_MULTIPLICADOR } from "@/lib/politico/multiplicadores";
+import { TAG_DIVULGADOR } from "@/lib/politico/divulgador";
 import { lerCanalMultiplicadores } from "@/lib/politico/multiplicadores-canal";
 import { ApiError } from "@/lib/api/types";
 
@@ -92,12 +93,21 @@ export type EnvioMultiplicadoresResultado =
   | { ok: false; erro: string };
 
 /**
- * Manda o vídeo (link pessoal) pra cada multiplicador marcado. Sequencial e
- * gentil (sem rajada). Pula quem não tem telefone válido, com o motivo. Se não
+ * Grupo-alvo do envio. O cliente escolhe o GRUPO (não as pessoas): conteúdo que é
+ * OBRIGAÇÃO do assessor vai só pra eles; exclusivo de voluntário, só divulgadores.
+ */
+export type GrupoMultiplicador = "todos" | "assessor" | "divulgador";
+
+/**
+ * Manda o vídeo (link pessoal) pra cada multiplicador do GRUPO escolhido. Sequencial
+ * e gentil (sem rajada). Pula quem não tem telefone válido, com o motivo. Se não
  * houver canal de WhatsApp conectado, aborta com erro claro (no teste não há
  * WAHA — a tela mostra isso em vez de "enviar" no vazio).
  */
-export async function enviarVideoAosMultiplicadores(materialId: string): Promise<EnvioMultiplicadoresResultado> {
+export async function enviarVideoAosMultiplicadores(
+  materialId: string,
+  grupo: GrupoMultiplicador = "todos",
+): Promise<EnvioMultiplicadoresResultado> {
   const user = await requireAuth();
   const org = await resolveActiveOrg(user);
   if (!org) return { ok: false, erro: "Sessão ou organização inválida." };
@@ -118,16 +128,35 @@ export async function enviarVideoAosMultiplicadores(materialId: string): Promise
     .maybeSingle();
   if (!mat) return { ok: false, erro: "Conteúdo do Instagram não encontrado nesta biblioteca." };
 
-  // Cohort = contatos marcados como multiplicador.
+  const alvo: GrupoMultiplicador = grupo === "assessor" || grupo === "divulgador" ? grupo : "todos";
+
+  // Cohort = contatos marcados como multiplicador. O GRUPO filtra pela tag
+  // `divulgador` (tem = divulgador / não tem = assessor), em JS (cohort é pequeno).
   const { data: ctsData } = await db
     .from("contacts")
-    .select("id, name, phone_number")
+    .select("id, name, phone_number, tags")
     .eq("organization_id", org.orgId)
     .contains("tags", [TAG_MULTIPLICADOR])
     .limit(CAP_ENVIO);
-  const cohort = (ctsData ?? []) as { id: string; name: string | null; phone_number: string | null }[];
+  const todos = (ctsData ?? []) as {
+    id: string;
+    name: string | null;
+    phone_number: string | null;
+    tags: string[] | null;
+  }[];
+  const cohort = todos.filter((c) => {
+    if (alvo === "todos") return true;
+    const ehDivulgador = (c.tags ?? []).includes(TAG_DIVULGADOR);
+    return alvo === "divulgador" ? ehDivulgador : !ehDivulgador;
+  });
   if (cohort.length === 0) {
-    return { ok: false, erro: "Nenhum multiplicador marcado ainda. Marque seus assessores/lideranças primeiro." };
+    const vazio =
+      alvo === "assessor"
+        ? "Nenhum assessor marcado ainda."
+        : alvo === "divulgador"
+          ? "Nenhum divulgador ainda (eles entram pelo convite + aceite)."
+          : "Nenhum multiplicador marcado ainda. Marque seus assessores/lideranças primeiro.";
+    return { ok: false, erro: vazio };
   }
 
   // Número DEDICADO dos multiplicadores (anti-ban): se configurado, o disparo sai
