@@ -1262,6 +1262,15 @@ export async function sendMessageHandler(
       }
     } catch (err) {
       if (err instanceof StaleServiceBoundaryError || err instanceof AgendaDeferredError || err instanceof ApprovedReplyReceiptPersistenceError) throw err;
+      console.error(
+        "[DIAG-HANDLER-FAIL] " +
+          JSON.stringify({
+            msg: err instanceof Error ? err.message : String(err),
+            causeMsg: String((((err as { cause?: { message?: string } })?.cause)?.message) ?? ""),
+            causeCode: String((((err as { cause?: { code?: string } })?.cause)?.code) ?? ""),
+            stack: ((err as { stack?: string })?.stack ?? "").slice(0, 1600),
+          }),
+      );
       const msg = err instanceof Error ? err.message : adapter.codes.unknownError;
       // `storage_sign_failed` fica literal: é falha do NOSSO Storage, não do
       // canal — a URL assinada é montada antes de qualquer coisa tocar o adapter.
