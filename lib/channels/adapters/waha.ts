@@ -269,6 +269,7 @@ export const wahaAdapter: ChannelAdapter = {
     // comportamento visível — proibido nas Fases 0–2.
     if (!client) return { externalId: null };
 
+    try {
     const to = await resolveCanonicalCusChatId(client, envelope.sessionRef, envelope.to);
 
     // A estrutura de três caminhos é do upstream (o cartão de contato entrou
@@ -310,5 +311,21 @@ export const wahaAdapter: ChannelAdapter = {
     }
 
     return { externalId: parseWahaMessageId(res) };
+    } catch (e) {
+      const err = e as { message?: string; cause?: unknown };
+      const c = (err?.cause ?? {}) as { message?: string; code?: string };
+      console.error(
+        "[DIAG-SEND-FAIL] " +
+          JSON.stringify({
+            msg: err?.message ?? String(e),
+            causeMsg: c?.message ?? "",
+            causeCode: c?.code ?? "",
+            to: envelope.to,
+            kind: envelope.kind,
+            session: envelope.sessionRef,
+          }),
+      );
+      throw e;
+    }
   },
 };
