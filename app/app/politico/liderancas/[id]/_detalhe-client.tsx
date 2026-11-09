@@ -46,7 +46,6 @@ export interface LiderancaDetalhe {
 export interface Props {
   lideranca: LiderancaDetalhe;
   fotoUrl: string | null;
-  territorios: Opcao[];
   vozArmada?: boolean;
   politicoNome?: string | null;
   indicadas?: { leadId: string; nome: string }[];
@@ -93,7 +92,7 @@ function fmtData(d: string | null): string {
   return new Date(d).toLocaleDateString("pt-BR", { day: "2-digit", month: "short", year: "numeric" });
 }
 
-export default function DetalheLiderancaClient({ lideranca, fotoUrl, territorios, vozArmada = false, politicoNome = null, indicadas = [] }: Props) {
+export default function DetalheLiderancaClient({ lideranca, fotoUrl, vozArmada = false, politicoNome = null, indicadas = [] }: Props) {
   const router = useRouter();
 
   const [l, setL] = useState<LiderancaDetalhe>(lideranca);
@@ -138,8 +137,6 @@ export default function DetalheLiderancaClient({ lideranca, fotoUrl, territorios
   const [aniversario, setAniversario] = useState(l.aniversario ?? "");
   const [cidade, setCidade] = useState(l.cidade ?? "");
   const [bairro, setBairro] = useState(l.bairro ?? "");
-  const [zona, setZona] = useState(l.zona_eleitoral ?? "");
-  const [territoryId, setTerritoryId] = useState(l.territory_id ?? "");
   const [engajamento, setEngajamento] = useState(l.nivel_engajamento ?? "medio");
   const [status, setStatus] = useState(l.status ?? "ativo");
   const [observacoes, setObservacoes] = useState(l.observacoes ?? "");
@@ -159,8 +156,6 @@ export default function DetalheLiderancaClient({ lideranca, fotoUrl, territorios
       aniversario: aniversario || null,
       cidade: cidade.trim() || null,
       bairro: bairro.trim() || null,
-      zona_eleitoral: zona.trim() || null,
-      territory_id: territoryId || null,
       nivel_engajamento: engajamento,
       status,
       observacoes: observacoes.trim() || null,
@@ -287,7 +282,7 @@ export default function DetalheLiderancaClient({ lideranca, fotoUrl, territorios
 
         {/* Contadores */}
         <div className="mt-4 flex flex-wrap gap-6">
-          <Contador valor={l.leads_mobilizados} label="indicadas" />
+          <Contador valor={l.leads_mobilizados} label="cadastros trazidos" />
           <Contador valor={l.eventos_organizados} label="eventos" />
           <div>
             <div className="text-xs" style={{ color: "var(--color-text-subtle)" }}>último contato</div>
@@ -318,15 +313,6 @@ export default function DetalheLiderancaClient({ lideranca, fotoUrl, territorios
               <Campo label="Aniversário"><input type="date" value={aniversario} onChange={(e) => setAniversario(e.target.value)} className="wr-input w-full" /></Campo>
               <Campo label="Cidade"><input type="text" value={cidade} onChange={(e) => setCidade(e.target.value)} className="wr-input w-full" /></Campo>
               <Campo label="Bairro"><input type="text" value={bairro} onChange={(e) => setBairro(e.target.value)} className="wr-input w-full" /></Campo>
-              <Campo label="Zona eleitoral"><input type="text" value={zona} onChange={(e) => setZona(e.target.value)} className="wr-input w-full" /></Campo>
-              {territorios.length > 0 && (
-                <Campo label="Território">
-                  <select value={territoryId} onChange={(e) => setTerritoryId(e.target.value)} className="wr-input w-full">
-                    <option value="">—</option>
-                    {territorios.map((t) => <option key={t.id} value={t.id}>{t.nome}</option>)}
-                  </select>
-                </Campo>
-              )}
               <Campo label="Engajamento">
                 <select value={engajamento} onChange={(e) => setEngajamento(e.target.value)} className="wr-input w-full">
                   {ENGAJAMENTOS.map((o) => <option key={o.id} value={o.id}>{o.nome}</option>)}
@@ -360,8 +346,6 @@ export default function DetalheLiderancaClient({ lideranca, fotoUrl, territorios
             <Info label="Aniversário" valor={l.aniversario ? fmtData(l.aniversario) : "—"} />
             <Info label="Cidade" valor={l.cidade ?? "—"} />
             <Info label="Bairro" valor={l.bairro ?? "—"} />
-            <Info label="Zona eleitoral" valor={l.zona_eleitoral ?? "—"} />
-            <Info label="Território" valor={rotulo(territorios, l.territory_id)} />
             <Info label="Engajamento" valor={rotulo(ENGAJAMENTOS, l.nivel_engajamento)} />
             <Info label="Contato vinculado" valor={l.contacts?.name ?? "—"} />
             {l.observacoes && <div className="sm:col-span-2"><Info label="Observações" valor={l.observacoes} /></div>}
@@ -372,7 +356,7 @@ export default function DetalheLiderancaClient({ lideranca, fotoUrl, territorios
       {indicadas.length > 0 && (
         <section className="gip-glass p-6 sm:p-7">
           <h2 className="mb-4 text-[11px] font-semibold uppercase tracking-[0.08em]" style={{ color: "var(--color-text-subtle)" }}>
-            Pessoas indicadas ({l.leads_mobilizados})
+            Cadastros trazidos por esta liderança ({l.leads_mobilizados})
           </h2>
           <div className="flex flex-wrap gap-2">
             {indicadas.map((p) => (

@@ -26,11 +26,18 @@ export const runtime = "nodejs";
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
+// Ano sentinela 2000 (bissexto) — guardamos só dia e mês do aniversário (igual ao
+// perfil do QR: idade não é revelada). birthday_md = mês*100+dia alimenta o cron.
+const DIAS_NO_MES = [31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
+const pad2 = (n: number) => String(n).padStart(2, "0");
+
 const bodySchema = z.object({
   nome: z.string().trim().min(2).max(200),
   telefone: z.string().trim().min(8).max(32),
   cidade: z.string().trim().max(120).optional(),
   bairro: z.string().trim().max(120).optional(),
+  dia: z.number().int().min(1).max(31).nullable().optional(),
+  mes: z.number().int().min(1).max(12).nullable().optional(),
   website: z.string().optional(), // honeypot: precisa vir vazio
 });
 
@@ -82,15 +89,45 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ lideranca:
   if (parsed.data.cidade) customFields.cidade = parsed.data.cidade;
   if (parsed.data.bairro) customFields.bairro = parsed.data.bairro;
 
+  // Aniversário (dia/mês) → birthdate "2000-MM-DD", só se o dia couber no mês.
+  let birthdate: string | null = null;
+  if (parsed.data.dia != null && parsed.data.mes != null && parsed.data.dia <= DIAS_NO_MES[parsed.data.mes - 1]!) {
+    birthdate = `2000-${pad2(parsed.data.mes)}-${pad2(parsed.data.dia)}`;
+  }
+
   // Contato: reaproveita se o telefone já existe na org; senão cria.
   let contactId: string;
   const existente = await encontrarContatoPorTelefone(admin as never, orgId, telefone);
   if (existente) {
     contactId = (existente as { id: string }).id;
+    // Enriquece o contato existente SEM apagar o que já tem (cidade/bairro/aniversário).
+    try {
+      const { data: cRow } = await admin
+        .from("contacts")
+        .select("custom_fields, birthdate")
+        .eq("id", contactId)
+        .maybeSingle();
+      const cf = { ...(((cRow as { custom_fields?: Record<string, unknown> } | null)?.custom_fields) ?? {}) };
+      if (parsed.data.cidade) cf.cidade = parsed.data.cidade;
+      if (parsed.data.bairro) cf.bairro = parsed.data.bairro;
+      const patch: Record<string, unknown> = { custom_fields: cf };
+      if (birthdate && !((cRow as { birthdate?: string | null } | null)?.birthdate)) patch.birthdate = birthdate;
+      await admin.from("contacts").update(patch).eq("id", contactId).eq("organization_id", orgId);
+    } catch {
+      /* enriquecimento é best-effort — não bloqueia o cadastro */
+    }
   } else {
+    const insert: Record<string, unknown> = {
+      organization_id: orgId,
+      name: parsed.data.nome,
+      phone_number: telefone,
+      source: "form",
+      custom_fields: customFields,
+    };
+    if (birthdate) insert.birthdate = birthdate;
     const { data: novo, error: cErr } = await admin
       .from("contacts")
-      .insert({ organization_id: orgId, name: parsed.data.nome, phone_number: telefone, source: "form", custom_fields: customFields })
+      .insert(insert)
       .select("id")
       .maybeSingle();
     if (cErr || !novo) {

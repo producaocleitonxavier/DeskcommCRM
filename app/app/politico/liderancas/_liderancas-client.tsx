@@ -154,7 +154,7 @@ export default function LiderancasClient({ liderancas }: LiderancasClientProps) 
                 { num: String(ativas), label: "Ativas" },
                 { num: String(municipios), label: "Municípios" },
                 { num: String(comWhatsapp), label: "Com WhatsApp" },
-                { num: String(totalMobilizados), label: "Pessoas indicadas" },
+                { num: String(totalMobilizados), label: "Cadastros trazidos" },
                 { num: String(totalEventos), label: "Eventos" },
               ],
               colunas: [
@@ -166,7 +166,7 @@ export default function LiderancasClient({ liderancas }: LiderancasClientProps) 
                 { header: "Bairro", largura: "8%" },
                 { header: "WhatsApp", largura: "10%" },
                 { header: "Aniv.", largura: "7%" },
-                { header: "Indicados", largura: "6%" },
+                { header: "Cadastros", largura: "6%" },
                 { header: "Eventos", largura: "5%" },
                 { header: "Engaj.", largura: "6%", pilula: true },
                 { header: "Status", largura: "5%", pilula: true },
@@ -208,7 +208,7 @@ export default function LiderancasClient({ liderancas }: LiderancasClientProps) 
             <KpiCard label="Ativas" valor={ativas} icone={UserCheck} />
             <KpiCard label="Municípios" valor={municipios} icone={MapPin} />
             <KpiCard label="Com WhatsApp" valor={comWhatsapp} icone={MessageCircle} />
-            <KpiCard label="Pessoas indicadas" valor={totalMobilizados} icone={Megaphone} />
+            <KpiCard label="Cadastros trazidos" valor={totalMobilizados} icone={Megaphone} />
             <KpiCard label="Eventos" valor={totalEventos} icone={CalendarCheck} />
           </section>
 
@@ -299,7 +299,7 @@ export default function LiderancasClient({ liderancas }: LiderancasClientProps) 
                         <div className="font-heading text-lg font-bold tabular-nums leading-none">
                           {(l.leads_mobilizados ?? 0).toLocaleString("pt-BR")}
                         </div>
-                        <div className="mt-0.5 text-[11px] text-muted-foreground">indicadas</div>
+                        <div className="mt-0.5 text-[11px] text-muted-foreground">cadastros</div>
                       </div>
                       <div className="text-center">
                         <div className="font-heading text-lg font-bold tabular-nums leading-none">

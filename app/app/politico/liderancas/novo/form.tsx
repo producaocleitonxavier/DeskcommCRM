@@ -22,7 +22,6 @@ interface Opcao {
 
 export interface NovaLiderancaFormProps {
   orgId: string;
-  territorios: Opcao[];
 }
 
 const TIPOS: Opcao[] = [
@@ -56,7 +55,7 @@ function Label({ children, obrig }: { children: React.ReactNode; obrig?: boolean
   );
 }
 
-export default function NovaLiderancaForm({ territorios }: NovaLiderancaFormProps) {
+export default function NovaLiderancaForm(_props: NovaLiderancaFormProps) {
   const router = useRouter();
 
   const [nome, setNome] = useState("");
@@ -69,8 +68,6 @@ export default function NovaLiderancaForm({ territorios }: NovaLiderancaFormProp
   const [aniversario, setAniversario] = useState("");
   const [cidade, setCidade] = useState("");
   const [bairro, setBairro] = useState("");
-  const [zona, setZona] = useState("");
-  const [territoryId, setTerritoryId] = useState("");
   const [engajamento, setEngajamento] = useState("medio");
   const [status, setStatus] = useState("ativo");
   const [observacoes, setObservacoes] = useState("");
@@ -102,8 +99,6 @@ export default function NovaLiderancaForm({ territorios }: NovaLiderancaFormProp
     if (aniversario) payload.aniversario = aniversario;
     if (cidade.trim()) payload.cidade = cidade.trim();
     if (bairro.trim()) payload.bairro = bairro.trim();
-    if (zona.trim()) payload.zona_eleitoral = zona.trim();
-    if (territoryId) payload.territory_id = territoryId;
     if (observacoes.trim()) payload.observacoes = observacoes.trim();
 
     const res = await criarRegistro("pol_liderancas", payload);
@@ -211,19 +206,6 @@ export default function NovaLiderancaForm({ territorios }: NovaLiderancaFormProp
               <Label>Bairro</Label>
               <input type="text" value={bairro} onChange={(e) => setBairro(e.target.value)} className="wr-input w-full" />
             </div>
-            <div>
-              <Label>Zona eleitoral</Label>
-              <input type="text" value={zona} onChange={(e) => setZona(e.target.value)} className="wr-input w-full" />
-            </div>
-            {territorios.length > 0 && (
-              <div>
-                <Label>Território</Label>
-                <select value={territoryId} onChange={(e) => setTerritoryId(e.target.value)} className="wr-input w-full">
-                  <option value="">—</option>
-                  {territorios.map((t) => <option key={t.id} value={t.id}>{t.nome}</option>)}
-                </select>
-              </div>
-            )}
             <div>
               <Label>Engajamento</Label>
               <select value={engajamento} onChange={(e) => setEngajamento(e.target.value)} className="wr-input w-full">

@@ -11,6 +11,11 @@
 
 import { useState } from "react";
 
+const MESES = [
+  "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
+  "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro",
+];
+
 interface Props {
   liderancaId: string;
   liderancaNome: string;
@@ -32,12 +37,17 @@ export default function CaptacaoClient({
   const [telefone, setTelefone] = useState("");
   const [cidade, setCidade] = useState("");
   const [bairro, setBairro] = useState("");
+  const [dia, setDia] = useState("");
+  const [mes, setMes] = useState("");
   const [website, setWebsite] = useState(""); // honeypot
   const [enviando, setEnviando] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
   const [ok, setOk] = useState(false);
 
   const tituloPolitico = politicoNome || "Gabinete";
+  // Mandato por extenso (cargo + nome) p/ o consentimento. "Vereador Cleiton Xavier".
+  const mandato = [politicoCargo, politicoNome].filter(Boolean).join(" ").trim() || "gabinete";
+  const iniciaisLideranca = liderancaNome.trim().split(/\s+/).filter(Boolean).slice(0, 2).map((p) => p[0]).join("").toUpperCase() || "?";
 
   async function enviar(e: React.FormEvent) {
     e.preventDefault();
@@ -51,7 +61,15 @@ export default function CaptacaoClient({
       const res = await fetch(`/api/public/captacao/${liderancaId}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ nome: nome.trim(), telefone: telefone.trim(), cidade: cidade.trim() || undefined, bairro: bairro.trim() || undefined, website }),
+        body: JSON.stringify({
+          nome: nome.trim(),
+          telefone: telefone.trim(),
+          cidade: cidade.trim() || undefined,
+          bairro: bairro.trim() || undefined,
+          dia: dia ? Number(dia) : undefined,
+          mes: mes ? Number(mes) : undefined,
+          website,
+        }),
       });
       if (!res.ok) {
         let msg = "Não foi possível enviar. Tente novamente.";
@@ -75,36 +93,43 @@ export default function CaptacaoClient({
   return (
     <div
       className="flex min-h-screen flex-col items-center justify-center px-4 py-10"
-      style={{ background: "linear-gradient(160deg,#0E1116 0%,#14181F 55%,#1A2410 100%)" }}
+      style={{ background: "radial-gradient(1100px 520px at 50% -8%, #1b3350, #0b1726 60%, #0a1420 100%)" }}
     >
       <div className="w-full max-w-md">
-        {/* Topo: a IDENTIDADE DO POLÍTICO em primeiro plano */}
+        {/* Topo: a LIDERANÇA em destaque (é quem convida; a confiança é com ela).
+            O MANDATO fica secundário/discreto — transparência de quem está por trás,
+            sem assustar quem só conhece a liderança. */}
         <div className="mb-6 flex flex-col items-center text-center">
+          {/* Mandato — faixa secundária, discreta */}
           {logoUrl ? (
-            // Caixa de tamanho fixo: a logo escala pra caber (object-contain),
-            // então QUALQUER imagem (quadrada, larga ou alta) fica com destaque
-            // consistente, sem depender das dimensões do arquivo enviado.
-            <div className="flex h-40 w-full items-center justify-center sm:h-48">
+            <div className="mb-5 flex h-14 items-center justify-center sm:h-16">
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 src={logoUrl}
                 alt={tituloPolitico}
-                className="max-h-full w-auto max-w-[320px] object-contain drop-shadow-[0_8px_28px_rgba(0,0,0,0.55)]"
+                className="max-h-full w-auto max-w-[200px] object-contain opacity-90"
               />
             </div>
           ) : (
-            <>
-              <h2 className="font-heading text-2xl font-extrabold leading-tight sm:text-3xl" style={{ color: "#FFFFFF" }}>
-                {tituloPolitico}
-              </h2>
-              {politicoCargo ? (
-                <div className="mt-1 text-[12px] font-semibold uppercase tracking-[0.18em]" style={{ color: "#D7F36A" }}>
-                  {politicoCargo}
-                </div>
-              ) : null}
-              <div className="mt-3 h-[3px] w-12 rounded-full" style={{ background: "#D7F36A" }} />
-            </>
+            <p className="mb-5 text-[11px] font-semibold uppercase tracking-[0.18em]" style={{ color: "rgba(255,255,255,0.5)" }}>
+              Mandato {mandato}
+            </p>
           )}
+
+          {/* Liderança — DESTAQUE: avatar com iniciais + nome grande + convite */}
+          <div
+            className="grid h-16 w-16 place-items-center rounded-full text-lg font-bold text-white"
+            style={{ background: "linear-gradient(135deg,#6E8BFF,#3550c9)", boxShadow: "0 10px 30px -8px rgba(0,0,0,0.65)" }}
+          >
+            {iniciaisLideranca}
+          </div>
+          <h2 className="mt-3 font-heading text-2xl font-extrabold leading-tight sm:text-3xl" style={{ color: "#FFFFFF" }}>
+            {liderancaNome}
+          </h2>
+          <p className="mt-1 text-sm" style={{ color: "rgba(255,255,255,0.65)" }}>
+            está te convidando a participar
+          </p>
+          <div className="mt-3 h-[3px] w-12 rounded-full" style={{ background: "#D7F36A" }} />
         </div>
 
         <div className="rounded-2xl p-6 sm:p-7" style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.1)" }}>
@@ -121,7 +146,7 @@ export default function CaptacaoClient({
               <div>
                 <h1 className="font-heading text-xl font-bold" style={{ color: "#FFFFFF" }}>Faça seu cadastro</h1>
                 <p className="mt-1 text-sm" style={{ color: "rgba(255,255,255,0.6)" }}>
-                  Indicação de <strong style={{ color: "rgba(255,255,255,0.85)" }}>{liderancaNome}</strong>.
+                  Leva 20 segundos. 🙂
                 </p>
               </div>
 
@@ -146,6 +171,29 @@ export default function CaptacaoClient({
                 </Campo>
               </div>
 
+              {/* Aniversário: só dia e mês (nunca o ano — não revela idade). */}
+              <Campo label="Aniversário (dia e mês)">
+                <div className="flex gap-3">
+                  <input
+                    type="number"
+                    inputMode="numeric"
+                    min={1}
+                    max={31}
+                    value={dia}
+                    onChange={(e) => setDia(e.target.value)}
+                    className="campo"
+                    style={{ maxWidth: 96 }}
+                    placeholder="Dia"
+                  />
+                  <select value={mes} onChange={(e) => setMes(e.target.value)} className="campo">
+                    <option value="">Mês</option>
+                    {MESES.map((nm, i) => (
+                      <option key={nm} value={i + 1}>{nm}</option>
+                    ))}
+                  </select>
+                </div>
+              </Campo>
+
               {/* honeypot — oculto para humanos, bots preenchem */}
               <input
                 type="text"
@@ -166,7 +214,7 @@ export default function CaptacaoClient({
                 {enviando ? "Enviando…" : "Quero participar"}
               </button>
               <p className="text-center text-[11px]" style={{ color: "rgba(255,255,255,0.4)" }}>
-                Ao enviar, você concorda em ser contatado(a) pelo gabinete.
+                Ao enviar, você concorda em ser contatado(a) pelo gabinete{mandato !== "gabinete" ? ` do ${mandato}` : ""}, apoiado pela liderança {liderancaNome}.
               </p>
             </form>
           )}

@@ -26,7 +26,7 @@ export default async function LiderancaDetalhePage({
   if (!org) redirect("/app/onboarding");
 
   const db = await createClient();
-  const [lidRes, terrRes, pessoasRes, eventosRes] = await Promise.all([
+  const [lidRes, pessoasRes, eventosRes] = await Promise.all([
     db
       .from("pol_liderancas")
       .select(
@@ -35,7 +35,6 @@ export default async function LiderancaDetalhePage({
       .eq("organization_id", org.orgId)
       .eq("id", id)
       .maybeSingle(),
-    db.from("pol_territories").select("id, name, state_code").eq("organization_id", org.orgId).order("name").limit(600),
     // Pessoas indicadas por esta liderança (quem entrou pelo link de captação) —
     // com nome, para listar e linkar na ficha. count = total.
     db.from("pol_leads").select("id, contact_id, contacts!contact_id(name)", { count: "exact" }).eq("organization_id", org.orgId).eq("pol_lideranca_id", id).order("created_at", { ascending: false }).limit(100),
@@ -43,11 +42,6 @@ export default async function LiderancaDetalhePage({
   ]);
 
   if (!lidRes.data) notFound();
-
-  const territorios = ((terrRes.data ?? []) as { id: string; name: string; state_code: string | null }[]).map((t) => ({
-    id: t.id,
-    nome: t.state_code ? `${t.name} · ${t.state_code}` : t.name,
-  }));
 
   const base = lidRes.data as unknown as LiderancaDetalhe & { foto_path: string | null };
   let fotoUrl: string | null = null;
@@ -72,5 +66,5 @@ export default async function LiderancaDetalhePage({
   const { data: gabNome } = await db.from("pol_gabinete_config").select("nome_parlamentar").eq("organization_id", org.orgId).maybeSingle();
   const politicoNome = ((gabNome?.nome_parlamentar as string | null) ?? "").trim() || null;
 
-  return <DetalheLiderancaClient lideranca={lideranca} fotoUrl={fotoUrl} territorios={territorios} vozArmada={vozOk} politicoNome={politicoNome} indicadas={indicadas} />;
+  return <DetalheLiderancaClient lideranca={lideranca} fotoUrl={fotoUrl} vozArmada={vozOk} politicoNome={politicoNome} indicadas={indicadas} />;
 }
