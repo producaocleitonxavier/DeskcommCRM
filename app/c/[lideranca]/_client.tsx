@@ -30,7 +30,6 @@ export default function CaptacaoClient({
   liderancaNome,
   politicoNome,
   politicoCargo,
-  logoUrl,
   plataformaNome,
 }: Props) {
   const [nome, setNome] = useState("");
@@ -44,7 +43,6 @@ export default function CaptacaoClient({
   const [erro, setErro] = useState<string | null>(null);
   const [ok, setOk] = useState(false);
 
-  const tituloPolitico = politicoNome || "Gabinete";
   // Mandato por extenso (cargo + nome) p/ o consentimento. "Vereador Cleiton Xavier".
   const mandato = [politicoCargo, politicoNome].filter(Boolean).join(" ").trim() || "gabinete";
   const iniciaisLideranca = liderancaNome.trim().split(/\s+/).filter(Boolean).slice(0, 2).map((p) => p[0]).join("").toUpperCase() || "?";
@@ -96,26 +94,10 @@ export default function CaptacaoClient({
       style={{ background: "radial-gradient(1100px 520px at 50% -8%, #1b3350, #0b1726 60%, #0a1420 100%)" }}
     >
       <div className="w-full max-w-md">
-        {/* Topo: a LIDERANÇA em destaque (é quem convida; a confiança é com ela).
-            O MANDATO fica secundário/discreto — transparência de quem está por trás,
-            sem assustar quem só conhece a liderança. */}
+        {/* Topo: só a LIDERANÇA em destaque (é quem convida; a confiança é com ela).
+            O mandato NÃO aparece aqui — fica no consentimento e no rodapé, pra não
+            assustar quem só conhece a liderança. */}
         <div className="mb-6 flex flex-col items-center text-center">
-          {/* Mandato — faixa secundária, discreta */}
-          {logoUrl ? (
-            <div className="mb-5 flex h-14 items-center justify-center sm:h-16">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src={logoUrl}
-                alt={tituloPolitico}
-                className="max-h-full w-auto max-w-[200px] object-contain opacity-90"
-              />
-            </div>
-          ) : (
-            <p className="mb-5 text-[11px] font-semibold uppercase tracking-[0.18em]" style={{ color: "rgba(255,255,255,0.5)" }}>
-              Mandato {mandato}
-            </p>
-          )}
-
           {/* Liderança — DESTAQUE: avatar com iniciais + nome grande + convite */}
           <div
             className="grid h-16 w-16 place-items-center rounded-full text-lg font-bold text-white"
