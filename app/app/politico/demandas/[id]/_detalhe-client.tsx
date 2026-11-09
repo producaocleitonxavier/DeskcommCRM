@@ -600,8 +600,10 @@ export default function DetalheDemandaClient({ demanda, assessores, eventos, voz
           </div>
         </div>
 
-        {/* Cobrança: o órgão já respondeu o ofício? (fácil de bater o olho) */}
-        <div className="mb-4 flex flex-wrap items-center gap-2.5 rounded-xl px-4 py-3" style={{ background: "var(--color-surface-elevated)", border: "1px solid var(--color-border)" }}>
+        {/* Cobrança: o órgão já respondeu o ofício? (fácil de bater o olho)
+            Card em MARINHO (war-room wr-claro wr-navy-section) — navy + texto branco,
+            mesmo padrão dos detalhes de Liderança/Lead. */}
+        <div className="war-room wr-claro wr-navy-section mb-4 flex flex-wrap items-center gap-2.5 rounded-xl px-4 py-3" style={{ background: "var(--color-surface-elevated)", border: "1px solid var(--color-border)" }}>
           <span className="text-sm font-semibold" style={{ color: "var(--color-text)" }}>O órgão respondeu?</span>
           <button
             type="button"
