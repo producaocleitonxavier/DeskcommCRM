@@ -35,6 +35,18 @@ function etapaDe(value: string) {
   return ETAPAS.find((e) => e.value === value) ?? ETAPAS[0];
 }
 
+// Função (equipe que divulga) — mesmo critério do placar de Multiplicadores:
+// tag `multiplicador` = está no time; + `divulgador` = Divulgador; senão Assessor.
+const FUNCAO_CHIP: Record<"assessor" | "divulgador", { label: string; bg: string; fg: string }> = {
+  assessor: { label: "Assessor", bg: "#E0F2FE", fg: "#0369A1" },
+  divulgador: { label: "Divulgador", bg: "#DCFCE7", fg: "#15803D" },
+};
+function funcaoDe(tags: string[] | null | undefined): "assessor" | "divulgador" | null {
+  const t = tags ?? [];
+  if (!t.includes("multiplicador")) return null;
+  return t.includes("divulgador") ? "divulgador" : "assessor";
+}
+
 function iniciais(nome: string | null | undefined): string {
   if (!nome) return "?";
   const partes = nome.trim().split(/\s+/);
@@ -329,6 +341,12 @@ export default function LeadsClient({ leads, total, contagens, cidades, mapaResu
                   >
                     <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-xs font-bold" style={{ background: `linear-gradient(135deg, ${et.hex} 0%, #26318F 100%)`, color: et.escuro ? "#FFFFFF" : "#16181D" }} aria-hidden>{iniciais(nome)}</span>
                     <span className="min-w-0 flex-1 truncate font-semibold" style={{ color: "var(--color-text)" }}>{nome}</span>
+                    {(() => {
+                      const f = funcaoDe(lead.contacts?.tags);
+                      return f ? (
+                        <span className="hidden shrink-0 rounded-full px-2 py-0.5 text-[11px] font-bold sm:inline-flex" style={{ background: FUNCAO_CHIP[f].bg, color: FUNCAO_CHIP[f].fg }}>{FUNCAO_CHIP[f].label}</span>
+                      ) : null;
+                    })()}
                     <span className="hidden shrink-0 text-xs sm:block" style={{ color: "var(--color-text-muted)" }}>{lead.contacts?.phone_number ?? ""}</span>
                     <span className="hidden shrink-0 rounded-full px-2 py-0.5 text-[11px] font-semibold md:inline-flex" style={{ background: et.badge.bg, color: et.badge.fg }}>{et.label}</span>
                     {temp && <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ background: temp.dot }} title={`Temperatura: ${temp.label}`} />}
@@ -371,13 +389,21 @@ export default function LeadsClient({ leads, total, contagens, cidades, mapaResu
                   </div>
 
                   <div className="flex items-center justify-between gap-2">
-                    <span
-                      className="inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold"
-                      style={{ background: et.badge.bg, color: et.badge.fg }}
-                    >
-                      {et.label}
-                    </span>
-                    <Link href={`/app/politico/leads/${lead.id}`} className="wr-btn text-sm">
+                    <div className="flex min-w-0 flex-wrap items-center gap-1.5">
+                      <span
+                        className="inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold"
+                        style={{ background: et.badge.bg, color: et.badge.fg }}
+                      >
+                        {et.label}
+                      </span>
+                      {(() => {
+                        const f = funcaoDe(lead.contacts?.tags);
+                        return f ? (
+                          <span className="inline-flex items-center rounded-full px-2.5 py-1 text-xs font-bold" style={{ background: FUNCAO_CHIP[f].bg, color: FUNCAO_CHIP[f].fg }}>{FUNCAO_CHIP[f].label}</span>
+                        ) : null;
+                      })()}
+                    </div>
+                    <Link href={`/app/politico/leads/${lead.id}`} className="wr-btn text-sm shrink-0">
                       Ver
                     </Link>
                   </div>

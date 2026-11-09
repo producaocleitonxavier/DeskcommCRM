@@ -16,7 +16,9 @@ import { buscarLinhaDoTempo } from "@/lib/politico/linha-do-tempo";
 import { LinhaDoTempo360 } from "@/components/politico/linha-do-tempo-360";
 import BotaoDescadastro from "./_descadastrar";
 import VideoDivulgar, { type VideoItem } from "./_video-divulgar";
+import MarcarFuncao from "./_marcar-funcao";
 import { TAG_MULTIPLICADOR } from "@/lib/politico/multiplicadores";
+import { TAG_DIVULGADOR } from "@/lib/politico/divulgador";
 
 export const dynamic = "force-dynamic";
 
@@ -396,6 +398,11 @@ export default async function FichaPage({
   // Novo cadastro/simpatizante NÃO vê o card. Marcador canônico: a tag `multiplicador`
   // (mesmo critério do placar de Multiplicadores e de quem recebe o disparo do link).
   const ehMultiplicador = (contact.tags ?? []).includes(TAG_MULTIPLICADOR);
+  // Função (reusa a mesma máquina do placar): tem `divulgador` → Divulgador;
+  // só `multiplicador` → Assessor (equipe marcada por função). Senão, sem selo.
+  const funcao: "assessor" | "divulgador" | null = ehMultiplicador
+    ? ((contact.tags ?? []).includes(TAG_DIVULGADOR) ? "divulgador" : "assessor")
+    : null;
 
   // Vídeos da biblioteca (posts do IG) para gerar o link pessoal de divulgação.
   // Só busca para multiplicador — não faz sentido para o resto da base.
@@ -506,6 +513,18 @@ export default async function FichaPage({
                   style={{ background: "var(--color-accent)", color: "#2E3410" }}
                 >
                   Líder
+                </span>
+              )}
+              {funcao && (
+                <span
+                  className="inline-flex items-center rounded-full px-2.5 py-1 text-xs font-bold"
+                  style={
+                    funcao === "divulgador"
+                      ? { background: "rgba(52,211,153,0.18)", color: "#6EE7B7" }
+                      : { background: "rgba(56,189,248,0.18)", color: "#7DD3FC" }
+                  }
+                >
+                  {funcao === "divulgador" ? "Divulgador" : "Assessor"}
                 </span>
               )}
               <span className="text-xs tabular-nums" style={{ color: "var(--color-text-subtle)" }}>
@@ -669,6 +688,9 @@ export default async function FichaPage({
               <Link href="/app/politico/funil" className="wr-btn w-full justify-center">
                 <GitBranch style={{ width: 16, height: 16 }} /> Mover no funil
               </Link>
+              {!contact.is_blocked && (
+                <MarcarFuncao contactId={contact.id} ehMultiplicador={ehMultiplicador} funcao={funcao} />
+              )}
               <div className="border-t pt-2.5 mt-0.5" style={{ borderColor: "var(--color-border)" }}>
                 <BotaoDescadastro contactId={contact.id} leadId={lead.id} bloqueado={!!contact.is_blocked} />
               </div>

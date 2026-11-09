@@ -33,6 +33,7 @@ export interface LeadRow {
     phone_number: string | null;
     source: string | null;
     last_activity_at: string | null;
+    tags: string[] | null;
   } | null;
   pol_territories: { name: string } | null;
 }
@@ -63,7 +64,7 @@ async function buscarLeads(
   // Embed SEMPRE inner: além de consertar os cards "Sem nome" na busca, é o que
   // permite filtrar o PAI por uma coluna do contato (is_blocked). Todo lead tem
   // contato (FK contact_id), então inner não esconde ninguém legítimo.
-  const contatoEmbed = "contacts!contact_id!inner(name, phone_number, source, last_activity_at)";
+  const contatoEmbed = "contacts!contact_id!inner(name, phone_number, source, last_activity_at, tags)";
 
   let query = db
     .from("pol_leads")
