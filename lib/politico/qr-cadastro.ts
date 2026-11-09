@@ -23,7 +23,6 @@ import { logger } from "@/lib/logger";
 import { recomputarEngajamento } from "@/lib/politico/engajamento";
 import { enviarMaterialComoDocumento, enviarTextoNoCanal } from "@/lib/politico/enviar-material";
 import { extrairCodigoIndicacao, processarIndicacao } from "@/lib/politico/indicacao";
-import { convidarAPerfilar } from "@/lib/politico/perfil";
 
 /** `[qr:CODE]` — colchetes e prefixo próprio para não casar por acidente. */
 export const PADRAO_QR = /\[qr:([A-Za-z0-9_-]{2,24})\]/i;
@@ -42,6 +41,47 @@ function limparNome(texto: string | null): string | null {
   // Precisa ter ao menos uma letra; evita capturar "ok", "👍" ou números soltos.
   if (!/\p{L}/u.test(t)) return null;
   return t;
+}
+
+// ─── PERFILAMENTO CONVERSACIONAL (cidade → bairro → aniversário) ──────────────
+// Ano sentinela 2000 (bissexto → 29/02 existe): guardamos SÓ dia e mês do
+// aniversário (o cliente não quer revelar a idade). Igual à rota do formulário.
+const DIAS_NO_MES = [31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
+const pad2 = (n: number) => String(n).padStart(2, "0");
+
+/** Campo curto de texto livre (cidade/bairro): higieniza; null se não serve. */
+function limparCampoCurto(texto: string | null): string | null {
+  const t = (texto ?? "").trim().replace(/\s+/g, " ");
+  if (t.length < 2 || t.length > 120) return null;
+  if (!/\p{L}/u.test(t)) return null; // precisa ter letra (evita "👍"/números soltos)
+  return t;
+}
+
+const MESES: Record<string, number> = {
+  jan: 1, fev: 2, mar: 3, abr: 4, mai: 5, jun: 6,
+  jul: 7, ago: 8, set: 9, out: 10, nov: 11, dez: 12,
+};
+
+/**
+ * Lê "dia e mês" de uma resposta livre: "14/09", "14/9", "14-09", "14 09",
+ * "14 de setembro". Brasil = DD/MM. Devolve {dia, mes} VÁLIDOS (dia cabe no mês),
+ * ou null (aí o chamador re-pergunta).
+ */
+function parseDiaMes(texto: string | null): { dia: number; mes: number } | null {
+  const t = (texto ?? "").toLowerCase();
+  const nums = (t.match(/\d{1,2}/g) ?? []).map(Number);
+  let dia: number | null = null;
+  let mes: number | null = null;
+  if (nums.length >= 2) {
+    [dia, mes] = [nums[0]!, nums[1]!];
+  } else if (nums.length === 1) {
+    const m = Object.entries(MESES).find(([k]) => t.includes(k)); // "14 de setembro"
+    if (m) { dia = nums[0]!; mes = m[1]; }
+  }
+  if (dia == null || mes == null) return null;
+  if (mes < 1 || mes > 12) return null;
+  if (dia < 1 || dia > DIAS_NO_MES[mes - 1]!) return null;
+  return { dia, mes };
 }
 
 export interface ResultadoQrCadastro {
@@ -66,6 +106,12 @@ export async function processarCadastroQr(
     }
     const codigo = extrairCodigoQr(entrada.texto);
     if (codigo) return await iniciarCadastro(admin, entrada.organizationId, entrada.contactId, codigo);
+    // PERFILAMENTO CONVERSACIONAL: se a pessoa já recebeu o material e está num
+    // passo de perfil (cidade/bairro/aniversário), a resposta dela é DESSE passo —
+    // não é nome. Checa antes do fluxo de nome (estados são mutuamente exclusivos:
+    // nome = material pendente; perfil = material já entregue).
+    const perfil = await continuarPerfil(admin, entrada.organizationId, entrada.contactId, entrada.texto);
+    if (perfil) return perfil;
     return await capturarNomeEEntregar(admin, entrada.organizationId, entrada.contactId, entrada.texto);
   } catch (err) {
     logger.warn("[qr-cadastro] falhou (a conversa segue normal)", {
@@ -269,10 +315,136 @@ async function capturarNomeEEntregar(
     logger.warn("[qr-cadastro] envio do material falhou", { organization_id: organizationId, contact_id: contactId, detail: r.erro });
     return { status: "error", detail: `envio_falhou:${r.erro ?? ""}` };
   }
-  // material_entregue_at já foi carimbado no reclaim. PERFIL PRIMEIRO: convida a
-  // completar cidade/bairro/aniversário por formulário (uma vez, best-effort). O
-  // convite de INDICAÇÃO passou pra DEPOIS — dispara quando a pessoa COMPLETA o
-  // perfil (pico de engajamento), na rota /api/v1/perfil/public. Decisão 08/nov.
-  await convidarAPerfilar(admin, { organizationId, contactId, canalId: origem.channel_session_id });
+  // material_entregue_at já foi carimbado no reclaim. PERFILAMENTO CONVERSACIONAL:
+  // em vez de mandar um LINK de formulário (link cru assusta/parece vírus; e botão
+  // nativo não é confiável na conexão WAHA/NOWEB), começa a perguntar
+  // cidade/bairro/aniversário NA PRÓPRIA CONVERSA — uma pergunta por vez. Decisão
+  // do cliente 09/nov. Best-effort: se não enviar, a entrega do material já valeu.
+  await iniciarPerfil(admin, { organizationId, contactId, cadastroId: cad.id, canalId: origem.channel_session_id });
   return { status: "ok", detail: `entregue:${origem.nome}` };
+}
+
+/** Começa o perfil conversacional após o material: marca etapa 'cidade' e pergunta. */
+async function iniciarPerfil(
+  admin: SupabaseClient,
+  entrada: { organizationId: string; contactId: string; cadastroId: string; canalId: string },
+): Promise<void> {
+  const { organizationId, contactId, cadastroId, canalId } = entrada;
+  try {
+    await admin.from("pol_qr_cadastros").update({ etapa_perfil: "cidade" }).eq("id", cadastroId);
+    await enviarTextoNoCanal(admin, {
+      organizationId,
+      contactId,
+      canalId,
+      texto: "Pra gente te mandar novidades e conteúdo da *sua região*, me conta: qual a sua *cidade*? 🏙️",
+      rotulo: "qr-perfil-cidade",
+    });
+  } catch (err) {
+    logger.warn("[qr-cadastro] falha ao iniciar perfil (segue normal)", {
+      organization_id: organizationId,
+      contact_id: contactId,
+      detail: err instanceof Error ? err.message.slice(0, 120) : "?",
+    });
+  }
+}
+
+/** Mescla chaves na RAIZ de contacts.custom_fields (igual à rota do formulário). */
+async function mesclarCustomFields(
+  admin: SupabaseClient,
+  organizationId: string,
+  contactId: string,
+  campos: Record<string, string>,
+): Promise<void> {
+  const { data } = await admin
+    .from("contacts")
+    .select("custom_fields")
+    .eq("organization_id", organizationId)
+    .eq("id", contactId)
+    .maybeSingle();
+  const atual = (data as { custom_fields: Record<string, unknown> | null } | null)?.custom_fields ?? {};
+  await admin
+    .from("contacts")
+    .update({ custom_fields: { ...atual, ...campos } })
+    .eq("organization_id", organizationId)
+    .eq("id", contactId);
+}
+
+/**
+ * Avança o perfil conversacional. Se o contato tem um cadastro num passo de perfil
+ * (cidade/bairro/aniversário), a mensagem dele É a resposta desse passo: grava no
+ * contato e pergunta o próximo (ou encerra). Devolve null se NÃO há passo pendente
+ * (a mensagem segue para o fluxo de nome). Fail-soft (o chamador trata exceção).
+ *
+ * Janela de 72h sobre a ENTREGA: uma mensagem solta semanas depois não vira
+ * "cidade" por engano (LGPD / não sobrescrever dado à toa).
+ */
+async function continuarPerfil(
+  admin: SupabaseClient,
+  organizationId: string,
+  contactId: string,
+  texto: string | null,
+): Promise<ResultadoQrCadastro | null> {
+  const janela = new Date(Date.now() - 72 * 3_600_000).toISOString();
+  const { data: pend } = await admin
+    .from("pol_qr_cadastros")
+    .select("id, etapa_perfil, pol_qr_origens!inner(channel_session_id)")
+    .eq("organization_id", organizationId)
+    .eq("contact_id", contactId)
+    .in("etapa_perfil", ["cidade", "bairro", "aniversario"])
+    .gte("material_entregue_at", janela)
+    .order("material_entregue_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (!pend) return null;
+  const cad = pend as unknown as {
+    id: string;
+    etapa_perfil: "cidade" | "bairro" | "aniversario";
+    pol_qr_origens: { channel_session_id: string | null };
+  };
+  const canalId = cad.pol_qr_origens.channel_session_id;
+  if (!canalId) return { status: "ok", detail: "perfil_sem_canal" };
+
+  const perguntar = (texto: string, rotulo: string) =>
+    enviarTextoNoCanal(admin, { organizationId, contactId, canalId, texto, rotulo });
+
+  if (cad.etapa_perfil === "cidade") {
+    const cidade = limparCampoCurto(texto);
+    if (!cidade) {
+      await perguntar("Pode me dizer só o nome da sua *cidade*? 🙂", "qr-perfil-cidade-rep");
+      return { status: "ok", detail: "perfil_cidade_invalida" };
+    }
+    await mesclarCustomFields(admin, organizationId, contactId, { cidade });
+    await admin.from("pol_qr_cadastros").update({ etapa_perfil: "bairro" }).eq("id", cad.id);
+    await perguntar("Show! E o seu *bairro*?", "qr-perfil-bairro");
+    return { status: "ok", detail: "perfil_cidade_ok" };
+  }
+
+  if (cad.etapa_perfil === "bairro") {
+    const bairro = limparCampoCurto(texto);
+    if (!bairro) {
+      await perguntar("Me diz só o nome do seu *bairro*, por favor. 🙂", "qr-perfil-bairro-rep");
+      return { status: "ok", detail: "perfil_bairro_invalido" };
+    }
+    await mesclarCustomFields(admin, organizationId, contactId, { bairro });
+    await admin.from("pol_qr_cadastros").update({ etapa_perfil: "aniversario" }).eq("id", cad.id);
+    await perguntar("Por último, seu *aniversário* 🎂 — só o *dia e o mês* (ex: 14/09).", "qr-perfil-aniversario");
+    return { status: "ok", detail: "perfil_bairro_ok" };
+  }
+
+  // etapa_perfil === "aniversario"
+  const dm = parseDiaMes(texto);
+  if (!dm) {
+    await perguntar("Não peguei a data 🙈 Me manda só o *dia e o mês*, assim: 14/09.", "qr-perfil-aniversario-rep");
+    return { status: "ok", detail: "perfil_aniversario_invalido" };
+  }
+  await admin
+    .from("contacts")
+    .update({ birthdate: `2000-${pad2(dm.mes)}-${pad2(dm.dia)}` })
+    .eq("organization_id", organizationId)
+    .eq("id", contactId);
+  await admin.from("pol_qr_cadastros").update({ etapa_perfil: "done" }).eq("id", cad.id);
+  // Completou o perfil = pico de engajamento: recalcula o índice (fecha o laço).
+  await recomputarEngajamento(admin, organizationId, contactId, { reason: "Perfil por QR completo" });
+  await perguntar("Prontinho, muito obrigado! 🙌 Agora é só ficar de olho — vou te mandar novidades por aqui.", "qr-perfil-fim");
+  return { status: "ok", detail: "perfil_completo" };
 }

@@ -56707,4 +56707,7 @@ create policy tenant_isolation_pol_tarefa_presencas_all on public.pol_tarefa_pre
 revoke all on public.pol_tarefa_presencas from anon;
 grant select, insert, update, delete on public.pol_tarefa_presencas to authenticated;
 
+-- 9092: passo do perfilamento CONVERSACIONAL do QR (cidade->bairro->aniversario->done).
+alter table public.pol_qr_cadastros add column if not exists etapa_perfil text;
+
 notify pgrst, 'reload schema';
