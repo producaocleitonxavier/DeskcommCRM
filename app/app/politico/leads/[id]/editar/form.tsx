@@ -13,6 +13,8 @@ import { useState, type FormEvent, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 
+import { definirFuncao, type FuncaoMultiplicador } from "@/app/actions/politico/multiplicadores-actions";
+
 export interface LeadParaEdicao {
   leadId: string;
   contactId: string;
@@ -27,7 +29,14 @@ export interface LeadParaEdicao {
   support_level: string;
   community_role: string;
   leader_potential: boolean;
+  funcaoInicial: FuncaoMultiplicador;
 }
+
+const FUNCOES: { value: FuncaoMultiplicador; label: string }[] = [
+  { value: "nenhuma", label: "— (não é da equipe)" },
+  { value: "assessor", label: "Assessor (equipe do gabinete)" },
+  { value: "divulgador", label: "Divulgador (voluntário que espalha)" },
+];
 
 const ETAPAS = [
   { value: "novo_cadastro", label: "Novo contato" },
@@ -98,6 +107,7 @@ export default function EditarLeadForm({ inicial }: { inicial: LeadParaEdicao })
   const [etapa, setEtapa] = useState(inicial.support_level);
   const [papel, setPapel] = useState(inicial.community_role);
   const [liderPotencial, setLiderPotencial] = useState(inicial.leader_potential);
+  const [funcao, setFuncao] = useState<FuncaoMultiplicador>(inicial.funcaoInicial);
 
   async function handleSubmit(ev: FormEvent) {
     ev.preventDefault();
@@ -149,6 +159,16 @@ export default function EditarLeadForm({ inicial }: { inicial: LeadParaEdicao })
         setErro(msgDoErro(e, `Erro ao salvar classificação (${resL.status})`));
         setSalvando(false);
         return;
+      }
+
+      // Função (tags multiplicador/divulgador) — só grava se mudou.
+      if (funcao !== inicial.funcaoInicial) {
+        const resF = await definirFuncao(inicial.contactId, funcao);
+        if (!resF.ok) {
+          setErro(resF.erro || "Erro ao salvar a função.");
+          setSalvando(false);
+          return;
+        }
       }
 
       router.push(`/app/politico/leads/${inicial.leadId}`);
@@ -215,6 +235,17 @@ export default function EditarLeadForm({ inicial }: { inicial: LeadParaEdicao })
         <label className="block space-y-1.5">
           <Label>Papel na comunidade</Label>
           <input type="text" value={papel} onChange={(e) => setPapel(e.target.value)} maxLength={120} placeholder="Ex.: Presidente de associação" className="wr-input" />
+        </label>
+        <label className="block space-y-1.5">
+          <Label>Função no time</Label>
+          <select value={funcao} onChange={(e) => setFuncao(e.target.value as FuncaoMultiplicador)} className="wr-input">
+            {FUNCOES.map((f) => (
+              <option key={f.value} value={f.value}>{f.label}</option>
+            ))}
+          </select>
+          <span className="text-xs leading-relaxed" style={{ color: "var(--color-text-subtle)" }}>
+            Assessor/Divulgador entram no <strong style={{ color: "var(--color-text-muted)" }}>placar de Multiplicadores</strong> e recebem os conteúdos pra espalhar.
+          </span>
         </label>
         <label className="flex items-center gap-3 cursor-pointer select-none">
           <input type="checkbox" checked={liderPotencial} onChange={(e) => setLiderPotencial(e.target.checked)} className="h-5 w-5 rounded accent-[#26318F]" />

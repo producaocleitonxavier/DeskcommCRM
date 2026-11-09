@@ -12,8 +12,53 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { requireAuth, resolveActiveOrg } from "@/lib/auth/server";
 import { TAG_MULTIPLICADOR } from "@/lib/politico/multiplicadores";
+import { TAG_DIVULGADOR } from "@/lib/politico/divulgador";
 
 export type AcaoResultado = { ok: true } | { ok: false; erro: string };
+
+export type FuncaoMultiplicador = "nenhuma" | "assessor" | "divulgador";
+
+/**
+ * Define a FUNÇÃO do contato no time (reusa as tags, sem campo novo):
+ *  - nenhuma   → remove `multiplicador` e `divulgador` (sai do placar);
+ *  - assessor  → só `multiplicador` (equipe marcada por função);
+ *  - divulgador→ `multiplicador` + `divulgador`.
+ * Preserva as demais tags. Usado pelo form de editar/novo pessoa.
+ */
+export async function definirFuncao(contactId: string, funcao: FuncaoMultiplicador): Promise<AcaoResultado> {
+  const cid = (contactId ?? "").trim();
+  if (!cid) return { ok: false, erro: "Contato inválido." };
+
+  const user = await requireAuth();
+  const org = await resolveActiveOrg(user);
+  if (!org) return { ok: false, erro: "Sessão ou organização inválida." };
+  const db = await createClient();
+
+  const { data: ct, error: erroLe } = await db
+    .from("contacts")
+    .select("id, tags")
+    .eq("organization_id", org.orgId)
+    .eq("id", cid)
+    .maybeSingle();
+  if (erroLe) return { ok: false, erro: erroLe.message };
+  if (!ct) return { ok: false, erro: "Pessoa não encontrada." };
+
+  const atuais = (((ct as { tags: string[] | null }).tags ?? []) as string[]).filter((t) => typeof t === "string");
+  const semFuncao = atuais.filter((t) => t !== TAG_MULTIPLICADOR && t !== TAG_DIVULGADOR);
+  const novas =
+    funcao === "assessor"
+      ? [...semFuncao, TAG_MULTIPLICADOR]
+      : funcao === "divulgador"
+        ? [...semFuncao, TAG_MULTIPLICADOR, TAG_DIVULGADOR]
+        : semFuncao;
+
+  const { error: erroUpd } = await db.from("contacts").update({ tags: novas }).eq("id", cid).eq("organization_id", org.orgId);
+  if (erroUpd) return { ok: false, erro: erroUpd.message };
+
+  revalidatePath("/app/politico/multiplicadores");
+  revalidatePath("/app/politico/leads");
+  return { ok: true };
+}
 
 /** Liga/desliga a etiqueta "multiplicador" num contato, sem duplicar. */
 async function alternarTag(contactId: string, adicionar: boolean): Promise<AcaoResultado> {

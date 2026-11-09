@@ -42,7 +42,7 @@ export default async function EditarLeadPage({ params }: { params: Promise<{ id:
 
   const { data: contact } = await db
     .from("contacts")
-    .select("id, name, phone_number, email, birthdate, custom_fields")
+    .select("id, name, phone_number, email, birthdate, custom_fields, tags")
     .eq("id", l.contact_id)
     .maybeSingle();
 
@@ -54,7 +54,13 @@ export default async function EditarLeadPage({ params }: { params: Promise<{ id:
     email: string | null;
     birthdate: string | null;
     custom_fields: Record<string, unknown> | null;
+    tags: string[] | null;
   };
+
+  const tags = (c.tags ?? []).filter((t): t is string => typeof t === "string");
+  const funcaoInicial: LeadParaEdicao["funcaoInicial"] = tags.includes("multiplicador")
+    ? (tags.includes("divulgador") ? "divulgador" : "assessor")
+    : "nenhuma";
 
   const cf = (c.custom_fields ?? {}) as Record<string, unknown>;
   const inicial: LeadParaEdicao = {
@@ -71,6 +77,7 @@ export default async function EditarLeadPage({ params }: { params: Promise<{ id:
     support_level: l.support_level,
     community_role: l.community_role ?? "",
     leader_potential: !!l.leader_potential,
+    funcaoInicial,
   };
 
   return (

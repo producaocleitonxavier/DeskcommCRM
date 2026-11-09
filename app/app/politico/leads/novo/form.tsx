@@ -21,7 +21,15 @@ import { useState, useCallback, type FormEvent, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 
+import { definirFuncao, type FuncaoMultiplicador } from "@/app/actions/politico/multiplicadores-actions";
+
 /* ── constantes ────────────────────────────────────────────────────────────── */
+
+const FUNCOES: { value: FuncaoMultiplicador; label: string }[] = [
+  { value: "nenhuma", label: "— (não é da equipe)" },
+  { value: "assessor", label: "Assessor (equipe do gabinete)" },
+  { value: "divulgador", label: "Divulgador (voluntário que espalha)" },
+];
 
 const ETAPAS = [
   { value: "novo_cadastro", label: "Novo contato" },
@@ -167,6 +175,7 @@ export default function NovoCadastroForm({ podeTopoFunil = false }: { podeTopoFu
   const [etapa, setEtapa] = useState("novo_cadastro");
   const [comunidadeRole, setComunidadeRole] = useState("");
   const [liderPotencial, setLiderPotencial] = useState(false);
+  const [funcao, setFuncao] = useState<FuncaoMultiplicador>("nenhuma");
 
   // Origem & relacionamento
   const [origem, setOrigem] = useState("manual");
@@ -298,6 +307,11 @@ export default function NovoCadastroForm({ podeTopoFunil = false }: { podeTopoFu
         setSalvando(false);
         return;
       }
+      // Função no time (tags) — best-effort; se falhar, dá pra marcar depois na ficha.
+      if (funcao !== "nenhuma") {
+        await definirFuncao(contactId, funcao);
+      }
+
       const leadData = await resLead.json();
       const leadId: string = leadData?.data?.pol_lead?.id ?? leadData?.data?.id;
       router.push(leadId ? `/app/politico/leads/${leadId}` : "/app/politico/leads");
@@ -423,6 +437,20 @@ export default function NovoCadastroForm({ podeTopoFunil = false }: { podeTopoFu
           <input type="checkbox" checked={liderPotencial} onChange={(e) => setLiderPotencial(e.target.checked)} className="h-5 w-5 rounded accent-[#26318F]" />
           <span className="text-sm font-semibold" style={{ color: "var(--color-text-muted)" }}>Potencial multiplicador / líder</span>
         </label>
+
+        {podeTopoFunil && (
+          <label className="block space-y-1.5">
+            <Label>Função no time</Label>
+            <select value={funcao} onChange={(e) => setFuncao(e.target.value as FuncaoMultiplicador)} className="wr-input">
+              {FUNCOES.map((f) => (
+                <option key={f.value} value={f.value}>{f.label}</option>
+              ))}
+            </select>
+            <span className="text-xs leading-relaxed" style={{ color: "var(--color-text-subtle)" }}>
+              Marque assessores e divulgadores — já entram no <strong style={{ color: "var(--color-text-muted)" }}>placar de Multiplicadores</strong>.
+            </span>
+          </label>
+        )}
       </section>
 
       {/* ═══════════ ORIGEM & RELACIONAMENTO (colapsável) ═════════════════ */}
