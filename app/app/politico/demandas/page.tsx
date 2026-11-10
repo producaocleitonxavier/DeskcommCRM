@@ -93,8 +93,9 @@ function prioridadeLabel(prioridade: string | null): string | null {
 function prioridadeEstilo(prioridade: string | null): { bg: string; color: string } | null {
   if (!prioridade || prioridade === "normal" || prioridade === "baixa") return null;
   const mapa: Record<string, { bg: string; color: string }> = {
-    alta: { bg: "rgba(217,164,75,0.16)", color: "#92600E" },
-    urgente: { bg: "rgba(245,158,11,0.18)", color: "#B45309" },
+    // Alta = âmbar; Urgente = vermelho-alarme (distinguíveis no relance).
+    alta: { bg: "rgba(245,158,11,0.16)", color: "#B45309" },
+    urgente: { bg: "rgba(239,68,68,0.16)", color: "#C82333" },
   };
   return mapa[prioridade] ?? null;
 }
@@ -718,6 +719,30 @@ export default async function GabinetePage({
               </div>
             )}
 
+            {/* LEGENDA das cores da borda — pra pessoa entender o que cada cor diz. */}
+            {demandas.length > 0 && (
+              <div
+                className="mx-4 mb-1 mt-3 flex flex-wrap items-center gap-x-4 gap-y-1.5 rounded-xl px-3.5 py-2.5 text-xs"
+                style={{ background: "var(--color-surface-elevated)", border: "1px solid var(--color-border)", color: "var(--color-text-muted)" }}
+              >
+                <span className="font-bold uppercase tracking-wide" style={{ color: "var(--color-text-subtle)" }}>
+                  Cor da barra:
+                </span>
+                <span className="inline-flex items-center gap-1.5">
+                  <span className="h-3.5 w-1.5 rounded-full" style={{ background: "#EF4444" }} aria-hidden />
+                  <strong style={{ color: "var(--color-text)" }}>Atrasada</strong> (passou do prazo)
+                </span>
+                <span className="inline-flex items-center gap-1.5">
+                  <span className="h-3.5 w-1.5 rounded-full" style={{ background: "#F59E0B" }} aria-hidden />
+                  <strong style={{ color: "var(--color-text)" }}>Precisa de empurrão</strong> (urgente ou órgão sem resposta)
+                </span>
+                <span className="inline-flex items-center gap-1.5">
+                  <span className="h-3.5 w-1.5 rounded-full" style={{ background: "#3B82F6" }} aria-hidden />
+                  <strong style={{ color: "var(--color-text)" }}>Em dia</strong> (cor pela etapa)
+                </span>
+              </div>
+            )}
+
             {demandas.length === 0 ? (
               <div className="p-12 text-center">
                 <p className="text-sm" style={{ color: "var(--color-text-subtle)" }}>
@@ -737,10 +762,14 @@ export default async function GabinetePage({
                       const orgaoCor = corDoOrgao(orgaoNome);
                       const fechadaRow = ["resolvida", "encerrada"].includes(d.estado);
                       const naoRespondeu = temRespondeu && !d.pol_respondeu && !fechadaRow;
-                      // Borda de triagem: vermelho = problema (atrasada ou sem resposta);
-                      // senão a cor do status. "Bater o olho" e ver o que pega fogo.
-                      const urgente = atrasada || naoRespondeu;
-                      const accent = urgente ? "#EF4444" : ESTADO_COR[d.estado] ?? "#94A3B8";
+                      // Triagem em 2 níveis: VERMELHO = atrasada (pega fogo de verdade);
+                      // ÂMBAR = precisa de empurrão (urgente OU órgão sem resposta, mas no
+                      // prazo); senão a cor do status. Vermelho reservado = vermelho significa algo.
+                      const accent = atrasada
+                        ? "#EF4444"
+                        : naoRespondeu || d.pol_prioridade === "urgente"
+                          ? "#F59E0B"
+                          : ESTADO_COR[d.estado] ?? "#94A3B8";
 
                       return (
                         <Link
@@ -820,7 +849,7 @@ export default async function GabinetePage({
                                     ✓ Respondeu{d.pol_respondeu_em ? ` · ${formatarData(d.pol_respondeu_em)}` : ""}
                                   </span>
                                 ) : (
-                                  <span className="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-bold" style={{ background: "rgba(239,68,68,0.14)", color: "#C82333" }}>
+                                  <span className="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold" style={{ background: "rgba(245,158,11,0.16)", color: "#92600E" }}>
                                     Sem resposta do órgão
                                   </span>
                                 )
