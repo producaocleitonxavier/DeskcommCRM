@@ -10,6 +10,7 @@ import Link from "next/link";
 import {
   AlertTriangle,
   Calendar,
+  Camera,
   CheckCircle2,
   Clock,
   Construction,
@@ -165,10 +166,10 @@ function hueDoNome(nome: string): number {
  */
 function PlacarEquipe({ linhas }: { linhas: PlacarMembro[] }) {
   const CHIPS = [
-    { key: "cadastros", label: "cadastros", Icone: UserPlus },
-    { key: "demandas", label: "demandas", Icone: Inbox },
-    { key: "visitas", label: "visitas", Icone: Calendar },
-    { key: "qr", label: "QR", Icone: Sparkles },
+    { key: "cadastros", um: "cadastro", varios: "cadastros", Icone: UserPlus },
+    { key: "demandas", um: "demanda", varios: "demandas", Icone: Inbox },
+    { key: "visitas", um: "visita", varios: "visitas", Icone: Calendar },
+    { key: "qr", um: "QR", varios: "QR", Icone: Sparkles },
   ] as const;
   return (
     <section aria-label="Placar da equipe" className="gip-glass p-6 sm:p-7">
@@ -201,14 +202,15 @@ function PlacarEquipe({ linhas }: { linhas: PlacarMembro[] }) {
                 {l.nome}
               </span>
               <div className="hidden items-center gap-3 sm:flex">
-                {CHIPS.map(({ key, label, Icone }) => (
+                {CHIPS.map(({ key, um, varios, Icone }) => (
                   <span
                     key={key}
                     className="inline-flex items-center gap-1 text-xs"
                     style={{ color: l[key] > 0 ? "var(--color-text-muted)" : "var(--color-text-subtle)" }}
                   >
                     <Icone className="h-3.5 w-3.5" aria-hidden />
-                    <strong style={{ color: l[key] > 0 ? "var(--color-text)" : "inherit" }}>{l[key]}</strong> {label}
+                    <strong style={{ color: l[key] > 0 ? "var(--color-text)" : "inherit" }}>{l[key]}</strong>{" "}
+                    {l[key] === 1 ? um : varios}
                   </span>
                 ))}
               </div>
@@ -283,9 +285,16 @@ export default function HojeClient({
             </p>
             <div className="mt-5 flex flex-wrap gap-2">
               <Link
+                href="/app/politico/campo"
+                className="inline-flex min-h-[40px] items-center gap-1.5 rounded-full px-4 text-sm font-bold"
+                style={{ background: "var(--color-accent)", color: "#14181F", boxShadow: "0 6px 20px color-mix(in srgb, var(--color-accent) 35%, transparent)" }}
+              >
+                <Camera className="h-4 w-4" aria-hidden /> Registrar na rua
+              </Link>
+              <Link
                 href="/app/politico/demandas/nova"
                 className="inline-flex min-h-[40px] items-center gap-1.5 rounded-full px-4 text-sm font-semibold"
-                style={{ background: "var(--color-accent)", color: "#14181F" }}
+                style={{ border: "1px solid rgba(255,255,255,0.18)", color: "rgba(255,255,255,0.9)" }}
               >
                 <Inbox className="h-4 w-4" aria-hidden /> Nova demanda
               </Link>
