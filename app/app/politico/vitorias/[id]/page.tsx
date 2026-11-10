@@ -10,7 +10,6 @@ import { redirect, notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { requireAuth, resolveActiveOrg } from "@/lib/auth/server";
 import { listarAnexosDemanda } from "@/app/actions/politico/gabinete-actions";
-import { obterIdentidade } from "@/app/actions/politico/gabinete-identidade";
 import { CommandHero } from "@/components/politico/command-hero";
 import GeradorVitoriaClient from "./_gerador-client";
 
@@ -33,7 +32,7 @@ export default async function GerarVitoriaPage({ params }: { params: Promise<{ i
     .maybeSingle();
   if (!dem) notFound();
 
-  const [anexos, identidade] = await Promise.all([listarAnexosDemanda(id), obterIdentidade()]);
+  const anexos = await listarAnexosDemanda(id);
   const fotos = anexos
     .filter((a) => MIMES_IMAGEM.includes(a.media_mime) && a.url)
     .map((a) => ({ id: a.id, url: a.url as string, nome: a.nome_arquivo }));
@@ -42,15 +41,14 @@ export default async function GerarVitoriaPage({ params }: { params: Promise<{ i
     <div className="gip-ambient-bg mx-auto max-w-[920px] px-4 py-7 space-y-5">
       <CommandHero
         eyebrow="Gabinete · Vitórias"
-        titulo="Transformar em vitória"
-        subtitulo="Monte o card Antes & Depois desta demanda resolvida e divulgue nos Stories."
+        titulo="Material da vitória"
+        subtitulo="Organize o Antes & Depois e a legenda. A comunicação baixa as fotos e monta a arte."
         acoes={[{ href: `/app/politico/demandas/${id}`, label: "← Demanda" }]}
       />
       <GeradorVitoriaClient
         demandaId={id}
         assunto={(dem.assunto as string | null) ?? "Demanda"}
         fotosIniciais={fotos}
-        molduraConfigurada={!!identidade.molduraVitoriaUrl}
       />
     </div>
   );
