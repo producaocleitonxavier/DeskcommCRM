@@ -2,16 +2,17 @@
  * Motor do card "Antes & Depois" — ENCAIXE na moldura do mandato.
  *
  * GET /app/politico/vitorias/[id]/card?antes=<anexoId>&depois=<anexoId>
- * → PNG: as fotos encaixadas nas 2 JANELAS da moldura do gabinete.
+ * → PNG: as 2 fotos encaixadas nas janelas da moldura do gabinete.
  *
- * REGRA: a identidade é do GABINETE. O designer sobe a moldura (PNG 1080x1920 com
- * 2 janelas onde as fotos entram) em Identidade do Mandato. A ferramenta DETECTA
- * as janelas e encaixa a foto perfeita, EM QUALQUER LAYOUT — recorta na orientação
- * certa (EXIF via sharp) e no FORMATO EXATO da janela (reto/arredondado).
+ * O JEITO CERTO (pixel-perfeito): a foto vai POR TRÁS e a moldura POR CIMA — então
+ * TUDO da arte (selos ANTES/DEPOIS, molduras, logo) fica sobre a foto e NADA é
+ * coberto. A foto aparece só na janela.
  *
- * A janela pode ser TRANSPARENTE (ideal) OU BRANCA (quando o designer exporta
- * achatado) — a ferramenta aceita as duas. A foto é RECORTADA no formato da janela
- * e vai POR CIMA da moldura. Esquerda/topo = Antes; direita/baixo = Depois.
+ * Funciona com molde TRANSPARENTE (ideal) E com molde ACHATADO (janelas brancas/
+ * xadrez): detecta as 2 maiores janelas e as torna TRANSPARENTES antes de compor,
+ * sem tocar nos selos (que são opacos e menores). Esquerda/topo = Antes.
+ *
+ * REGRA: a identidade é do GABINETE (sobe a moldura em Identidade do Mandato).
  */
 
 import type { NextRequest } from "next/server";
@@ -39,7 +40,6 @@ async function baixar(admin: Admin, bucket: string, path: string): Promise<Buffe
   return Buffer.from(await data.arrayBuffer());
 }
 
-/** Ordena as 2 janelas: lado a lado → esquerda=Antes; empilhadas → topo=Antes. */
 function ordenar(a: Comp, b: Comp): [Comp, Comp] {
   const dx = Math.abs((a.minx + a.maxx) / 2 - (b.minx + b.maxx) / 2);
   const dy = Math.abs((a.miny + a.maxy) / 2 - (b.miny + b.maxy) / 2);
@@ -90,27 +90,22 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
   if (!molduraBuf) return erro("Não consegui ler a moldura.", 500);
   if (!antesBuf || !depoisBuf) return erro("Não consegui ler as fotos.", 500);
 
-  // Moldura em pixels crus (RGBA, resolução cheia) — pra detectar as janelas.
+  // Moldura em pixels crus (RGBA) — vou achar as janelas e, se precisar, abri-las.
   const { data, info } = await sharp(molduraBuf).ensureAlpha().raw().toBuffer({ resolveWithObject: true });
   const W = info.width;
   const Hh = info.height;
   const ch = info.channels; // 4
   const n = W * Hh;
 
-  // Máscara de JANELA: pixel TRANSPARENTE (alfa<40) OU CLARO NEUTRO (molde achatado
-  // vira xadrez branco+cinza; pego os dois). Claro neutro = r,g,b todos altos — não
-  // pega moldura dourada (azul baixo), vermelho nem verde. Depois a janela é
-  // SOLIDIFICADA (preenche linha a linha) pra foto chapar sem xadrez vazar.
+  // Máscara de JANELA: transparente (alfa<40) OU claro neutro (molde achatado =
+  // xadrez branco+cinza; r,g,b todos >140 — não pega dourado/vermelho/verde).
   const mask = new Uint8Array(n);
   for (let i = 0; i < n; i++) {
     const o = i * ch;
-    const a = data[o + 3];
-    const claro = data[o] > 140 && data[o + 1] > 140 && data[o + 2] > 140;
-    if (a < 40 || claro) mask[i] = 1;
+    if (data[o + 3] < 40 || (data[o] > 140 && data[o + 1] > 140 && data[o + 2] > 140)) mask[i] = 1;
   }
 
-  // Rotulagem de componentes conexos (flood fill) — acha as regiões das janelas.
-  const label = new Int32Array(n); // 0 = sem rótulo
+  const label = new Int32Array(n);
   const pilha: number[] = [];
   const comps: Comp[] = [];
   let atual = 0;
@@ -138,46 +133,45 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
     comps.push({ id: atual, minx, miny, maxx, maxy, area });
   }
 
-  // As 2 maiores janelas (ignora ruído <2% e um fundo gigante >55%).
-  const boas = comps.filter((c) => c.area > n * 0.02 && c.area < n * 0.55).sort((a, b) => b.area - a.area);
+  const boas = comps.filter((c) => c.area > n * 0.02 && c.area < n * 0.6).sort((a, b) => b.area - a.area);
   if (boas.length < 2) {
     return erro("Não encontrei 2 janelas na moldura. As 2 áreas das fotos (Antes/Depois) precisam estar transparentes ou brancas.", 422);
   }
   const [cAntes, cDepois] = ordenar(boas[0]!, boas[1]!);
 
-  // Recorta a foto no FORMATO EXATO da janela (usa a máscara do componente como
-  // canal alfa) e devolve pronta pra compor na posição da janela.
-  async function encaixar(buf: Buffer, c: Comp): Promise<{ input: Buffer; top: number; left: number }> {
-    const bw = c.maxx - c.minx + 1;
-    const bh = c.maxy - c.miny + 1;
-    const alfa = new Uint8Array(bw * bh);
-    // SOLIDIFICA a janela: em cada linha, preenche do primeiro ao último pixel da
-    // janela (fecha os buracos do xadrez) — mantém o contorno arredondado, interior
-    // cheio. A foto chapa o espaço inteiro.
-    for (let y = 0; y < bh; y++) {
-      const gy = (c.miny + y) * W;
+  // ABRE as 2 janelas: solidifica cada uma (preenche linha a linha, fecha xadrez)
+  // e zera o alfa ali → a foto vai aparecer por trás. Os selos (opacos, menores,
+  // fora dessas 2 regiões) continuam intactos e POR CIMA.
+  for (const c of [cAntes, cDepois]) {
+    for (let y = c.miny; y <= c.maxy; y++) {
+      const row = y * W;
       let lo = -1;
       let hi = -1;
-      for (let x = 0; x < bw; x++) {
-        if (label[gy + (c.minx + x)] === c.id) {
+      for (let x = c.minx; x <= c.maxx; x++) {
+        if (label[row + x] === c.id) {
           if (lo < 0) lo = x;
           hi = x;
         }
       }
-      if (lo >= 0) for (let x = lo; x <= hi; x++) alfa[y * bw + x] = 255;
+      if (lo >= 0) for (let x = lo; x <= hi; x++) data[(row + x) * ch + 3] = 0;
     }
-    const fotoRgb = await sharp(buf).rotate().resize(bw, bh, { fit: "cover", position: "centre" }).removeAlpha().raw().toBuffer();
-    const recortada = await sharp(fotoRgb, { raw: { width: bw, height: bh, channels: 3 } })
-      .joinChannel(Buffer.from(alfa), { raw: { width: bw, height: bh, channels: 1 } })
-      .png()
-      .toBuffer();
-    return { input: recortada, top: c.miny, left: c.minx };
   }
+  const molduraAberta = await sharp(Buffer.from(data), { raw: { width: W, height: Hh, channels: ch } }).png().toBuffer();
 
-  const [encAntes, encDepois] = await Promise.all([encaixar(antesBuf, cAntes), encaixar(depoisBuf, cDepois)]);
+  // Foto (cover) no tamanho do retângulo da janela — vai POR TRÁS.
+  const fotoBbox = (buf: Buffer, c: Comp) =>
+    sharp(buf).rotate().resize(c.maxx - c.minx + 1, c.maxy - c.miny + 1, { fit: "cover", position: "centre" }).png().toBuffer();
+  const [fAntes, fDepois] = await Promise.all([fotoBbox(antesBuf, cAntes), fotoBbox(depoisBuf, cDepois)]);
 
-  // Base = a moldura; as fotos (já recortadas no formato das janelas) vão POR CIMA.
-  const out = await sharp(molduraBuf).composite([encAntes, encDepois]).png().toBuffer();
+  // Base transparente → fotos nas janelas → MOLDURA (com janelas abertas) POR CIMA.
+  const out = await sharp({ create: { width: W, height: Hh, channels: 4, background: { r: 0, g: 0, b: 0, alpha: 0 } } })
+    .composite([
+      { input: fAntes, top: cAntes.miny, left: cAntes.minx },
+      { input: fDepois, top: cDepois.miny, left: cDepois.minx },
+      { input: molduraAberta, top: 0, left: 0 },
+    ])
+    .png()
+    .toBuffer();
 
   return new Response(new Uint8Array(out), { headers: { "content-type": "image/png", "cache-control": "no-store" } });
 }
