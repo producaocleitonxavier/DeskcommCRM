@@ -688,22 +688,7 @@ export default async function GabinetePage({
                 </p>
               </div>
             ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm border-collapse">
-                  <thead>
-                    <tr>
-                      {["Demanda", "Tipo", "Órgão destino", "Status", "Visita", "Prioridade", ...(temRespondeu ? ["Respondeu?"] : [])].map((col) => (
-                        <th
-                          key={col}
-                          className="text-left font-semibold text-[11px] uppercase tracking-wide px-4 py-3 whitespace-nowrap border-b"
-                          style={{ color: "var(--color-text-muted)", borderColor: "color-mix(in srgb, var(--color-text) 7%, transparent)" }}
-                        >
-                          {col}
-                        </th>
-                      ))}
-                    </tr>
-                  </thead>
-                  <tbody>
+              <div className="flex flex-col">
                     {demandas.map((d) => {
                       const diasPrazo = diasParaPrazo(d.prazo_em); // data da VISITA (informativo)
                       const prazoInfo = prazoDeAtendimento(d.aberta_em, d.pol_prazo_dias);
@@ -716,31 +701,26 @@ export default async function GabinetePage({
                       const fechadaRow = ["resolvida", "encerrada"].includes(d.estado);
 
                       return (
-                        <tr
+                        <Link
                           key={d.id}
-                          className="group transition-colors hover:bg-white/[0.04]"
+                          href={`/app/politico/demandas/${d.id}`}
+                          className="block px-4 py-4 transition-colors hover:bg-white/[0.04]"
                           style={{ borderBottom: "1px solid color-mix(in srgb, var(--color-text) 7%, transparent)" }}
                         >
-                          <td className="px-4 py-3.5 max-w-[280px]">
-                            <div className="flex items-center gap-2">
-                              <Link
-                                href={`/app/politico/demandas/${d.id}`}
-                                className="font-semibold truncate transition-colors hover:underline"
-                                style={{ color: "var(--color-text)" }}
-                              >
+                          {/* Linha 1: assunto + selos IA/autoatendimento + prioridade à direita */}
+                          <div className="flex items-start justify-between gap-3">
+                            <div className="flex min-w-0 flex-wrap items-center gap-2">
+                              <span className="font-semibold" style={{ color: "var(--color-text)" }}>
                                 {d.assunto || "Sem assunto"}
-                              </Link>
+                              </span>
                               {temIA && (
-                                <span
-                                  className="inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-bold"
-                                  style={{ background: "var(--color-accent)", color: "#2E3410" }}
-                                >
+                                <span className="inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-bold" style={{ background: "var(--color-accent)", color: "#2E3410" }}>
                                   IA
                                 </span>
                               )}
                               {d.pol_autoatendimento && (
                                 <span
-                                  className="inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold whitespace-nowrap"
+                                  className="inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold"
                                   style={{ background: "rgba(96,165,250,0.15)", color: "#1D4ED8" }}
                                   title="O cidadão foi orientado a resolver pelo link da Prefeitura. Registro de inteligência — não é trabalho do gabinete."
                                 >
@@ -748,83 +728,58 @@ export default async function GabinetePage({
                                 </span>
                               )}
                             </div>
-                          </td>
-                          <td className="px-4 py-3.5 whitespace-nowrap" style={{ color: "var(--color-text-muted)" }}>
-                            {d.pol_tipo ? d.pol_tipo.replace(/_/g, " ") : "—"}
-                          </td>
-                          <td className="px-4 py-3.5 whitespace-nowrap">
-                            {orgaoNome ? (
+                            {pLabel && pEstilo && (
+                              <span className="shrink-0 inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold" style={{ background: pEstilo.bg, color: pEstilo.color }}>
+                                {pLabel}
+                              </span>
+                            )}
+                          </div>
+
+                          {/* Linha 2: etiquetas — tudo visível, quebra sozinho, sem scroll lateral */}
+                          <div className="mt-2.5 flex flex-wrap items-center gap-1.5">
+                            <StatusPill estado={d.estado} />
+                            {atrasada && (
+                              <span
+                                className="inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-bold"
+                                style={{ background: "rgba(239,68,68,0.16)", color: "#C82333" }}
+                                title={`Passou do prazo acordado (${d.pol_prazo_dias ?? 30} dias)`}
+                              >
+                                Atrasada {Math.abs(prazoInfo.diasRestantes)}d
+                              </span>
+                            )}
+                            {orgaoNome && (
                               <span className="inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold" style={{ background: orgaoCor.bg, color: orgaoCor.color }}>
                                 {orgaoNome}
                               </span>
-                            ) : (
-                              <span style={{ color: "var(--color-text-subtle)" }}>—</span>
                             )}
-                          </td>
-                          <td className="px-4 py-3.5 whitespace-nowrap">
-                            <div className="flex flex-wrap items-center gap-1.5">
-                              <StatusPill estado={d.estado} />
-                              {atrasada && (
-                                <span
-                                  className="inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-bold"
-                                  style={{ background: "rgba(239,68,68,0.16)", color: "#C82333" }}
-                                  title={`Passou do prazo acordado (${d.pol_prazo_dias ?? 30} dias)`}
-                                >
-                                  Atrasada {Math.abs(prazoInfo.diasRestantes)}d
-                                </span>
-                              )}
-                            </div>
-                          </td>
-                          <td className="px-4 py-3.5 whitespace-nowrap">
-                            {d.prazo_em ? (
-                              <span className="text-sm tabular-nums" style={{ color: "var(--color-text-muted)" }}>
-                                {formatarData(d.prazo_em)}
+                            {d.pol_tipo && (
+                              <span className="inline-flex items-center rounded-full border px-2 py-0.5 text-[11px] font-medium" style={{ borderColor: "var(--color-border)", color: "var(--color-text-muted)" }}>
+                                {d.pol_tipo.replace(/_/g, " ")}
+                              </span>
+                            )}
+                            {d.prazo_em && (
+                              <span className="inline-flex items-center gap-1 text-xs tabular-nums" style={{ color: "var(--color-text-subtle)" }}>
+                                📅 Visita {formatarData(d.prazo_em)}
                                 {diasPrazo !== null && !["resolvida", "encerrada"].includes(d.estado) && (
-                                  <span className="ml-1 text-xs">
-                                    {diasPrazo < 0
-                                      ? `(${Math.abs(diasPrazo)}d atrás)`
-                                      : diasPrazo === 0
-                                        ? "(hoje)"
-                                        : `(${diasPrazo}d)`}
-                                  </span>
+                                  <span>{diasPrazo < 0 ? `(${Math.abs(diasPrazo)}d atrás)` : diasPrazo === 0 ? "(hoje)" : `(${diasPrazo}d)`}</span>
                                 )}
                               </span>
-                            ) : (
-                              <span style={{ color: "var(--color-text-subtle)" }}>—</span>
                             )}
-                          </td>
-                          <td className="px-4 py-3.5 whitespace-nowrap">
-                            {pLabel && pEstilo ? (
-                              <span
-                                className="inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold"
-                                style={{ background: pEstilo.bg, color: pEstilo.color }}
-                              >
-                                {pLabel}
-                              </span>
-                            ) : (
-                              <span style={{ color: "var(--color-text-subtle)" }}>Normal</span>
-                            )}
-                          </td>
-                          {temRespondeu && (
-                            <td className="px-4 py-3.5 whitespace-nowrap">
-                              {d.pol_respondeu ? (
+                            {temRespondeu && !fechadaRow && (
+                              d.pol_respondeu ? (
                                 <span className="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold" style={{ background: "rgba(34,197,94,0.15)", color: "#15803D" }}>
-                                  Sim{d.pol_respondeu_em ? ` · ${formatarData(d.pol_respondeu_em)}` : ""}
+                                  ✓ Respondeu{d.pol_respondeu_em ? ` · ${formatarData(d.pol_respondeu_em)}` : ""}
                                 </span>
-                              ) : fechadaRow ? (
-                                <span style={{ color: "var(--color-text-subtle)" }}>—</span>
                               ) : (
-                                <span className="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold" style={{ background: "rgba(239,68,68,0.14)", color: "#C82333" }}>
-                                  Não
+                                <span className="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-bold" style={{ background: "rgba(239,68,68,0.14)", color: "#C82333" }}>
+                                  Sem resposta do órgão
                                 </span>
-                              )}
-                            </td>
-                          )}
-                        </tr>
+                              )
+                            )}
+                          </div>
+                        </Link>
                       );
                     })}
-                  </tbody>
-                </table>
               </div>
             )}
 
