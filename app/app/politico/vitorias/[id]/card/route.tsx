@@ -97,13 +97,16 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
   const ch = info.channels; // 4
   const n = W * Hh;
 
-  // Máscara de JANELA: pixel transparente (alfa<40) OU quase-branco (molde achatado).
+  // Máscara de JANELA: pixel TRANSPARENTE (alfa<40) OU CLARO NEUTRO (molde achatado
+  // vira xadrez branco+cinza; pego os dois). Claro neutro = r,g,b todos altos — não
+  // pega moldura dourada (azul baixo), vermelho nem verde. Depois a janela é
+  // SOLIDIFICADA (preenche linha a linha) pra foto chapar sem xadrez vazar.
   const mask = new Uint8Array(n);
   for (let i = 0; i < n; i++) {
     const o = i * ch;
     const a = data[o + 3];
-    const branco = data[o] > 225 && data[o + 1] > 225 && data[o + 2] > 225;
-    if (a < 40 || branco) mask[i] = 1;
+    const claro = data[o] > 140 && data[o + 1] > 140 && data[o + 2] > 140;
+    if (a < 40 || claro) mask[i] = 1;
   }
 
   // Rotulagem de componentes conexos (flood fill) — acha as regiões das janelas.
@@ -148,11 +151,20 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
     const bw = c.maxx - c.minx + 1;
     const bh = c.maxy - c.miny + 1;
     const alfa = new Uint8Array(bw * bh);
+    // SOLIDIFICA a janela: em cada linha, preenche do primeiro ao último pixel da
+    // janela (fecha os buracos do xadrez) — mantém o contorno arredondado, interior
+    // cheio. A foto chapa o espaço inteiro.
     for (let y = 0; y < bh; y++) {
       const gy = (c.miny + y) * W;
+      let lo = -1;
+      let hi = -1;
       for (let x = 0; x < bw; x++) {
-        alfa[y * bw + x] = label[gy + (c.minx + x)] === c.id ? 255 : 0;
+        if (label[gy + (c.minx + x)] === c.id) {
+          if (lo < 0) lo = x;
+          hi = x;
+        }
       }
+      if (lo >= 0) for (let x = lo; x <= hi; x++) alfa[y * bw + x] = 255;
     }
     const fotoRgb = await sharp(buf).rotate().resize(bw, bh, { fit: "cover", position: "centre" }).removeAlpha().raw().toBuffer();
     const recortada = await sharp(fotoRgb, { raw: { width: bw, height: bh, channels: 3 } })
