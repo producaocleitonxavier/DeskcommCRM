@@ -119,21 +119,29 @@ export default function CapturaCampoClient({
   const [salvando, setSalvando] = useState(false);
   const [demandaId, setDemandaId] = useState<string | null>(null);
 
-  // GPS automático ao abrir — silencioso, opcional.
-  useEffect(() => {
+  // Pede a localização. Chamada ao abrir (automática) e no botão "Usar minha
+  // localização" — no clique o navegador reabre o pedido de permissão (mais
+  // confiável que só no load, sobretudo no desktop).
+  const pedirLocalizacao = useCallback(() => {
     if (typeof navigator === "undefined" || !navigator.geolocation) {
       setGeoStatus("off");
       return;
     }
+    setGeoStatus("buscando");
     navigator.geolocation.getCurrentPosition(
       (p) => {
         setGeo({ lat: p.coords.latitude, lng: p.coords.longitude });
         setGeoStatus("ok");
       },
       () => setGeoStatus("off"),
-      { enableHighAccuracy: true, timeout: 8000 },
+      { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 },
     );
   }, []);
+
+  // GPS automático ao abrir — silencioso, opcional.
+  useEffect(() => {
+    pedirLocalizacao();
+  }, [pedirLocalizacao]);
 
   // Detecta suporte a gravação.
   useEffect(() => {
@@ -485,11 +493,25 @@ export default function CapturaCampoClient({
               style={{ background: "var(--color-surface-elevated)", border: "1px solid var(--color-border)" }}
             >
               <MapPin className="h-4 w-4 shrink-0" style={{ color: geoStatus === "ok" ? "#16A34A" : "var(--color-text-subtle)" }} aria-hidden />
-              <span style={{ color: "var(--color-text-muted)" }}>
-                {geoStatus === "buscando" && "Pegando sua localização…"}
-                {geoStatus === "ok" && "Localização capturada — vira rua e cidade sozinho."}
-                {geoStatus === "off" && "Localização desligada — você pode digitar a rua depois."}
-              </span>
+              {geoStatus === "buscando" && (
+                <span style={{ color: "var(--color-text-muted)" }}>Pegando sua localização…</span>
+              )}
+              {geoStatus === "ok" && (
+                <span style={{ color: "var(--color-text-muted)" }}>Localização capturada — vira rua e cidade sozinho.</span>
+              )}
+              {geoStatus === "off" && (
+                <div className="flex min-w-0 flex-1 flex-wrap items-center justify-between gap-2">
+                  <span style={{ color: "var(--color-text-muted)" }}>Sem localização — no celular ela liga sozinha.</span>
+                  <button
+                    type="button"
+                    onClick={pedirLocalizacao}
+                    className="shrink-0 rounded-full px-3 py-1 text-xs font-bold"
+                    style={{ background: "color-mix(in srgb, var(--color-accent) 16%, transparent)", color: "var(--accent-ink, var(--color-accent))" }}
+                  >
+                    Usar minha localização
+                  </button>
+                </div>
+              )}
             </div>
           </section>
 
