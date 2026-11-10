@@ -123,14 +123,16 @@ export async function gerarLegendaVitoria(demandaId: string): Promise<ResultadoL
   const bairro = (d.pol_bairro as string | null) ?? "";
   const cidade = (d.pol_municipio as string | null) ?? "";
   let dias: number | null = null;
+  let tempoTxt = "";
   if (d.aberta_em && d.fechada_em) {
     dias = Math.max(0, Math.round((new Date(d.fechada_em as string).getTime() - new Date(d.aberta_em as string).getTime()) / 86_400_000));
+    tempoTxt = dias === 0 ? "no mesmo dia" : `em ${dias} ${dias === 1 ? "dia" : "dias"}`;
   }
   const nome = (cfg?.nome_parlamentar as string | null)?.trim() || "o gabinete";
 
   // Sem IA: legenda factual montada em código (a feature não trava).
   if ("erro" in cerebro) {
-    const base = `${assunto}${bairro ? ` no bairro ${bairro}` : ""} — resolvido${orgao ? ` junto à ${orgao}` : ""}${dias !== null ? ` em ${dias} ${dias === 1 ? "dia" : "dias"}` : ""}. Trabalho do gabinete pela comunidade.`;
+    const base = `${assunto}${bairro ? ` no bairro ${bairro}` : ""} — resolvido${orgao ? ` junto à ${orgao}` : ""}${tempoTxt ? ` ${tempoTxt}` : ""}. Trabalho do gabinete pela comunidade.`;
     return { ok: true, legenda: base };
   }
 
@@ -146,7 +148,7 @@ export async function gerarLegendaVitoria(demandaId: string): Promise<ResultadoL
     (bairro ? `- Bairro: ${bairro}\n` : "") +
     (cidade ? `- Cidade: ${cidade}\n` : "") +
     (orgao ? `- Resolvido junto a: ${orgao}\n` : "") +
-    (dias !== null ? `- Tempo até resolver: ${dias} dia(s)\n` : "") +
+    (tempoTxt ? `- Tempo até resolver: ${tempoTxt} (use exatamente esta expressão, não invente outro número)\n` : "") +
     `- Mandato: ${nome}\n\n` +
     `Escreva a legenda (2-3 frases, sem promessa, sem pedir voto).`;
 

@@ -18,6 +18,23 @@ import { gerarLegendaVitoria } from "@/app/actions/politico/vitoria-actions";
 type Foto = { id: string; url: string; nome: string };
 const MIMES_IMAGEM = ["image/jpeg", "image/jpg", "image/png"];
 
+type ModeloId = "mandato" | "impacto" | "luz" | "gradiente" | "moldura";
+const MODELOS: { id: ModeloId; nome: string; desc: string }[] = [
+  { id: "mandato", nome: "Mandato", desc: "institucional" },
+  { id: "impacto", nome: "Impacto", desc: "bold/esportivo" },
+  { id: "luz", nome: "Luz", desc: "claro/elegante" },
+  { id: "gradiente", nome: "Gradiente", desc: "vibrante" },
+  { id: "moldura", nome: "Moldura", desc: "painel/frame" },
+];
+const CORES: { hex: string; nome: string }[] = [
+  { hex: "#0B1726", nome: "Marinho" },
+  { hex: "#16A34A", nome: "Verde" },
+  { hex: "#1D4ED8", nome: "Azul" },
+  { hex: "#7C1D2E", nome: "Vinho" },
+  { hex: "#1F2937", nome: "Grafite" },
+  { hex: "#D7F36A", nome: "Lima" },
+];
+
 export default function GeradorVitoriaClient({
   demandaId,
   assunto,
@@ -30,6 +47,8 @@ export default function GeradorVitoriaClient({
   const [fotos, setFotos] = useState<Foto[]>(fotosIniciais);
   const [antesId, setAntesId] = useState<string | null>(fotosIniciais[0]?.id ?? null);
   const [depoisId, setDepoisId] = useState<string | null>(fotosIniciais[1]?.id ?? null);
+  const [modelo, setModelo] = useState<ModeloId>("mandato");
+  const [cor, setCor] = useState("#0B1726");
   const [legenda, setLegenda] = useState("");
   const [gerandoLegenda, setGerandoLegenda] = useState(false);
   const [enviando, setEnviando] = useState(false);
@@ -41,15 +60,15 @@ export default function GeradorVitoriaClient({
 
   const montarUrl = useCallback(
     () =>
-      `/app/politico/vitorias/${demandaId}/card?antes=${antesId}&depois=${depoisId}&l=${encodeURIComponent(legenda)}&t=${Date.now()}`,
-    [demandaId, antesId, depoisId, legenda],
+      `/app/politico/vitorias/${demandaId}/card?antes=${antesId}&depois=${depoisId}&modelo=${modelo}&cor=${encodeURIComponent(cor)}&l=${encodeURIComponent(legenda)}&t=${Date.now()}`,
+    [demandaId, antesId, depoisId, modelo, cor, legenda],
   );
 
-  // Atualiza a prévia quando as fotos mudam (legenda atualiza no blur / botão).
+  // Atualiza a prévia quando fotos/modelo/cor mudam (legenda atualiza no blur/botão).
   useEffect(() => {
     if (antesId && depoisId) setPreviewUrl(montarUrl());
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [antesId, depoisId]);
+  }, [antesId, depoisId, modelo, cor]);
 
   function escolherAntes(id: string) {
     setErro(null);
@@ -189,12 +208,53 @@ export default function GeradorVitoriaClient({
             </label>
           </section>
 
+          {/* Estilo: modelo de arte + cor */}
+          <section className="gip-glass p-5 space-y-4">
+            <span className="text-sm font-bold" style={{ color: "var(--color-text)" }}>2 · Estilo da arte</span>
+            <div className="grid grid-cols-3 gap-2">
+              {MODELOS.map((m) => (
+                <button
+                  key={m.id}
+                  type="button"
+                  onClick={() => setModelo(m.id)}
+                  className="flex flex-col items-center rounded-xl px-2 py-3 transition-colors"
+                  style={modelo === m.id
+                    ? { background: "var(--color-accent)", color: "#14181F" }
+                    : { background: "var(--color-surface-elevated)", color: "var(--color-text-muted)", border: "1px solid var(--color-border)" }}
+                >
+                  <span className="text-sm font-bold">{m.nome}</span>
+                  <span className="text-[11px] opacity-80">{m.desc}</span>
+                </button>
+              ))}
+            </div>
+            <div>
+              <span className="mb-2 block text-xs font-semibold uppercase tracking-wide" style={{ color: "var(--color-text-muted)" }}>Cor</span>
+              <div className="flex flex-wrap items-center gap-2">
+                {CORES.map((c) => (
+                  <button
+                    key={c.hex}
+                    type="button"
+                    onClick={() => setCor(c.hex)}
+                    title={c.nome}
+                    aria-label={c.nome}
+                    className="h-8 w-8 rounded-full"
+                    style={{ background: c.hex, outline: cor === c.hex ? "3px solid color-mix(in srgb, var(--color-accent) 70%, transparent)" : "1px solid var(--color-border)", outlineOffset: 2 }}
+                  />
+                ))}
+                <label className="ml-1 inline-flex cursor-pointer items-center gap-1.5 text-xs font-medium" style={{ color: "var(--color-text-muted)" }}>
+                  <input type="color" value={cor} onChange={(e) => setCor(e.target.value)} className="h-8 w-8 cursor-pointer rounded border-0 bg-transparent p-0" />
+                  outra
+                </label>
+              </div>
+            </div>
+          </section>
+
           {/* Legenda */}
           <section className="gip-glass p-5 space-y-3">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <Sparkles className="h-4 w-4" style={{ color: "var(--accent-ink, var(--color-accent))" }} aria-hidden />
-                <span className="text-sm font-bold" style={{ color: "var(--color-text)" }}>2 · Legenda</span>
+                <span className="text-sm font-bold" style={{ color: "var(--color-text)" }}>3 · Legenda</span>
               </div>
               <button
                 type="button"
@@ -223,7 +283,7 @@ export default function GeradorVitoriaClient({
 
         {/* Prévia do card */}
         <section className="gip-glass p-5 space-y-3">
-          <span className="text-sm font-bold" style={{ color: "var(--color-text)" }}>3 · Prévia (Stories)</span>
+          <span className="text-sm font-bold" style={{ color: "var(--color-text)" }}>4 · Prévia (Stories)</span>
           {pronto && previewUrl ? (
             <>
               <div className="mx-auto overflow-hidden rounded-2xl" style={{ width: 270, border: "1px solid var(--color-border)" }}>
