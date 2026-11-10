@@ -4,6 +4,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { linhasDeModelosPoliticos, nichoDaOrg } from "./semear-politico";
 import { MODELOS_DE_POLITICO } from "./modelos/politico";
 import { triggerConfigSchema } from "./api-schemas";
+import { flowGraphSchema } from "./graph-schema";
 
 const ORG = "11111111-1111-4111-8111-111111111111";
 
@@ -50,6 +51,15 @@ describe("linhasDeModelosPoliticos", () => {
   it("leva o grafo com nós (texto e prazos), não um grafo vazio", () => {
     for (const l of linhas) {
       expect(l.draft_graph.nodes.length).toBeGreaterThan(0);
+    }
+  });
+
+  it("grava o grafo CANÔNICO (parse idempotente) — senão o editor abre 'não salvo' e quebra", () => {
+    // O grafo gravado tem de ser igual ao seu próprio parse: é o que a rota
+    // `from-model` faz. Se gravássemos o cru, o schema preencheria defaults no
+    // load (ex.: target no match_reply) e a tela nasceria dirty + canvas vazio.
+    for (const l of linhas) {
+      expect(flowGraphSchema.parse(l.draft_graph)).toEqual(l.draft_graph);
     }
   });
 });

@@ -28,6 +28,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { triggerConfigSchema } from "@/lib/followup/api-schemas";
+import { flowGraphSchema } from "@/lib/followup/graph-schema";
 import { MODELOS_DE_POLITICO } from "@/lib/followup/modelos/politico";
 import type { NichoDeModelo } from "@/lib/followup/modelos/tipos";
 
@@ -50,7 +51,11 @@ export function linhasDeModelosPoliticos(orgId: string) {
   return MODELOS_DE_POLITICO.map((m) => ({
     organization_id: orgId,
     name: m.nome,
-    draft_graph: m.grafo,
+    // ⚠️ grafo PARSEADO, não o cru — IGUAL à rota `from-model`. O schema preenche
+    // os defaults dos nós (ex.: `target: 'last_reply'` no match_reply). Sem isso,
+    // o `savedGraph` nasce não-canônico (a tela já abre "Alterações não salvas")
+    // E um nó quebra ao renderizar → canvas em branco. Bug real, pego em prod.
+    draft_graph: flowGraphSchema.parse(m.grafo),
     trigger_config: triggerConfigSchema.parse(m.gatilho({})),
     handoff_policy: m.handoffPolicy,
   }));
