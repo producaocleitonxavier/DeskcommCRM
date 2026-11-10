@@ -15,6 +15,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { isServiceRoleConfigured } from "@/lib/audit";
 import { requireAuth, resolveActiveOrg } from "@/lib/auth/server";
 import { nomesDosAtendentes } from "@/lib/users/nome-do-atendente";
+import { contarVitorias } from "@/app/actions/politico/vitoria-actions";
 import { destinosDaInterface } from "@/lib/navigation/interface";
 import HojeClient from "./_hoje-client";
 import PageTabs from "@/components/politico/page-tabs";
@@ -733,12 +734,13 @@ export default async function HojePage() {
   const inicioSemanaISO = inicioSemana.toISOString();
   const inicioSemanaDate = inicioSemanaISO.slice(0, 10);
 
-  const [metrics, gabineteHoje, filaAcao, meuTrabalho, registrosDeRua] = await Promise.all([
+  const [metrics, gabineteHoje, filaAcao, meuTrabalho, registrosDeRua, vitoriasPraMostrar] = await Promise.all([
     buscarMetricas(org.orgId),
     buscarGabineteHoje(org.orgId),
     buscarFilaDeAcao(org.orgId),
     buscarMeuTrabalho(org.orgId, user.id, inicioSemanaISO, inicioSemanaDate),
     contarRegistrosDeRua(org.orgId),
+    contarVitorias(),
   ]);
 
   // "Painel" e "Prestação de Contas" são as abas de GESTÃO. Mostra as DUAS quando
@@ -788,6 +790,7 @@ export default async function HojePage() {
         placarEquipe={placarEquipe}
         visitasProntasOficio={prontasOficio.total}
         registrosDeRua={registrosDeRua}
+        vitoriasPraMostrar={vitoriasPraMostrar}
       />
     </>
   );

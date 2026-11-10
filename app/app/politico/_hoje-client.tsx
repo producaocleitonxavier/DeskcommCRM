@@ -61,6 +61,8 @@ export interface HojeClientProps {
   visitasProntasOficio?: number;
   /** Registros de Rua (captura de campo) ainda na mesa. 0 = card some. */
   registrosDeRua?: number;
+  /** Vitórias (demandas resolvidas com foto) prontas pra virar card. 0 = some. */
+  vitoriasPraMostrar?: number;
 }
 
 function badgeAtencao(a: GabineteHoje["atencao"][number]): { label: string; tipo: Tipo } {
@@ -244,6 +246,7 @@ export default function HojeClient({
   placarEquipe = null,
   visitasProntasOficio = 0,
   registrosDeRua = 0,
+  vitoriasPraMostrar = 0,
 }: HojeClientProps) {
   // Funil de ATENDIMENTO (ciclo de vida da demanda) — não o funil de campanha.
   const lifecycleData = g.lifecycle.map((s, i) => ({
@@ -343,7 +346,7 @@ export default function HojeClient({
       {placarEquipe && placarEquipe.length > 0 && <PlacarEquipe linhas={placarEquipe} />}
 
       {/* ── Fila de ação: o que espera a sua decisão AGORA ───────── */}
-      {(filaAcao.rascunhosIA > 0 || filaAcao.disparosRascunho > 0 || filaAcao.leadsQuentesSemContato > 0 || visitasProntasOficio > 0 || registrosDeRua > 0) && (
+      {(filaAcao.rascunhosIA > 0 || filaAcao.disparosRascunho > 0 || filaAcao.leadsQuentesSemContato > 0 || visitasProntasOficio > 0 || registrosDeRua > 0 || vitoriasPraMostrar > 0) && (
         <section aria-label="Esperando você" className="grid grid-cols-1 gap-3 sm:grid-cols-3">
           {/* Visitas de campo que já foram feitas e esperam o ofício do gabinete.
               O relato do assessor está na demanda; aqui é só o "pronto pra oficializar". */}
@@ -385,6 +388,30 @@ export default function HojeClient({
                 </span>
                 <span className="mt-0.5 block text-sm" style={{ color: "var(--color-text-muted)" }}>
                   {registrosDeRua === 1 ? "registro de rua realizado" : "registros de rua realizados"}
+                </span>
+              </span>
+            </Link>
+          )}
+          {/* Vitórias: demandas resolvidas com foto, prontas pra virar card
+              Antes & Depois. A situação política não passa batido. */}
+          {vitoriasPraMostrar > 0 && (
+            <Link
+              href="/app/politico/vitorias"
+              className="gip-glass-hover flex items-center gap-3 rounded-2xl p-4"
+              style={{
+                background: "color-mix(in srgb, #16A34A 10%, var(--color-surface))",
+                border: "1px solid color-mix(in srgb, #16A34A 32%, transparent)",
+              }}
+            >
+              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl" style={{ background: "#16A34A", color: "#FFFFFF" }} aria-hidden>
+                <Sparkles className="h-5 w-5" />
+              </span>
+              <span className="min-w-0 flex-1">
+                <span className="block font-heading text-lg font-bold leading-none tabular-nums" style={{ color: "var(--color-text)" }}>
+                  {vitoriasPraMostrar.toLocaleString("pt-BR")}
+                </span>
+                <span className="mt-0.5 block text-sm" style={{ color: "var(--color-text-muted)" }}>
+                  {vitoriasPraMostrar === 1 ? "vitória pra mostrar" : "vitórias pra mostrar"}
                 </span>
               </span>
             </Link>

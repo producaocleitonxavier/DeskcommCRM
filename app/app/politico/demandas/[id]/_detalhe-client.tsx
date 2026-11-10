@@ -335,6 +335,16 @@ export default function DetalheDemandaClient({ demanda, assessores, eventos, voz
             {a.label}
           </button>
         ))}
+        {/* Resolvida → vira Situação Política: card Antes & Depois. */}
+        {d.estado === "resolvida" && (
+          <Link
+            href={`/app/politico/vitorias/${d.id}`}
+            className="inline-flex items-center gap-1.5 rounded-full px-4 py-2 text-sm font-bold"
+            style={{ background: "#D7F36A", color: "#14181F" }}
+          >
+            🪄 Transformar em vitória
+          </Link>
+        )}
         <button
           type="button"
           disabled={avisando || !d.contacts?.phone_number}
