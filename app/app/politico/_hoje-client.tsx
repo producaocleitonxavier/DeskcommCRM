@@ -59,8 +59,8 @@ export interface HojeClientProps {
   placarEquipe?: PlacarMembro[] | null;
   /** Visitas realizadas prontas pra ofício (só gabinete). 0 = faixa some. */
   visitasProntasOficio?: number;
-  /** Demanda da visita mais recente pronta — a faixa abre DIRETO nela. */
-  visitaProntaId?: string | null;
+  /** Registros de Rua (captura de campo) ainda na mesa. 0 = card some. */
+  registrosDeRua?: number;
 }
 
 function badgeAtencao(a: GabineteHoje["atencao"][number]): { label: string; tipo: Tipo } {
@@ -243,7 +243,7 @@ export default function HojeClient({
   meuTrabalho,
   placarEquipe = null,
   visitasProntasOficio = 0,
-  visitaProntaId = null,
+  registrosDeRua = 0,
 }: HojeClientProps) {
   // Funil de ATENDIMENTO (ciclo de vida da demanda) — não o funil de campanha.
   const lifecycleData = g.lifecycle.map((s, i) => ({
@@ -343,13 +343,13 @@ export default function HojeClient({
       {placarEquipe && placarEquipe.length > 0 && <PlacarEquipe linhas={placarEquipe} />}
 
       {/* ── Fila de ação: o que espera a sua decisão AGORA ───────── */}
-      {(filaAcao.rascunhosIA > 0 || filaAcao.disparosRascunho > 0 || filaAcao.leadsQuentesSemContato > 0 || visitasProntasOficio > 0) && (
+      {(filaAcao.rascunhosIA > 0 || filaAcao.disparosRascunho > 0 || filaAcao.leadsQuentesSemContato > 0 || visitasProntasOficio > 0 || registrosDeRua > 0) && (
         <section aria-label="Esperando você" className="grid grid-cols-1 gap-3 sm:grid-cols-3">
           {/* Visitas de campo que já foram feitas e esperam o ofício do gabinete.
               O relato do assessor está na demanda; aqui é só o "pronto pra oficializar". */}
           {visitasProntasOficio > 0 && (
             <Link
-              href={visitaProntaId ? `/app/politico/demandas/${visitaProntaId}` : "/app/politico/visitas"}
+              href="/app/politico/demandas?prontas_oficio=1"
               className="gip-glass gip-glass-hover flex items-center gap-3 p-4"
             >
               <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl" style={{ background: "rgba(16,185,129,0.14)", color: "#0E8A5F" }} aria-hidden>
@@ -361,6 +361,26 @@ export default function HojeClient({
                 </span>
                 <span className="mt-0.5 block text-sm" style={{ color: "var(--color-text-muted)" }}>
                   {visitasProntasOficio === 1 ? "visita feita, pronta pra ofício" : "visitas feitas, prontas pra ofício"}
+                </span>
+              </span>
+            </Link>
+          )}
+          {/* Registros de Rua: o que os assessores captaram no campo e está na mesa.
+              Um clique → o quadro só com esses (origem=campo). */}
+          {registrosDeRua > 0 && (
+            <Link
+              href="/app/politico/demandas?origem=campo"
+              className="gip-glass gip-glass-hover flex items-center gap-3 p-4"
+            >
+              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl" style={{ background: "color-mix(in srgb, var(--color-accent) 16%, transparent)", color: "var(--icon-accent)" }} aria-hidden>
+                <Camera className="h-5 w-5" />
+              </span>
+              <span className="min-w-0 flex-1">
+                <span className="block font-heading text-lg font-bold leading-none tabular-nums" style={{ color: "var(--color-text)" }}>
+                  {registrosDeRua.toLocaleString("pt-BR")}
+                </span>
+                <span className="mt-0.5 block text-sm" style={{ color: "var(--color-text-muted)" }}>
+                  {registrosDeRua === 1 ? "registro de rua na mesa" : "registros de rua na mesa"}
                 </span>
               </span>
             </Link>

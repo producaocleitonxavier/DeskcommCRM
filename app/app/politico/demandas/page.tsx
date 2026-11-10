@@ -200,7 +200,7 @@ async function buscarDemandas(
   pagina: number,
   filtroEstado: string | undefined,
   filtroOrgao: string | undefined,
-  opts: { temAuto: boolean; verAuto: boolean; temRespondeu: boolean; soCobrar: boolean; municipio?: string; bairro?: string },
+  opts: { temAuto: boolean; verAuto: boolean; temRespondeu: boolean; soCobrar: boolean; municipio?: string; bairro?: string; prontasOficio?: boolean; origemCampo?: boolean },
 ) {
   const db = await createClient();
   const offset = (pagina - 1) * POR_PAGINA;
@@ -241,6 +241,19 @@ async function buscarDemandas(
   // "Precisa cobrar": aberta (não resolvida/encerrada) E o órgão não respondeu.
   if (opts.soCobrar && opts.temRespondeu) {
     query = query.not("estado", "in", "(resolvida,encerrada)").eq("pol_respondeu", false);
+  }
+  // "Prontas pra ofício": visita feita (últimos 21 dias) e ainda sem ofício — a
+  // mesma régua do sinal no Hoje, agora como QUADRO (todas, não só a 1ª).
+  if (opts.prontasOficio) {
+    const desde = new Date(Date.now() - 21 * 86400000).toISOString().slice(0, 10);
+    query = query
+      .not("pol_visita_realizada_em", "is", null)
+      .gte("pol_visita_realizada_em", desde)
+      .is("pol_oficio_rotulo", null);
+  }
+  // "Registros de Rua": o que veio da Captura de Campo (Gabinete de Rua).
+  if (opts.origemCampo) {
+    query = query.eq("pol_origem_captura", "campo");
   }
 
   const { data, count } = await query;
@@ -366,6 +379,9 @@ export default async function GabinetePage({
   // filtra por município, vereador por bairro — a demanda guarda os dois campos.
   const filtroMunicipio = typeof params.municipio === "string" ? params.municipio : undefined;
   const filtroBairro = typeof params.bairro === "string" ? params.bairro : undefined;
+  // Quadros de 1 clique (vindos dos cards do Hoje).
+  const filtroProntasOficio = params.prontas_oficio === "1";
+  const filtroOrigemCampo = params.origem === "campo";
 
   // Camada "A IA orientou" (autoatendimento): existe só se a migration 9072 rodou.
   const temAuto = await colunaAutoExiste(org.orgId);
@@ -375,7 +391,7 @@ export default async function GabinetePage({
   const filtroCobrar = temRespondeu && !verAuto && params.cobrar === "1";
 
   const [{ demandas, total }, contagens, orgaos, rollupOrgaos] = await Promise.all([
-    buscarDemandas(org.orgId, pagina, filtroEstado, filtroOrgao, { temAuto, verAuto, temRespondeu, soCobrar: filtroCobrar, municipio: filtroMunicipio, bairro: filtroBairro }),
+    buscarDemandas(org.orgId, pagina, filtroEstado, filtroOrgao, { temAuto, verAuto, temRespondeu, soCobrar: filtroCobrar, municipio: filtroMunicipio, bairro: filtroBairro, prontasOficio: filtroProntasOficio, origemCampo: filtroOrigemCampo }),
     contarEstados(org.orgId, temAuto, temRespondeu),
     buscarOrgaos(org.orgId, temAuto),
     buscarRollupOrgaos(org.orgId, temAuto, temRespondeu),
@@ -419,7 +435,7 @@ export default async function GabinetePage({
   const viewAtual = verAuto ? "autoatendimento" : undefined;
   function montarQuery(overrides: Record<string, string | undefined>) {
     const q = new URLSearchParams();
-    const merged = { estado: filtroEstado, orgao: filtroOrgao, view: viewAtual, cobrar: filtroCobrar ? "1" : undefined, municipio: filtroMunicipio, bairro: filtroBairro, ...overrides };
+    const merged = { estado: filtroEstado, orgao: filtroOrgao, view: viewAtual, cobrar: filtroCobrar ? "1" : undefined, municipio: filtroMunicipio, bairro: filtroBairro, prontas_oficio: filtroProntasOficio ? "1" : undefined, origem: filtroOrigemCampo ? "campo" : undefined, ...overrides };
     for (const [k, v] of Object.entries(merged)) {
       if (v) q.set(k, v);
     }
@@ -535,18 +551,22 @@ export default async function GabinetePage({
           {/* Demandas table */}
           <section aria-label="Lista de demandas" id="lista-demandas" className="gip-glass pt-2 pb-0 px-0 scroll-mt-20">
             {/* Banner "você está filtrando" — informação clara em meio segundo. */}
-            {(filtroMunicipio || filtroBairro || filtroCobrar) && (
+            {(filtroMunicipio || filtroBairro || filtroCobrar || filtroProntasOficio || filtroOrigemCampo) && (
               <div
                 className="mx-4 mt-3.5 flex flex-wrap items-center justify-between gap-2 rounded-xl px-3.5 py-2.5"
                 style={{ background: "color-mix(in srgb, var(--color-accent) 10%, transparent)", border: "1px solid color-mix(in srgb, var(--color-accent) 30%, transparent)" }}
               >
                 <span className="text-sm font-semibold" style={{ color: "var(--color-text)" }}>
-                  {filtroCobrar
-                    ? `Mostrando só o que precisa de cobrança · ${total} ${total === 1 ? "demanda" : "demandas"}`
-                    : `Demandas de ${filtroMunicipio ?? filtroBairro} · ${total} ${total === 1 ? "demanda" : "demandas"}`}
+                  {filtroProntasOficio
+                    ? `✍️ Visitas feitas, prontas pra ofício · ${total} ${total === 1 ? "demanda" : "demandas"}`
+                    : filtroOrigemCampo
+                      ? `📸 Registros de Rua (vindos do campo) · ${total} ${total === 1 ? "demanda" : "demandas"}`
+                      : filtroCobrar
+                        ? `Mostrando só o que precisa de cobrança · ${total} ${total === 1 ? "demanda" : "demandas"}`
+                        : `Demandas de ${filtroMunicipio ?? filtroBairro} · ${total} ${total === 1 ? "demanda" : "demandas"}`}
                 </span>
                 <Link
-                  href={`/app/politico/demandas${montarQuery({ municipio: undefined, bairro: undefined, cobrar: undefined, estado: undefined, orgao: undefined, pagina: "1" })}`}
+                  href={`/app/politico/demandas${montarQuery({ municipio: undefined, bairro: undefined, cobrar: undefined, prontas_oficio: undefined, origem: undefined, estado: undefined, orgao: undefined, pagina: "1" })}`}
                   className="shrink-0 text-sm font-bold"
                   style={{ color: "var(--accent-ink, var(--color-accent))" }}
                 >

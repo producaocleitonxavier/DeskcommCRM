@@ -516,6 +516,24 @@ function primeiroNome(nome: string | null | undefined): string {
  * (9085) → comparo com DATA ("YYYY-MM-DD"), não timestamp. Fail-soft: sem a coluna
  * a consulta erra e devolve 0.
  */
+/**
+ * Quantos "Registros de Rua" (captura de campo) estão na mesa — abertos. Alimenta
+ * o card do Hoje que leva ao quadro filtrado (origem=campo). Fail-soft: sem a
+ * coluna pol_origem_captura (migration 9094) a consulta erra e volta 0.
+ */
+async function contarRegistrosDeRua(organizationId: string): Promise<number> {
+  const db = await createClient();
+  const { count, error } = await db
+    .from("demandas")
+    .select("id", { count: "exact", head: true })
+    .eq("organization_id", organizationId)
+    .eq("pol_gabinete", true)
+    .eq("pol_origem_captura", "campo")
+    .not("estado", "in", "(resolvida,encerrada)");
+  if (error) return 0;
+  return count ?? 0;
+}
+
 async function buscarVisitasProntasOficio(
   organizationId: string,
 ): Promise<{ total: number; primeiraId: string | null }> {
@@ -715,11 +733,12 @@ export default async function HojePage() {
   const inicioSemanaISO = inicioSemana.toISOString();
   const inicioSemanaDate = inicioSemanaISO.slice(0, 10);
 
-  const [metrics, gabineteHoje, filaAcao, meuTrabalho] = await Promise.all([
+  const [metrics, gabineteHoje, filaAcao, meuTrabalho, registrosDeRua] = await Promise.all([
     buscarMetricas(org.orgId),
     buscarGabineteHoje(org.orgId),
     buscarFilaDeAcao(org.orgId),
     buscarMeuTrabalho(org.orgId, user.id, inicioSemanaISO, inicioSemanaDate),
+    contarRegistrosDeRua(org.orgId),
   ]);
 
   // "Painel" e "Prestação de Contas" são as abas de GESTÃO. Mostra as DUAS quando
@@ -768,7 +787,7 @@ export default async function HojePage() {
         meuTrabalho={meuTrabalho}
         placarEquipe={placarEquipe}
         visitasProntasOficio={prontasOficio.total}
-        visitaProntaId={prontasOficio.primeiraId}
+        registrosDeRua={registrosDeRua}
       />
     </>
   );

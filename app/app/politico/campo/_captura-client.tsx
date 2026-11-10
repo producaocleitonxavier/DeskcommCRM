@@ -264,6 +264,7 @@ export default function CapturaCampoClient({
         textoCru: cru,
         latitude: geo?.lat ?? null,
         longitude: geo?.lng ?? null,
+        orgaos: orgaosChips,
       });
       if (!est.ok) {
         setErro(est.erro);

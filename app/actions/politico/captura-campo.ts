@@ -149,6 +149,8 @@ export async function estruturarOcorrencia(input: {
   textoCru: string;
   latitude?: number | null;
   longitude?: number | null;
+  /** Órgãos reais DESTE mandato (ex.: Cemig, Copasa, PBH…) — a IA nomeia o certo, não o genérico. */
+  orgaos?: string[];
 }): Promise<ResultadoEstrutura> {
   const user = await requireAuth();
   const org = await resolveActiveOrg(user);
@@ -207,9 +209,14 @@ export async function estruturarOcorrencia(input: {
     "buraco/asfalto/via/calçada/sinalização = Secretaria de Obras; lixo/entulho = Limpeza Urbana. " +
     "Responda SOMENTE com um objeto JSON válido, sem comentários e sem cercas de código.";
 
+  const listaOrgaos = (input.orgaos ?? []).filter((o) => o && o.trim()).slice(0, 20);
   const prompt =
     `Relato cru do assessor (voz transcrita e/ou digitada):\n"""${cru}"""\n\n` +
     (rua || cidade ? `Localização aproximada pelo GPS: ${[rua, cidade].filter(Boolean).join(", ")}.\n\n` : "") +
+    (listaOrgaos.length > 0
+      ? `Órgãos reais DESTE mandato: ${listaOrgaos.join(", ")}.\n` +
+        `No campo "orgao" use PREFERENCIALMENTE o NOME EXATO de um desses (ex.: escreva "Cemig", não "companhia de energia"). Só use outro nome se nenhum servir.\n\n`
+      : "") +
     `Devolva um JSON com EXATAMENTE estas chaves:\n` +
     `{\n` +
     `  "assunto": "título curto e claro da ocorrência (máx. ~90 caracteres)",\n` +
@@ -351,6 +358,9 @@ export async function criarOcorrenciaCampo(input: {
     assunto,
     pol_tipo: area,
     pol_prioridade: (input.prioridade ?? "normal").trim() || "normal",
+    // Marca que veio da Captura de Campo (Gabinete de Rua) — alimenta o card e o
+    // quadro "Registros de Rua". Migration 9094.
+    pol_origem_captura: "campo",
   };
   if ((input.orgao ?? "").trim()) payload.pol_orgao_destino = input.orgao.trim();
   if ((input.bairro ?? "").trim()) payload.pol_bairro = input.bairro!.trim();

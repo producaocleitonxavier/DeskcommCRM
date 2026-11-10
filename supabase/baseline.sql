@@ -56716,4 +56716,11 @@ alter table public.demandas
 create index if not exists idx_demandas_registrado_por
   on public.demandas(organization_id, pol_registrado_por_id);
 
+-- 9094: origem da demanda ('campo' = Captura de Campo / Gabinete de Rua).
+alter table public.demandas
+  add column if not exists pol_origem_captura text;
+create index if not exists idx_demandas_origem_captura
+  on public.demandas(organization_id, pol_origem_captura)
+  where pol_origem_captura is not null;
+
 notify pgrst, 'reload schema';
