@@ -200,7 +200,7 @@ async function buscarDemandas(
   pagina: number,
   filtroEstado: string | undefined,
   filtroOrgao: string | undefined,
-  opts: { temAuto: boolean; verAuto: boolean; temRespondeu: boolean; soCobrar: boolean; municipio?: string; bairro?: string; prontasOficio?: boolean; origemCampo?: boolean },
+  opts: { temAuto: boolean; verAuto: boolean; temRespondeu: boolean; soCobrar: boolean; municipio?: string; bairro?: string; prontasOficio?: boolean; origemCampo?: boolean; busca?: string },
 ) {
   const db = await createClient();
   const offset = (pagina - 1) * POR_PAGINA;
@@ -254,6 +254,14 @@ async function buscarDemandas(
   // "Registros de Rua": o que veio da Captura de Campo (Gabinete de Rua).
   if (opts.origemCampo) {
     query = query.eq("pol_origem_captura", "campo");
+  }
+  // Busca livre: assunto OU bairro OU órgão. Sanitiza (vírgula/parênteses quebram
+  // o filtro `.or` do PostgREST). ilike = não liga pra maiúscula/minúscula.
+  if (opts.busca) {
+    const t = opts.busca.replace(/[,()*%]/g, " ").trim();
+    if (t) {
+      query = query.or(`assunto.ilike.%${t}%,pol_bairro.ilike.%${t}%,pol_orgao_destino.ilike.%${t}%`);
+    }
   }
 
   const { data, count } = await query;
@@ -382,6 +390,8 @@ export default async function GabinetePage({
   // Quadros de 1 clique (vindos dos cards do Hoje).
   const filtroProntasOficio = params.prontas_oficio === "1";
   const filtroOrigemCampo = params.origem === "campo";
+  // Busca por texto (assunto/bairro/órgão) — o que salva a Rose de caçar numa lista grande.
+  const busca = typeof params.q === "string" ? params.q.trim() : undefined;
 
   // Camada "A IA orientou" (autoatendimento): existe só se a migration 9072 rodou.
   const temAuto = await colunaAutoExiste(org.orgId);
@@ -391,7 +401,7 @@ export default async function GabinetePage({
   const filtroCobrar = temRespondeu && !verAuto && params.cobrar === "1";
 
   const [{ demandas, total }, contagens, orgaos, rollupOrgaos] = await Promise.all([
-    buscarDemandas(org.orgId, pagina, filtroEstado, filtroOrgao, { temAuto, verAuto, temRespondeu, soCobrar: filtroCobrar, municipio: filtroMunicipio, bairro: filtroBairro, prontasOficio: filtroProntasOficio, origemCampo: filtroOrigemCampo }),
+    buscarDemandas(org.orgId, pagina, filtroEstado, filtroOrgao, { temAuto, verAuto, temRespondeu, soCobrar: filtroCobrar, municipio: filtroMunicipio, bairro: filtroBairro, prontasOficio: filtroProntasOficio, origemCampo: filtroOrigemCampo, busca }),
     contarEstados(org.orgId, temAuto, temRespondeu),
     buscarOrgaos(org.orgId, temAuto),
     buscarRollupOrgaos(org.orgId, temAuto, temRespondeu),
@@ -435,7 +445,7 @@ export default async function GabinetePage({
   const viewAtual = verAuto ? "autoatendimento" : undefined;
   function montarQuery(overrides: Record<string, string | undefined>) {
     const q = new URLSearchParams();
-    const merged = { estado: filtroEstado, orgao: filtroOrgao, view: viewAtual, cobrar: filtroCobrar ? "1" : undefined, municipio: filtroMunicipio, bairro: filtroBairro, prontas_oficio: filtroProntasOficio ? "1" : undefined, origem: filtroOrigemCampo ? "campo" : undefined, ...overrides };
+    const merged = { estado: filtroEstado, orgao: filtroOrgao, view: viewAtual, cobrar: filtroCobrar ? "1" : undefined, municipio: filtroMunicipio, bairro: filtroBairro, prontas_oficio: filtroProntasOficio ? "1" : undefined, origem: filtroOrigemCampo ? "campo" : undefined, q: busca, ...overrides };
     for (const [k, v] of Object.entries(merged)) {
       if (v) q.set(k, v);
     }
@@ -550,14 +560,41 @@ export default async function GabinetePage({
 
           {/* Demandas table */}
           <section aria-label="Lista de demandas" id="lista-demandas" className="gip-glass pt-2 pb-0 px-0 scroll-mt-20">
+            {/* BUSCA — a Rose digita "poste" e acha na hora, sem caçar na lista. */}
+            <form action="/app/politico/demandas" method="get" className="px-4 pt-4">
+              <div
+                className="flex items-center gap-2 rounded-full px-4"
+                style={{ minHeight: 50, background: "var(--color-surface-elevated)", border: "1px solid var(--color-border)" }}
+              >
+                <span aria-hidden className="text-base" style={{ color: "var(--color-text-subtle)" }}>🔎</span>
+                <input
+                  type="search"
+                  name="q"
+                  defaultValue={busca ?? ""}
+                  placeholder="Buscar por assunto, bairro ou órgão…"
+                  className="min-w-0 flex-1 border-0 bg-transparent text-sm outline-none"
+                  style={{ color: "var(--color-text)" }}
+                  autoComplete="off"
+                />
+                {filtroCobrar && <input type="hidden" name="cobrar" value="1" />}
+                {filtroOrigemCampo && <input type="hidden" name="origem" value="campo" />}
+                {filtroProntasOficio && <input type="hidden" name="prontas_oficio" value="1" />}
+                {viewAtual && <input type="hidden" name="view" value={viewAtual} />}
+                <button type="submit" className="shrink-0 rounded-full px-5 py-2 text-sm font-bold" style={{ background: "var(--color-accent)", color: "#14181F" }}>
+                  Buscar
+                </button>
+              </div>
+            </form>
             {/* Banner "você está filtrando" — informação clara em meio segundo. */}
-            {(filtroMunicipio || filtroBairro || filtroCobrar || filtroProntasOficio || filtroOrigemCampo) && (
+            {(filtroMunicipio || filtroBairro || filtroCobrar || filtroProntasOficio || filtroOrigemCampo || busca) && (
               <div
                 className="mx-4 mt-3.5 flex flex-wrap items-center justify-between gap-2 rounded-xl px-3.5 py-2.5"
                 style={{ background: "color-mix(in srgb, var(--color-accent) 10%, transparent)", border: "1px solid color-mix(in srgb, var(--color-accent) 30%, transparent)" }}
               >
                 <span className="text-sm font-semibold" style={{ color: "var(--color-text)" }}>
-                  {filtroProntasOficio
+                  {busca
+                    ? `🔎 Resultados para "${busca}" · ${total} ${total === 1 ? "demanda" : "demandas"}`
+                    : filtroProntasOficio
                     ? `✍️ Visitas feitas, prontas pra ofício · ${total} ${total === 1 ? "demanda" : "demandas"}`
                     : filtroOrigemCampo
                       ? `📸 Registros de Rua (vindos do campo) · ${total} ${total === 1 ? "demanda" : "demandas"}`
@@ -566,7 +603,7 @@ export default async function GabinetePage({
                         : `Demandas de ${filtroMunicipio ?? filtroBairro} · ${total} ${total === 1 ? "demanda" : "demandas"}`}
                 </span>
                 <Link
-                  href={`/app/politico/demandas${montarQuery({ municipio: undefined, bairro: undefined, cobrar: undefined, prontas_oficio: undefined, origem: undefined, estado: undefined, orgao: undefined, pagina: "1" })}`}
+                  href={`/app/politico/demandas${montarQuery({ municipio: undefined, bairro: undefined, cobrar: undefined, prontas_oficio: undefined, origem: undefined, q: undefined, estado: undefined, orgao: undefined, pagina: "1" })}`}
                   className="shrink-0 text-sm font-bold"
                   style={{ color: "var(--accent-ink, var(--color-accent))" }}
                 >
@@ -688,7 +725,7 @@ export default async function GabinetePage({
                 </p>
               </div>
             ) : (
-              <div className="flex flex-col">
+              <div className="grid grid-cols-1 gap-3 p-4 lg:grid-cols-2">
                     {demandas.map((d) => {
                       const diasPrazo = diasParaPrazo(d.prazo_em); // data da VISITA (informativo)
                       const prazoInfo = prazoDeAtendimento(d.aberta_em, d.pol_prazo_dias);
@@ -699,44 +736,21 @@ export default async function GabinetePage({
                       const orgaoNome = normalizarOrgao(d.pol_orgao_destino);
                       const orgaoCor = corDoOrgao(orgaoNome);
                       const fechadaRow = ["resolvida", "encerrada"].includes(d.estado);
+                      const naoRespondeu = temRespondeu && !d.pol_respondeu && !fechadaRow;
+                      // Borda de triagem: vermelho = problema (atrasada ou sem resposta);
+                      // senão a cor do status. "Bater o olho" e ver o que pega fogo.
+                      const urgente = atrasada || naoRespondeu;
+                      const accent = urgente ? "#EF4444" : ESTADO_COR[d.estado] ?? "#94A3B8";
 
                       return (
                         <Link
                           key={d.id}
                           href={`/app/politico/demandas/${d.id}`}
-                          className="block px-4 py-4 transition-colors hover:bg-white/[0.04]"
-                          style={{ borderBottom: "1px solid color-mix(in srgb, var(--color-text) 7%, transparent)" }}
+                          className="flex flex-col rounded-2xl p-4 transition-shadow hover:shadow-md"
+                          style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)", borderLeft: `4px solid ${accent}` }}
                         >
-                          {/* Linha 1: assunto + selos IA/autoatendimento + prioridade à direita */}
-                          <div className="flex items-start justify-between gap-3">
-                            <div className="flex min-w-0 flex-wrap items-center gap-2">
-                              <span className="font-semibold" style={{ color: "var(--color-text)" }}>
-                                {d.assunto || "Sem assunto"}
-                              </span>
-                              {temIA && (
-                                <span className="inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-bold" style={{ background: "var(--color-accent)", color: "#2E3410" }}>
-                                  IA
-                                </span>
-                              )}
-                              {d.pol_autoatendimento && (
-                                <span
-                                  className="inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold"
-                                  style={{ background: "rgba(96,165,250,0.15)", color: "#1D4ED8" }}
-                                  title="O cidadão foi orientado a resolver pelo link da Prefeitura. Registro de inteligência — não é trabalho do gabinete."
-                                >
-                                  ✨ autoatendimento
-                                </span>
-                              )}
-                            </div>
-                            {pLabel && pEstilo && (
-                              <span className="shrink-0 inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold" style={{ background: pEstilo.bg, color: pEstilo.color }}>
-                                {pLabel}
-                              </span>
-                            )}
-                          </div>
-
-                          {/* Linha 2: etiquetas — tudo visível, quebra sozinho, sem scroll lateral */}
-                          <div className="mt-2.5 flex flex-wrap items-center gap-1.5">
+                          {/* Topo: status + atrasada · prioridade à direita */}
+                          <div className="mb-2 flex flex-wrap items-center gap-1.5">
                             <StatusPill estado={d.estado} />
                             {atrasada && (
                               <span
@@ -747,6 +761,36 @@ export default async function GabinetePage({
                                 Atrasada {Math.abs(prazoInfo.diasRestantes)}d
                               </span>
                             )}
+                            {pLabel && pEstilo && (
+                              <span className="ml-auto inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold" style={{ background: pEstilo.bg, color: pEstilo.color }}>
+                                {pLabel}
+                              </span>
+                            )}
+                          </div>
+
+                          {/* Título: o assunto em destaque + selos */}
+                          <div className="flex flex-wrap items-start gap-2">
+                            <span className="font-semibold leading-snug" style={{ color: "var(--color-text)", fontSize: 15 }}>
+                              {d.assunto || "Sem assunto"}
+                            </span>
+                            {temIA && (
+                              <span className="inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-bold" style={{ background: "var(--color-accent)", color: "#2E3410" }}>
+                                IA
+                              </span>
+                            )}
+                            {d.pol_autoatendimento && (
+                              <span
+                                className="inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold"
+                                style={{ background: "rgba(96,165,250,0.15)", color: "#1D4ED8" }}
+                                title="O cidadão foi orientado a resolver pelo link da Prefeitura. Registro de inteligência — não é trabalho do gabinete."
+                              >
+                                ✨ autoatendimento
+                              </span>
+                            )}
+                          </div>
+
+                          {/* Órgão + tipo */}
+                          <div className="mt-3 flex flex-wrap items-center gap-1.5">
                             {orgaoNome && (
                               <span className="inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold" style={{ background: orgaoCor.bg, color: orgaoCor.color }}>
                                 {orgaoNome}
@@ -757,26 +801,32 @@ export default async function GabinetePage({
                                 {d.pol_tipo.replace(/_/g, " ")}
                               </span>
                             )}
-                            {d.prazo_em && (
-                              <span className="inline-flex items-center gap-1 text-xs tabular-nums" style={{ color: "var(--color-text-subtle)" }}>
-                                📅 Visita {formatarData(d.prazo_em)}
-                                {diasPrazo !== null && !["resolvida", "encerrada"].includes(d.estado) && (
-                                  <span>{diasPrazo < 0 ? `(${Math.abs(diasPrazo)}d atrás)` : diasPrazo === 0 ? "(hoje)" : `(${diasPrazo}d)`}</span>
-                                )}
-                              </span>
-                            )}
-                            {temRespondeu && !fechadaRow && (
-                              d.pol_respondeu ? (
-                                <span className="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold" style={{ background: "rgba(34,197,94,0.15)", color: "#15803D" }}>
-                                  ✓ Respondeu{d.pol_respondeu_em ? ` · ${formatarData(d.pol_respondeu_em)}` : ""}
-                                </span>
-                              ) : (
-                                <span className="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-bold" style={{ background: "rgba(239,68,68,0.14)", color: "#C82333" }}>
-                                  Sem resposta do órgão
-                                </span>
-                              )
-                            )}
                           </div>
+
+                          {/* Rodapé: visita + resposta do órgão */}
+                          {(d.prazo_em || (temRespondeu && !fechadaRow)) && (
+                            <div className="mt-2.5 flex flex-wrap items-center gap-2">
+                              {d.prazo_em && (
+                                <span className="inline-flex items-center gap-1 text-xs tabular-nums" style={{ color: "var(--color-text-subtle)" }}>
+                                  📅 Visita {formatarData(d.prazo_em)}
+                                  {diasPrazo !== null && !["resolvida", "encerrada"].includes(d.estado) && (
+                                    <span>{diasPrazo < 0 ? `(${Math.abs(diasPrazo)}d atrás)` : diasPrazo === 0 ? "(hoje)" : `(${diasPrazo}d)`}</span>
+                                  )}
+                                </span>
+                              )}
+                              {temRespondeu && !fechadaRow && (
+                                d.pol_respondeu ? (
+                                  <span className="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold" style={{ background: "rgba(34,197,94,0.15)", color: "#15803D" }}>
+                                    ✓ Respondeu{d.pol_respondeu_em ? ` · ${formatarData(d.pol_respondeu_em)}` : ""}
+                                  </span>
+                                ) : (
+                                  <span className="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-bold" style={{ background: "rgba(239,68,68,0.14)", color: "#C82333" }}>
+                                    Sem resposta do órgão
+                                  </span>
+                                )
+                              )}
+                            </div>
+                          )}
                         </Link>
                       );
                     })}
