@@ -11,6 +11,7 @@ import { Card } from "@/components/ui/card";
 import { FlowArrow, Plus, Sparkle } from "@/lib/ui/icons";
 import { useFollowupFlows, type FollowupFlowPointerRow } from "@/hooks/followup/useFollowupFlows";
 import type { FollowupFlowSurface } from "@/lib/followup/api-schemas";
+import type { NichoDeModelo } from "@/lib/followup/modelos";
 import { DeleteFollowupFlowButton } from "./DeleteFollowupFlowButton";
 import { DuplicateFollowupFlowButton } from "./DuplicateFollowupFlowButton";
 import { FlowStatusBadge } from "./FlowStatusBadge";
@@ -23,6 +24,8 @@ interface Props {
   canWrite: boolean;
   /** Recorte por superfície. Ausente = todos (comportamento atual). */
   surface?: FollowupFlowSurface;
+  /** Nicho da org — recorta o catálogo de modelos. Padrão: clínica (origem). */
+  nicho?: NichoDeModelo;
 }
 
 function formatUpdatedAt(iso: string, idioma: string): string {
@@ -33,7 +36,7 @@ function formatUpdatedAt(iso: string, idioma: string): string {
   });
 }
 
-export function FlowsList({ initialData, canWrite, surface }: Props) {
+export function FlowsList({ initialData, canWrite, surface, nicho = "clinica" }: Props) {
   const tagDoIdioma = useTagDeIdioma();
   const t = useT();
   const { data } = useFollowupFlows({ initialData, ...(surface ? { surface } : {}) });
@@ -76,6 +79,7 @@ export function FlowsList({ initialData, canWrite, surface }: Props) {
           open={modelosOpen}
           onOpenChange={setModelosOpen}
           nomesExistentes={flows.map((f) => f.name)}
+          nicho={nicho}
         />
       )}
     </>

@@ -26,10 +26,11 @@ import { useT } from "@/hooks/i18n/useT";
 import { useEtapasDeGatilho } from "@/hooks/followup/useEtapasDeGatilho";
 import { useInstalarModelo } from "@/hooks/followup/useInstalarModelo";
 import {
-  MODELOS_DE_FOLLOWUP,
+  modelosDoNicho,
   horizonteDoModeloMs,
   toquesDoModelo,
   type ModeloDeFollowup,
+  type NichoDeModelo,
 } from "@/lib/followup/modelos";
 import { Clock, PaperPlaneTilt } from "@/lib/ui/icons";
 
@@ -53,6 +54,9 @@ interface Props {
   onOpenChange: (open: boolean) => void;
   /** Nomes dos fluxos que a organização já tem — marca o modelo já instalado. */
   nomesExistentes: string[];
+  /** Nicho da org: recorta o catálogo (gabinete não vê modelos de clínica, e
+   * vice-versa) e escolhe a voz da descrição. Padrão: clínica (origem). */
+  nicho?: NichoDeModelo;
 }
 
 const DIA_MS = 86_400_000;
@@ -65,8 +69,15 @@ function horizonteLegivel(ms: number): string {
   return meses <= 1 ? "1 mês" : `${meses} meses`;
 }
 
-export function ModelosDialog({ open, onOpenChange, nomesExistentes }: Props) {
+export function ModelosDialog({ open, onOpenChange, nomesExistentes, nicho = "clinica" }: Props) {
   const t = useT();
+  // Só os modelos do nicho desta org — um gabinete não vê "Exame"/"Cobrança", e
+  // uma clínica não vê os três do mandato.
+  const modelos = modelosDoNicho(nicho);
+  const descricao =
+    nicho === "politico"
+      ? "Fluxos com os textos já escritos, para os dois momentos em que o relacionamento com o cidadão se constrói: quem acabou de chegar e quem o gabinete acabou de atender. Instalar não manda mensagem para ninguém — o fluxo nasce como rascunho para você revisar e editar."
+      : "Fluxos com os textos já escritos, para as quatro vezes em que um paciente some no meio do caminho. Instalar não manda mensagem para ninguém: o fluxo nasce como rascunho para você revisar.";
   const router = useRouter();
   const instalar = useInstalarModelo();
   const [etapaPorModelo, setEtapaPorModelo] = useState<Record<string, string>>({});
@@ -118,15 +129,11 @@ export function ModelosDialog({ open, onOpenChange, nomesExistentes }: Props) {
       <DialogContent className="max-h-[85vh] max-w-2xl overflow-y-auto">
         <DialogHeader>
           <DialogTitle>{t("Modelos prontos")}</DialogTitle>
-          <DialogDescription>
-            {t(
-              "Fluxos com os textos já escritos, para as quatro vezes em que um paciente some no meio do caminho. Instalar não manda mensagem para ninguém: o fluxo nasce como rascunho para você revisar.",
-            )}
-          </DialogDescription>
+          <DialogDescription>{t(descricao)}</DialogDescription>
         </DialogHeader>
 
         <ul className="flex flex-col gap-3">
-          {MODELOS_DE_FOLLOWUP.map((modelo) => {
+          {modelos.map((modelo) => {
             const jaInstalado = nomesExistentes.includes(modelo.nome);
             const etapaEscolhida = etapaPorModelo[modelo.id];
             const faltaEtapa = modelo.pedeEtapa && !etapaEscolhida;

@@ -98,7 +98,10 @@ describe("catálogo de modelos de follow-up", () => {
     });
 
     it("conta os toques e o horizonte a partir do grafo", () => {
-      expect(toquesDoModelo(modelo.grafo)).toBeGreaterThanOrEqual(3);
+      // Piso de 2: uma escada de follow-up precisa de ao menos dois toques pra
+      // ser escada. Os de clínica têm 3–4; os de gabinete são enxutos (2 de
+      // propósito — "mensagem demais pra quem não respondeu é zona de ban").
+      expect(toquesDoModelo(modelo.grafo)).toBeGreaterThanOrEqual(2);
       expect(horizonteDoModeloMs(modelo.grafo)).toBeGreaterThan(0);
     });
   });

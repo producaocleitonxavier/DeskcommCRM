@@ -13039,11 +13039,11 @@ export const DICIONARIO: Traducoes = {
   "Boas-vindas": { es: "Bienvenida" },
   "Pós-atendimento": { es: "Posatención" },
   "Reconexão": { es: "Reconexión" },
-  "Alguém novo entrou em contato com o mandato. O fluxo apresenta o canal e começa a relação, sem pedir nada em troca.": {
-    es: "Alguien nuevo se puso en contacto con el mandato. El flujo presenta el canal y comienza la relación, sin pedir nada a cambio.",
+  "Alguém novo entrou em contato com o mandato. O fluxo acolhe e, 5 dias depois, oferece receber vídeos e conteúdos em primeira mão — opt-in, sem pedir voto.": {
+    es: "Alguien nuevo se puso en contacto con el mandato. El flujo da la bienvenida y, 5 días después, ofrece recibir videos y contenidos en primicia — opt-in, sin pedir voto.",
   },
-  "Depois que o gabinete atende alguém, o fluxo volta para confirmar que ficou resolvido e manter a porta aberta.": {
-    es: "Después de que el despacho atiende a alguien, el flujo vuelve para confirmar que quedó resuelto y mantener la puerta abierta.",
+  "Depois que o gabinete atende alguém, o fluxo volta uma vez pra confirmar que ficou resolvido e manter a porta aberta.": {
+    es: "Después de que el despacho atiende a alguien, el flujo vuelve una vez para confirmar que quedó resuelto y mantener la puerta abierta.",
   },
   "A conversa com a pessoa parou faz dias. O fluxo reaquece o vínculo sem cobrar nada, só para manter o contato próximo.": {
     es: "La conversación con la persona se detuvo hace días. El flujo reactiva el vínculo sin exigir nada, solo para mantener el contacto cercano.",
