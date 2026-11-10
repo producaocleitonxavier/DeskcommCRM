@@ -517,9 +517,10 @@ function primeiroNome(nome: string | null | undefined): string {
  * a consulta erra e devolve 0.
  */
 /**
- * Quantos "Registros de Rua" (captura de campo) estão na mesa — abertos. Alimenta
- * o card do Hoje que leva ao quadro filtrado (origem=campo). Fail-soft: sem a
- * coluna pol_origem_captura (migration 9094) a consulta erra e volta 0.
+ * Quantos "Registros de Rua" (captura de campo) foram REALIZADOS — o total que o
+ * gabinete captou na rua. Alimenta o card do Hoje que leva ao quadro filtrado
+ * (origem=campo). Fail-soft: sem a coluna pol_origem_captura (migration 9094) a
+ * consulta erra e volta 0.
  */
 async function contarRegistrosDeRua(organizationId: string): Promise<number> {
   const db = await createClient();
@@ -528,8 +529,7 @@ async function contarRegistrosDeRua(organizationId: string): Promise<number> {
     .select("id", { count: "exact", head: true })
     .eq("organization_id", organizationId)
     .eq("pol_gabinete", true)
-    .eq("pol_origem_captura", "campo")
-    .not("estado", "in", "(resolvida,encerrada)");
+    .eq("pol_origem_captura", "campo");
   if (error) return 0;
   return count ?? 0;
 }

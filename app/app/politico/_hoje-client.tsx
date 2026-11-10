@@ -349,7 +349,7 @@ export default function HojeClient({
               O relato do assessor está na demanda; aqui é só o "pronto pra oficializar". */}
           {visitasProntasOficio > 0 && (
             <Link
-              href="/app/politico/demandas?prontas_oficio=1"
+              href="/app/politico/demandas?prontas_oficio=1#lista-demandas"
               className="gip-glass gip-glass-hover flex items-center gap-3 p-4"
             >
               <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl" style={{ background: "rgba(16,185,129,0.14)", color: "#0E8A5F" }} aria-hidden>
@@ -369,10 +369,14 @@ export default function HojeClient({
               Um clique → o quadro só com esses (origem=campo). */}
           {registrosDeRua > 0 && (
             <Link
-              href="/app/politico/demandas?origem=campo"
-              className="gip-glass gip-glass-hover flex items-center gap-3 p-4"
+              href="/app/politico/demandas?origem=campo#lista-demandas"
+              className="gip-glass-hover flex items-center gap-3 rounded-2xl p-4"
+              style={{
+                background: "color-mix(in srgb, var(--color-accent) 9%, var(--color-surface))",
+                border: "1px solid color-mix(in srgb, var(--color-accent) 32%, transparent)",
+              }}
             >
-              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl" style={{ background: "color-mix(in srgb, var(--color-accent) 16%, transparent)", color: "var(--icon-accent)" }} aria-hidden>
+              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl" style={{ background: "var(--color-accent)", color: "#14181F" }} aria-hidden>
                 <Camera className="h-5 w-5" />
               </span>
               <span className="min-w-0 flex-1">
@@ -380,7 +384,7 @@ export default function HojeClient({
                   {registrosDeRua.toLocaleString("pt-BR")}
                 </span>
                 <span className="mt-0.5 block text-sm" style={{ color: "var(--color-text-muted)" }}>
-                  {registrosDeRua === 1 ? "registro de rua na mesa" : "registros de rua na mesa"}
+                  {registrosDeRua === 1 ? "registro de rua realizado" : "registros de rua realizados"}
                 </span>
               </span>
             </Link>
