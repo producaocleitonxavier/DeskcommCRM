@@ -1,18 +1,18 @@
 /**
- * Motor do card "Antes & Depois" (Situação Política / Vitórias) — v1.1.
+ * Motor do card "Antes & Depois" — ENCAIXE na moldura do mandato.
  *
- * GET /app/politico/vitorias/[id]/card?antes=&depois=&l=&modelo=&cor=
- * → PNG vertical 9:16 (Stories). Montado server-side com next/og (Satori).
+ * GET /app/politico/vitorias/[id]/card?antes=<anexoId>&depois=<anexoId>
+ * → PNG: as fotos encaixadas nas JANELAS TRANSPARENTES da moldura do gabinete.
  *
- * v1.1: (1) FOTO corrigida com `sharp` — gira pela orientação EXIF real e recorta
- * no quadro sem distorcer (o celular deita a foto; o Satori ignora o EXIF). (2) 3
- * MODELOS de arte (mandato/impacto/luz). (3) COR de fundo escolhível (a identidade
- * do mandato pode não ser a nossa). Logo vem de pol_gabinete_config.
+ * REGRA: a identidade é do GABINETE. O designer sobe a moldura (PNG 1080x1920 com
+ * 2 áreas transparentes = Antes/Depois) em Identidade do Mandato. A ferramenta só
+ * DETECTA as janelas transparentes (qualquer layout) e encaixa a foto perfeita:
+ * recorta na orientação certa (EXIF via sharp) e no formato exato da janela
+ * (a moldura vai POR CIMA, revelando a foto só onde é transparente).
  *
- * Privado (atrás do login), trava anexo→demanda→org. Nada envia — só a imagem.
+ * Esquerda/topo = Antes; direita/baixo = Depois. Sem texto nosso, sem fonte.
  */
 
-import { ImageResponse } from "next/og";
 import type { NextRequest } from "next/server";
 import sharp from "sharp";
 
@@ -22,373 +22,155 @@ import { createAdminClient } from "@/lib/supabase/admin";
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
-const W = 1080;
-const H = 1920;
-const LIME = "#D7F36A";
-
 type Admin = ReturnType<typeof createAdminClient>;
+interface Janela {
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+}
 
-/** Normaliza a foto no SERVIDOR: gira pela orientação real (EXIF) + recorta no
- * quadro (cover, sem distorcer) + vira JPG. Devolve data URL (sem rede no Satori). */
-async function fotoData(admin: Admin, bucket: string, path: string | null, w: number, h: number): Promise<string | null> {
-  if (!path) return null;
-  try {
-    const { data } = await admin.storage.from(bucket).download(path);
-    if (!data) return null;
-    const buf = Buffer.from(await data.arrayBuffer());
-    const out = await sharp(buf).rotate().resize(w, h, { fit: "cover", position: "centre" }).jpeg({ quality: 82 }).toBuffer();
-    return `data:image/jpeg;base64,${out.toString("base64")}`;
-  } catch {
-    return null;
+async function baixar(admin: Admin, bucket: string, path: string): Promise<Buffer | null> {
+  const { data } = await admin.storage.from(bucket).download(path);
+  if (!data) return null;
+  return Buffer.from(await data.arrayBuffer());
+}
+
+/**
+ * Detecta as janelas transparentes da moldura (onde as fotos entram). Faz
+ * rotulagem de componentes conexos (flood fill) sobre a máscara de alfa, numa
+ * versão reduzida (rápido), e devolve as 2 maiores janelas — em coordenadas da
+ * imagem cheia. Funciona com QUALQUER layout de molde.
+ */
+async function detectarJanelas(molduraBuf: Buffer, fullW: number, fullH: number): Promise<Janela[]> {
+  const escala = 4;
+  const dw = Math.max(1, Math.round(fullW / escala));
+  const dh = Math.max(1, Math.round(fullH / escala));
+  const { data, info } = await sharp(molduraBuf).ensureAlpha().resize(dw, dh, { fit: "fill" }).raw().toBuffer({ resolveWithObject: true });
+  const w = info.width;
+  const h = info.height;
+  const ch = info.channels; // 4 (RGBA)
+  const n = w * h;
+  const transp = new Uint8Array(n);
+  for (let i = 0; i < n; i++) transp[i] = data[i * ch + 3] < 40 ? 1 : 0;
+
+  const visto = new Uint8Array(n);
+  const pilha: number[] = [];
+  const comps: { minx: number; miny: number; maxx: number; maxy: number; area: number }[] = [];
+  for (let s = 0; s < n; s++) {
+    if (!transp[s] || visto[s]) continue;
+    let minx = w, miny = h, maxx = 0, maxy = 0, area = 0;
+    pilha.length = 0;
+    pilha.push(s);
+    visto[s] = 1;
+    while (pilha.length) {
+      const p = pilha.pop()!;
+      const px = p % w;
+      const py = (p / w) | 0;
+      area++;
+      if (px < minx) minx = px;
+      if (px > maxx) maxx = px;
+      if (py < miny) miny = py;
+      if (py > maxy) maxy = py;
+      if (px > 0 && transp[p - 1] && !visto[p - 1]) { visto[p - 1] = 1; pilha.push(p - 1); }
+      if (px < w - 1 && transp[p + 1] && !visto[p + 1]) { visto[p + 1] = 1; pilha.push(p + 1); }
+      if (py > 0 && transp[p - w] && !visto[p - w]) { visto[p - w] = 1; pilha.push(p - w); }
+      if (py < h - 1 && transp[p + w] && !visto[p + w]) { visto[p + w] = 1; pilha.push(p + w); }
+    }
+    comps.push({ minx, miny, maxx, maxy, area });
   }
+
+  // Descarta ruído (< 0,5% da máscara) e um fundo transparente enorme (> 60%).
+  const total = n;
+  const boas = comps.filter((c) => c.area > total * 0.005 && c.area < total * 0.6).sort((a, b) => b.area - a.area);
+  return boas.slice(0, 2).map((c) => ({
+    x: Math.max(0, Math.round(c.minx * escala)),
+    y: Math.max(0, Math.round(c.miny * escala)),
+    w: Math.min(fullW, Math.round((c.maxx - c.minx + 1) * escala)),
+    h: Math.min(fullH, Math.round((c.maxy - c.miny + 1) * escala)),
+  }));
 }
 
-/** Logo: mantém proporção (contain), preserva transparência (PNG). */
-async function logoData(admin: Admin, path: string | null, max: number): Promise<string | null> {
-  if (!path) return null;
-  try {
-    const { data } = await admin.storage.from("gabinete-identidade").download(path);
-    if (!data) return null;
-    const buf = Buffer.from(await data.arrayBuffer());
-    const out = await sharp(buf).rotate().resize(max, max, { fit: "inside", withoutEnlargement: true }).png().toBuffer();
-    return `data:image/png;base64,${out.toString("base64")}`;
-  } catch {
-    return null;
-  }
+/** Ordena as 2 janelas: lado a lado → esquerda=Antes; empilhadas → topo=Antes. */
+function ordenar(janelas: Janela[]): [Janela, Janela] {
+  const [a, b] = janelas;
+  const dx = Math.abs(a.x + a.w / 2 - (b.x + b.w / 2));
+  const dy = Math.abs(a.y + a.h / 2 - (b.y + b.h / 2));
+  if (dx >= dy) return a.x <= b.x ? [a, b] : [b, a];
+  return a.y <= b.y ? [a, b] : [b, a];
 }
 
-function ehEscuro(hex: string): boolean {
-  const h = hex.replace("#", "");
-  const r = parseInt(h.slice(0, 2), 16);
-  const g = parseInt(h.slice(2, 4), 16);
-  const b = parseInt(h.slice(4, 6), 16);
-  return (0.2126 * r + 0.7152 * g + 0.0722 * b) / 255 < 0.52;
-}
-function validarCor(c: string | null, fallback: string): string {
-  return c && /^#[0-9a-fA-F]{6}$/.test(c) ? c : fallback;
-}
-function clarear(hex: string, amt: number): string {
-  const h = hex.replace("#", "");
-  const ch = (i: number) => Math.min(255, parseInt(h.slice(i, i + 2), 16) + amt).toString(16).padStart(2, "0");
-  return `#${ch(0)}${ch(2)}${ch(4)}`;
+async function fotoNaJanela(buf: Buffer, j: Janela): Promise<Buffer> {
+  return sharp(buf).rotate().resize(j.w, j.h, { fit: "cover", position: "centre" }).png().toBuffer();
 }
 
-interface Dados {
-  antes: string | null;
-  depois: string | null;
-  logo: string | null;
-  nome: string;
-  cargo: string;
-  cidade: string;
-  corpo: string;
-  bairro: string;
-  orgao: string;
-  cor: string;
-}
-
-// ── MODELO 1: MANDATO (fundo = cor; sóbrio/institucional) ───────────────────
-function Mandato(d: Dados) {
-  const txt = ehEscuro(d.cor) ? "#FFFFFF" : "#14181F";
-  const acento = ehEscuro(d.cor) ? LIME : "#14181F";
-  const acentoTxt = ehEscuro(d.cor) ? "#14181F" : "#FFFFFF";
-  const sub = ehEscuro(d.cor) ? "rgba(255,255,255,0.72)" : "rgba(0,0,0,0.6)";
-  return (
-    <div style={{ display: "flex", flexDirection: "column", width: W, height: H, background: d.cor }}>
-      <div style={{ display: "flex", alignItems: "center", padding: "56px 64px 20px 64px" }}>
-        <Logo d={d} acento={acento} acentoTxt={acentoTxt} />
-        <div style={{ display: "flex", flexDirection: "column", marginLeft: 24 }}>
-          <span style={{ fontSize: 46, fontWeight: 800, color: txt }}>{d.nome}</span>
-          {(d.cargo || d.cidade) && <span style={{ fontSize: 28, color: acento, marginTop: 4 }}>{[d.cargo, d.cidade].filter(Boolean).join(" · ")}</span>}
-        </div>
-      </div>
-      <div style={{ display: "flex", padding: "6px 64px 18px 64px" }}>
-        <div style={{ display: "flex", background: acento, color: acentoTxt, fontSize: 30, fontWeight: 800, padding: "10px 24px", borderRadius: 999 }}>✓ PROBLEMA RESOLVIDO</div>
-      </div>
-      <ParDeFotos d={d} corAntes="#F59E0B" corDepois={acento} rotuloCor={txt} />
-      <div style={{ display: "flex", flex: 1, padding: "38px 64px 0 64px" }}>
-        <span style={{ fontSize: 40, lineHeight: 1.35, color: txt, fontWeight: 500 }}>{d.corpo}</span>
-      </div>
-      <Rodape d={d} bg={ehEscuro(d.cor) ? "rgba(0,0,0,0.25)" : "rgba(0,0,0,0.06)"} txt={txt} sub={sub} acento={acento} />
-    </div>
-  );
-}
-
-// ── MODELO 2: IMPACTO (preto + cor vibrante; bold/esportivo) ────────────────
-function Impacto(d: Dados) {
-  const BG = "#0B0B0D";
-  return (
-    <div style={{ display: "flex", flexDirection: "column", width: W, height: H, background: BG }}>
-      <div style={{ display: "flex", height: 16, background: d.cor }} />
-      <div style={{ display: "flex", alignItems: "center", padding: "40px 56px 10px 56px" }}>
-        <Logo d={d} acento={d.cor} acentoTxt="#0B0B0D" />
-        <span style={{ fontSize: 42, fontWeight: 800, color: "#FFFFFF", marginLeft: 20 }}>{d.nome}</span>
-      </div>
-      <div style={{ display: "flex", padding: "6px 56px 10px 56px" }}>
-        <span style={{ fontSize: 76, fontWeight: 800, color: d.cor, letterSpacing: -1, textTransform: "uppercase" }}>Resolvido.</span>
-      </div>
-      <div style={{ display: "flex", justifyContent: "space-between", padding: "8px 48px 0 48px" }}>
-        <FotoBold rotulo="ANTES" url={d.antes} cor="#FFFFFF" />
-        <FotoBold rotulo="DEPOIS" url={d.depois} cor={d.cor} />
-      </div>
-      <div style={{ display: "flex", flex: 1, padding: "36px 56px 0 56px" }}>
-        <span style={{ fontSize: 38, lineHeight: 1.35, color: "#FFFFFF", fontWeight: 500 }}>{d.corpo}</span>
-      </div>
-      <div style={{ display: "flex", flexDirection: "column", background: d.cor, padding: "26px 56px 44px 56px" }}>
-        <span style={{ fontSize: 30, fontWeight: 800, color: "#0B0B0D" }}>Gabinete {d.cargo ? `do ${d.cargo}` : ""} {d.nome}</span>
-        {(d.bairro || d.orgao) && <span style={{ fontSize: 26, color: "rgba(11,11,13,0.7)", marginTop: 4 }}>{[d.bairro, d.orgao].filter(Boolean).join("  ·  ")}</span>}
-      </div>
-    </div>
-  );
-}
-
-// ── MODELO 3: LUZ (claro/editorial; cor como acento) ────────────────────────
-function Luz(d: Dados) {
-  const BG = "#F6F4EE";
-  const txt = "#16202B";
-  return (
-    <div style={{ display: "flex", flexDirection: "column", width: W, height: H, background: BG }}>
-      <div style={{ display: "flex", alignItems: "center", padding: "56px 64px 16px 64px" }}>
-        <Logo d={d} acento={d.cor} acentoTxt="#FFFFFF" />
-        <div style={{ display: "flex", flexDirection: "column", marginLeft: 24 }}>
-          <span style={{ fontSize: 46, fontWeight: 800, color: txt }}>{d.nome}</span>
-          {(d.cargo || d.cidade) && <span style={{ fontSize: 28, color: d.cor, marginTop: 4 }}>{[d.cargo, d.cidade].filter(Boolean).join(" · ")}</span>}
-        </div>
-      </div>
-      <div style={{ display: "flex", alignItems: "center", padding: "0 64px 14px 64px" }}>
-        <div style={{ display: "flex", width: 60, height: 8, background: d.cor, borderRadius: 4, marginRight: 16 }} />
-        <span style={{ fontSize: 30, fontWeight: 800, color: d.cor, letterSpacing: 2 }}>PROBLEMA RESOLVIDO</span>
-      </div>
-      <ParDeFotos d={d} corAntes="#C2410C" corDepois={d.cor} rotuloCor={txt} />
-      <div style={{ display: "flex", flex: 1, padding: "38px 64px 0 64px" }}>
-        <span style={{ fontSize: 40, lineHeight: 1.38, color: txt, fontWeight: 500 }}>{d.corpo}</span>
-      </div>
-      <Rodape d={d} bg="rgba(0,0,0,0.04)" txt={txt} sub="rgba(0,0,0,0.5)" acento={d.cor} />
-    </div>
-  );
-}
-
-// ── MODELO 4: GRADIENTE (vibrante/comemorativo; molduras + selos) ───────────
-function Gradiente(d: Dados) {
-  const bg = `linear-gradient(145deg, ${d.cor}, ${clarear(d.cor, 78)})`;
-  const txt = ehEscuro(d.cor) ? "#FFFFFF" : "#14181F";
-  const foto = (url: string | null, rotulo: string, pill: string, raio: Record<string, number>) => (
-    <div style={{ display: "flex", flexDirection: "column", width: 466, alignItems: "center" }}>
-      <div style={{ display: "flex", width: 466, height: 600, overflow: "hidden", background: "#1A1A1F", border: "5px solid rgba(255,255,255,0.92)", alignItems: "center", justifyContent: "center", ...raio }}>
-        {url ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img src={url} width={466} height={600} style={{ width: 466, height: 600 }} alt="" />
-        ) : (
-          <span style={{ fontSize: 26, color: "rgba(255,255,255,0.55)" }}>sem foto</span>
-        )}
-      </div>
-      <div style={{ display: "flex", marginTop: -32 }}>
-        <div style={{ display: "flex", background: pill, color: "#FFFFFF", fontSize: 32, fontWeight: 800, letterSpacing: 2, padding: "10px 30px", borderRadius: 999 }}>{rotulo}</div>
-      </div>
-    </div>
-  );
-  return (
-    <div style={{ display: "flex", flexDirection: "column", width: W, height: H, background: bg }}>
-      <div style={{ display: "flex", alignItems: "center", padding: "54px 64px 14px 64px" }}>
-        <Logo d={d} acento="#FFFFFF" acentoTxt={d.cor} />
-        <div style={{ display: "flex", flexDirection: "column", marginLeft: 24 }}>
-          <span style={{ fontSize: 46, fontWeight: 800, color: txt }}>{d.nome}</span>
-          {(d.cargo || d.cidade) && <span style={{ fontSize: 28, color: txt, opacity: 0.85, marginTop: 4 }}>{[d.cargo, d.cidade].filter(Boolean).join(" · ")}</span>}
-        </div>
-      </div>
-      <div style={{ display: "flex", padding: "6px 64px 22px 64px" }}>
-        <div style={{ display: "flex", background: "#FFFFFF", color: d.cor, fontSize: 30, fontWeight: 800, padding: "10px 24px", borderRadius: 999 }}>✓ PROBLEMA RESOLVIDO</div>
-      </div>
-      <div style={{ display: "flex", justifyContent: "space-between", padding: "4px 60px 0 60px" }}>
-        {foto(d.antes, "ANTES", "#F97316", { borderTopLeftRadius: 120, borderTopRightRadius: 28, borderBottomRightRadius: 120, borderBottomLeftRadius: 28 })}
-        {foto(d.depois, "DEPOIS", "#1D4ED8", { borderTopLeftRadius: 28, borderTopRightRadius: 120, borderBottomRightRadius: 28, borderBottomLeftRadius: 120 })}
-      </div>
-      <div style={{ display: "flex", flex: 1, padding: "44px 64px 0 64px" }}>
-        <span style={{ fontSize: 40, lineHeight: 1.35, color: txt, fontWeight: 600 }}>{d.corpo}</span>
-      </div>
-      <div style={{ display: "flex", flexDirection: "column", padding: "0 64px 48px 64px" }}>
-        <span style={{ fontSize: 30, fontWeight: 700, color: txt }}>Gabinete {d.cargo ? `do ${d.cargo}` : ""} {d.nome}</span>
-        {(d.bairro || d.orgao) && <span style={{ fontSize: 26, color: txt, opacity: 0.7, marginTop: 6 }}>{[d.bairro, d.orgao].filter(Boolean).join("  ·  ")}</span>}
-      </div>
-    </div>
-  );
-}
-
-// ── MODELO 5: MOLDURA (painel escuro com frame na cor; elegante) ────────────
-function Moldura(d: Dados) {
-  const BG = ehEscuro(d.cor) ? d.cor : "#101D30";
-  const acento = ehEscuro(d.cor) ? LIME : d.cor;
-  return (
-    <div style={{ display: "flex", width: W, height: H, background: BG, padding: 40 }}>
-      <div style={{ display: "flex", flexDirection: "column", flex: 1, border: `3px solid ${acento}`, borderRadius: 36, padding: "44px 48px" }}>
-        <div style={{ display: "flex", alignItems: "center" }}>
-          <Logo d={d} acento={acento} acentoTxt={ehEscuro(acento) ? "#FFFFFF" : "#0B0B0D"} />
-          <div style={{ display: "flex", flexDirection: "column", marginLeft: 22 }}>
-            <span style={{ fontSize: 44, fontWeight: 800, color: "#FFFFFF" }}>{d.nome}</span>
-            {(d.cargo || d.cidade) && <span style={{ fontSize: 26, color: acento, marginTop: 4 }}>{[d.cargo, d.cidade].filter(Boolean).join(" · ")}</span>}
-          </div>
-        </div>
-        <div style={{ display: "flex", marginTop: 22 }}>
-          <div style={{ display: "flex", background: acento, color: ehEscuro(acento) ? "#FFFFFF" : "#0B0B0D", fontSize: 28, fontWeight: 800, padding: "8px 22px", borderRadius: 999 }}>✓ RESOLVIDO</div>
-        </div>
-        <div style={{ display: "flex", justifyContent: "space-between", marginTop: 28 }}>
-          {[
-            { r: "ANTES", u: d.antes },
-            { r: "DEPOIS", u: d.depois },
-          ].map((f) => (
-            <div key={f.r} style={{ display: "flex", flexDirection: "column", width: 430, alignItems: "center" }}>
-              <span style={{ fontSize: 26, fontWeight: 800, letterSpacing: 2, color: "#FFFFFF", marginBottom: 10 }}>{f.r}</span>
-              <FotoBox url={f.u} w={430} h={560} borda={acento} />
-            </div>
-          ))}
-        </div>
-        <div style={{ display: "flex", flex: 1, marginTop: 30 }}>
-          <span style={{ fontSize: 36, lineHeight: 1.35, color: "#FFFFFF", fontWeight: 500 }}>{d.corpo}</span>
-        </div>
-        <div style={{ display: "flex", flexDirection: "column" }}>
-          <div style={{ display: "flex", width: 110, height: 6, background: acento, borderRadius: 3, marginBottom: 14 }} />
-          <span style={{ fontSize: 28, fontWeight: 700, color: "#FFFFFF" }}>Gabinete {d.cargo ? `do ${d.cargo}` : ""} {d.nome}</span>
-          {(d.bairro || d.orgao) && <span style={{ fontSize: 24, color: "rgba(255,255,255,0.6)", marginTop: 4 }}>{[d.bairro, d.orgao].filter(Boolean).join("  ·  ")}</span>}
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// ── Peças compartilhadas ────────────────────────────────────────────────────
-function Logo({ d, acento, acentoTxt }: { d: Dados; acento: string; acentoTxt: string }) {
-  if (d.logo) {
-    // eslint-disable-next-line @next/next/no-img-element
-    return <img src={d.logo} width={100} height={100} style={{ width: 100, height: 100, objectFit: "contain", borderRadius: 16 }} alt="" />;
-  }
-  return (
-    <div style={{ display: "flex", width: 100, height: 100, borderRadius: 20, background: acento, alignItems: "center", justifyContent: "center" }}>
-      <span style={{ fontSize: 54, fontWeight: 800, color: acentoTxt }}>{d.nome.charAt(0).toUpperCase()}</span>
-    </div>
-  );
-}
-
-function FotoBox({ url, w, h, borda }: { url: string | null; w: number; h: number; borda: string }) {
-  return (
-    <div style={{ display: "flex", width: w, height: h, borderRadius: 20, overflow: "hidden", background: "#1A1A1F", border: `4px solid ${borda}`, alignItems: "center", justifyContent: "center" }}>
-      {url ? (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img src={url} width={w} height={h} style={{ width: w, height: h }} alt="" />
-      ) : (
-        <span style={{ fontSize: 26, color: "rgba(255,255,255,0.55)" }}>sem foto</span>
-      )}
-    </div>
-  );
-}
-
-function ParDeFotos({ d, corAntes, corDepois, rotuloCor }: { d: Dados; corAntes: string; corDepois: string; rotuloCor: string }) {
-  const w = 460;
-  const h = 600;
-  return (
-    <div style={{ display: "flex", justifyContent: "space-between", padding: "10px 64px 0 64px" }}>
-      {[
-        { r: "ANTES", u: d.antes, c: corAntes },
-        { r: "DEPOIS", u: d.depois, c: corDepois },
-      ].map((f) => (
-        <div key={f.r} style={{ display: "flex", flexDirection: "column", width: w, alignItems: "center" }}>
-          <div style={{ display: "flex", alignItems: "center", marginBottom: 12 }}>
-            <div style={{ display: "flex", width: 14, height: 14, borderRadius: 7, background: f.c, marginRight: 10 }} />
-            <span style={{ fontSize: 28, fontWeight: 800, letterSpacing: 2, color: rotuloCor }}>{f.r}</span>
-          </div>
-          <FotoBox url={f.u} w={w} h={h} borda={f.c} />
-        </div>
-      ))}
-    </div>
-  );
-}
-
-function FotoBold({ rotulo, url, cor }: { rotulo: string; url: string | null; cor: string }) {
-  const w = 468;
-  const h = 560;
-  return (
-    <div style={{ display: "flex", flexDirection: "column", width: w }}>
-      <FotoBox url={url} w={w} h={h} borda={cor} />
-      <div style={{ display: "flex", justifyContent: "center", marginTop: -34 }}>
-        <div style={{ display: "flex", background: cor, color: cor === "#FFFFFF" ? "#0B0B0D" : "#0B0B0D", fontSize: 34, fontWeight: 800, letterSpacing: 2, padding: "8px 28px", borderRadius: 999 }}>{rotulo}</div>
-      </div>
-    </div>
-  );
-}
-
-function Rodape({ d, bg, txt, sub, acento }: { d: Dados; bg: string; txt: string; sub: string; acento: string }) {
-  return (
-    <div style={{ display: "flex", flexDirection: "column", background: bg, padding: "28px 64px 48px 64px" }}>
-      <div style={{ display: "flex", width: 120, height: 6, background: acento, borderRadius: 3, marginBottom: 18 }} />
-      <span style={{ fontSize: 30, fontWeight: 700, color: txt }}>Gabinete {d.cargo ? `do ${d.cargo}` : ""} {d.nome}</span>
-      {(d.bairro || d.orgao) && <span style={{ fontSize: 26, color: sub, marginTop: 6 }}>{[d.bairro, d.orgao].filter(Boolean).join("  ·  ")}</span>}
-    </div>
-  );
+function erro(msg: string, status = 400): Response {
+  return new Response(msg, { status, headers: { "content-type": "text/plain; charset=utf-8" } });
 }
 
 export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const user = await requireAuth();
   const org = await resolveActiveOrg(user);
-  if (!org) return new Response("sem organização", { status: 403 });
+  if (!org) return erro("sem organização", 403);
   const { id } = await params;
 
   const sp = req.nextUrl.searchParams;
   const antesId = sp.get("antes") ?? "";
   const depoisId = sp.get("depois") ?? "";
-  const legenda = (sp.get("l") ?? "").slice(0, 400);
-  const modelo = sp.get("modelo") ?? "mandato";
-  const corPadrao = modelo === "luz" || modelo === "gradiente" ? "#16A34A" : modelo === "impacto" ? "#D7F36A" : "#0B1726";
-  const cor = validarCor(sp.get("cor"), corPadrao);
+  if (!antesId || !depoisId) return erro("Escolha a foto do Antes e a do Depois.", 422);
 
   const admin = createAdminClient();
 
-  const { data: dem } = await admin
-    .from("demandas")
-    .select("id, assunto, pol_orgao_destino, pol_bairro, pol_municipio, aberta_em, fechada_em")
-    .eq("organization_id", org.orgId)
-    .eq("id", id)
-    .maybeSingle();
-  if (!dem) return new Response("demanda não encontrada", { status: 404 });
+  // A demanda é da org?
+  const { data: dem } = await admin.from("demandas").select("id").eq("organization_id", org.orgId).eq("id", id).maybeSingle();
+  if (!dem) return erro("demanda não encontrada", 404);
 
-  const ids = [antesId, depoisId].filter(Boolean);
-  const { data: anexos } = ids.length
-    ? await admin.from("pol_demanda_anexos").select("id, storage_path").eq("organization_id", org.orgId).eq("demanda_id", id).in("id", ids)
-    : { data: [] as { id: string; storage_path: string }[] };
+  // Moldura do mandato.
+  const { data: cfg } = await admin.from("pol_gabinete_config").select("moldura_vitoria_path").eq("organization_id", org.orgId).maybeSingle();
+  const molduraPath = (cfg?.moldura_vitoria_path as string | null) ?? null;
+  if (!molduraPath) return erro("O gabinete ainda não subiu a moldura (Identidade do Mandato).", 409);
+
+  // Anexos escolhidos TÊM de ser da demanda (trava anti-injeção).
+  const { data: anexos } = await admin
+    .from("pol_demanda_anexos")
+    .select("id, storage_path")
+    .eq("organization_id", org.orgId)
+    .eq("demanda_id", id)
+    .in("id", [antesId, depoisId]);
   const mapa = new Map((anexos ?? []).map((a) => [a.id, a.storage_path]));
+  const antesPath = mapa.get(antesId);
+  const depoisPath = mapa.get(depoisId);
+  if (!antesPath || !depoisPath) return erro("Fotos inválidas pra esta demanda.", 422);
 
-  const { data: cfg } = await admin
-    .from("pol_gabinete_config")
-    .select("nome_parlamentar, cargo, cidade, logo_path")
-    .eq("organization_id", org.orgId)
-    .maybeSingle();
-
-  // Dimensões 2x da exibição (nitidez). Impacto usa um corte um pouco mais baixo.
-  const fw = modelo === "impacto" ? 936 : 920;
-  const fh = modelo === "impacto" ? 1120 : 1200;
-  const [antes, depois, logo] = await Promise.all([
-    fotoData(admin, "gabinete-anexos", mapa.get(antesId) ?? null, fw, fh),
-    fotoData(admin, "gabinete-anexos", mapa.get(depoisId) ?? null, fw, fh),
-    logoData(admin, (cfg?.logo_path as string | null) ?? null, 200),
+  const [molduraBuf, antesBuf, depoisBuf] = await Promise.all([
+    baixar(admin, "gabinete-identidade", molduraPath),
+    baixar(admin, "gabinete-anexos", antesPath),
+    baixar(admin, "gabinete-anexos", depoisPath),
   ]);
+  if (!molduraBuf) return erro("Não consegui ler a moldura.", 500);
+  if (!antesBuf || !depoisBuf) return erro("Não consegui ler as fotos.", 500);
 
-  const nome = (cfg?.nome_parlamentar as string | null)?.trim() || "Gabinete";
-  const cargo = (cfg?.cargo as string | null)?.trim() || "";
-  const cidade = (cfg?.cidade as string | null) || (dem.pol_municipio as string | null) || "";
-  const orgao = (dem.pol_orgao_destino as string | null)?.trim() || "";
-  const bairro = (dem.pol_bairro as string | null)?.trim() || "";
+  const meta = await sharp(molduraBuf).metadata();
+  const fullW = meta.width ?? 1080;
+  const fullH = meta.height ?? 1920;
 
-  let diasTxt = "";
-  if (dem.aberta_em && dem.fechada_em) {
-    const dias = Math.max(0, Math.round((new Date(dem.fechada_em as string).getTime() - new Date(dem.aberta_em as string).getTime()) / 86_400_000));
-    diasTxt = dias === 0 ? " no mesmo dia" : ` em ${dias} ${dias === 1 ? "dia" : "dias"}`;
+  const janelas = await detectarJanelas(molduraBuf, fullW, fullH);
+  if (janelas.length < 2) {
+    return erro("Não encontrei 2 janelas transparentes na moldura. Confira se a arte tem 2 áreas transparentes (Antes/Depois).", 422);
   }
-  const textoPadrao = `${dem.assunto ?? "Demanda"} — resolvido${bairro ? ` no bairro ${bairro}` : ""}${orgao ? `, junto à ${orgao}` : ""}${diasTxt}.`;
+  const [jAntes, jDepois] = ordenar(janelas);
 
-  const dados: Dados = { antes, depois, logo, nome, cargo, cidade, corpo: legenda || textoPadrao, bairro, orgao, cor };
-  const jsx =
-    modelo === "impacto" ? Impacto(dados)
-    : modelo === "luz" ? Luz(dados)
-    : modelo === "gradiente" ? Gradiente(dados)
-    : modelo === "moldura" ? Moldura(dados)
-    : Mandato(dados);
+  const [fAntes, fDepois] = await Promise.all([fotoNaJanela(antesBuf, jAntes), fotoNaJanela(depoisBuf, jDepois)]);
 
-  return new ImageResponse(jsx, { width: W, height: H });
+  // Base (cobre tudo) → fotos nas janelas → moldura POR CIMA (revela só o transparente).
+  const out = await sharp({ create: { width: fullW, height: fullH, channels: 4, background: { r: 17, g: 20, b: 26, alpha: 1 } } })
+    .composite([
+      { input: fAntes, top: jAntes.y, left: jAntes.x },
+      { input: fDepois, top: jDepois.y, left: jDepois.x },
+      { input: molduraBuf, top: 0, left: 0 },
+    ])
+    .png()
+    .toBuffer();
+
+  return new Response(new Uint8Array(out), { headers: { "content-type": "image/png", "cache-control": "no-store" } });
 }

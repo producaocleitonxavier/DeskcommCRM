@@ -37,8 +37,8 @@ export async function POST(req: NextRequest): Promise<Response> {
 
   const form = await req.formData().catch(() => null);
   const campo = String(form?.get("campo") ?? "");
-  if (campo !== "logo" && campo !== "assinatura" && campo !== "timbrado") {
-    return fail("validation_failed", "Campo 'campo' deve ser 'logo', 'assinatura' ou 'timbrado'.", 422, { requestId });
+  if (campo !== "logo" && campo !== "assinatura" && campo !== "timbrado" && campo !== "moldura_vitoria") {
+    return fail("validation_failed", "Campo 'campo' inválido.", 422, { requestId });
   }
   const file = form?.get("file");
   if (!(file instanceof File)) {
@@ -53,6 +53,10 @@ export async function POST(req: NextRequest): Promise<Response> {
   }
   if (verdict.kind !== "image") {
     return fail("unsupported_media_type", "Envie uma imagem (PNG, JPG ou WebP).", 415, { requestId });
+  }
+  // A moldura PRECISA ser PNG (as janelas das fotos são áreas transparentes).
+  if (campo === "moldura_vitoria" && mime !== "image/png") {
+    return fail("unsupported_media_type", "A moldura precisa ser um PNG com as janelas (Antes/Depois) transparentes.", 415, { requestId });
   }
   if (file.size > MAX_IDENTIDADE_BYTES) {
     return fail("payload_too_large", "Imagem acima de 5MB.", 413, { requestId });
@@ -70,7 +74,11 @@ export async function POST(req: NextRequest): Promise<Response> {
     return fail("internal_error", "Erro ao subir a imagem.", 500, { requestId });
   }
 
-  const coluna = campo === "logo" ? "logo_path" : campo === "assinatura" ? "assinatura_path" : "timbrado_path";
+  const coluna =
+    campo === "logo" ? "logo_path"
+    : campo === "assinatura" ? "assinatura_path"
+    : campo === "timbrado" ? "timbrado_path"
+    : "moldura_vitoria_path";
   const db = await createClient();
   const { error: upsertErr } = await db.from("pol_gabinete_config").upsert(
     { organization_id: org.orgId, [coluna]: storagePath, updated_at: new Date().toISOString() },

@@ -29,6 +29,8 @@ export interface IdentidadeGabinete {
   logoUrl: string | null;
   assinaturaUrl: string | null;
   timbradoUrl: string | null;
+  /** Moldura de Stories Antes&Depois (PNG com 2 janelas transparentes). */
+  molduraVitoriaUrl: string | null;
   timbradoMargemTopoMm: number;
   timbradoMargemBaseMm: number;
   timbradoMargemLadosMm: number;
@@ -56,6 +58,7 @@ export async function obterIdentidade(): Promise<IdentidadeGabinete> {
     logoUrl: null,
     assinaturaUrl: null,
     timbradoUrl: null,
+    molduraVitoriaUrl: null,
     timbradoMargemTopoMm: TIMBRADO_MARGENS_MM_PADRAO.topo,
     timbradoMargemBaseMm: TIMBRADO_MARGENS_MM_PADRAO.base,
     timbradoMargemLadosMm: TIMBRADO_MARGENS_MM_PADRAO.lados,
@@ -69,7 +72,7 @@ export async function obterIdentidade(): Promise<IdentidadeGabinete> {
   const { data } = await db
     .from("pol_gabinete_config")
     .select(
-      "nome_parlamentar, cargo, subtitulo, cidade, logo_path, assinatura_path, timbrado_path, timbrado_margem_topo_mm, timbrado_margem_base_mm, timbrado_margem_lados_mm, oficio_destinatario_posicao, oficio_mostrar_assunto, oficio_assinatura_modo",
+      "nome_parlamentar, cargo, subtitulo, cidade, logo_path, assinatura_path, timbrado_path, moldura_vitoria_path, timbrado_margem_topo_mm, timbrado_margem_base_mm, timbrado_margem_lados_mm, oficio_destinatario_posicao, oficio_mostrar_assunto, oficio_assinatura_modo",
     )
     .eq("organization_id", org)
     .maybeSingle();
@@ -82,6 +85,7 @@ export async function obterIdentidade(): Promise<IdentidadeGabinete> {
     logo_path: string | null;
     assinatura_path: string | null;
     timbrado_path: string | null;
+    moldura_vitoria_path: string | null;
     timbrado_margem_topo_mm: number | null;
     timbrado_margem_base_mm: number | null;
     timbrado_margem_lados_mm: number | null;
@@ -103,6 +107,7 @@ export async function obterIdentidade(): Promise<IdentidadeGabinete> {
     logoUrl: await assinar(row.logo_path),
     assinaturaUrl: await assinar(row.assinatura_path),
     timbradoUrl: await assinar(row.timbrado_path),
+    molduraVitoriaUrl: await assinar(row.moldura_vitoria_path),
     timbradoMargemTopoMm: row.timbrado_margem_topo_mm ?? TIMBRADO_MARGENS_MM_PADRAO.topo,
     timbradoMargemBaseMm: row.timbrado_margem_base_mm ?? TIMBRADO_MARGENS_MM_PADRAO.base,
     timbradoMargemLadosMm: row.timbrado_margem_lados_mm ?? TIMBRADO_MARGENS_MM_PADRAO.lados,
@@ -154,10 +159,14 @@ export async function salvarIdentidade(campos: {
 }
 
 /** Remove a imagem (logo ou assinatura): apaga do bucket e limpa o path. */
-export async function removerImagemIdentidade(campo: "logo" | "assinatura" | "timbrado"): Promise<IdentidadeResultado> {
+export async function removerImagemIdentidade(campo: "logo" | "assinatura" | "timbrado" | "moldura_vitoria"): Promise<IdentidadeResultado> {
   const org = await orgAtiva();
   if (!org) return { ok: false, erro: "Sessão ou organização inválida." };
-  const coluna = campo === "logo" ? "logo_path" : campo === "assinatura" ? "assinatura_path" : "timbrado_path";
+  const coluna =
+    campo === "logo" ? "logo_path"
+    : campo === "assinatura" ? "assinatura_path"
+    : campo === "timbrado" ? "timbrado_path"
+    : "moldura_vitoria_path";
   const db = await createClient();
   const { data } = await db
     .from("pol_gabinete_config")

@@ -10,6 +10,7 @@ import { redirect, notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { requireAuth, resolveActiveOrg } from "@/lib/auth/server";
 import { listarAnexosDemanda } from "@/app/actions/politico/gabinete-actions";
+import { obterIdentidade } from "@/app/actions/politico/gabinete-identidade";
 import { CommandHero } from "@/components/politico/command-hero";
 import GeradorVitoriaClient from "./_gerador-client";
 
@@ -32,7 +33,7 @@ export default async function GerarVitoriaPage({ params }: { params: Promise<{ i
     .maybeSingle();
   if (!dem) notFound();
 
-  const anexos = await listarAnexosDemanda(id);
+  const [anexos, identidade] = await Promise.all([listarAnexosDemanda(id), obterIdentidade()]);
   const fotos = anexos
     .filter((a) => MIMES_IMAGEM.includes(a.media_mime) && a.url)
     .map((a) => ({ id: a.id, url: a.url as string, nome: a.nome_arquivo }));
@@ -49,6 +50,7 @@ export default async function GerarVitoriaPage({ params }: { params: Promise<{ i
         demandaId={id}
         assunto={(dem.assunto as string | null) ?? "Demanda"}
         fotosIniciais={fotos}
+        molduraConfigurada={!!identidade.molduraVitoriaUrl}
       />
     </div>
   );

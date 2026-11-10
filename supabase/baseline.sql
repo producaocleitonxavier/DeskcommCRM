@@ -56723,4 +56723,8 @@ create index if not exists idx_demandas_origem_captura
   on public.demandas(organization_id, pol_origem_captura)
   where pol_origem_captura is not null;
 
+-- 9095: moldura de Stories Antes&Depois do mandato (2 janelas transparentes).
+alter table public.pol_gabinete_config
+  add column if not exists moldura_vitoria_path text;
+
 notify pgrst, 'reload schema';

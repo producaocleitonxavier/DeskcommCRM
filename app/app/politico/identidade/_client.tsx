@@ -37,6 +37,7 @@ export default function IdentidadeClient({ inicial }: { inicial: IdentidadeGabin
   const [logoUrl, setLogoUrl] = useState(inicial.logoUrl);
   const [assinaturaUrl, setAssinaturaUrl] = useState(inicial.assinaturaUrl);
   const [timbradoUrl, setTimbradoUrl] = useState(inicial.timbradoUrl);
+  const [molduraUrl, setMolduraUrl] = useState(inicial.molduraVitoriaUrl);
   const [margemTopo, setMargemTopo] = useState(String(inicial.timbradoMargemTopoMm));
   const [margemBase, setMargemBase] = useState(String(inicial.timbradoMargemBaseMm));
   const [margemLados, setMargemLados] = useState(String(inicial.timbradoMargemLadosMm));
@@ -51,11 +52,12 @@ export default function IdentidadeClient({ inicial }: { inicial: IdentidadeGabin
   const [salvando, setSalvando] = useState(false);
   const [okMsg, setOkMsg] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
-  const [enviando, setEnviando] = useState<"logo" | "assinatura" | "timbrado" | null>(null);
+  const [enviando, setEnviando] = useState<"logo" | "assinatura" | "timbrado" | "moldura_vitoria" | null>(null);
 
   const logoRef = useRef<HTMLInputElement>(null);
   const assinaturaRef = useRef<HTMLInputElement>(null);
   const timbradoRef = useRef<HTMLInputElement>(null);
+  const molduraRef = useRef<HTMLInputElement>(null);
 
   async function salvar() {
     setErro(null);
@@ -98,7 +100,7 @@ export default function IdentidadeClient({ inicial }: { inicial: IdentidadeGabin
     router.refresh();
   }
 
-  async function enviarImagem(campo: "logo" | "assinatura" | "timbrado", file: File) {
+  async function enviarImagem(campo: "logo" | "assinatura" | "timbrado" | "moldura_vitoria", file: File) {
     setErro(null);
     setEnviando(campo);
     const fd = new FormData();
@@ -125,18 +127,20 @@ export default function IdentidadeClient({ inicial }: { inicial: IdentidadeGabin
     if (url) {
       if (campo === "logo") setLogoUrl(url);
       else if (campo === "assinatura") setAssinaturaUrl(url);
-      else setTimbradoUrl(url);
+      else if (campo === "timbrado") setTimbradoUrl(url);
+      else setMolduraUrl(url);
       router.refresh();
     }
   }
 
-  async function remover(campo: "logo" | "assinatura" | "timbrado") {
+  async function remover(campo: "logo" | "assinatura" | "timbrado" | "moldura_vitoria") {
     setErro(null);
     const res = await removerImagemIdentidade(campo);
     if (!res.ok) return setErro(res.erro);
     if (campo === "logo") setLogoUrl(null);
     else if (campo === "assinatura") setAssinaturaUrl(null);
-    else setTimbradoUrl(null);
+    else if (campo === "timbrado") setTimbradoUrl(null);
+    else setMolduraUrl(null);
     router.refresh();
   }
 
@@ -208,6 +212,34 @@ export default function IdentidadeClient({ inicial }: { inicial: IdentidadeGabin
         inputRef={timbradoRef}
         onEscolher={(f) => enviarImagem("timbrado", f)}
         onRemover={() => remover("timbrado")}
+        alturaPreview={300}
+      />
+
+      {/* Moldura de Stories "Antes & Depois" (Situação Política) */}
+      <div
+        className="rounded-2xl p-4 sm:p-5"
+        style={{ background: "color-mix(in srgb, var(--color-accent) 10%, var(--color-surface))", border: "1px solid color-mix(in srgb, var(--color-accent) 32%, transparent)" }}
+      >
+        <h2 className="font-heading text-base font-bold" style={{ color: "var(--color-text)" }}>⚠️ Como montar a moldura (leia antes)</h2>
+        <p className="mt-2 text-sm leading-relaxed" style={{ color: "var(--color-text-muted)" }}>
+          A arte é do <strong>designer de vocês</strong> — a ferramenta só encaixa as fotos. Para funcionar, a regra é uma só:
+        </p>
+        <ul className="mt-2 space-y-1.5 text-sm" style={{ color: "var(--color-text-muted)" }}>
+          <li>• <strong style={{ color: "var(--color-text)" }}>Os 2 espaços onde as fotos entram precisam ficar TRANSPARENTES</strong> na arte (PNG, sem fundo nesses retângulos). É nesses buracos vazios que a foto é encaixada.
+          </li>
+          <li>• <strong style={{ color: "var(--color-text)" }}>Esquerda</strong> (ou de cima) = <strong style={{ color: "#B45309" }}>Antes</strong>; <strong style={{ color: "var(--color-text)" }}>direita</strong> (ou de baixo) = <strong style={{ color: "#15803D" }}>Depois</strong>.</li>
+          <li>• Tamanho: <strong style={{ color: "var(--color-text)" }}>1080 × 1920</strong> (vertical, Stories). Todo o resto — cores, logo, selos, textos fixos — é livre, é a identidade de vocês.</li>
+          <li>• O texto da legenda <strong style={{ color: "var(--color-text)" }}>não vai na imagem</strong> — ele é colado ao postar o Story.</li>
+        </ul>
+      </div>
+      <ImagemCard
+        titulo="Moldura Antes & Depois (Stories)"
+        dica="PNG 1080×1920 com os 2 espaços das fotos TRANSPARENTES (esquerda/topo = Antes, direita/baixo = Depois). A ferramenta encaixa as fotos nessas janelas, em qualquer layout."
+        url={molduraUrl}
+        enviando={enviando === "moldura_vitoria"}
+        inputRef={molduraRef}
+        onEscolher={(f) => enviarImagem("moldura_vitoria", f)}
+        onRemover={() => remover("moldura_vitoria")}
         alturaPreview={300}
       />
 
