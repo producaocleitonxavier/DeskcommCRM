@@ -16,8 +16,9 @@ import { CommandHero } from "@/components/politico/command-hero";
 import { gerarEncaminhamento } from "@/app/actions/politico/gerarEncaminhamento";
 import { gerarOficioDemanda } from "@/app/actions/politico/gerarOficio";
 import { avisarCidadao, avisarResolucaoAutomatica } from "@/app/actions/politico/avisarCidadao";
+import { avisarCobrancaAoCidadao } from "@/app/actions/politico/avisarCobranca";
 import { atualizarRegistro, excluirRegistro, registrarEventoDemanda, sincronizarVisitaNaAgenda } from "@/app/actions/politico/gabinete-actions";
-import { textoCobranca } from "@/lib/politico/demanda-cobranca";
+import { textoCobranca, demandaVencidaSemResposta } from "@/lib/politico/demanda-cobranca";
 import DemandaAnexos from "@/components/politico/demanda-anexos";
 
 interface Opcao {
@@ -148,6 +149,7 @@ export default function DetalheDemandaClient({ demanda, assessores, eventos, voz
   const [gerandoOficio, setGerandoOficio] = useState(false);
   const [avisando, setAvisando] = useState(false);
   const [avisoMsg, setAvisoMsg] = useState<string | null>(null);
+  const [cobrando, setCobrando] = useState(false);
   const [excluindo, setExcluindo] = useState(false);
   const [anexoToken, setAnexoToken] = useState(0);
   const [erro, setErro] = useState<string | null>(null);
@@ -389,6 +391,37 @@ export default function DetalheDemandaClient({ demanda, assessores, eventos, voz
         >
           <MessageCircle className="h-4 w-4" aria-hidden /> {avisando ? "Enviando…" : "Avisar cidadão"}
         </button>
+        {/* Follow-up de cobrança: só quando a demanda venceu o prazo e o órgão
+            ainda não respondeu — dar satisfação ("estamos cobrando"). Modo
+            assistido: o assessor decide, um a um. */}
+        {demandaVencidaSemResposta({
+          estado: d.estado,
+          abertaEm: d.aberta_em,
+          prazoDias: d.pol_prazo_dias,
+          respondeu: d.pol_respondeu === true,
+        }) && (
+          <button
+            type="button"
+            disabled={cobrando || !d.contacts?.phone_number}
+            title={!d.contacts?.phone_number ? "O cidadão não tem telefone cadastrado" : "Avisar o cidadão que o gabinete está cobrando a solução"}
+            onClick={async () => {
+              if (!window.confirm("Avisar o cidadão por WhatsApp que o prazo passou e o gabinete está cobrando a solução?")) return;
+              setErro(null);
+              setAvisoMsg(null);
+              setCobrando(true);
+              const res = await avisarCobrancaAoCidadao(d.id);
+              setCobrando(false);
+              if (res.ok) {
+                setAvisoMsg("Cidadão avisado de que o gabinete está cobrando a demanda.");
+                router.refresh();
+              } else setErro(res.erro);
+            }}
+            className="wr-btn inline-flex items-center gap-1.5 font-semibold disabled:opacity-50"
+            style={{ background: "rgba(245,158,11,0.16)", color: "#FBBF24", borderColor: "rgba(245,158,11,0.45)" }}
+          >
+            <Clock className="h-4 w-4" aria-hidden /> {cobrando ? "Enviando…" : "Avisar que estamos cobrando"}
+          </button>
+        )}
         {vozArmada && d.contact_id && (
           <BotaoRecadoVoz
             contactId={d.contact_id}

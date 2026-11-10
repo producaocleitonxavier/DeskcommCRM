@@ -163,6 +163,49 @@ export function ordenarUrgencia(a: OrgaoRollup, b: OrgaoRollup): number {
 }
 
 /**
+ * A demanda está VENCIDA (prazo passou) E o órgão ainda NÃO respondeu, E segue
+ * ABERTA — é exatamente quando cabe dar satisfação ao cidadão ("o órgão não se
+ * manifestou, mas estamos cobrando"). Reusa `estaAtrasada` (a mesma régua da
+ * lista e do watcher) pra não divergir. Fonte única do gatilho do follow-up de
+ * cobrança: a tela mostra o botão e a action valida pelo MESMO predicado.
+ */
+export function demandaVencidaSemResposta(d: {
+  estado: string;
+  abertaEm: string;
+  prazoDias: number | null;
+  respondeu: boolean;
+}): boolean {
+  return !ESTADOS_FECHADOS.has(d.estado) && !d.respondeu && estaAtrasada(d.abertaEm, d.prazoDias);
+}
+
+/**
+ * Mensagem de WhatsApp ao CIDADÃO (não ao órgão) quando a demanda venceu sem
+ * resposta — "o setor responsável ainda não se manifestou, mas estamos
+ * cobrando". É o oposto do `textoCobranca` (que é o ofício formal ao órgão):
+ * aqui é caloroso, 1ª pessoa do gabinete, pt-BR. SEM PROMESSA (não diz "resolvo
+ * até X" — a mensagem é escrita e enviada por humano dias depois, e autoridade
+ * pública que promete e não cumpre é dano político/risco TSE). Sem interpolar
+ * nada além do nome e do assunto que o próprio gabinete digitou.
+ */
+export function textoCobrancaCidadao(p: {
+  primeiroNome?: string | null;
+  nomeParlamentar?: string | null;
+  assunto?: string | null;
+}): string {
+  const nome = (p.primeiroNome ?? "").trim();
+  const saudacao = nome ? `Olá, ${nome}!` : "Olá!";
+  const parl = (p.nomeParlamentar ?? "").trim();
+  const assinatura = parl ? ` do gabinete do ${parl}` : " do nosso gabinete";
+  const assunto = (p.assunto ?? "").trim();
+  const sobre = assunto ? ` sobre ${assunto}` : "";
+  return (
+    `${saudacao} Aqui é${assinatura}. Passando pra te dar um retorno do seu pedido${sobre}: ` +
+    `o prazo passou e o órgão responsável ainda não se manifestou — mas já estamos cobrando a ` +
+    `solução. Assim que houver resposta, te aviso por aqui. Pode contar com a gente.`
+  );
+}
+
+/**
  * Corpo de um ofício de COBRANÇA (reiteração) — o gabinete mandou o pedido, o
  * órgão não respondeu, e a gente cobra. Formal, pt-BR, SEM promessa de campanha.
  * Determinístico (não chama IA). Encaixa o nº do ofício anterior quando houver.
