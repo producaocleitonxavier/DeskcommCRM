@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ReactFlow,
   ReactFlowProvider,
@@ -126,6 +126,36 @@ function FlowCanvasInner({ flowId, initialData }: Props) {
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
   const [selectedEdgeId, setSelectedEdgeId] = useState<string | null>(null);
   const [paletteOpen, setPaletteOpen] = useState(false);
+
+  // ALTURA VISÍVEL + ENQUADRAR AO ABRIR. A casca do /app é `min-h-dvh` (altura
+  // INDEFINIDA) e, com banners acima dela (conexão caída, cobrança), o canvas de
+  // `h-full min-h-[600px]` fica MAIS ALTO que a parte visível — o `fitView`
+  // centraliza os nós abaixo da dobra e a tela parece vazia (medido em prod:
+  // 9 nós no DOM, em y≈494, fora da vista). Aqui a gente mede a altura REAL da
+  // janela a partir do topo do container e a fixa, depois enquadra. Robusto a
+  // banner/cabeçalho e sem mexer na casca inteira.
+  const rootRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const el = rootRef.current;
+    if (!el) return;
+    let raf = 0;
+    const ajusta = () => {
+      const top = el.getBoundingClientRect().top;
+      const h = Math.max(360, Math.round(window.innerHeight - top - 8));
+      el.style.height = `${h}px`;
+      el.style.minHeight = `${h}px`;
+      cancelAnimationFrame(raf);
+      raf = requestAnimationFrame(() => {
+        if (initial.nodes.length > 0) void fitView({ padding: 0.2 });
+      });
+    };
+    ajusta();
+    window.addEventListener("resize", ajusta);
+    return () => {
+      window.removeEventListener("resize", ajusta);
+      cancelAnimationFrame(raf);
+    };
+  }, [fitView, initial.nodes.length]);
 
   const liveGraph = useMemo(() => {
     const base = fromReactFlow(nodes, edges);
@@ -328,7 +358,7 @@ function FlowCanvasInner({ flowId, initialData }: Props) {
   );
 
   return (
-    <div className="flex h-full min-h-[600px] w-full flex-col">
+    <div ref={rootRef} className="flex h-full min-h-[600px] w-full flex-col">
       {flow && (
         <PublishBar
           flowId={flowId}
