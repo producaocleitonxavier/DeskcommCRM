@@ -29,7 +29,7 @@ import { FunnelBoard } from "@/components/politico/funnel-board";
 import { BarChartCard } from "@/components/politico/bar-chart-card";
 import { AreaChartCard } from "@/components/politico/area-chart-card";
 import { SectionHeader } from "@/components/politico/section-header";
-import type { MetricasHoje, GabineteHoje, FilaDeAcao, MeuTrabalho, PlacarMembro } from "./page";
+import type { MetricasHoje, GabineteHoje, FilaDeAcao, MeuTrabalho, PlacarMembro, CargaMembro } from "./page";
 
 // Hexes do funil (espelham --wr-funnel-1..5) — Recharts aplica fill como
 // atributo SVG, onde var(--x) não é confiável.
@@ -57,6 +57,8 @@ export interface HojeClientProps {
   meuTrabalho: MeuTrabalho;
   /** Placar da equipe (só pro gestor) — produção de cada membro na semana. null = não é gestor. */
   placarEquipe?: PlacarMembro[] | null;
+  /** Carga da equipe (só pro gestor) — o que está ABERTO na mão de cada um + atrasadas. */
+  cargaEquipe?: CargaMembro[] | null;
   /** Visitas realizadas prontas pra ofício (só gabinete). 0 = faixa some. */
   visitasProntasOficio?: number;
   /** Registros de Rua (captura de campo) ainda na mesa. 0 = card some. */
@@ -233,6 +235,44 @@ function PlacarEquipe({ linhas }: { linhas: PlacarMembro[] }) {
   );
 }
 
+/**
+ * Carga da equipe (gestor): o que está ABERTO na mão de cada um + quantas
+ * atrasadas. Complementa o placar (produção) com o lado "o que está travado".
+ * "Sem responsável" fecha a lista (demanda aberta que ninguém assumiu).
+ */
+function CargaEquipe({ linhas }: { linhas: CargaMembro[] }) {
+  return (
+    <section aria-label="Carga da equipe" className="gip-glass p-6 sm:p-7">
+      <SectionHeader
+        title="Carga da equipe · agora"
+        subtitle="O que está na mão de cada um — e quantas já passaram do prazo"
+        action={{ label: "Ver demandas", href: "/app/politico/demandas" }}
+        className="mb-4"
+      />
+      <div className="overflow-hidden rounded-xl" style={{ border: "1px solid var(--color-border)" }}>
+        <div className="flex items-center gap-2 px-4 py-2 text-[11px] font-bold uppercase tracking-wide" style={{ background: "rgba(127,127,127,0.06)", color: "var(--color-text-subtle)" }}>
+          <span className="flex-1">Responsável</span>
+          <span className="w-20 text-right">Abertas</span>
+          <span className="w-20 text-right">Atrasadas</span>
+        </div>
+        <ul>
+          {linhas.map((l) => (
+            <li key={l.userId ?? "sem"} className="flex items-center gap-2 px-4 py-2.5" style={{ borderTop: "1px solid var(--color-border)" }}>
+              <span className="min-w-0 flex-1 truncate text-sm font-semibold" style={{ color: l.userId ? "var(--color-text)" : "var(--color-text-subtle)" }}>
+                {l.nome}
+              </span>
+              <span className="w-20 text-right text-sm font-bold tabular-nums" style={{ color: "var(--color-text)" }}>{l.abertas}</span>
+              <span className="w-20 text-right text-sm font-bold tabular-nums" style={{ color: l.atrasadas > 0 ? "#C82333" : "var(--color-text-subtle)" }}>
+                {l.atrasadas}
+              </span>
+            </li>
+          ))}
+        </ul>
+      </div>
+    </section>
+  );
+}
+
 export default function HojeClient({
   metrics: m,
   gabineteHoje: g,
@@ -244,6 +284,7 @@ export default function HojeClient({
   podeLiderancas = false,
   meuTrabalho,
   placarEquipe = null,
+  cargaEquipe = null,
   visitasProntasOficio = 0,
   registrosDeRua = 0,
   vitoriasPraMostrar = 0,
@@ -344,6 +385,9 @@ export default function HojeClient({
 
       {/* ── Placar da equipe (só pro gestor) ─────────────────────── */}
       {placarEquipe && placarEquipe.length > 0 && <PlacarEquipe linhas={placarEquipe} />}
+
+      {/* ── Carga da equipe (só pro gestor) — o que está na mão de cada um ── */}
+      {cargaEquipe && cargaEquipe.length > 0 && <CargaEquipe linhas={cargaEquipe} />}
 
       {/* ── Fila de ação: o que espera a sua decisão AGORA ───────── */}
       {(filaAcao.rascunhosIA > 0 || filaAcao.disparosRascunho > 0 || filaAcao.leadsQuentesSemContato > 0 || visitasProntasOficio > 0 || registrosDeRua > 0 || vitoriasPraMostrar > 0) && (

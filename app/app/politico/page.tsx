@@ -713,6 +713,62 @@ async function buscarPlacarEquipe(
   return linhas;
 }
 
+// -- Carga por responsável (gargalo / o que está na mão de cada um) ----------
+
+/** Uma linha da carga: o que está ABERTO na mão de cada pessoa + quantas atrasadas. */
+export interface CargaMembro {
+  userId: string | null; // null = "Sem responsável"
+  nome: string;
+  abertas: number;
+  atrasadas: number;
+}
+
+/**
+ * CARGA DA EQUIPE (visão do gestor): quantas demandas ABERTAS cada pessoa tem na
+ * mão e quantas já passaram do prazo. Complementa o placar (que mostra produção).
+ * Responsável = dono humano; se não houver, quem registrou; senão "Sem responsável".
+ * Atrasada = passou do prazo de atendimento (pol_prazo_dias, padrão 30d).
+ */
+async function buscarCargaEquipe(organizationId: string): Promise<CargaMembro[]> {
+  const db = await createClient();
+  const { data } = await db
+    .from("demandas")
+    .select("dono_user_id, pol_registrado_por_id, aberta_em, pol_prazo_dias")
+    .eq("organization_id", organizationId)
+    .eq("pol_gabinete", true)
+    .not("estado", "in", "(resolvida,encerrada)")
+    .limit(5000);
+  const rows = (data ?? []) as {
+    dono_user_id: string | null;
+    pol_registrado_por_id: string | null;
+    aberta_em: string;
+    pol_prazo_dias: number | null;
+  }[];
+
+  const SEM = "__sem__";
+  const PRAZO_PADRAO = 30;
+  const tally = new Map<string, { abertas: number; atrasadas: number }>();
+  for (const d of rows) {
+    const resp = d.dono_user_id || d.pol_registrado_por_id || SEM;
+    const dias = d.pol_prazo_dias && d.pol_prazo_dias > 0 ? d.pol_prazo_dias : PRAZO_PADRAO;
+    const atrasada = new Date(d.aberta_em).getTime() + dias * 86_400_000 < Date.now();
+    const cur = tally.get(resp) ?? { abertas: 0, atrasadas: 0 };
+    cur.abertas += 1;
+    if (atrasada) cur.atrasadas += 1;
+    tally.set(resp, cur);
+  }
+
+  const ids = [...tally.keys()].filter((k) => k !== SEM);
+  const nomes = await nomesDosAtendentes(ids);
+  const linhas: CargaMembro[] = [];
+  for (const [k, v] of tally) {
+    linhas.push({ userId: k === SEM ? null : k, nome: k === SEM ? "Sem responsável" : nomes.get(k) ?? "Equipe", abertas: v.abertas, atrasadas: v.atrasadas });
+  }
+  // Quem tem mais atrasada no topo; "Sem responsável" sempre por último.
+  linhas.sort((a, b) => (a.userId === null ? 1 : 0) - (b.userId === null ? 1 : 0) || b.atrasadas - a.atrasadas || b.abertas - a.abertas);
+  return linhas;
+}
+
 // -- Componente (server) -----------------------------------------------------
 
 export default async function HojePage() {
@@ -760,9 +816,10 @@ export default async function HojePage() {
 
   // Placar da equipe (Comando do Gabinete) — SÓ pro gestor (quem vê o Painel). O
   // assessor de rua vê só o "Hoje pessoal" (o próprio trabalho), não o dos outros.
-  const placarEquipe = veGestao
-    ? await buscarPlacarEquipe(org.orgId, inicioSemanaISO, inicioSemanaDate)
-    : null;
+  // Placar = produção (o que cada um fez); Carga = o que está na mão (gargalo).
+  const [placarEquipe, cargaEquipe] = veGestao
+    ? await Promise.all([buscarPlacarEquipe(org.orgId, inicioSemanaISO, inicioSemanaDate), buscarCargaEquipe(org.orgId)])
+    : [null, null];
 
   // Sinal "pronto pra ofício" — SÓ pro gabinete (quem tem Ofícios no menu). O
   // assessor de rua nem consulta (passa 0). É o "30s depois que a visita terminou"
@@ -788,6 +845,7 @@ export default async function HojePage() {
         podeLiderancas={hrefsVisiveis.has("/app/politico/liderancas")}
         meuTrabalho={meuTrabalho}
         placarEquipe={placarEquipe}
+        cargaEquipe={cargaEquipe}
         visitasProntasOficio={prontasOficio.total}
         registrosDeRua={registrosDeRua}
         vitoriasPraMostrar={vitoriasPraMostrar}
