@@ -79,9 +79,10 @@ Classifique cada achado em UM de dois baldes:
 - "equipe": SENSÍVEL ou estratégico — polêmicas, processos, derrotas, alianças partidárias, contexto político. É SÓ para a equipe, nunca para o cidadão.
 
 REGRAS DURAS:
+- SEJA RÁPIDO: no máximo 3 buscas, bem direcionadas. Não repita buscas parecidas.
 - Só inclua o que você REALMENTE encontrou, COM a URL da fonte. Nada de inventar nem supor.
 - Tom FACTUAL. NUNCA escreva promessa de campanha, pedido de voto nem juízo de valor eleitoral.
-- No máximo 10 achados, os mais relevantes.
+- No máximo 6 achados, os mais relevantes.
 
 Responda APENAS com um array JSON (sem texto antes ou depois, sem cercas de código), no formato:
 [{"balde":"cidadao","titulo":"...","resumo":"1-2 frases factuais","fonte":"https://..."}]
@@ -150,20 +151,23 @@ export async function pesquisarMandato(
     // (@ai-sdk/anthropic 4.x) não casa 1:1 com o ToolSet do `ai` 7.x por skew de
     // versão do @ai-sdk/provider — o `next build` tolera e o runtime é válido.
     // O cast assume isso explicitamente.
-    const tools = { web_search: anthropic.tools.webSearch_20260209({ maxUses: 6 }) } as unknown as ToolSet;
+    const tools = { web_search: anthropic.tools.webSearch_20260209({ maxUses: 3 }) } as unknown as ToolSet;
     const result = await generateText({
       model: anthropic(MODELO_DE_PESQUISA),
       prompt: montarPromptDePesquisa(dados),
       tools,
-      stopWhen: [stepCountIs(8)],
+      stopWhen: [stepCountIs(5)],
+      // Timeout duro: sem isto a busca pode girar por minutos. Desiste em 75s e
+      // o chamador mostra "demorou demais, tente de novo" em vez de pendurar a tela.
+      abortSignal: AbortSignal.timeout(75_000),
     });
     const achados = parseAchados(result.text ?? "");
     return { ok: true, achados };
   } catch (err) {
-    logger.warn("pesquisar-mandato: busca falhou", {
-      organization_id: orgId,
-      causa: err instanceof Error ? err.message : String(err),
-    });
-    return { ok: false, erro: "falha_na_busca" };
+    const msg = err instanceof Error ? err.message : String(err);
+    const nome = err instanceof Error ? err.name : "";
+    const demorou = nome === "TimeoutError" || nome === "AbortError" || /abort|timeout/i.test(msg);
+    logger.warn("pesquisar-mandato: busca falhou", { organization_id: orgId, causa: msg, demorou });
+    return { ok: false, erro: demorou ? "A busca demorou demais. Tente de novo." : "falha_na_busca" };
   }
 }

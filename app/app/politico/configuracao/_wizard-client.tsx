@@ -15,7 +15,7 @@ import { useRouter } from "next/navigation";
 import {
   Landmark, Building2, Users, Flag, Check, ArrowLeft, ArrowRight,
   MessageCircle, Clock, AtSign, Globe, Sparkles, ShieldCheck,
-  Plus, X, Loader2, PartyPopper, MapPin, Mail, CalendarCheck,
+  Plus, X, Loader2, PartyPopper, MapPin, Mail, CalendarCheck, Search,
 } from "lucide-react";
 
 import { CommandHero } from "@/components/politico/command-hero";
@@ -156,10 +156,24 @@ export default function SetupWizard({ inicial }: { inicial: SetupInicial }) {
               O conhecimento que a IA usa para atender foi gerado a partir do que você preencheu — portal, serviços com link e órgãos do seu município/estado. A equipe só ativa quando quiser.
             </p>
           </div>
+          <div className="mx-auto mt-4 max-w-md rounded-[14px] p-4 text-left" style={{ border: "1px solid var(--color-border)", background: "color-mix(in srgb, var(--color-text) 3%, transparent)" }}>
+            <p className="text-[13px] font-semibold">🔎 Quer aprofundar ainda mais?</p>
+            <p className="mt-1 text-[13px]" style={{ color: "var(--color-text-muted)" }}>
+              A inteligência pode pesquisar — na fonte oficial do seu mandato (Câmara/Assembleia), no TSE e em notícias — o que você ainda não preencheu. Você revisa e aprova o que entra; nada é acrescentado sem o seu aval.
+            </p>
+            <button
+              type="button"
+              onClick={() => router.push("/app/politico/enriquecer")}
+              className="mt-3 inline-flex items-center gap-2 rounded-full px-5 py-2 text-[13px] font-bold transition-opacity hover:opacity-90"
+              style={{ border: "1px solid var(--color-accent)", color: "var(--accent-ink, #8AA62E)" }}
+            >
+              <Search size={15} /> Aprofundar com uma pesquisa
+            </button>
+          </div>
           <button
             type="button"
             onClick={() => router.push("/app/politico")}
-            className="mt-7 inline-flex items-center gap-2 rounded-full px-7 py-3 text-sm font-bold transition-opacity hover:opacity-90"
+            className="mt-5 inline-flex items-center gap-2 rounded-full px-7 py-3 text-sm font-bold transition-opacity hover:opacity-90"
             style={{ background: "var(--color-accent)", color: "#16181D" }}
           >
             Acessar a ferramenta agora <ArrowRight size={16} />
