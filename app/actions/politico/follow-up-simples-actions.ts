@@ -1,14 +1,17 @@
 "use server";
 
 /**
- * Autoria "à prova de criança" de um follow-up do gabinete: a pessoa escreve só
- * as MENSAGENS e os PRAZOS ("manda isso, espera 3 dias, manda aquilo"), e a
- * `montarEscada` gera o grafo válido por baixo — sem nó, ramo nem prazo de graça
- * à vista. Nasce RASCUNHO (ninguém recebe nada até uma pessoa publicar), igual
- * aos modelos pré-semeados.
+ * Autoria de follow-up GUIADA POR OBJETIVO — o jeito de um gabinete montar algo
+ * assertivo em 1 minuto, sem entender "nó", "ramo" nem "escada".
  *
- * O desenho da jornada (o "ver o que vai acontecer") é puro e roda no cliente
- * (`lib/followup/escada-jornada.ts`); aqui é só a GRAVAÇÃO.
+ * A pessoa escolhe O QUE QUER FAZER; o fluxo certo já vem montado por baixo:
+ *   • acolher  → manda uma mensagem (+ lembrete opcional p/ quem não responde)
+ *   • conteudo → PERGUNTA; se responder SIM, MANDA o material; senão, lembrete → para
+ *   • cobrar   → manda uma mensagem (+ lembrete opcional)
+ *   • lembrar  → manda uma mensagem (+ lembrete opcional)
+ *
+ * Nasce RASCUNHO (ninguém recebe nada até uma pessoa publicar). A jornada é pura
+ * e roda no cliente; aqui é só a GRAVAÇÃO.
  */
 import { z } from "zod";
 
@@ -18,31 +21,70 @@ import { ROLE_RANK } from "@/lib/auth/types";
 import { supportWriteError } from "@/lib/impersonate/support";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { triggerConfigSchema } from "@/lib/followup/api-schemas";
-import { flowGraphSchema } from "@/lib/followup/graph-schema";
-import { montarEscada, type EscadaSpec } from "@/lib/followup/modelos/escada";
+import { flowGraphSchema, type FlowGraph } from "@/lib/followup/graph-schema";
+import { montarEscada } from "@/lib/followup/modelos/escada";
+import { montarPerguntaResposta } from "@/lib/followup/modelos/pergunta-resposta";
 
 const DIA_MS = 86_400_000;
+const PRAZO_RESPOSTA_MS = 3 * DIA_MS;
+const NOTA_RESPONDEU = "A pessoa respondeu — quem segue a conversa é o atendimento do gabinete.";
 
-const toqueSchema = z.object({
+const lembreteSchema = z.object({
+  esperaDias: z.number().int().min(1).max(90),
   texto: z.string().trim().min(1).max(900),
-  esperaDias: z.number().int().min(0).max(90),
-  rotulo: z.string().trim().max(60).optional(),
 });
 
 const payloadSchema = z.object({
+  objetivo: z.enum(["acolher", "conteudo", "cobrar", "lembrar"]),
   nome: z.string().trim().min(3).max(80),
-  gatilho: z.enum(["lead_created", "manual"]),
-  toques: z.array(toqueSchema).min(1).max(5),
+  mensagem: z.string().trim().min(1).max(900),
+  /** Só no objetivo "conteudo": o que o fluxo manda quando a pessoa responde sim. */
+  material: z.string().trim().max(900).optional(),
+  /** Lembrete opcional para quem não respondeu. */
+  lembrete: lembreteSchema.optional(),
 });
 
-export type ResultadoFollowupSimples =
-  | { ok: true; id: string }
-  | { ok: false; error: string };
+export type ResultadoFollowupSimples = { ok: true; id: string } | { ok: false; error: string };
+
+/** O gatilho em termos simples: "quando chega" × "quando eu inscrever". */
+function gatilhoDoObjetivo(objetivo: string) {
+  const kind = objetivo === "acolher" || objetivo === "conteudo" ? "lead_created" : "manual";
+  return { kind, cancel_on_reply: true } as const;
+}
+
+function montarGrafo(d: z.infer<typeof payloadSchema>): FlowGraph {
+  if (d.objetivo === "conteudo") {
+    return montarPerguntaResposta({
+      pergunta: { rotulo: "Oferece o conteúdo", texto: d.mensagem },
+      simPadrao: "sim",
+      simRotulo: "Quer receber",
+      material: { rotulo: "Manda o material", texto: d.material ?? "" },
+      prazoDeRespostaMs: PRAZO_RESPOSTA_MS,
+      lembrete: d.lembrete
+        ? { esperaAntesMs: d.lembrete.esperaDias * DIA_MS, rotulo: "Lembrete", texto: d.lembrete.texto }
+        : undefined,
+      notaDeResposta: NOTA_RESPONDEU,
+    });
+  }
+  // acolher / cobrar / lembrar → escada: mensagem (+ lembrete opcional).
+  return montarEscada({
+    prazoDeRespostaMs: PRAZO_RESPOSTA_MS,
+    sim: { rotulo: "Respondeu que sim", padrao: "sim" },
+    notaDeResposta: NOTA_RESPONDEU,
+    toques: [
+      { texto: d.mensagem, rotulo: "Mensagem" },
+      ...(d.lembrete ? [{ esperaAntesMs: d.lembrete.esperaDias * DIA_MS, texto: d.lembrete.texto, rotulo: "Lembrete" }] : []),
+    ],
+  });
+}
 
 export async function criarFollowupSimples(entrada: unknown): Promise<ResultadoFollowupSimples> {
   const parsed = payloadSchema.safeParse(entrada);
-  if (!parsed.success) return { ok: false, error: "Confira os campos: nome e ao menos uma mensagem." };
+  if (!parsed.success) return { ok: false, error: "Confira os campos: nome e a mensagem são obrigatórios." };
   const d = parsed.data;
+  if (d.objetivo === "conteudo" && !d.material?.trim()) {
+    return { ok: false, error: "Escreva o que você vai mandar quando a pessoa responder sim (o conteúdo/o link)." };
+  }
 
   const user = await loadAuthUser();
   if (!user) return { ok: false, error: "Sessão expirada." };
@@ -52,25 +94,11 @@ export async function criarFollowupSimples(entrada: unknown): Promise<ResultadoF
   if (ROLE_RANK[org.role] < ROLE_RANK.manager) return { ok: false, error: "Só um gestor pode criar fluxos." };
   if (await mfaEmDivida()) return { ok: false, error: "Verificação de 2 fatores pendente." };
 
-  // Monta a escada a partir das mensagens+prazos. Prazo de resposta e ramo "sim"
-  // ficam em defaults sãos — a pessoa não precisa pensar nisso.
-  const spec: EscadaSpec = {
-    prazoDeRespostaMs: 3 * DIA_MS,
-    sim: { rotulo: "Respondeu que sim", padrao: "sim" },
-    notaDeResposta: "A pessoa respondeu — quem segue a conversa é o atendimento do gabinete.",
-    toques: d.toques.map((t, i) => ({
-      // Espera só quando há dias a esperar (um "espera 0" quebraria o piso do nó).
-      ...(t.esperaDias > 0 ? { esperaAntesMs: t.esperaDias * DIA_MS } : {}),
-      texto: t.texto,
-      rotulo: t.rotulo?.trim() || `Mensagem ${i + 1}`,
-    })),
-  };
-
   let draftGraph: unknown;
   let triggerConfig: unknown;
   try {
-    draftGraph = flowGraphSchema.parse(montarEscada(spec));
-    triggerConfig = triggerConfigSchema.parse({ kind: d.gatilho, cancel_on_reply: true });
+    draftGraph = flowGraphSchema.parse(montarGrafo(d));
+    triggerConfig = triggerConfigSchema.parse(gatilhoDoObjetivo(d.objetivo));
   } catch {
     return { ok: false, error: "Não consegui montar o fluxo com esses dados. Tente mensagens mais curtas." };
   }
@@ -90,9 +118,7 @@ export async function criarFollowupSimples(entrada: unknown): Promise<ResultadoF
     .single();
 
   if (error || !row) {
-    if (error?.code === "23505") {
-      return { ok: false, error: `Já existe um fluxo chamado "${d.nome}". Escolha outro nome.` };
-    }
+    if (error?.code === "23505") return { ok: false, error: `Já existe um fluxo chamado "${d.nome}". Escolha outro nome.` };
     return { ok: false, error: "Não foi possível salvar o fluxo." };
   }
 
@@ -103,7 +129,7 @@ export async function criarFollowupSimples(entrada: unknown): Promise<ResultadoF
     organizationId: org.orgId,
     resourceType: "followup_flow",
     resourceId: id,
-    metadata: { source: "escada_simples", toques: d.toques.length, gatilho: d.gatilho },
+    metadata: { source: "guiado_por_objetivo", objetivo: d.objetivo, tem_lembrete: Boolean(d.lembrete) },
   });
 
   return { ok: true, id };

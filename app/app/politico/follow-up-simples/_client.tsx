@@ -1,89 +1,119 @@
 "use client";
 
 /**
- * Autoria de follow-up "à prova de criança": a pessoa escreve MENSAGENS e PRAZOS,
- * e VÊ a jornada acontecer ao lado (sem nó, ramo nem jargão). Protótipo p/ estudo
- * no homologação — muitos gabinetes trabalham diferente, e cada um monta o seu.
+ * Follow-up GUIADO POR OBJETIVO — "à prova de criança" de verdade: a pessoa
+ * escolhe O QUE QUER FAZER, o fluxo certo já vem montado por baixo, e ela só
+ * edita os textos vendo a jornada ao lado. Sem "nó", "ramo" nem "escada".
  */
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { Plus, Trash2, Send, Loader2, MessageCircle, Clock, Flag } from "lucide-react";
+import {
+  ArrowLeft, Send, Loader2, HeartHandshake, Gift, Clock, CalendarCheck, ChevronRight,
+} from "lucide-react";
 
 import { CommandHero } from "@/components/politico/command-hero";
 import { Button } from "@/components/ui/button";
 import { criarFollowupSimples } from "@/app/actions/politico/follow-up-simples-actions";
-import { jornadaDaEscada, simularEscada, type Reacao } from "@/lib/followup/escada-jornada";
+import { jornadaDaEscada } from "@/lib/followup/escada-jornada";
 import type { EscadaSpec } from "@/lib/followup/modelos/escada";
 
 const DIA_MS = 86_400_000;
 
-interface ToqueForm {
-  texto: string;
-  esperaDias: number;
-  rotulo: string;
+type Objetivo = "acolher" | "conteudo" | "cobrar" | "lembrar";
+
+interface MetaObjetivo {
+  v: Objetivo;
+  titulo: string;
+  desc: string;
+  quando: string;
+  Icon: typeof Gift;
+  nomePadrao: string;
+  rotuloMensagem: string;
+  placeholderMensagem: string;
 }
 
-const REACAO_LABEL: Record<Reacao, string> = {
-  ignora: "não responde",
-  responde_sim: "responde SIM",
-  responde_outro: "responde outra coisa",
-};
+const OBJETIVOS: MetaObjetivo[] = [
+  {
+    v: "acolher", titulo: "Acolher quem chegou", desc: "Dar as boas-vindas a um novo contato.",
+    quando: "Começa quando um novo contato entra", Icon: HeartHandshake, nomePadrao: "Boas-vindas",
+    rotuloMensagem: "A mensagem de boas-vindas",
+    placeholderMensagem: "Oi! Que bom ter você por aqui. Esse é o canal direto com o nosso gabinete — me chama sempre que precisar.",
+  },
+  {
+    v: "conteudo", titulo: "Oferecer um conteúdo", desc: "Pergunto se a pessoa quer; se topar, eu mando.",
+    quando: "Começa quando um novo contato entra", Icon: Gift, nomePadrao: "Oferecer conteúdo",
+    rotuloMensagem: "A pergunta (oferece o conteúdo)",
+    placeholderMensagem: "Quer receber, em primeira mão, os conteúdos que a gente produz? Responde SIM que eu te mando.",
+  },
+  {
+    v: "cobrar", titulo: "Cobrar o retorno de uma demanda", desc: "Dar um retorno sobre um pedido.",
+    quando: "Começa quando eu inscrever a pessoa", Icon: Clock, nomePadrao: "Retorno da demanda",
+    rotuloMensagem: "A mensagem de retorno",
+    placeholderMensagem: "Oi! Passando pra te atualizar sobre o seu pedido — já encaminhamos ao órgão e estamos acompanhando.",
+  },
+  {
+    v: "lembrar", titulo: "Lembrar de um evento", desc: "Avisar sobre um evento ou agenda.",
+    quando: "Começa quando eu inscrever a pessoa", Icon: CalendarCheck, nomePadrao: "Lembrete de evento",
+    rotuloMensagem: "A mensagem do lembrete",
+    placeholderMensagem: "Oi! Passando pra lembrar do nosso encontro. Conto com a sua presença!",
+  },
+];
 
 export default function FollowupSimplesClient() {
   const router = useRouter();
+  const [objetivo, setObjetivo] = useState<Objetivo | null>(null);
   const [nome, setNome] = useState("");
-  const [gatilho, setGatilho] = useState<"lead_created" | "manual">("lead_created");
-  const [toques, setToques] = useState<ToqueForm[]>([{ texto: "", esperaDias: 0, rotulo: "" }]);
-  const [reacoes, setReacoes] = useState<Reacao[]>(["ignora"]);
+  const [mensagem, setMensagem] = useState("");
+  const [material, setMaterial] = useState("");
+  const [temLembrete, setTemLembrete] = useState(false);
+  const [lembreteDias, setLembreteDias] = useState(3);
+  const [lembreteTexto, setLembreteTexto] = useState("");
   const [salvando, start] = useTransition();
 
-  function setToque(i: number, patch: Partial<ToqueForm>) {
-    setToques((a) => a.map((t, j) => (j === i ? { ...t, ...patch } : t)));
-  }
-  function addToque() {
-    if (toques.length >= 5) return;
-    setToques((a) => [...a, { texto: "", esperaDias: 3, rotulo: "" }]);
-    setReacoes((a) => [...a, "ignora"]);
-  }
-  function removerToque(i: number) {
-    if (toques.length <= 1) return;
-    setToques((a) => a.filter((_, j) => j !== i));
-    setReacoes((a) => a.filter((_, j) => j !== i));
+  const meta = OBJETIVOS.find((o) => o.v === objetivo) ?? null;
+
+  function escolher(o: MetaObjetivo) {
+    setObjetivo(o.v);
+    setNome((n) => n || o.nomePadrao);
+    setMensagem("");
+    setMaterial("");
+    setTemLembrete(false);
+    setLembreteTexto("");
   }
 
-  // Monta a spec a partir do formulário (só os toques com texto).
-  const comTexto = toques.filter((t) => t.texto.trim());
-  const spec: EscadaSpec | null =
-    comTexto.length > 0
+  // Jornada ao vivo. Para "conteúdo" é um ramo (renderizado à parte); para os
+  // demais é a escada.
+  const lembrete = temLembrete && lembreteTexto.trim()
+    ? { esperaDias: Math.max(1, lembreteDias), texto: lembreteTexto.trim() }
+    : null;
+
+  const escadaSpec: EscadaSpec | null =
+    objetivo && objetivo !== "conteudo" && mensagem.trim()
       ? {
           prazoDeRespostaMs: 3 * DIA_MS,
           sim: { rotulo: "Respondeu que sim", padrao: "sim" },
-          notaDeResposta: "A pessoa respondeu — quem segue é o atendimento do gabinete.",
-          toques: comTexto.map((t, i) => ({
-            ...(t.esperaDias > 0 ? { esperaAntesMs: t.esperaDias * DIA_MS } : {}),
-            texto: t.texto.trim(),
-            rotulo: t.rotulo.trim() || `Mensagem ${i + 1}`,
-          })),
+          notaDeResposta: "A pessoa respondeu — o atendimento do gabinete assume.",
+          toques: [
+            { texto: mensagem.trim(), rotulo: "Mensagem" },
+            ...(lembrete ? [{ esperaAntesMs: lembrete.esperaDias * DIA_MS, texto: lembrete.texto, rotulo: "Lembrete" }] : []),
+          ],
         }
       : null;
-  const jornada = spec ? jornadaDaEscada(spec) : null;
-  const simulacao = spec ? simularEscada(spec, reacoes.slice(0, comTexto.length)) : null;
+  const jornadaEscada = escadaSpec ? jornadaDaEscada(escadaSpec) : null;
 
   function salvar() {
-    if (nome.trim().length < 3) {
-      toast.error("Dê um nome ao fluxo (mínimo 3 letras).");
-      return;
-    }
-    if (!spec) {
-      toast.error("Escreva ao menos uma mensagem.");
-      return;
-    }
+    if (!objetivo) return;
+    if (nome.trim().length < 3) return toast.error("Dê um nome ao fluxo (mínimo 3 letras).");
+    if (!mensagem.trim()) return toast.error("Escreva a mensagem.");
+    if (objetivo === "conteudo" && !material.trim()) return toast.error("Escreva o que você manda quando a pessoa responder sim (o conteúdo/o link).");
     start(async () => {
       const r = await criarFollowupSimples({
+        objetivo,
         nome: nome.trim(),
-        gatilho,
-        toques: comTexto.map((t) => ({ texto: t.texto.trim(), esperaDias: t.esperaDias, rotulo: t.rotulo.trim() || undefined })),
+        mensagem: mensagem.trim(),
+        ...(objetivo === "conteudo" ? { material: material.trim() } : {}),
+        ...(lembrete ? { lembrete } : {}),
       });
       if (!r.ok) {
         toast.error(r.error);
@@ -94,178 +124,160 @@ export default function FollowupSimplesClient() {
     });
   }
 
+  // ── Passo 1: escolher o objetivo ──────────────────────────────────────────
+  if (!objetivo || !meta) {
+    return (
+      <div className="gip-ambient-bg mx-auto max-w-[860px] px-4 py-7 space-y-5">
+        <CommandHero
+          eyebrow="Relacionamento · Follow-up"
+          titulo="O que você quer fazer?"
+          subtitulo="Escolha o objetivo. O fluxo certo já vem montado — você só escreve as mensagens."
+          acoes={[{ href: "/app/ai/followups", label: "← Follow-ups" }]}
+        />
+        <div className="grid gap-3 sm:grid-cols-2">
+          {OBJETIVOS.map((o) => (
+            <button
+              key={o.v}
+              type="button"
+              onClick={() => escolher(o)}
+              className="gip-glass flex items-start gap-3 p-4 text-left transition-all hover:-translate-y-px"
+            >
+              <span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl"
+                style={{ background: "color-mix(in srgb, var(--color-accent) 16%, transparent)", color: "var(--accent-ink, var(--color-accent))" }}>
+                <o.Icon className="h-5 w-5" aria-hidden />
+              </span>
+              <span className="min-w-0 flex-1">
+                <span className="block text-[15px] font-semibold" style={{ color: "var(--color-text)" }}>{o.titulo}</span>
+                <span className="mt-0.5 block text-[13px]" style={{ color: "var(--color-text-muted)" }}>{o.desc}</span>
+                <span className="mt-1.5 block text-[11px] font-medium uppercase tracking-wide" style={{ color: "var(--color-text-subtle)" }}>{o.quando}</span>
+              </span>
+              <ChevronRight className="h-4 w-4 shrink-0 self-center" style={{ color: "var(--color-text-subtle)" }} aria-hidden />
+            </button>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  // ── Passo 2: escrever as mensagens + ver a jornada ────────────────────────
   return (
     <div className="gip-ambient-bg mx-auto max-w-[1040px] px-4 py-7 space-y-5">
       <CommandHero
         eyebrow="Relacionamento · Follow-up"
-        titulo="Criar um follow-up simples"
-        subtitulo="Escreva as mensagens e os prazos. Você vê a jornada acontecer ao lado. Nasce como rascunho — ninguém recebe nada até você publicar."
+        titulo={meta.titulo}
+        subtitulo={`${meta.quando}. Nasce como rascunho — ninguém recebe nada até você publicar.`}
         acoes={[{ href: "/app/ai/followups", label: "← Follow-ups" }]}
+        extra={
+          <button type="button" onClick={() => setObjetivo(null)}
+            className="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[12.5px] font-medium text-white/85 transition-colors hover:bg-white/10">
+            <ArrowLeft size={14} aria-hidden /> Trocar objetivo
+          </button>
+        }
       />
 
       <div className="grid gap-5 lg:grid-cols-2">
-        {/* ── Coluna 1: o formulário ─────────────────────────────── */}
+        {/* Formulário */}
         <div className="space-y-4">
           <div className="gip-glass space-y-3 p-5">
             <div>
               <label className="mb-1.5 block text-sm font-semibold">Nome do fluxo</label>
-              <input
-                className="wr-input w-full"
-                value={nome}
-                onChange={(e) => setNome(e.target.value)}
-                placeholder="Ex.: Boas-vindas do bairro"
-              />
+              <input className="wr-input w-full" value={nome} onChange={(e) => setNome(e.target.value)} />
             </div>
             <div>
-              <p className="mb-1.5 text-sm font-semibold">Quando ele começa</p>
-              <div className="flex flex-col gap-2 sm:flex-row">
-                {([
-                  { v: "lead_created", t: "Quando um novo contato entra" },
-                  { v: "manual", t: "Quando eu inscrever a pessoa" },
-                ] as const).map((g) => {
-                  const on = gatilho === g.v;
-                  return (
-                    <button
-                      key={g.v}
-                      type="button"
-                      onClick={() => setGatilho(g.v)}
-                      className="flex-1 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors"
-                      style={{
-                        background: on ? "var(--color-accent)" : "var(--color-surface-elevated)",
-                        color: on ? "#16181D" : "var(--color-text-muted)",
-                        border: "1px solid var(--color-border)",
-                      }}
-                    >
-                      {g.t}
-                    </button>
-                  );
-                })}
-              </div>
+              <label className="mb-1.5 block text-sm font-semibold">{meta.rotuloMensagem}</label>
+              <textarea className="wr-input w-full" rows={3} value={mensagem}
+                onChange={(e) => setMensagem(e.target.value)} placeholder={meta.placeholderMensagem} />
             </div>
           </div>
 
-          {toques.map((t, i) => (
-            <div key={i} className="gip-glass space-y-2.5 p-4">
-              <div className="flex items-center justify-between">
-                <span className="inline-flex items-center gap-2 text-sm font-semibold">
-                  <MessageCircle className="h-4 w-4" style={{ color: "var(--accent-ink, var(--color-accent))" }} aria-hidden />
-                  Mensagem {i + 1}
-                </span>
-                {toques.length > 1 && (
-                  <button type="button" onClick={() => removerToque(i)} className="opacity-60 hover:opacity-100" style={{ color: "#E08079" }} aria-label="remover">
-                    <Trash2 className="h-4 w-4" />
-                  </button>
-                )}
-              </div>
-              {i > 0 && (
+          {objetivo === "conteudo" && (
+            <div className="gip-glass space-y-2 p-5" style={{ borderColor: "color-mix(in srgb, var(--color-accent) 30%, var(--color-border))" }}>
+              <label className="flex items-center gap-2 text-sm font-semibold">
+                <Gift className="h-4 w-4" style={{ color: "var(--accent-ink, var(--color-accent))" }} aria-hidden />
+                O que eu mando quando a pessoa responder SIM
+              </label>
+              <textarea className="wr-input w-full" rows={3} value={material}
+                onChange={(e) => setMaterial(e.target.value)}
+                placeholder="Combinado! Aqui está: https://link-do-seu-conteudo" />
+              <p className="text-xs" style={{ color: "var(--color-text-subtle)" }}>
+                Por enquanto, cole o <strong>link</strong> do conteúdo. (Enviar o arquivo em anexo pela automação é o próximo passo.)
+              </p>
+            </div>
+          )}
+
+          <div className="gip-glass p-4">
+            <label className="flex items-center gap-2.5 text-sm font-medium">
+              <input type="checkbox" checked={temLembrete} onChange={(e) => setTemLembrete(e.target.checked)} />
+              Mandar um <strong>lembrete</strong> se a pessoa não responder
+            </label>
+            {temLembrete && (
+              <div className="mt-3 space-y-2">
                 <div className="flex items-center gap-2 text-sm" style={{ color: "var(--color-text-muted)" }}>
                   <Clock className="h-4 w-4" aria-hidden /> Esperar
-                  <input
-                    type="number"
-                    min={1}
-                    max={90}
-                    value={t.esperaDias}
-                    onChange={(e) => setToque(i, { esperaDias: Math.max(1, Math.min(90, Number(e.target.value) || 1)) })}
-                    className="wr-input"
-                    style={{ width: 72 }}
-                  />
-                  dias antes de mandar
+                  <input type="number" min={1} max={90} value={lembreteDias}
+                    onChange={(e) => setLembreteDias(Math.max(1, Math.min(90, Number(e.target.value) || 1)))}
+                    className="wr-input" style={{ width: 72 }} />
+                  dias e mandar:
                 </div>
-              )}
-              <textarea
-                className="wr-input w-full"
-                rows={3}
-                value={t.texto}
-                onChange={(e) => setToque(i, { texto: e.target.value })}
-                placeholder="O que o cidadão vai ler. Sem prometer nada — acolha e ofereça."
-              />
-            </div>
-          ))}
-
-          <button
-            type="button"
-            onClick={addToque}
-            disabled={toques.length >= 5}
-            className="flex w-full items-center justify-center gap-2 rounded-2xl border-2 border-dashed py-3 text-sm font-bold disabled:opacity-40"
-            style={{ borderColor: "var(--color-border)", color: "var(--color-text-muted)" }}
-          >
-            <Plus className="h-4 w-4" /> Adicionar outra mensagem
-          </button>
-
-          <div className="flex items-center gap-2">
-            <Button onClick={salvar} disabled={salvando}>
-              {salvando ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
-              Salvar como rascunho
-            </Button>
+                <textarea className="wr-input w-full" rows={2} value={lembreteTexto}
+                  onChange={(e) => setLembreteTexto(e.target.value)}
+                  placeholder="Ainda dá tempo! É só me responder por aqui." />
+              </div>
+            )}
           </div>
+
+          <Button onClick={salvar} disabled={salvando}>
+            {salvando ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+            Salvar como rascunho
+          </Button>
         </div>
 
-        {/* ── Coluna 2: a jornada + o teste ──────────────────────── */}
-        <div className="space-y-4 lg:sticky lg:top-4 lg:self-start">
+        {/* A jornada */}
+        <div className="lg:sticky lg:top-4 lg:self-start">
           <div className="gip-glass p-5">
-            <p className="mb-1 text-sm font-semibold">A jornada</p>
-            <p className="mb-3 text-xs" style={{ color: "var(--color-text-subtle)" }}>
-              {jornada ? jornada.horizonteTexto : "Escreva uma mensagem para ver a jornada."}
-            </p>
-            {jornada && (
+            <p className="mb-3 text-sm font-semibold">A jornada</p>
+
+            {objetivo === "conteudo" ? (
               <ol className="space-y-3">
-                {jornada.momentos.map((m) => (
+                <MomentoConteudo n={1} quando="Assim que dispara" titulo="Manda a pergunta"
+                  texto={mensagem || meta.placeholderMensagem} />
+                <li className="rounded-xl p-3" style={{ background: "color-mix(in srgb, var(--color-accent) 10%, transparent)" }}>
+                  <p className="text-[12px] font-semibold" style={{ color: "var(--accent-ink, var(--color-accent))" }}>✅ Se responder SIM → manda o material:</p>
+                  <p className="mt-1 text-sm" style={{ color: "var(--color-text)" }}>{material || "— escreva o conteúdo/link ao lado —"}</p>
+                </li>
+                <li className="text-[12.5px]" style={{ color: "var(--color-text-muted)" }}>↩️ Se responder outra coisa → o atendimento assume.</li>
+                <li className="text-[12.5px]" style={{ color: "var(--color-text-muted)" }}>
+                  ⏭️ Se não responder → {lembrete ? `após ${lembrete.esperaDias} dia(s), manda o lembrete e espera de novo.` : "encerra (ninguém mais é incomodado)."}
+                </li>
+              </ol>
+            ) : jornadaEscada ? (
+              <ol className="space-y-3">
+                {jornadaEscada.momentos.map((m) => (
                   <li key={m.ordem} className="rounded-xl p-3" style={{ background: "color-mix(in srgb, var(--color-text) 4%, transparent)" }}>
-                    <p className="text-[11px] font-semibold uppercase tracking-wide" style={{ color: "var(--color-text-subtle)" }}>
-                      {m.ordem}. {m.quando}
-                    </p>
+                    <p className="text-[11px] font-semibold uppercase tracking-wide" style={{ color: "var(--color-text-subtle)" }}>{m.ordem}. {m.quando}</p>
                     <p className="mt-1 text-sm" style={{ color: "var(--color-text)" }}>{m.mensagem}</p>
                     <ul className="mt-2 space-y-0.5 text-[12px]" style={{ color: "var(--color-text-muted)" }}>
-                      <li>✅ Se responder: {m.seResponderSim}</li>
-                      <li>↩️ Se responder outra coisa: {m.seResponderOutro}</li>
+                      <li>↩️ Se responder: o atendimento assume.</li>
                       <li>⏭️ Se não responder: {m.seNaoResponder}</li>
                     </ul>
                   </li>
                 ))}
               </ol>
+            ) : (
+              <p className="text-xs" style={{ color: "var(--color-text-subtle)" }}>Escreva a mensagem para ver a jornada.</p>
             )}
           </div>
-
-          {spec && (
-            <div className="gip-glass p-5">
-              <p className="mb-1 flex items-center gap-2 text-sm font-semibold">
-                <Flag className="h-4 w-4" style={{ color: "var(--accent-ink, var(--color-accent))" }} aria-hidden /> Testar um cenário
-              </p>
-              <p className="mb-3 text-xs" style={{ color: "var(--color-text-subtle)" }}>
-                Escolha o que o cidadão faz a cada mensagem e veja o caminho.
-              </p>
-              <div className="space-y-2">
-                {comTexto.map((t, i) => (
-                  <div key={i} className="flex items-center gap-2 text-sm">
-                    <span className="shrink-0" style={{ color: "var(--color-text-subtle)" }}>Msg {i + 1}:</span>
-                    <select
-                      className="wr-input w-full"
-                      value={reacoes[i] ?? "ignora"}
-                      onChange={(e) => setReacoes((a) => a.map((r, j) => (j === i ? (e.target.value as Reacao) : r)))}
-                    >
-                      {(["ignora", "responde_sim", "responde_outro"] as Reacao[]).map((r) => (
-                        <option key={r} value={r}>{REACAO_LABEL[r]}</option>
-                      ))}
-                    </select>
-                  </div>
-                ))}
-              </div>
-              {simulacao && (
-                <div className="mt-3 rounded-xl p-3" style={{ background: "color-mix(in srgb, var(--color-accent) 10%, transparent)" }}>
-                  <ol className="space-y-1 text-[13px]" style={{ color: "var(--color-text)" }}>
-                    {simulacao.passos.map((p, k) => (
-                      <li key={k}>• <span style={{ color: "var(--color-text-subtle)" }}>{p.quando}:</span> {p.acao}</li>
-                    ))}
-                  </ol>
-                  <p className="mt-2 text-sm font-semibold" style={{ color: "var(--accent-ink, var(--color-accent))" }}>
-                    Desfecho: {simulacao.desfecho} · {simulacao.mensagensRecebidas} mensagem{simulacao.mensagensRecebidas === 1 ? "" : "s"}.
-                  </p>
-                </div>
-              )}
-            </div>
-          )}
         </div>
       </div>
     </div>
+  );
+}
+
+function MomentoConteudo({ n, quando, titulo, texto }: { n: number; quando: string; titulo: string; texto: string }) {
+  return (
+    <li className="rounded-xl p-3" style={{ background: "color-mix(in srgb, var(--color-text) 4%, transparent)" }}>
+      <p className="text-[11px] font-semibold uppercase tracking-wide" style={{ color: "var(--color-text-subtle)" }}>{n}. {quando} · {titulo}</p>
+      <p className="mt-1 text-sm" style={{ color: "var(--color-text)" }}>{texto}</p>
+    </li>
   );
 }

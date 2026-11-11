@@ -47,7 +47,7 @@ const TOOLS_DO_GABINETE = ["crm_registrar_demanda", "crm_listar_demandas_cidadao
 const TETO_PADRAO_USD_CENTS = 5000;
 
 export type ResultadoProvisionamento =
-  | { ok: true; agentId: string; versionId: string; indexando: boolean }
+  | { ok: true; agentId: string; versionId: string; indexando: boolean; aguardandoRevisao: boolean }
   | { ok: false; motivo: string };
 
 interface EntradaProvisionamento {
@@ -281,7 +281,12 @@ export async function provisionarAgenteDoMandato(
     versionId,
     expectedProvenance: "onboarding",
   });
-  if (!pub.ok) {
+  // A plataforma EXIGE revisão humana na 1ª publicação (trava de autonomia da
+  // própria base). Isso NÃO é falha: o agente nasce PRONTO como rascunho e um
+  // humano publica com 1 clique. Tratamos como sucesso — o agente está
+  // provisionado, só aguardando a revisão. Qualquer outro erro é falha de verdade.
+  const aguardandoRevisao = !pub.ok && pub.code === "existing_version_requires_review";
+  if (!pub.ok && !aguardandoRevisao) {
     return { ok: false, motivo: `erro_ao_publicar:${pub.code}` };
   }
 
@@ -294,9 +299,9 @@ export async function provisionarAgenteDoMandato(
     organizationId: orgId,
     resourceType: "ai_agent",
     resourceId: agentId,
-    metadata: { source: "mandato_setup", version_id: versionId, assistido: true },
+    metadata: { source: "mandato_setup", version_id: versionId, assistido: true, aguardando_revisao: aguardandoRevisao },
   });
 
   // A indexação do RAG depende de chave de embedding; o evento já foi emitido.
-  return { ok: true, agentId, versionId, indexando: true };
+  return { ok: true, agentId, versionId, indexando: true, aguardandoRevisao };
 }
