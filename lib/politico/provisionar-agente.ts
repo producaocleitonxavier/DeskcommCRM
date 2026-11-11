@@ -30,6 +30,17 @@ import { logger } from "@/lib/logger";
 
 /** Provedores com chave de PLATAFORMA (a instalação pode responder sem BYOK). */
 const PROVEDORES_DE_PLATAFORMA = ["anthropic", "openai", "openrouter"] as const;
+/**
+ * Modelo-padrão por provedor, para quando HÁ chave de plataforma mas o catálogo
+ * `ai_models` está vazio/incompleto (ex.: ambiente novo). O par é válido em
+ * `validarParProvedorModelo` e tem preço em `pricing.ts`. Sem isso, um ambiente
+ * sem catálogo não provisiona o agente (motivo "sem_modelo").
+ */
+const MODELO_PADRAO_POR_PROVEDOR: Record<string, string> = {
+  anthropic: "claude-sonnet-5",
+  openai: "gpt-5.4-mini",
+  openrouter: "anthropic/claude-sonnet-5",
+};
 /** O pacote "Atender o cidadão" — o que faz a IA REGISTRAR demanda, não só conversar. */
 const TOOLS_DO_GABINETE = ["crm_registrar_demanda", "crm_listar_demandas_cidadao"];
 /** Teto padrão do gabinete: US$50/mês, modo "avisar" (avisa e segue, nunca corta). */
@@ -83,10 +94,12 @@ async function escolherModelo(admin: SupabaseClient, orgId: string): Promise<Mod
     return (padrao?.model_id as string | undefined) ?? null;
   };
 
-  // (2) Chave de plataforma (a instalação paga).
+  // (2) Chave de plataforma (a instalação paga). Se o catálogo não trouxer
+  // modelo, cai no padrão do provedor — para um ambiente sem catálogo ainda
+  // conseguir provisionar.
   for (const provider of PROVEDORES_DE_PLATAFORMA) {
     if (!chaveDePlataforma(provider)) continue;
-    const model = await escolherDoProvedor(provider);
+    const model = (await escolherDoProvedor(provider)) ?? MODELO_PADRAO_POR_PROVEDOR[provider];
     if (model) return { provider, model, credentialId: null };
   }
 
