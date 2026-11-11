@@ -7,7 +7,7 @@
  */
 
 import { createClient } from "@/lib/supabase/server";
-import { requireAuth, resolveActiveOrg } from "@/lib/auth/server";
+import { requireAuth, resolveActiveOrg, orgSeAoMenos } from "@/lib/auth/server";
 
 export interface PortalConfig {
   orgId: string;
@@ -45,15 +45,18 @@ export async function obterPortalConfig(): Promise<PortalConfig | null> {
 }
 
 export async function salvarPortalAtivo(ativo: boolean): Promise<{ ok: boolean; erro?: string }> {
-  const user = await requireAuth();
-  const org = await resolveActiveOrg(user);
-  if (!org) return { ok: false, erro: "Sessão ou organização inválida." };
+  // Ligar/desligar o portal publica (ou esconde) dados do mandato na INTERNET —
+  // é ação para FORA. Exige papel de gestor; não basta estar logado na org.
+  // (A página já é manager-gated, mas a action é um endpoint POST chamável
+  // direto — a trava de papel precisa morar aqui também.)
+  const orgId = await orgSeAoMenos("manager");
+  if (!orgId) return { ok: false, erro: "Você não tem permissão para alterar o portal público." };
   const db = await createClient();
 
   // Garante a linha de config (upsert por organization_id).
   const { error } = await db
     .from("pol_gabinete_config")
-    .upsert({ organization_id: org.orgId, portal_ativo: ativo }, { onConflict: "organization_id" });
+    .upsert({ organization_id: orgId, portal_ativo: ativo }, { onConflict: "organization_id" });
   if (error) return { ok: false, erro: error.message };
   return { ok: true };
 }

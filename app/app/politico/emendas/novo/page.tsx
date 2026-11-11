@@ -5,12 +5,12 @@
  * (client) grava em pol_emendas via Supabase (RLS); valores entram em R$ e são
  * convertidos para _cents.
  *
- * Acesso: manager+
+ * Acesso: agent+ (criar emenda não fica aberto a um `viewer` por URL).
  */
 
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { requireAuth, resolveActiveOrg } from "@/lib/auth/server";
+import { requireAuth, resolveActiveOrg, exigirPapelNaOrg } from "@/lib/auth/server";
 import { lerMandatoConfig } from "@/lib/politico/setup-do-mandato";
 import NovaEmendaForm from "./form";
 
@@ -20,6 +20,7 @@ export default async function NovaEmendaPage() {
   const user = await requireAuth();
   const org = await resolveActiveOrg(user);
   if (!org) redirect("/app/onboarding");
+  exigirPapelNaOrg(user, org, "agent");
 
   const db = await createClient();
   const [terrRes, lidRes, orgRes] = await Promise.all([

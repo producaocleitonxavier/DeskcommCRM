@@ -4,12 +4,13 @@
  * Server: auth + fetch (pol_emendas) + leitura do TIPO DE MANDATO (vereador vê
  * por bairro; deputado, por município/meso-região) + cruzamento emenda×voto
  * (TSE, fail-soft). A derivação dos números é pura (lib/politico/emenda-painel).
- * Visual em ./_emendas-client. Acesso: manager+.
+ * Visual em ./_emendas-client. Acesso: agent+ (fecha o vazamento de VER valores
+ * por URL a um `viewer`; a separação fina rua×gabinete é a parede por módulo).
  */
 
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { requireAuth, resolveActiveOrg } from "@/lib/auth/server";
+import { requireAuth, resolveActiveOrg, exigirPapelNaOrg } from "@/lib/auth/server";
 import { ROLE_RANK } from "@/lib/auth/types";
 import { lerMandatoConfig } from "@/lib/politico/setup-do-mandato";
 import { derivarPainel, resumoPorMunicipio, AREA_LABELS, type EmendaLite, type TipoMandato } from "@/lib/politico/emenda-painel";
@@ -34,6 +35,7 @@ export default async function EmendasPage() {
 
   const org = await resolveActiveOrg(user);
   if (!org) redirect("/app/onboarding");
+  exigirPapelNaOrg(user, org, "agent");
 
   const db = await createClient();
 

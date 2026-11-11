@@ -140,19 +140,24 @@ export async function POST(req: NextRequest): Promise<Response> {
   const admin = createAdminClient();
 
   for (const entry of payload.entry) {
-    // Resolver a organização pela Page ID
+    // Resolver a organização pela CONTA de Instagram. No Instagram Login não há
+    // Facebook Page: o `entry.id` do webhook é o IG account id (IGSID), o mesmo
+    // valor que o OAuth guarda em `ig_business_account_id` (o `ig_page_id` fica
+    // null). Casar por `ig_page_id` nunca achava a sessão — o inbound inteiro
+    // (DM/comentário/menção) caía aqui em silêncio. O status gravado é
+    // "WORKING" (valor do CHECK), não "connected" (que nem é válido).
     const { data: session } = await admin
       .from("channel_sessions")
       .select("id, organization_id, ig_business_account_id")
       .eq("provider", "instagram")
-      .eq("ig_page_id", entry.id)
+      .eq("ig_business_account_id", entry.id)
       .is("archived_at", null)
-      .eq("status", "connected")
+      .eq("status", "WORKING")
       .limit(1)
       .maybeSingle();
 
     if (!session) {
-      logger.debug("[ig-webhooks] No session for page", { pageId: entry.id });
+      logger.debug("[ig-webhooks] No session for IG account", { igAccountId: entry.id });
       continue;
     }
 

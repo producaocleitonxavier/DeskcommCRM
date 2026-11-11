@@ -2,12 +2,12 @@
  * /app/politico/emendas/[id] — detalhe, edição e pipeline de execução de uma
  * emenda (Gabinete). Server: auth + busca da emenda + territórios/lideranças.
  *
- * Acesso: manager+
+ * Acesso: agent+ (fecha o vazamento por URL a um `viewer`).
  */
 
 import { notFound, redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { requireAuth, resolveActiveOrg } from "@/lib/auth/server";
+import { requireAuth, resolveActiveOrg, exigirPapelNaOrg } from "@/lib/auth/server";
 import { obterMandatoTse, pesoBairro, type PesoBairro } from "@/app/actions/politico/obras-actions";
 import { lerVozConfig, vozArmada } from "@/lib/voz/config";
 import DetalheEmendaClient, { type EmendaDetalhe } from "./_detalhe-client";
@@ -23,6 +23,7 @@ export default async function EmendaDetalhePage({
   const user = await requireAuth();
   const org = await resolveActiveOrg(user);
   if (!org) redirect("/app/onboarding");
+  exigirPapelNaOrg(user, org, "agent");
 
   const db = await createClient();
   const [emRes, terrRes, lidRes] = await Promise.all([
