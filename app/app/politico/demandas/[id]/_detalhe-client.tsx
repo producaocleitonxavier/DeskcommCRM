@@ -375,11 +375,11 @@ export default function DetalheDemandaClient({ demanda, assessores, eventos, voz
                 msg =
                   `Cidadão avisado no WhatsApp (protocolo ${res.protocolo})` +
                   (res.comOficio ? " com o ofício em anexo" : "") +
-                  (res.audio === "enviado" ? " + recado em áudio na voz do Cleiton" : "") +
+                  (res.audio === "enviado" ? " + recado em áudio na voz do mandato" : "") +
                   "." +
                   (audioNota ? ` ${audioNota}` : "");
               } else if (res.audio === "enviado") {
-                msg = "Recado em áudio na voz do Cleiton enviado. (O aviso de texto já tinha ido antes.)";
+                msg = "Recado em áudio na voz do mandato enviado. (O aviso de texto já tinha ido antes.)";
               } else if (audioNota) {
                 msg = `O cidadão já tinha sido avisado por texto. ${audioNota}`;
               } else {

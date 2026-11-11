@@ -121,7 +121,7 @@ export default function OpiniaoPublicaClient({ config, resumo, mencoes }: { conf
         <section className="gip-glass p-5 space-y-4">
           <h2 className="text-sm font-bold" style={{ color: "var(--color-text)" }}>O que monitorar</h2>
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-            <Campo label="Nome(s) do candidato / mandato" hint="separe por vírgula"><input value={nome} onChange={(e) => setNome(e.target.value)} placeholder="Cleiton Xavier, @cleitonxavier" className="wr-input w-full" /></Campo>
+            <Campo label="Nome(s) do candidato / mandato" hint="separe por vírgula"><input value={nome} onChange={(e) => setNome(e.target.value)} placeholder="Nome do candidato, @perfil" className="wr-input w-full" /></Campo>
             <Campo label="Cidade" hint="base da operação"><input value={cidade} onChange={(e) => setCidade(e.target.value)} placeholder="Belo Horizonte" className="wr-input w-full" /></Campo>
             <Campo label="Temas / pautas" hint="separe por vírgula"><input value={temas} onChange={(e) => setTemas(e.target.value)} placeholder="segurança, saúde, buraco, iluminação" className="wr-input w-full" /></Campo>
             <Campo label="Bairros de interesse" hint="separe por vírgula"><input value={bairros} onChange={(e) => setBairros(e.target.value)} placeholder="Centro, Trevo, Venda Nova" className="wr-input w-full" /></Campo>

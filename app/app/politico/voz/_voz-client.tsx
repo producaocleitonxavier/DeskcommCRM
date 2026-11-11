@@ -404,7 +404,7 @@ export default function VozClient({ inicial }: { inicial: Inicial }) {
         )}
         <div>
           <label className={label} style={{ color: "var(--color-text-subtle)" }}>Quem autorizou (nome do político)</label>
-          <input name="consentido_por" type="text" required placeholder="Ex.: Cleiton Xavier" className="w-full rounded-[12px] px-3.5 py-2.5 text-sm" style={{ background: "var(--color-surface-elevated)", border: "1px solid var(--color-border)", color: "var(--color-text)" }} />
+          <input name="consentido_por" type="text" required placeholder="Ex.: nome do parlamentar" className="w-full rounded-[12px] px-3.5 py-2.5 text-sm" style={{ background: "var(--color-surface-elevated)", border: "1px solid var(--color-border)", color: "var(--color-text)" }} />
         </div>
         <label className="flex cursor-pointer items-start gap-2 text-[13px]" style={{ color: "var(--color-text-muted)" }}>
           <input name="consentimento" type="checkbox" required className="mt-0.5" />
