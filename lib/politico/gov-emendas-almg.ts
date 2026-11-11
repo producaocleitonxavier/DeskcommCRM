@@ -20,9 +20,21 @@
  * `buscarEmendasAlmg` toca a rede.
  */
 
-/** CSV oficial de emendas da ALMG (todas as emendas estaduais de MG). */
-export const ALMG_EMENDAS_CSV_URL =
+/**
+ * CSV oficial de emendas da ALMG (todas as emendas estaduais de MG).
+ * ATENÇÃO: o servidor da ALMG bloqueia IPs fora do Brasil (ex. a VPS) — a
+ * busca direta dá ETIMEDOUT. Em produção/homologação apontamos para um ESPELHO
+ * do arquivo (Supabase Storage, que a VPS alcança) via `ALMG_EMENDAS_CSV_URL`,
+ * atualizado a cada 2 meses (ritmo de publicação da ALMG). O default abaixo só
+ * vale onde a ALMG é alcançável (ex. a máquina que atualiza o espelho).
+ */
+export const ALMG_EMENDAS_CSV_URL_OFICIAL =
   "https://mediaserver.almg.gov.br/acervo/497/469/2497469.csv";
+
+/** Fonte efetiva do CSV: o espelho (env) quando houver, senão o oficial. */
+export function urlDoCsvAlmg(): string {
+  return (process.env.ALMG_EMENDAS_CSV_URL ?? "").trim() || ALMG_EMENDAS_CSV_URL_OFICIAL;
+}
 
 export interface EmendaAlmg {
   ano: number;
@@ -220,7 +232,7 @@ export function extrairEmendasDoAutor(
 export async function buscarEmendasAlmg(nomeAutor: string): Promise<EmendaAlmg[]> {
   const nome = (nomeAutor ?? "").trim();
   if (!nome) return [];
-  const resp = await fetch(ALMG_EMENDAS_CSV_URL, {
+  const resp = await fetch(urlDoCsvAlmg(), {
     headers: { accept: "text/csv" },
     // o arquivo é grande (~36 MB) e muda a cada 2 meses; sem cache agressivo.
     cache: "no-store",
