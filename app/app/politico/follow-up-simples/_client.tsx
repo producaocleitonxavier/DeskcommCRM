@@ -70,8 +70,13 @@ export default function FollowupSimplesClient() {
   const [lembreteDias, setLembreteDias] = useState(3);
   const [lembreteTexto, setLembreteTexto] = useState("");
   const [salvando, start] = useTransition();
+  // Convite de evento vai COM algo: o link da arte/flyer ou do site de inscrição.
+  const [linkConvite, setLinkConvite] = useState("");
 
   const meta = OBJETIVOS.find((o) => o.v === objetivo) ?? null;
+  // A mensagem que de fato sai: no evento, o link entra numa linha própria no fim.
+  const mensagemFinal =
+    objetivo === "lembrar" && linkConvite.trim() ? `${mensagem.trim()}\n\n${linkConvite.trim()}` : mensagem.trim();
 
   function escolher(o: MetaObjetivo) {
     setObjetivo(o.v);
@@ -80,6 +85,7 @@ export default function FollowupSimplesClient() {
     setMaterial("");
     setTemLembrete(false);
     setLembreteTexto("");
+    setLinkConvite("");
   }
 
   // Jornada ao vivo. Para "conteúdo" é um ramo (renderizado à parte); para os
@@ -95,7 +101,7 @@ export default function FollowupSimplesClient() {
           sim: { rotulo: "Respondeu que sim", padrao: "sim" },
           notaDeResposta: "A pessoa respondeu — o atendimento do gabinete assume.",
           toques: [
-            { texto: mensagem.trim(), rotulo: "Mensagem" },
+            { texto: mensagemFinal, rotulo: "Mensagem" },
             ...(lembrete ? [{ esperaAntesMs: lembrete.esperaDias * DIA_MS, texto: lembrete.texto, rotulo: "Lembrete" }] : []),
           ],
         }
@@ -111,7 +117,7 @@ export default function FollowupSimplesClient() {
       const r = await criarFollowupSimples({
         objetivo,
         nome: nome.trim(),
-        mensagem: mensagem.trim(),
+        mensagem: mensagemFinal,
         ...(objetivo === "conteudo" ? { material: material.trim() } : {}),
         ...(lembrete ? { lembrete } : {}),
       });
@@ -189,6 +195,24 @@ export default function FollowupSimplesClient() {
                 onChange={(e) => setMensagem(e.target.value)} placeholder={meta.placeholderMensagem} />
             </div>
           </div>
+
+          {objetivo === "lembrar" && (
+            <div className="gip-glass space-y-2 p-5">
+              <label className="flex items-center gap-2 text-sm font-semibold">
+                <CalendarCheck className="h-4 w-4" style={{ color: "var(--accent-ink, var(--color-accent))" }} aria-hidden />
+                Link do convite (opcional)
+              </label>
+              <input
+                className="wr-input w-full"
+                value={linkConvite}
+                onChange={(e) => setLinkConvite(e.target.value)}
+                placeholder="https://… (arte/flyer do evento ou site de inscrição)"
+              />
+              <p className="text-xs" style={{ color: "var(--color-text-subtle)" }}>
+                Vai numa linha própria no fim da mensagem. Cole o link da <strong>arte/flyer</strong> ou do <strong>site de inscrição</strong>. (Mandar a imagem em anexo pela automação é o próximo passo.)
+              </p>
+            </div>
+          )}
 
           {objetivo === "conteudo" && (
             <div className="gip-glass space-y-2 p-5" style={{ borderColor: "color-mix(in srgb, var(--color-accent) 30%, var(--color-border))" }}>

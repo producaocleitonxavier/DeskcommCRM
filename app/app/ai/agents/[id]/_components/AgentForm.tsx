@@ -419,6 +419,32 @@ export function AgentForm(props: Props) {
    * que salvou um e não o outro.
    */
   const [papel, setPapel] = React.useState<"conversa" | "operacao" | "seguranca">("conversa");
+  // MODO SIMPLES (padrão): a tela mostra só o que um gabinete precisa para pôr o
+  // agente no ar — nome, número, instruções e o que ele consulta. Todo o resto
+  // (inteligência, freios, gatilhos, handoff, follow-up, papéis) continua
+  // montado e valendo, só ESCONDIDO atrás de "Configurações avançadas". Escondido
+  // por CSS, não desmontado: o estado e a validação seguem inteiros.
+  const [avancado, setAvancado] = React.useState(false);
+  React.useEffect(() => {
+    try {
+      if (window.localStorage.getItem("agente-config-avancada") === "1") setAvancado(true);
+    } catch {
+      /* sem storage: fica no modo simples */
+    }
+  }, []);
+  const alternarAvancado = () => {
+    setAvancado((v) => {
+      const novo = !v;
+      try {
+        window.localStorage.setItem("agente-config-avancada", novo ? "1" : "0");
+      } catch {
+        /* preferência só não é lembrada */
+      }
+      if (!novo) setPapel("conversa");
+      return novo;
+    });
+  };
+  const soAvancado = avancado ? "" : "hidden";
 
   /**
    * A pergunta é "salvar mudaria alguma coisa?", e não "os dois objetos são
@@ -512,6 +538,9 @@ export function AgentForm(props: Props) {
   }, [form, t]);
 
   const isValid = Object.keys(validation).length === 0;
+  // No modo simples só nome e instruções ficam à vista; um erro em qualquer
+  // outro campo estaria invisível — a faixa do modo avisa que ele existe.
+  const ajusteEscondido = Object.keys(validation).some((k) => k !== "name" && k !== "system_prompt");
 
   /**
    * A dica do botão "Publicar" — uma frase, vinda de UM motivo.
@@ -768,7 +797,24 @@ export function AgentForm(props: Props) {
         vocabulário interno; quem configura pensa em "quem fala com meu cliente" e
         "quem organiza minha casa".
       */}
-      <div className="flex flex-wrap gap-1 border-b" role="tablist" aria-label={t("Papéis do agente")}>
+      {/* A faixa do modo: diz o que está escondido e onde achar. */}
+      <div className="flex flex-wrap items-center justify-between gap-2 rounded-md border bg-muted/40 px-3 py-2">
+        <p className="text-xs text-muted-foreground">
+          {avancado
+            ? t("Mostrando todas as configurações. A maioria já vem certa — mexa só se souber o que precisa.")
+            : t("Mostrando só o essencial: nome, número, instruções e o que ele consulta. O resto já vem configurado.")}
+          {!avancado && ajusteEscondido ? (
+            <span className="ml-1 font-medium text-destructive">
+              {t("Há um ajuste pendente nas configurações avançadas.")}
+            </span>
+          ) : null}
+        </p>
+        <Button type="button" variant="outline" size="sm" onClick={alternarAvancado} data-testid="alternar-config-avancada">
+          {avancado ? t("Voltar ao modo simples") : t("Configurações avançadas")}
+        </Button>
+      </div>
+
+      <div className={`flex flex-wrap gap-1 border-b ${soAvancado}`} role="tablist" aria-label={t("Papéis do agente")}>
         {(
           [
             ["conversa", t("Conversa com o cliente")],
@@ -859,7 +905,7 @@ export function AgentForm(props: Props) {
                 maxLength={2000}
               />
             </div>
-            <div className="space-y-1">
+            <div className={`space-y-1 ${soAvancado}`}>
               <Label htmlFor="priority">{t("Ordem de preferência (0 a 1000)")}</Label>
               <Input
                 id="priority"
@@ -884,7 +930,7 @@ export function AgentForm(props: Props) {
           </Card>
 
           {/* Provider + credential + model */}
-          <Card className="space-y-3 p-4">
+          <Card className={`space-y-3 p-4 ${soAvancado}`}>
             <h3 className="text-sm font-medium">{t("A inteligência que ele usa")}</h3>
             <div className="space-y-1">
               <Label htmlFor="provider">{t("Empresa de inteligência artificial")}</Label>
@@ -1032,7 +1078,7 @@ export function AgentForm(props: Props) {
           </Card>
 
           {/* Limits */}
-          <Card className="space-y-3 p-4">
+          <Card className={`space-y-3 p-4 ${soAvancado}`}>
             <h3 className="text-sm font-medium">{t("Freios de segurança")}</h3>
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1">
@@ -1197,7 +1243,7 @@ export function AgentForm(props: Props) {
           </Card>
 
           {/* Estilo de resposta (split de mensagens — Onda 4) */}
-          <Card className="space-y-3 p-4">
+          <Card className={`space-y-3 p-4 ${soAvancado}`}>
             <h3 className="text-sm font-medium">{t("Estilo de resposta")}</h3>
             <div className="flex items-center gap-2">
               <Switch
@@ -1237,7 +1283,19 @@ export function AgentForm(props: Props) {
           </Card>
 
           {/* Capacidades */}
-          <Card className="space-y-2 p-4">
+          {/* No modo simples, só o resumo: as capacidades já vêm ligadas pelo
+              assistente do mandato; a lista inteira mora nas avançadas. */}
+          {!avancado ? (
+            <Card className="space-y-1 p-4">
+              <h3 className="text-sm font-medium">{t("O que o agente pode fazer")}</h3>
+              <p className="text-xs text-muted-foreground">
+                {form.tool_ids.length === 0
+                  ? t("Nenhuma capacidade ligada — ele só conversa. Para ligar, abra as configurações avançadas.")
+                  : `${form.tool_ids.length} ${t("capacidade(s) ligada(s). Para ver ou mudar, abra as configurações avançadas.")}`}
+              </p>
+            </Card>
+          ) : null}
+          <Card className={`space-y-2 p-4 ${soAvancado}`}>
             <h3 className="text-sm font-medium">{t("O que o agente pode fazer")}</h3>
             <p className="text-xs text-muted-foreground">
               {t(
@@ -1263,7 +1321,7 @@ export function AgentForm(props: Props) {
           />
 
           {/* Triggers */}
-          <Card className="space-y-2 p-4">
+          <Card className={`space-y-2 p-4 ${soAvancado}`}>
             <h3 className="text-sm font-medium">{t("Quando ele entra em ação")}</h3>
             <TriggerEditor
               value={form.trigger_config}
@@ -1274,7 +1332,7 @@ export function AgentForm(props: Props) {
           </Card>
 
           {/* Handoff */}
-          <Card className="space-y-3 p-4">
+          <Card className={`space-y-3 p-4 ${soAvancado}`}>
             <h3 className="text-sm font-medium">{t("Passar para uma pessoa")}</h3>
             <div className="flex items-center gap-2">
               <Switch
@@ -1328,15 +1386,17 @@ export function AgentForm(props: Props) {
               #2209. Grava em `ai_agents.config.sentiment_threshold`, por isso
               só em edição, como o cartão dos comandos do celular. */}
           {isEdit && (
-            <LimiarDeSentimento
-              agentId={props.agent.id}
-              inicial={(props.agent.config ?? {}).sentiment_threshold}
-              disabled={disabled}
-            />
+            <div className={soAvancado}>
+              <LimiarDeSentimento
+                agentId={props.agent.id}
+                inicial={(props.agent.config ?? {}).sentiment_threshold}
+                disabled={disabled}
+              />
+            </div>
           )}
 
           {/* Casos humanos */}
-          <Card className="space-y-3 p-4">
+          <Card className={`space-y-3 p-4 ${soAvancado}`}>
             <h3 className="text-sm font-medium">{t("Pedir ajuda sem sair da conversa")}</h3>
             <div className="flex items-center gap-2">
               <Switch
@@ -1357,7 +1417,7 @@ export function AgentForm(props: Props) {
           </Card>
 
           {/* Propostas comerciais */}
-          <Card className="space-y-3 p-4">
+          <Card className={`space-y-3 p-4 ${soAvancado}`}>
             <h3 className="text-sm font-medium">{t("Propostas comerciais")}</h3>
             <div className="flex items-center gap-2">
               <Switch
@@ -1373,7 +1433,7 @@ export function AgentForm(props: Props) {
           </Card>
 
           {/* Follow-up */}
-          <Card className="space-y-3 p-4">
+          <Card className={`space-y-3 p-4 ${soAvancado}`}>
             <h3 className="text-sm font-medium">{t("Follow-up")}</h3>
             <p className="text-xs text-muted-foreground">
               {t(
@@ -1435,11 +1495,13 @@ export function AgentForm(props: Props) {
           {/* Comandos pelo celular (`#on`/`#off`, C-076). Salva em
               `ai_agents.config.aceita_comandos_celular`. */}
           {isEdit && (
-            <ComandosDoCelular
-              agentId={props.agent.id}
-              inicial={(props.agent.config ?? {}).aceita_comandos_celular}
-              disabled={disabled}
-            />
+            <div className={soAvancado}>
+              <ComandosDoCelular
+                agentId={props.agent.id}
+                inicial={(props.agent.config ?? {}).aceita_comandos_celular}
+                disabled={disabled}
+              />
+            </div>
           )}
         </div>
       </div>
