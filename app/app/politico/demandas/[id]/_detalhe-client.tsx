@@ -20,6 +20,7 @@ import { avisarCobrancaAoCidadao } from "@/app/actions/politico/avisarCobranca";
 import { avisarCuidadoAoCidadao } from "@/app/actions/politico/avisarCuidado";
 import { cabeCuidado, ehDemandaSaude, textoCuidadoSaude } from "@/lib/politico/cuidado-saude";
 import { ModalEnviarTexto } from "@/components/politico/modal-enviar-texto";
+import { textoAvisoCidadao } from "@/lib/politico/aviso-cidadao-texto";
 import { atualizarRegistro, excluirRegistro, registrarEventoDemanda, sincronizarVisitaNaAgenda } from "@/app/actions/politico/gabinete-actions";
 import { textoCobranca, demandaVencidaSemResposta, textoCobrancaCidadao } from "@/lib/politico/demanda-cobranca";
 import DemandaAnexos from "@/components/politico/demanda-anexos";
@@ -88,6 +89,7 @@ export interface Props {
   podeOficio?: boolean;
   /** Nome do parlamentar (saudação do recado em áudio). */
   politicoNome?: string | null;
+  politicoCargo?: string | null;
 }
 
 const TIPOS: Opcao[] = [
@@ -142,7 +144,7 @@ function paraInputDate(d: string | null): string {
   return new Date(d).toISOString().slice(0, 10);
 }
 
-export default function DetalheDemandaClient({ demanda, assessores, eventos, vozArmada, mostrarAssuntoOficio, politicoNome, podeOficio = true }: Props) {
+export default function DetalheDemandaClient({ demanda, assessores, eventos, vozArmada, mostrarAssuntoOficio, politicoNome, politicoCargo, podeOficio = true }: Props) {
   const router = useRouter();
 
   const [d, setD] = useState<DemandaDetalhe>(demanda);
@@ -150,7 +152,6 @@ export default function DetalheDemandaClient({ demanda, assessores, eventos, voz
   const [salvando, setSalvando] = useState(false);
   const [gerandoIA, setGerandoIA] = useState(false);
   const [gerandoOficio, setGerandoOficio] = useState(false);
-  const [avisando, setAvisando] = useState(false);
   const [avisoMsg, setAvisoMsg] = useState<string | null>(null);
   const [excluindo, setExcluindo] = useState(false);
   const [anexoToken, setAnexoToken] = useState(0);
@@ -350,50 +351,43 @@ export default function DetalheDemandaClient({ demanda, assessores, eventos, voz
             🪄 Transformar em vitória
           </Link>
         )}
-        <button
-          type="button"
-          disabled={avisando || !d.contacts?.phone_number}
-          title={!d.contacts?.phone_number ? "O cidadão não tem telefone cadastrado" : "Enviar aviso ao cidadão por WhatsApp"}
-          onClick={async () => {
-            if (!window.confirm("Enviar aviso ao cidadão por WhatsApp confirmando o registro da demanda?")) return;
-            setErro(null);
-            setAvisoMsg(null);
-            setAvisando(true);
-            const res = await avisarCidadao(d.id);
-            setAvisando(false);
-            if (res.ok) {
-              const audioNota =
-                res.audio === "blackout"
-                  ? "O áudio ficou de fora (silêncio eleitoral de 72h)."
-                  : res.audio === "voz_desarmada"
-                    ? "O áudio ficou de fora (a Voz do Mandato não está ligada)."
-                    : res.audio === "falha"
-                      ? "O áudio falhou — tente de novo."
-                      : "";
-              let msg: string;
-              if (res.textoEnviado) {
-                msg =
-                  `Cidadão avisado no WhatsApp (protocolo ${res.protocolo})` +
-                  (res.comOficio ? " com o ofício em anexo" : "") +
-                  (res.audio === "enviado" ? " + recado em áudio na voz do mandato" : "") +
-                  "." +
-                  (audioNota ? ` ${audioNota}` : "");
-              } else if (res.audio === "enviado") {
-                msg = "Recado em áudio na voz do mandato enviado. (O aviso de texto já tinha ido antes.)";
-              } else if (audioNota) {
-                msg = `O cidadão já tinha sido avisado por texto. ${audioNota}`;
-              } else {
-                msg = "O cidadão já tinha sido avisado por texto — nada novo a enviar.";
-              }
-              setAvisoMsg(msg);
-              router.refresh();
-            } else setErro(res.erro);
-          }}
-          className="wr-btn inline-flex items-center gap-1.5 font-semibold disabled:opacity-50"
-          style={{ background: "rgba(74,222,128,0.16)", color: "#86EFAC", borderColor: "rgba(74,222,128,0.45)" }}
-        >
-          <MessageCircle className="h-4 w-4" aria-hidden /> {avisando ? "Enviando…" : "Avisar cidadão"}
-        </button>
+        {(() => {
+          const ehResolucao = d.estado === "resolvida";
+          const comOficio = !ehResolucao && !!(d.pol_encaminhamento_ia ?? "").trim();
+          const protocolo = (d.pol_oficio_rotulo ?? "").trim() || `#${d.id.slice(0, 8).toUpperCase()}`;
+          const sugerido = textoAvisoCidadao({
+            ehResolucao,
+            comOficio,
+            primeiroNome: primeiroNomeCidadao,
+            nomeParlamentar: politicoNome ?? null,
+            cargo: politicoCargo ?? null,
+            protocolo,
+          });
+          return (
+            <ModalEnviarTexto
+              botao={<><MessageCircle className="h-4 w-4" aria-hidden /> Avisar cidadão</>}
+              botaoStyle={{ background: "rgba(74,222,128,0.16)", color: "#86EFAC", borderColor: "rgba(74,222,128,0.45)" }}
+              botaoDisabled={!d.contacts?.phone_number}
+              botaoTitle={!d.contacts?.phone_number ? "O cidadão não tem telefone cadastrado" : "Avisar o cidadão por WhatsApp (edite o texto antes)"}
+              titulo={`Avisar cidadão${primeiroNomeCidadao ? ` · ${primeiroNomeCidadao}` : ""}`}
+              textoSugerido={sugerido}
+              dica={comOficio ? "O ofício em PDF vai anexado automaticamente — este é o texto que acompanha." : "Revise e ajuste o texto antes de enviar."}
+              rotuloEnviar="Enviar aviso"
+              onEnviar={async (texto) => {
+                const res = await avisarCidadao(d.id, { texto });
+                if (res.ok) {
+                  router.refresh();
+                  const sucesso = res.textoEnviado
+                    ? `Cidadão avisado${res.comOficio ? " com o ofício em anexo" : ""}.`
+                    : "O cidadão já tinha sido avisado — nada novo a enviar.";
+                  setAvisoMsg(sucesso);
+                  return { ok: true, sucesso };
+                }
+                return { ok: false, erro: res.erro };
+              }}
+            />
+          );
+        })()}
         {/* Follow-up de cobrança: só quando a demanda venceu o prazo e o órgão
             ainda não respondeu — dar satisfação ("estamos cobrando"). Modo
             assistido: o assessor decide, um a um. */}

@@ -24,6 +24,7 @@ import { avisoDeResolucaoLigado } from "@/lib/politico/aviso-de-resolucao";
 import { enviarRecadoDeVozNaConversa } from "@/lib/voz/enviar-recado";
 import type { MomentoVoz } from "@/lib/voz/recado";
 import { lerIdentidadeDoMandato } from "@/lib/politico/identidade-do-mandato";
+import { textoAvisoCidadao } from "@/lib/politico/aviso-cidadao-texto";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { SendMessageInput } from "@/lib/schemas";
 
@@ -66,7 +67,7 @@ function protocoloDe(d: DemandaParaAviso): string {
 
 export async function avisarCidadao(
   demandaId: string,
-  opts?: { incluirAudio?: boolean },
+  opts?: { incluirAudio?: boolean; texto?: string },
 ): Promise<AvisoResultado> {
   const user = await requireAuth();
   const org = await resolveActiveOrg(user);
@@ -163,17 +164,18 @@ export async function avisarCidadao(
     }
 
     const protocoloLocal = rotulo || protocoloDe(d);
-    const saudacao = primeiroNome ? `Olá, ${primeiroNome}!` : "Olá!";
 
-    // Resolução: boa notícia (texto completo). Encaminhamento: texto CURTO — a
-    // voz do político carrega o calor, o texto é só a capa do ofício.
-    const corpo = ehResolucao
-      ? `${saudacao} Boa notícia: a sua demanda (protocolo ${protocoloLocal}) foi RESOLVIDA.` +
-        ` Agradecemos a confiança e seguimos à disposição para o que precisar.` +
-        ` Conte sempre com o nosso gabinete.`
-      : oficioBytes
-        ? `${saudacao} Aqui é do gabinete${assinaturaGab}. Segue o ofício referente à demanda solicitada.`
-        : `${saudacao} Aqui é do gabinete${assinaturaGab}. Passo pra avisar que a sua demanda já foi encaminhada ao órgão responsável — assim que houver novidade, te retorno por aqui.`;
+    // Modo assistido: se o assessor editou o texto no modal, usa o DELE; senão,
+    // a sugestão automática (mesma função pura que a tela usa no preview).
+    const sugerido = textoAvisoCidadao({
+      ehResolucao,
+      comOficio: !!oficioBytes,
+      primeiroNome,
+      nomeParlamentar: nomeParl || null,
+      cargo: cargoParl || null,
+      protocolo: protocoloLocal,
+    });
+    const corpo = (opts?.texto ?? "").trim() || sugerido;
 
     // Com ofício: copia o PDF para o bucket da conversa (whatsapp-media sob
     // {org}/{conversa}/, exigência do handler) e envia como DOCUMENTO com o texto

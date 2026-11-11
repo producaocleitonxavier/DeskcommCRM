@@ -75,11 +75,12 @@ export default async function DemandaDetalhePage({
   // Gabinete usa linha "Assunto:" no ofício? (liga o campo na tela.)
   const { data: gabRow } = await db
     .from("pol_gabinete_config")
-    .select("oficio_mostrar_assunto, nome_parlamentar")
+    .select("oficio_mostrar_assunto, nome_parlamentar, cargo")
     .eq("organization_id", org.orgId)
     .maybeSingle();
   const mostrarAssuntoOficio = (gabRow?.oficio_mostrar_assunto as boolean | null) === true;
   const politicoNome = ((gabRow?.nome_parlamentar as string | null) ?? "").trim() || null;
+  const politicoCargo = ((gabRow?.cargo as string | null) ?? "").trim() || null;
 
   // Ofício é GABINETE-ONLY: só quem tem "Ofícios" no menu (perfil gabinete) emite.
   // Gato por menu pq rua e gabinete têm o mesmo papel (agent) — o menu distingue.
@@ -109,6 +110,7 @@ export default async function DemandaDetalhePage({
       vozArmada={vozOk}
       mostrarAssuntoOficio={mostrarAssuntoOficio}
       politicoNome={politicoNome}
+      politicoCargo={politicoCargo}
       podeOficio={podeOficio}
     />
   );
