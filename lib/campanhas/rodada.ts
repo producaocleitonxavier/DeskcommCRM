@@ -42,6 +42,7 @@ import { decidePacing, dayStartInTz } from "@/lib/agent-engine/pacing/engine";
 import { loadChannelKnobs, loadPacingState, recordSend } from "@/lib/agent-engine/pacing/store";
 import { beginServiceAtOrigin } from "@/lib/atendimento/origem";
 import { logger } from "@/lib/logger";
+import { travaDeCobaia, soDigitos, type TravaDeCobaia } from "./cobaia-trava";
 import { OrgNaoOperanteError, STATUS_OPERANTE, ehOperante, statusDaOrgEmbutida } from "@/lib/organizacao/operante";
 
 import { motivoParaExcluir, recusouMarketing, statusDaSaida } from "./elegibilidade";
@@ -755,55 +756,12 @@ export async function numerosEmHoldDeSaude(
  *   nenhum destino casa, TODO envio recusado. No laboratório, segurança vence
  *   liveness — melhor não mandar do que mandar para fora da allowlist.
  */
-export interface TravaDeCobaia {
-  cobaia: boolean;
-  pausado: boolean;
-  sementes: Set<string>;
-}
-
-export async function travaDeCobaia(
-  admin: SupabaseClient,
-  organizationId: string,
-): Promise<TravaDeCobaia> {
-  const semRestricao: TravaDeCobaia = { cobaia: false, pausado: false, sementes: new Set() };
-  const { data: ctrl, error: erroCtrl } = await admin
-    .from("pol_cobaia_controle")
-    .select("modo_cobaia, envio_pausado")
-    .eq("organization_id", organizationId)
-    .maybeSingle();
-  if (erroCtrl) {
-    logger.warn("[campanha] leitura do controle de cobaia falhou; tratando como org normal", {
-      motivo: erroCtrl.message,
-    });
-    return semRestricao;
-  }
-  if (!ctrl) return semRestricao; // org normal: sem linha, sem restrição
-  const linha = ctrl as { modo_cobaia?: boolean; envio_pausado?: boolean };
-  const pausado = !!linha.envio_pausado;
-  const cobaia = linha.modo_cobaia !== false; // default true
-  if (!cobaia) return { cobaia: false, pausado, sementes: new Set() };
-
-  const { data: sem, error: erroSem } = await admin
-    .from("pol_cobaia_semente")
-    .select("telefone")
-    .eq("organization_id", organizationId);
-  if (erroSem) {
-    logger.error("[campanha] org cobaia e a leitura das sementes falhou; travando o envio (falha-fechada)", {
-      motivo: erroSem.message,
-    });
-    return { cobaia: true, pausado, sementes: new Set() };
-  }
-  return {
-    cobaia: true,
-    pausado,
-    sementes: new Set((sem ?? []).map((s) => soDigitos((s as { telefone: string }).telefone))),
-  };
-}
-
-/** Só os dígitos de um telefone — a comparação da allowlist ignora +55, espaços e traços. */
-export function soDigitos(telefone: string | null | undefined): string {
-  return (telefone ?? "").replace(/\D/g, "");
-}
+// `TravaDeCobaia`, `travaDeCobaia` e `soDigitos` foram EXTRAÍDOS para
+// ./cobaia-trava (importados no topo) para também rodarem no PONTO ÚNICO de
+// envio (sendMessageHandler) sem puxar todo o grafo da campanha. Reexportados
+// aqui para quem já importava de "./rodada" (ex.: trava-de-cobaia.test.ts).
+export { travaDeCobaia, soDigitos };
+export type { TravaDeCobaia };
 
 /**
  * O número em que esta pessoa JÁ conversa, se houver.

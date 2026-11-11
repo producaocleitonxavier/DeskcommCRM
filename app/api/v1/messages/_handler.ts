@@ -33,6 +33,7 @@ import type { Actor, HandlerCtx } from "@/lib/api/handlers/types";
 import { audit } from "@/lib/audit";
 import { traduzir } from "@/lib/i18n/dicionario";
 import { assertOrgOperante } from "@/lib/organizacao/operante";
+import { checarEnvioCobaia } from "@/lib/campanhas/cobaia-trava";
 import {
   CHANNEL_SESSION_REF_COLUMNS,
   DEFAULT_CHANNEL_PROVIDER,
@@ -913,6 +914,35 @@ export async function sendMessageHandler(
     waIdentity: c.contacts?.wa_identity,
     waLid: c.contacts?.wa_lid,
   });
+
+  // TRAVA DE COBAIA (linha vermelha do teste em escala): numa org-laboratório,
+  // só sai mensagem para a allowlist-semente — para TODO remetente, INCLUSIVE o
+  // envio humano, que pula o portão de go-live logo abaixo. Esta é a garantia
+  // POR CÓDIGO de que nenhum eleitor real recebe no laboratório (não dependemos
+  // só da base fictícia). Fora da cobaia é no-op (~1ms). Ver
+  // lib/campanhas/cobaia-trava.ts e a migration 9090.
+  const bloqueioCobaia = await checarEnvioCobaia(
+    supabase,
+    ctx.organization_id,
+    c.contacts?.phone_number ?? "",
+  );
+  if (bloqueioCobaia.bloqueado) {
+    const { data: updated, error } = await supabase
+      .from("messages")
+      .update({
+        status: "failed",
+        error_code: bloqueioCobaia.motivo,
+        error_message:
+          "Modo laboratório: destino fora da lista de teste. Nenhuma mensagem foi enviada.",
+      })
+      .eq("organization_id", ctx.organization_id)
+      .eq("id", message.id)
+      .select(MSG_COLS)
+      .single();
+    if (error || !updated)
+      throw new ApiError(500, "internal_error", undefined, ctx.requestId, "Não foi possível registrar o bloqueio de cobaia.");
+    return updated as unknown as Message;
+  }
 
   // Releitura no sink: o operador pode ter fechado o canal enquanto o modelo
   // gerava a resposta. Envio humano não passa por esta restrição da IA.
