@@ -44,7 +44,7 @@ interface DemandaCuidadoRow {
   contacts: { name: string | null; phone_number: string | null } | null;
 }
 
-export async function avisarCuidadoAoCidadao(demandaId: string): Promise<CuidadoResultado> {
+export async function avisarCuidadoAoCidadao(demandaId: string, textoEditado?: string): Promise<CuidadoResultado> {
   const user = await requireAuth();
   const org = await resolveActiveOrg(user);
   if (!org) return { ok: false, erro: "Sessão ou organização inválida." };
@@ -111,7 +111,10 @@ export async function avisarCuidadoAoCidadao(demandaId: string): Promise<Cuidado
     return { ok: false, erro: "Não consegui abrir a conversa do cidadão." };
   }
 
-  const corpo = textoCuidadoSaude({ primeiroNome, nomeParlamentar: nomeParl || null, assunto: d.assunto, saude });
+  // Modo assistido: se o assessor editou o texto no modal, usa o DELE; senão,
+  // a sugestão automática. O texto é dado do humano autenticado — confiável.
+  const sugerido = textoCuidadoSaude({ primeiroNome, nomeParlamentar: nomeParl || null, assunto: d.assunto, saude });
+  const corpo = (textoEditado ?? "").trim() || sugerido;
 
   try {
     await sendMessageHandler(

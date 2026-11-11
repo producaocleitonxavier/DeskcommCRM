@@ -18,9 +18,10 @@ import { gerarOficioDemanda } from "@/app/actions/politico/gerarOficio";
 import { avisarCidadao, avisarResolucaoAutomatica } from "@/app/actions/politico/avisarCidadao";
 import { avisarCobrancaAoCidadao } from "@/app/actions/politico/avisarCobranca";
 import { avisarCuidadoAoCidadao } from "@/app/actions/politico/avisarCuidado";
-import { cabeCuidado, ehDemandaSaude } from "@/lib/politico/cuidado-saude";
+import { cabeCuidado, ehDemandaSaude, textoCuidadoSaude } from "@/lib/politico/cuidado-saude";
+import { ModalEnviarTexto } from "@/components/politico/modal-enviar-texto";
 import { atualizarRegistro, excluirRegistro, registrarEventoDemanda, sincronizarVisitaNaAgenda } from "@/app/actions/politico/gabinete-actions";
-import { textoCobranca, demandaVencidaSemResposta } from "@/lib/politico/demanda-cobranca";
+import { textoCobranca, demandaVencidaSemResposta, textoCobrancaCidadao } from "@/lib/politico/demanda-cobranca";
 import DemandaAnexos from "@/components/politico/demanda-anexos";
 
 interface Opcao {
@@ -151,8 +152,6 @@ export default function DetalheDemandaClient({ demanda, assessores, eventos, voz
   const [gerandoOficio, setGerandoOficio] = useState(false);
   const [avisando, setAvisando] = useState(false);
   const [avisoMsg, setAvisoMsg] = useState<string | null>(null);
-  const [cobrando, setCobrando] = useState(false);
-  const [cuidando, setCuidando] = useState(false);
   const [excluindo, setExcluindo] = useState(false);
   const [anexoToken, setAnexoToken] = useState(0);
   const [erro, setErro] = useState<string | null>(null);
@@ -174,6 +173,7 @@ export default function DetalheDemandaClient({ demanda, assessores, eventos, voz
   const [assuntoOficio, setAssuntoOficio] = useState(d.pol_oficio_assunto ?? "");
 
   const fechada = d.estado === "resolvida" || d.estado === "encerrada";
+  const primeiroNomeCidadao = (d.contacts?.name ?? "").trim().split(/\s+/)[0] ?? "";
 
   async function marcarResposta(respondeu: boolean) {
     const patch = respondeu
@@ -403,64 +403,54 @@ export default function DetalheDemandaClient({ demanda, assessores, eventos, voz
           prazoDias: d.pol_prazo_dias,
           respondeu: d.pol_respondeu === true,
         }) && (
-          <button
-            type="button"
-            disabled={cobrando || !d.contacts?.phone_number}
-            title={!d.contacts?.phone_number ? "O cidadão não tem telefone cadastrado" : "Avisar o cidadão que o gabinete está cobrando a solução"}
-            onClick={async () => {
-              if (!window.confirm("Avisar o cidadão por WhatsApp que o prazo passou e o gabinete está cobrando a solução?")) return;
-              setErro(null);
-              setAvisoMsg(null);
-              setCobrando(true);
-              const res = await avisarCobrancaAoCidadao(d.id);
-              setCobrando(false);
+          <ModalEnviarTexto
+            botao={<><Clock className="h-4 w-4" aria-hidden /> Avisar que estamos cobrando</>}
+            botaoStyle={{ background: "rgba(245,158,11,0.16)", color: "#FBBF24", borderColor: "rgba(245,158,11,0.45)" }}
+            botaoDisabled={!d.contacts?.phone_number}
+            botaoTitle={!d.contacts?.phone_number ? "O cidadão não tem telefone cadastrado" : "Avisar o cidadão que o gabinete está cobrando a solução"}
+            titulo={`Avisar que estamos cobrando${primeiroNomeCidadao ? ` · ${primeiroNomeCidadao}` : ""}`}
+            textoSugerido={textoCobrancaCidadao({ primeiroNome: primeiroNomeCidadao, nomeParlamentar: politicoNome ?? null, assunto: d.assunto })}
+            dica="Revise e ajuste antes de enviar. Quebre em parágrafos se quiser."
+            rotuloEnviar="Enviar aviso"
+            onEnviar={async (texto) => {
+              const res = await avisarCobrancaAoCidadao(d.id, texto);
               if (res.ok) {
                 setAvisoMsg("Cidadão avisado de que o gabinete está cobrando a demanda.");
                 router.refresh();
-              } else setErro(res.erro);
+                return { ok: true, sucesso: "Aviso enviado." };
+              }
+              return { ok: false, erro: res.erro };
             }}
-            className="wr-btn inline-flex items-center gap-1.5 font-semibold disabled:opacity-50"
-            style={{ background: "rgba(245,158,11,0.16)", color: "#FBBF24", borderColor: "rgba(245,158,11,0.45)" }}
-          >
-            <Clock className="h-4 w-4" aria-hidden /> {cobrando ? "Enviando…" : "Avisar que estamos cobrando"}
-          </button>
+          />
         )}
         {/* Follow-up afetivo (o OURO): depois de RESOLVER, voltar a falar pra
             saber como a pessoa está. Modo assistido — o assessor confirma.
             Demanda de saúde ganha o aviso "sensível". */}
-        {cabeCuidado({ estado: d.estado, fechadaEm: d.fechada_em }) && (
-          <button
-            type="button"
-            disabled={cuidando || !d.contacts?.phone_number}
-            title={
-              !d.contacts?.phone_number
-                ? "O cidadão não tem telefone cadastrado"
-                : ehDemandaSaude({ assunto: d.assunto, pol_tipo: d.pol_tipo, pol_orgao_destino: d.pol_orgao_destino })
-                  ? "⚠️ Saúde = assunto sensível. Revise com carinho antes de enviar."
-                  : "Voltar a falar com o cidadão pra saber como ele está"
-            }
-            onClick={async () => {
-              const saude = ehDemandaSaude({ assunto: d.assunto, pol_tipo: d.pol_tipo, pol_orgao_destino: d.pol_orgao_destino });
-              const aviso = saude
-                ? "Mandar um CUIDADO por WhatsApp pra saber como a pessoa está se recuperando?\n\n⚠️ É um assunto de saúde (sensível) — a mensagem não cita diagnóstico, mas confira o tom."
-                : "Voltar a falar com o cidadão por WhatsApp pra saber como ele está?";
-              if (!window.confirm(aviso)) return;
-              setErro(null);
-              setAvisoMsg(null);
-              setCuidando(true);
-              const res = await avisarCuidadoAoCidadao(d.id);
-              setCuidando(false);
-              if (res.ok) {
-                setAvisoMsg("Cuidado enviado — o gabinete voltou a falar com a pessoa. 🙏");
-                router.refresh();
-              } else setErro(res.erro);
-            }}
-            className="wr-btn inline-flex items-center gap-1.5 font-semibold disabled:opacity-50"
-            style={{ background: "rgba(236,72,153,0.16)", color: "#F9A8D4", borderColor: "rgba(236,72,153,0.45)" }}
-          >
-            <Heart className="h-4 w-4" aria-hidden /> {cuidando ? "Enviando…" : "Mandar um cuidado"}
-          </button>
-        )}
+        {cabeCuidado({ estado: d.estado, fechadaEm: d.fechada_em }) && (() => {
+          const saude = ehDemandaSaude({ assunto: d.assunto, pol_tipo: d.pol_tipo, pol_orgao_destino: d.pol_orgao_destino });
+          return (
+            <ModalEnviarTexto
+              botao={<><Heart className="h-4 w-4" aria-hidden /> Mandar um cuidado</>}
+              botaoStyle={{ background: "rgba(236,72,153,0.16)", color: "#F9A8D4", borderColor: "rgba(236,72,153,0.45)" }}
+              botaoDisabled={!d.contacts?.phone_number}
+              botaoTitle={!d.contacts?.phone_number ? "O cidadão não tem telefone cadastrado" : "Voltar a falar com o cidadão pra saber como ele está"}
+              titulo={`Mandar um cuidado${primeiroNomeCidadao ? ` · ${primeiroNomeCidadao}` : ""}`}
+              avisoSensivel={saude ? "⚠️ Assunto de saúde (sensível). A mensagem não cita diagnóstico — confira o tom e edite o que precisar." : null}
+              textoSugerido={textoCuidadoSaude({ primeiroNome: primeiroNomeCidadao, nomeParlamentar: politicoNome ?? null, assunto: d.assunto, saude })}
+              dica="Revise e ajuste antes de enviar. Quebre em parágrafos se ficar longo."
+              rotuloEnviar="Enviar cuidado"
+              onEnviar={async (texto) => {
+                const res = await avisarCuidadoAoCidadao(d.id, texto);
+                if (res.ok) {
+                  setAvisoMsg("Cuidado enviado — o gabinete voltou a falar com a pessoa. 🙏");
+                  router.refresh();
+                  return { ok: true, sucesso: "Cuidado enviado. 🙏" };
+                }
+                return { ok: false, erro: res.erro };
+              }}
+            />
+          );
+        })()}
         {vozArmada && d.contact_id && (
           <BotaoRecadoVoz
             contactId={d.contact_id}
@@ -751,6 +741,43 @@ export default function DetalheDemandaClient({ demanda, assessores, eventos, voz
           </div>
         )}
 
+        {/* O TEXTO do ofício vem ANTES dos dados (número/autoridade): o assessor
+            lê e edita a "carta" primeiro, e só depois preenche o "envelope". */}
+        <label className="mb-1.5 block text-sm font-semibold" style={{ color: "var(--color-text)" }}>
+          Texto do encaminhamento ao órgão
+        </label>
+        {editando ? (
+          <textarea
+            value={encaminhamento}
+            onChange={(e) => setEncaminhamento(e.target.value)}
+            rows={12}
+            placeholder="Ex.: Ofício encaminhado à Secretaria de Obras solicitando…"
+            className="mb-4 w-full resize-y rounded-xl px-4 py-3.5 text-sm leading-relaxed outline-none transition-colors focus:border-[color-mix(in srgb, var(--color-accent) 55%, transparent)]"
+            style={{
+              background: "var(--color-surface-elevated)",
+              border: "1px solid var(--color-border)",
+              color: "var(--color-text)",
+              minHeight: 260,
+              boxShadow: "none",
+            }}
+          />
+        ) : d.pol_encaminhamento_ia ? (
+          <div
+            className="mb-4 rounded-xl p-5 text-sm leading-relaxed whitespace-pre-wrap"
+            style={{
+              background: "var(--color-surface-elevated)",
+              border: "1px solid var(--color-border)",
+              color: "var(--color-text)",
+            }}
+          >
+            {d.pol_encaminhamento_ia}
+          </div>
+        ) : (
+          <p className="mb-4 text-sm" style={{ color: "var(--color-text-subtle)" }}>
+            Sem encaminhamento registrado. Edite para redigir — ou clique em “Gerar com IA”.
+          </p>
+        )}
+
         {/* Dados do ofício — número MANUAL + destinatário (sempre visíveis, fáceis
             de preencher: quem opera no gabinete pode não ter intimidade com tela). */}
         <div className="mb-4 grid gap-3 rounded-xl p-4" style={{ background: "var(--color-surface-elevated)", border: "1px solid var(--color-border)" }}>
@@ -804,37 +831,6 @@ export default function DetalheDemandaClient({ demanda, assessores, eventos, voz
           </div>
         </div>
 
-        {editando ? (
-          <textarea
-            value={encaminhamento}
-            onChange={(e) => setEncaminhamento(e.target.value)}
-            rows={12}
-            placeholder="Ex.: Ofício encaminhado à Secretaria de Obras solicitando…"
-            className="w-full resize-y rounded-xl px-4 py-3.5 text-sm leading-relaxed outline-none transition-colors focus:border-[color-mix(in srgb, var(--color-accent) 55%, transparent)]"
-            style={{
-              background: "var(--color-surface-elevated)",
-              border: "1px solid var(--color-border)",
-              color: "var(--color-text)",
-              minHeight: 260,
-              boxShadow: "none",
-            }}
-          />
-        ) : d.pol_encaminhamento_ia ? (
-          <div
-            className="rounded-xl p-5 text-sm leading-relaxed whitespace-pre-wrap"
-            style={{
-              background: "var(--color-surface-elevated)",
-              border: "1px solid var(--color-border)",
-              color: "var(--color-text)",
-            }}
-          >
-            {d.pol_encaminhamento_ia}
-          </div>
-        ) : (
-          <p className="text-sm" style={{ color: "var(--color-text-subtle)" }}>
-            Sem encaminhamento registrado. Edite para redigir — em breve, a IA redige para você.
-          </p>
-        )}
       </section>
       )}
 

@@ -50,7 +50,7 @@ interface DemandaCobrancaRow {
   contacts: { name: string | null; phone_number: string | null } | null;
 }
 
-export async function avisarCobrancaAoCidadao(demandaId: string): Promise<CobrancaResultado> {
+export async function avisarCobrancaAoCidadao(demandaId: string, textoEditado?: string): Promise<CobrancaResultado> {
   const user = await requireAuth();
   const org = await resolveActiveOrg(user);
   if (!org) return { ok: false, erro: "Sessão ou organização inválida." };
@@ -127,11 +127,9 @@ export async function avisarCobrancaAoCidadao(demandaId: string): Promise<Cobran
     return { ok: false, erro: "Não consegui abrir a conversa do cidadão." };
   }
 
-  const corpo = textoCobrancaCidadao({
-    primeiroNome,
-    nomeParlamentar: nomeParl || null,
-    assunto: d.assunto,
-  });
+  // Modo assistido: usa o texto EDITADO pelo assessor (modal), senão a sugestão.
+  const sugerido = textoCobrancaCidadao({ primeiroNome, nomeParlamentar: nomeParl || null, assunto: d.assunto });
+  const corpo = (textoEditado ?? "").trim() || sugerido;
 
   try {
     await sendMessageHandler(
