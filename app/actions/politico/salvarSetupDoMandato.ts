@@ -26,9 +26,11 @@ import { loadAuthUser, mfaEmDivida, resolveActiveOrg } from "@/lib/auth/server";
 import { ROLE_RANK } from "@/lib/auth/types";
 import { supportWriteError } from "@/lib/impersonate/support";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { logger } from "@/lib/logger";
 import { CHAVE_GABINETE } from "@/lib/politico/aviso-de-resolucao";
 import { CHAVE_SETUP_COMPLETO, CHAVE_SETUP_ADIADO, CHAVE_MANDATO, CHAVE_MANDATO_GERADO } from "@/lib/politico/setup-do-mandato";
 import { montarConhecimentoDoMandato, montarPromptDoMandato, type DadosDoMandato } from "@/lib/politico/gerar-conhecimento";
+import { provisionarAgenteDoMandato } from "@/lib/politico/provisionar-agente";
 
 const servicoSchema = z.object({
   nome: z.string().trim().max(120),
@@ -135,10 +137,15 @@ export async function salvarSetupDoMandato(entrada: unknown): Promise<ResultadoS
     bio: d.bio || null,
     temas: d.temas || null,
   };
+  // Preserva o id de um agente já provisionado (idempotência: re-rodar o
+  // assistente não cria um agente novo).
+  const geradoAnterior = (gabinete[CHAVE_MANDATO_GERADO] ?? null) as { agente_id?: string | null } | null;
+  const agenteExistente = geradoAnterior?.agente_id ?? null;
   const gerado = {
     conhecimento: montarConhecimentoDoMandato(dados),
     prompt: montarPromptDoMandato(dados),
     gerado_em: new Date().toISOString(),
+    agente_id: agenteExistente,
   };
 
   const novo = {
@@ -153,6 +160,43 @@ export async function salvarSetupDoMandato(entrada: unknown): Promise<ResultadoS
 
   const { error } = await admin.from("organizations").update({ settings: novo }).eq("id", org.orgId);
   if (error) return { ok: false, error: "erro_ao_gravar" };
+
+  // Provisiona o agente do mandato (publica em MODO ASSISTIDO) quando ainda não
+  // há um. NÃO FATAL: o assistente conclui mesmo se o provisionamento falhar — o
+  // conteúdo gerado fica salvo e a tela do agente segue como caminho manual.
+  if (!agenteExistente) {
+    try {
+      const prov = await provisionarAgenteDoMandato(admin, {
+        orgId: org.orgId,
+        userId: user.id,
+        nomeMandato: d.nome || null,
+        prompt: gerado.prompt,
+        conhecimento: gerado.conhecimento,
+      });
+      if (prov.ok) {
+        const gabineteComAgente = {
+          ...gabinete,
+          [CHAVE_SETUP_COMPLETO]: true,
+          [CHAVE_MANDATO]: mandato,
+          [CHAVE_MANDATO_GERADO]: { ...gerado, agente_id: prov.agentId },
+        };
+        await admin
+          .from("organizations")
+          .update({ settings: { ...settings, [CHAVE_GABINETE]: gabineteComAgente } })
+          .eq("id", org.orgId);
+      } else {
+        logger.warn("setup-mandato: provisionamento do agente não concluído", {
+          organization_id: org.orgId,
+          motivo: prov.motivo,
+        });
+      }
+    } catch (err) {
+      logger.warn("setup-mandato: provisionamento do agente lançou", {
+        organization_id: org.orgId,
+        causa: err instanceof Error ? err.message : String(err),
+      });
+    }
+  }
 
   await audit({
     action: "pol_gabinete.setup_salvo",
