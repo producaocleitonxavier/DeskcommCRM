@@ -18,6 +18,7 @@ import { EmptyState } from "@/components/politico/empty-state";
 import { RelatorioGabineteButton } from "@/components/politico/relatorio-gabinete-button";
 import type { RelatorioGabineteInputCliente } from "@/app/actions/politico/gerarRelatorioGabinete";
 import { SincronizarEmendasButton } from "@/components/politico/sincronizar-emendas-button";
+import { SincronizarEmendasAlmgButton } from "@/components/politico/sincronizar-emendas-almg-button";
 import type { TipoMandato } from "@/lib/politico/emenda-painel";
 import { rotuloModalidade } from "@/lib/politico/emenda-modalidade";
 
@@ -146,7 +147,15 @@ export default function EmendasClient(props: EmendasClientProps) {
           { href: "/app/politico/emendas/novo", label: "+ Nova emenda", primary: true },
           { href: "/app/politico/emendas/pedidos", label: "Pedidos" },
         ]}
-        extra={ehAdmin ? <SincronizarEmendasButton /> : undefined}
+        extra={
+          ehAdmin ? (
+            <div className="flex flex-wrap items-start justify-end gap-2">
+              <SincronizarEmendasButton />
+              {/* Emendas da ALMG = estaduais; só faz sentido p/ deputado. */}
+              {ehDeputado ? <SincronizarEmendasAlmgButton /> : null}
+            </div>
+          ) : undefined
+        }
       />
 
       {emendas.length === 0 ? (
