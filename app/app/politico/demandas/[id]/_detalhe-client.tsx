@@ -6,7 +6,7 @@
  * texto de encaminhamento. Grava via Supabase browser client (RLS).
  */
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, Clock, Flag, Heart, MessageCircle, Mic, Pencil, Printer, Sparkles, Trash2, X } from "lucide-react";
@@ -175,6 +175,8 @@ export default function DetalheDemandaClient({ demanda, assessores, eventos, voz
 
   const fechada = d.estado === "resolvida" || d.estado === "encerrada";
   const primeiroNomeCidadao = (d.contacts?.name ?? "").trim().split(/\s+/)[0] ?? "";
+  // Pro "Gerar com IA" rolar o texto gerado pra vista e focar nele (sem o "pulo").
+  const encaminhamentoRef = useRef<HTMLTextAreaElement>(null);
 
   async function marcarResposta(respondeu: boolean) {
     const patch = respondeu
@@ -656,6 +658,16 @@ export default function DetalheDemandaClient({ demanda, assessores, eventos, voz
                 if (res.ok) {
                   setEncaminhamento(res.texto);
                   setEditando(true);
+                  // Rola o texto gerado pra vista e foca nele — o resultado
+                  // aparece na hora, sem o "pulo" de layout (o textarea só monta
+                  // depois do re-render, por isso o timeout curto).
+                  setTimeout(() => {
+                    const el = encaminhamentoRef.current;
+                    if (el) {
+                      el.scrollIntoView({ behavior: "smooth", block: "center" });
+                      el.focus({ preventScroll: true });
+                    }
+                  }, 60);
                 } else {
                   setErro(res.erro);
                 }
@@ -742,6 +754,7 @@ export default function DetalheDemandaClient({ demanda, assessores, eventos, voz
         </label>
         {editando ? (
           <textarea
+            ref={encaminhamentoRef}
             value={encaminhamento}
             onChange={(e) => setEncaminhamento(e.target.value)}
             rows={12}
