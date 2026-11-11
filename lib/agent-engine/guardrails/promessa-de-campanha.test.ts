@@ -95,8 +95,48 @@ describe('detectarPromessaDeCampanha — a rotina do gabinete passa inteira', ()
     'Protocolamos seu pedido. O número do protocolo é 2026-1234.',
     'Obrigado por nos procurar. Vou acompanhar de perto e te mantenho informado.',
     'Seu pedido foi recebido. Assim que a secretaria responder, te retorno por aqui.',
+    // Controles do ENDURECIMENTO: plural/"a gente" + verbo de PROCESSO continuam
+    // passando (o endurecimento pegou plural só nos verbos de ENTREGA).
+    'A gente registra sua demanda e te retorna.',
+    'Vamos analisar seu pedido com a secretaria.',
+    'A gente vai verificar e te avisa assim que souber.',
   ])('não barra nada: %s', (frase) => {
     expect(detectarPromessaDeCampanha(frase).achou).toBe(false);
+  });
+});
+
+describe('detectarPromessaDeCampanha — furos fechados (endurecimento TSE)', () => {
+  it.each([
+    'Garanto sua vaga na creche, combinado?',
+    'Vou conseguir sua aposentadoria, pode deixar?',
+  ])('promessa disfarçada de PERGUNTA não desarma o benefício: %s', (frase) => {
+    expect(categorias(frase)).toContain('promessa_de_beneficio');
+  });
+
+  it('garantia disfarçada de pergunta também não escapa', () => {
+    expect(categorias('Prometo que vou acabar com a fila do SUS, pode confiar?')).toContain('garantia_eleitoral');
+  });
+
+  it.each([
+    'Nós vamos conseguir sua aposentadoria.',
+    'Vamos conseguir sua vaga na creche.',
+    'A gente consegue seu benefício do INSS.',
+    'Vou assegurar seu auxílio.',
+  ])('PLURAL, "a gente" e SINÔNIMO agora são pegos: %s', (frase) => {
+    expect(categorias(frase)).toContain('promessa_de_beneficio');
+  });
+
+  it('ADVÉRBIO entre o verbo e o benefício não quebra o casamento', () => {
+    expect(categorias('Vou conseguir rapidinho a sua aposentadoria.')).toContain('promessa_de_beneficio');
+  });
+
+  it.each([
+    'Vou conseguir sua prótese.',
+    'Garanto sua cadeira de rodas.',
+    'Consigo seus óculos novos.',
+    'Vou liberar sua CNH.',
+  ])('BENEFÍCIOS que antes escapavam da lista agora entram: %s', (frase) => {
+    expect(categorias(frase)).toContain('promessa_de_beneficio');
   });
 });
 

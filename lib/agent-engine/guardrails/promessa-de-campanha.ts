@@ -43,8 +43,9 @@
  *   acompanhar/protocolar) não estão nas listas, então passam sem regra especial.
  * - VISÃO ampla. "Quando eu for eleito, vou trabalhar pela saúde da cidade" é bandeira, não
  *   garantia de resultado individual: "trabalhar por" não casa nenhum verbo de entrega.
- * - Pergunta. "Você precisa conseguir uma vaga na creche?" repete o que o cidadão pediu; a
- *   frase terminada em `?` não é promessa — salvo a captação, que é oferta mesmo perguntando.
+ * - Pergunta GENUÍNA. "Você precisa de uma vaga na creche?" repete o pedido do cidadão e não
+ *   usa verbo de ENTREGA — passa. Mas uma promessa disfarçada de pergunta ("garanto sua vaga,
+ *   combinado?") NÃO escapa: o que conta é o verbo de entrega, não o ponto de interrogação.
  * - Frase NEGADA. "Não posso garantir sua aposentadoria", "a gente não promete vaga, mas
  *   encaminha" são o oposto da promessa — a negação antes do verbo desarma.
  *
@@ -75,7 +76,11 @@ const BENEFICIOS =
   'bolsa\\s+fam[ií]lia|bolsa\\s+de\\s+estudos?|bpc|loas|aposentadoria|pens[aã]o|benef[ií]cio(?:\\s+do\\s+inss)?|' +
   'consulta|cirurgia|exame|exames|rem[eé]dio|rem[eé]dios|medicamento|tratamento|leito|' +
   'dinheiro|pix|grana|vale(?:\\s+[a-zç]+)?|moradia|casa\\s+popular|casa\\s+pr[oó]pria|apartamento|' +
-  'lote|terreno|material\\s+de\\s+constru[cç][aã]o|cal[cç]amento|creche|matr[ií]cula|farda|uniforme';
+  'lote|terreno|material\\s+de\\s+constru[cç][aã]o|cal[cç]amento|creche|matr[ií]cula|farda|uniforme|' +
+  // Ampliado: itens de saúde/assistência que o cidadão pede ao gabinete e que
+  // escapavam da lista fechada (cada um com caso no teste).
+  'pr[oó]tese|cadeira\\s+de\\s+rodas|cadeira\\s+de\\s+banho|andador|muleta|muletas|[oó]culos|' +
+  'cnh|carteira\\s+de\\s+motorista|alvar[aá]|licen[cç]a|enxoval|fralda|fraldas|fralda\\s+geri[aá]trica';
 
 /**
  * Limites de palavra que entendem acento. O `\b` do JavaScript só conhece
@@ -90,6 +95,13 @@ const palavra = (alternativas: string): string => `${INICIO}(?:${alternativas})$
 const DETERMINANTE = String.raw`(?:(?:seu|sua|seus|suas|o|a|os|as|um|uma|uns|umas|lhe|te|pra\s+voc[eê]|para\s+voc[eê])\s+)*`;
 
 /**
+ * Advérbio opcional entre o verbo e o benefício: "conseguir RAPIDINHO a sua
+ * vaga", "garantir JÁ o seu auxílio". Antes, qualquer palavra no meio quebrava o
+ * casamento e a promessa escapava.
+ */
+const ADVERBIO_OPC = String.raw`(?:(?:[a-zç]+mente|rapidinho|rapid[aã]o|logo|j[aá]|certinho|f[aá]cil|sim|tamb[eé]m)\s+)?`;
+
+/**
  * A negação que transforma promessa em orientação. O `posso`/`vou`/`consigo` opcional
  * cobre "não posso garantir", "não vou conseguir", "não consigo prometer" — a locução
  * inteira nega o verbo. Mesmo desenho do `NAO_NEGADO` clínico.
@@ -102,10 +114,15 @@ const NAO_NEGADO = String.raw`(?<!(?:n[aã]o|nunca|jamais|sem)\s+(?:(?:posso|pod
  * é o que separa a promessa (barrada) do trabalho de gabinete (liberado).
  */
 const VERBOS_DE_ENTREGA =
-  String.raw`vou\s+(?:te\s+)?conseguir|consigo|vou\s+(?:te\s+)?arranjar|arranjo|` +
-  String.raw`vou\s+(?:te\s+)?dar|te\s+dou|dou\s+(?:pra|para)\s+voc[eê]|` +
-  String.raw`vou\s+(?:te\s+)?garantir|garanto|vou\s+(?:te\s+)?liberar|libero|` +
-  String.raw`vou\s+providenciar|providencio|vou\s+(?:te\s+)?resolver|resolvo`;
+  // Futuro/1ª pessoa SINGULAR e PLURAL e "a gente vai": "vou/vamos/irei/iremos/a
+  // gente vai conseguir". Fecha o escape de plural e 3ª pessoa que o detector
+  // antigo não via (só pegava "vou conseguir" no singular).
+  String.raw`(?:vou|vamos|irei|iremos|a\s+gente\s+vai)\s+(?:te\s+|lhe\s+)?(?:conseguir|arranjar|dar|garantir|liberar|providenciar|resolver|assegurar)|` +
+  // Presente, "a gente consegue/arranja/…": a forma coloquial de prometer.
+  String.raw`a\s+gente\s+(?:te\s+)?(?:consegue|arranja|d[aá]|garante|libera|providencia|resolve|assegura)|` +
+  // Presente 1ª pessoa singular e plural.
+  String.raw`consigo|conseguimos|arranjo|arranjamos|te\s+dou|dou\s+(?:pra|para)\s+voc[eê]|damos|` +
+  String.raw`garanto|garantimos|libero|liberamos|providencio|providenciamos|resolvo|resolvemos|asseguro|asseguramos`;
 
 /** Token de voto/apoio — o que, ligado a uma entrega, fecha a captação de sufrágio. */
 const VOTO = String.raw`voto|votar|vota|vote|me\s+(?:apoiar|apoie|apoia)|seu\s+apoio`;
@@ -146,15 +163,16 @@ const REGRAS: ReadonlyArray<{ categoria: CategoriaDeCampanha; padrao: RegExp; pe
   },
   {
     // PROMESSA DE BENEFÍCIO PESSOAL — "vou conseguir sua aposentadoria", "garanto sua vaga".
-    // Exige o verbo de entrega em 1ª pessoa, não negado, seguido (com determinante opcional)
-    // de um benefício pessoal. Pergunta desarma ("você quer que eu veja sua vaga?" é oferta
-    // de ajuda, não promessa fechada); a captação acima não desarma.
+    // Exige o verbo de entrega (1ª pessoa singular/plural ou "a gente"), não negado, com
+    // advérbio e determinante opcionais, seguido de um benefício pessoal. A pergunta NÃO
+    // desarma: "garanto sua vaga, combinado?" é promessa, não pergunta de verdade — a frase
+    // usa um verbo de ENTREGA (os verbos de processo, encaminhar/registrar, continuam fora).
     categoria: 'promessa_de_beneficio',
     padrao: new RegExp(
-      String.raw`${NAO_NEGADO}${palavra(VERBOS_DE_ENTREGA)}\s+${DETERMINANTE}${palavra(BENEFICIOS)}`,
+      String.raw`${NAO_NEGADO}${palavra(VERBOS_DE_ENTREGA)}\s+${ADVERBIO_OPC}${DETERMINANTE}${palavra(BENEFICIOS)}`,
       'iu',
     ),
-    perguntaDesarma: true,
+    perguntaDesarma: false,
   },
   {
     // GARANTIA ELEITORAL — resultado prometido com certeza. "prometo que vou resolver",
@@ -172,7 +190,7 @@ const REGRAS: ReadonlyArray<{ categoria: CategoriaDeCampanha; padrao: RegExp; pe
       ].join('|'),
       'iu',
     ),
-    perguntaDesarma: true,
+    perguntaDesarma: false,
   },
 ];
 
