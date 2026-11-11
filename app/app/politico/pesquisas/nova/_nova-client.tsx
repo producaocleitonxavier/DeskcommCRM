@@ -6,6 +6,7 @@ import Link from "next/link";
 import { ArrowRight, Loader2, Check } from "lucide-react";
 
 import { CommandHero } from "@/components/politico/command-hero";
+import { BannerAvisoTse, useAvisoTse } from "@/components/politico/aviso-tse";
 import { criarPesquisa } from "@/app/actions/politico/pesquisa-actions";
 import { TEMAS_PESQUISA } from "../_temas";
 
@@ -24,6 +25,8 @@ export default function NovaPesquisaClient() {
   const [theme, setTheme] = useState("");
   const [salvando, setSalvando] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
+  // Título e descrição são lidos por quem responde — advertência TSE (Lei 9.504).
+  const avisoTse = useAvisoTse(`${title}\n${description}`);
 
   async function salvar() {
     if (!title.trim()) { setErro("Informe um título."); return; }
@@ -115,6 +118,8 @@ export default function NovaPesquisaClient() {
             ))}
           </select>
         </div>
+
+        <BannerAvisoTse aviso={avisoTse} />
 
         {erro && <p className="text-sm" style={{ color: "#E08079" }}>{erro}</p>}
 

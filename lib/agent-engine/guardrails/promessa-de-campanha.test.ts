@@ -140,6 +140,66 @@ describe('detectarPromessaDeCampanha — furos fechados (endurecimento TSE)', ()
   });
 });
 
+describe('detectarPromessaDeCampanha — bateria adversarial "nada passa" (11/nov)', () => {
+  // FURO 1 — FUTURO SINTÉTICO: o detector antigo só via a perífrase "vou conseguir".
+  it.each([
+    'Conseguirei sua aposentadoria.',
+    'Garantirei seu auxílio ainda este mês.',
+    'Arranjarei um emprego pra você.',
+    'Darei sua cesta básica na semana que vem.',
+    'Liberarei seu benefício do INSS.',
+    'Resolveremos sua vaga na creche.',
+    'Conseguiremos sua consulta.',
+  ])('futuro sintético agora é pego: %s', (frase) => {
+    expect(categorias(frase)).toContain('promessa_de_beneficio');
+  });
+
+  // FURO 2 — PROMESSA CRUA: "prometo/juro + benefício", sem verbo de entrega.
+  it.each([
+    'Prometo sua vaga na creche.',
+    'Prometo sua aposentadoria.',
+    'Juro seu auxílio.',
+    'Prometo o emprego na prefeitura.',
+  ])('promessa crua com prometo/juro é pega: %s', (frase) => {
+    expect(categorias(frase)).toContain('promessa_de_beneficio');
+  });
+
+  // FURO 3 — CAPTAÇÃO por conectivo que não é "que"/"se".
+  it.each([
+    'Vota no 15 e eu te arranjo o emprego.',
+    'Vota em mim e eu te consigo a vaga.',
+    'Vote aqui e eu te dou uma cesta básica.',
+  ])('voto + conectivo + entrega de benefício = captação: %s', (frase) => {
+    expect(categorias(frase)).toContain('captacao_de_sufragio');
+  });
+
+  // FURO 4 — NÚMERO DE URNA entre o voto e o "que" ("vota no 15 que eu te dou…"),
+  // a forma mais comum de captação, que o grupo opcional sem dígitos deixava passar.
+  it.each([
+    'Vota no 15 que eu te dou a cesta.',
+    'Vote no 1234 que eu te consigo a vaga.',
+    'Se você votar no 13 eu te arranjo o emprego.',
+  ])('número de urna não quebra a captação: %s', (frase) => {
+    expect(categorias(frase)).toContain('captacao_de_sufragio');
+  });
+
+  // CONTROLES NEGATIVOS — a rotina legítima do gabinete com os MESMOS verbos novos
+  // precisa seguir passando, senão o banner vira ruído e o assessor para de ler.
+  it.each([
+    'Darei um retorno sobre seu pedido assim que a secretaria responder.',
+    'Garantirei que sua demanda seja protocolada hoje.',
+    'Prometo que vou acompanhar seu caso de perto.',
+    'Resolveremos isso pelos canais do gabinete.',
+    'Obrigado pelo seu voto de confiança. Vou verificar sua demanda.',
+    'Conte com meu voto para aprovar o projeto na câmara.',
+    'Darei prioridade ao seu atendimento.',
+    'Não prometo sua vaga, mas registro e acompanho seu pedido.',
+    'Não vou conseguir sua aposentadoria sozinho, mas encaminho à secretaria.',
+  ])('rotina legítima do gabinete NÃO dispara: %s', (frase) => {
+    expect(detectarPromessaDeCampanha(frase).achou).toBe(false);
+  });
+});
+
 describe('detectarPromessaDeCampanha — forma do retorno', () => {
   it('texto vazio não acha nada', () => {
     expect(detectarPromessaDeCampanha('')).toEqual({ achou: false, categorias: [] });

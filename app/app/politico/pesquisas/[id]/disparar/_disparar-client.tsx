@@ -6,6 +6,7 @@ import Link from "next/link";
 import { Send, Loader2, ShieldAlert, Info, Search, X, UserPlus } from "lucide-react";
 
 import { CommandHero } from "@/components/politico/command-hero";
+import { BannerAvisoTse, useAvisoTse } from "@/components/politico/aviso-tse";
 import { prepararDisparoDaPesquisa, buscarContatosParaDisparo, type SegmentoPesquisa, type ContatoEscolha } from "@/app/actions/politico/pesquisa-disparo";
 import { VARIAVEL_LINK } from "@/lib/politico/pesquisa-link";
 
@@ -53,6 +54,8 @@ export default function DispararClient({ surveyId, titulo, numPerguntas, nomeMan
   const [precisaTse, setPrecisaTse] = useState(false);
   const [enviando, setEnviando] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
+  // Advertência TSE (Lei 9.504) sobre o texto livre da mensagem — recalcula a cada tecla.
+  const avisoTse = useAvisoTse(mensagem);
 
   function toggle<T>(arr: T[], v: T): T[] {
     return arr.includes(v) ? arr.filter((x) => x !== v) : [...arr, v];
@@ -216,6 +219,7 @@ export default function DispararClient({ surveyId, titulo, numPerguntas, nomeMan
             <div className="rounded-lg p-3 text-sm" style={{ background: "#1a472a", color: "#dcfce7", maxWidth: 420 }}>
               {mensagem.replace("{{primeiro_nome}}", "Maria").replace(VARIAVEL_LINK, "[link da pesquisa]")}
             </div>
+            <BannerAvisoTse aviso={avisoTse} />
           </div>
 
           {precisaTse && (

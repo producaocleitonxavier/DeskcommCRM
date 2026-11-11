@@ -74,6 +74,7 @@ export interface AchadoDeCampanha {
 const BENEFICIOS =
   'emprego|empregos|vaga|vagas|cesta\\s+b[aá]sica|cestas?\\s+b[aá]sicas?|aux[ií]lio(?:\\s+[a-zç]+)?|' +
   'bolsa\\s+fam[ií]lia|bolsa\\s+de\\s+estudos?|bpc|loas|aposentadoria|pens[aã]o|benef[ií]cio(?:\\s+do\\s+inss)?|' +
+  'cesta|cestas|' +
   'consulta|cirurgia|exame|exames|rem[eé]dio|rem[eé]dios|medicamento|tratamento|leito|' +
   'dinheiro|pix|grana|vale(?:\\s+[a-zç]+)?|moradia|casa\\s+popular|casa\\s+pr[oó]pria|apartamento|' +
   'lote|terreno|material\\s+de\\s+constru[cç][aã]o|cal[cç]amento|creche|matr[ií]cula|farda|uniforme|' +
@@ -118,6 +119,9 @@ const VERBOS_DE_ENTREGA =
   // gente vai conseguir". Fecha o escape de plural e 3ª pessoa que o detector
   // antigo não via (só pegava "vou conseguir" no singular).
   String.raw`(?:vou|vamos|irei|iremos|a\s+gente\s+vai)\s+(?:te\s+|lhe\s+)?(?:conseguir|arranjar|dar|garantir|liberar|providenciar|resolver|assegurar)|` +
+  // Futuro SINTÉTICO 1ª pessoa ("conseguirei/garantirei/darei sua vaga"): a forma
+  // escrita que escapava — o detector antigo só via a perífrase "vou conseguir".
+  String.raw`conseguirei|conseguiremos|arranjarei|arranjaremos|darei|daremos|garantirei|garantiremos|liberarei|liberaremos|providenciarei|providenciaremos|resolverei|resolveremos|assegurarei|asseguraremos|` +
   // Presente, "a gente consegue/arranja/…": a forma coloquial de prometer.
   String.raw`a\s+gente\s+(?:te\s+)?(?:consegue|arranja|d[aá]|garante|libera|providencia|resolve|assegura)|` +
   // Presente 1ª pessoa singular e plural.
@@ -151,11 +155,16 @@ const REGRAS: ReadonlyArray<{ categoria: CategoriaDeCampanha; padrao: RegExp; pe
         String.raw`em\s+troca\s+d[eo]\s+(?:seu\s+)?(?:${VOTO})`,
         String.raw`(?:${VOTO})\s+em\s+troca`,
         // "vote em mim QUE eu te dou/consigo…" — a conjunção liga voto à entrega.
-        String.raw`${palavra(VOTO)}\s+(?:em\s+mim|n[oa]\s+[a-zç]+|aqui)?\s*,?\s*que\s+(?:eu\s+)?(?:te\s+)?(?:${ENTREGA_CURTA})`,
+        // O [a-zç0-9] cobre o NÚMERO DE URNA ("vota no 15 que…"), forma mais comum.
+        String.raw`${palavra(VOTO)}\s+(?:em\s+mim|n[oa]\s+[a-zç0-9]+|aqui)?\s*,?\s*que\s+(?:eu\s+)?(?:te\s+)?(?:${ENTREGA_CURTA})`,
         // "se você votar em mim, eu te arranjo…" — voto condicional + entrega até 40 chars.
-        String.raw`(?:se\s+)?(?:voc[eê]|vc)\s+votar?\s+(?:em\s+mim|n[oa]\s+[a-zç]+)[,\s].{0,40}?(?:${ENTREGA_CURTA})`,
+        String.raw`(?:se\s+)?(?:voc[eê]|vc)\s+votar?\s+(?:em\s+mim|n[oa]\s+[a-zç0-9]+)[,\s].{0,40}?(?:${ENTREGA_CURTA})`,
         // "eu te dou um emprego se você votar…" — entrega + voto condicional até 40 chars.
         String.raw`(?:${ENTREGA_CURTA}).{0,40}?(?:se|caso)\s+(?:voc[eê]|vc)\s+votar`,
+        // "vota no 15 E eu te arranjo o emprego" — voto seguido, por QUALQUER conectivo
+        // curto (não só "que"/"se"), de uma entrega de BENEFÍCIO CONCRETO. Exigir o
+        // benefício mantém o falso-positivo baixo (voto + verbo sozinhos não bastam).
+        String.raw`${palavra(VOTO)}.{0,30}?(?:${ENTREGA_CURTA})\s+${ADVERBIO_OPC}${DETERMINANTE}${palavra(BENEFICIOS)}`,
       ].join('|'),
       'iu',
     ),
@@ -169,7 +178,12 @@ const REGRAS: ReadonlyArray<{ categoria: CategoriaDeCampanha; padrao: RegExp; pe
     // usa um verbo de ENTREGA (os verbos de processo, encaminhar/registrar, continuam fora).
     categoria: 'promessa_de_beneficio',
     padrao: new RegExp(
-      String.raw`${NAO_NEGADO}${palavra(VERBOS_DE_ENTREGA)}\s+${ADVERBIO_OPC}${DETERMINANTE}${palavra(BENEFICIOS)}`,
+      [
+        String.raw`${NAO_NEGADO}${palavra(VERBOS_DE_ENTREGA)}\s+${ADVERBIO_OPC}${DETERMINANTE}${palavra(BENEFICIOS)}`,
+        // "prometo sua vaga", "juro seu auxílio" — promessa CRUA de benefício, sem o
+        // verbo de entrega. ("garanto" já cai pelo verbo de entrega.) A negação desarma.
+        String.raw`${NAO_NEGADO}${palavra(MARCADOR_PROMESSA)}\s+${ADVERBIO_OPC}${DETERMINANTE}${palavra(BENEFICIOS)}`,
+      ].join('|'),
       'iu',
     ),
     perguntaDesarma: false,

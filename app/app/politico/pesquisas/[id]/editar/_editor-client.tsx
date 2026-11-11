@@ -7,7 +7,7 @@
  * pesquisa. Temas GENÉRICOS (servem qualquer político), nome do mandato DINÂMICO,
  * guardrail TSE visível, salvamento por server action.
  */
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import {
@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 
 import { CommandHero } from "@/components/politico/command-hero";
+import { BannerAvisoTse, useAvisoTse } from "@/components/politico/aviso-tse";
 import { salvarPerguntas, type PerguntaInput } from "@/app/actions/politico/pesquisa-actions";
 import { TEMAS_PESQUISA, temaPesquisaDe } from "../../_temas";
 
@@ -115,6 +116,13 @@ export default function EditorClient({
   const [sugTema, setSugTema] = useState(temaPesquisa);
   const [salvando, setSalvando] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
+
+  // Advertência TSE sobre o texto autoral das perguntas + opções (lido pelo cidadão).
+  const textoDasPerguntas = useMemo(
+    () => perguntas.map((p) => [p.question, ...p.options].join("\n")).join("\n"),
+    [perguntas],
+  );
+  const avisoTse = useAvisoTse(textoDasPerguntas);
 
   const SUG = sugestoes(nomeMandato);
   const temaCabecalho = temaPesquisaDe(temaPesquisa);
@@ -308,6 +316,8 @@ export default function EditorClient({
           )}
         </div>
       </div>
+
+      <BannerAvisoTse aviso={avisoTse} />
 
       {/* Salvar */}
       <div className="flex items-center gap-2">

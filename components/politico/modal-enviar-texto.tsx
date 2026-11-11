@@ -10,29 +10,10 @@
  * mesmo padrão, para TEXTO: pré-preenche a sugestão, o assessor edita (quebra
  * parágrafo, encurta, ajusta o tom) e só então envia.
  */
-import { useMemo, useState, useTransition, type CSSProperties, type ReactNode } from "react";
-import { Loader2, X, Send, Check, AlertTriangle } from "lucide-react";
+import { useState, useTransition, type CSSProperties, type ReactNode } from "react";
+import { Loader2, X, Send, Check } from "lucide-react";
 
-import { detectarPromessaDeCampanha, type CategoriaDeCampanha } from "@/lib/agent-engine/guardrails/promessa-de-campanha";
-
-/** Traduz as categorias do detector para uma frase que o assessor entende na hora. */
-const FRASE_DA_CATEGORIA: Record<CategoriaDeCampanha, string> = {
-  captacao_de_sufragio: "parece ligar voto ou apoio a um favor",
-  promessa_de_beneficio: "parece prometer conseguir um benefício pessoal",
-  garantia_eleitoral: "parece garantir um resultado de campanha",
-};
-
-/**
- * Aviso de possível promessa de campanha (Lei 9.504/41-A) para o texto que o
- * assessor vai enviar. É ADVERTÊNCIA, não trava: o humano lê o contexto e decide
- * (ajusta ou envia assim mesmo). O bloqueio duro é só no automático da IA.
- */
-function avisoDePromessa(texto: string): string | null {
-  const achado = detectarPromessaDeCampanha(texto);
-  if (!achado.achou) return null;
-  const partes = achado.categorias.map((c) => FRASE_DA_CATEGORIA[c]);
-  return `Atenção (Lei 9.504): esse texto ${partes.join(" e ")}. Reveja — ou, se não for o caso, envie assim mesmo.`;
-}
+import { BannerAvisoTse, useAvisoTse } from "@/components/politico/aviso-tse";
 
 export interface ModalEnviarTextoProps {
   /** Conteúdo do botão que abre o modal (ícone + rótulo). */
@@ -72,7 +53,7 @@ export function ModalEnviarTexto({
   const [msg, setMsg] = useState<{ tipo: "ok" | "erro"; texto: string } | null>(null);
   const [pending, start] = useTransition();
   // Advertência TSE recalculada a cada edição do texto (detector puro, no cliente).
-  const avisoTse = useMemo(() => avisoDePromessa(texto), [texto]);
+  const avisoTse = useAvisoTse(texto);
 
   function abrir() {
     // Reabrir sempre parte da sugestão fresca (demanda pode ter mudado).
@@ -149,16 +130,7 @@ export function ModalEnviarTexto({
               </p>
             )}
 
-            {avisoTse && (
-              <p
-                className="mt-2 flex items-start gap-1.5 rounded-lg px-3 py-2 text-xs font-semibold"
-                style={{ background: "rgba(239,68,68,0.12)", color: "#B91C1C" }}
-                role="status"
-              >
-                <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden />
-                <span>{avisoTse}</span>
-              </p>
-            )}
+            <BannerAvisoTse aviso={avisoTse} className="mt-2" />
 
             {msg && (
               <div

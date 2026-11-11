@@ -11,6 +11,7 @@
 import { useState } from "react";
 import { Camera, Check, Copy, Download, Loader2, Sparkles, Upload } from "lucide-react";
 
+import { BannerAvisoTse, useAvisoTse } from "@/components/politico/aviso-tse";
 import { listarAnexosDemanda } from "@/app/actions/politico/gabinete-actions";
 import { uploadAnexoDemanda, ANEXO_MAX_BYTES } from "@/lib/politico/anexos-upload";
 import { gerarLegendaVitoria } from "@/app/actions/politico/vitoria-actions";
@@ -35,6 +36,8 @@ export default function GeradorVitoriaClient({
   const [enviando, setEnviando] = useState(false);
   const [copiado, setCopiado] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
+  // A legenda vai a público (Stories) — advertência TSE (Lei 9.504) ao vivo.
+  const avisoTse = useAvisoTse(legenda);
 
   const antes = fotos.find((f) => f.id === antesId) ?? null;
   const depois = fotos.find((f) => f.id === depoisId) ?? null;
@@ -168,6 +171,7 @@ export default function GeradorVitoriaClient({
           </button>
         </div>
         <textarea value={legenda} onChange={(e) => setLegenda(e.target.value)} rows={4} placeholder={`Ex.: ${assunto} — resolvido junto ao órgão responsável. Trabalho do gabinete pela comunidade.`} className="wr-input w-full" />
+        <BannerAvisoTse aviso={avisoTse} />
         <button type="button" onClick={copiarLegenda} disabled={!legenda} className="wr-btn inline-flex items-center gap-2 disabled:opacity-60">
           {copiado ? <Check className="h-4 w-4" aria-hidden /> : <Copy className="h-4 w-4" aria-hidden />}
           {copiado ? "Copiada!" : "Copiar legenda"}
