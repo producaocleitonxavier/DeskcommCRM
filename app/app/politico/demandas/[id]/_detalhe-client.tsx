@@ -9,7 +9,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, Clock, Flag, MessageCircle, Mic, Pencil, Printer, Sparkles, Trash2, X } from "lucide-react";
+import { ArrowLeft, Clock, Flag, Heart, MessageCircle, Mic, Pencil, Printer, Sparkles, Trash2, X } from "lucide-react";
 import { BotaoRecadoVoz } from "@/components/politico/botao-recado-voz";
 import { CommandHero } from "@/components/politico/command-hero";
 
@@ -17,6 +17,8 @@ import { gerarEncaminhamento } from "@/app/actions/politico/gerarEncaminhamento"
 import { gerarOficioDemanda } from "@/app/actions/politico/gerarOficio";
 import { avisarCidadao, avisarResolucaoAutomatica } from "@/app/actions/politico/avisarCidadao";
 import { avisarCobrancaAoCidadao } from "@/app/actions/politico/avisarCobranca";
+import { avisarCuidadoAoCidadao } from "@/app/actions/politico/avisarCuidado";
+import { cabeCuidado, ehDemandaSaude } from "@/lib/politico/cuidado-saude";
 import { atualizarRegistro, excluirRegistro, registrarEventoDemanda, sincronizarVisitaNaAgenda } from "@/app/actions/politico/gabinete-actions";
 import { textoCobranca, demandaVencidaSemResposta } from "@/lib/politico/demanda-cobranca";
 import DemandaAnexos from "@/components/politico/demanda-anexos";
@@ -150,6 +152,7 @@ export default function DetalheDemandaClient({ demanda, assessores, eventos, voz
   const [avisando, setAvisando] = useState(false);
   const [avisoMsg, setAvisoMsg] = useState<string | null>(null);
   const [cobrando, setCobrando] = useState(false);
+  const [cuidando, setCuidando] = useState(false);
   const [excluindo, setExcluindo] = useState(false);
   const [anexoToken, setAnexoToken] = useState(0);
   const [erro, setErro] = useState<string | null>(null);
@@ -420,6 +423,42 @@ export default function DetalheDemandaClient({ demanda, assessores, eventos, voz
             style={{ background: "rgba(245,158,11,0.16)", color: "#FBBF24", borderColor: "rgba(245,158,11,0.45)" }}
           >
             <Clock className="h-4 w-4" aria-hidden /> {cobrando ? "Enviando…" : "Avisar que estamos cobrando"}
+          </button>
+        )}
+        {/* Follow-up afetivo (o OURO): depois de RESOLVER, voltar a falar pra
+            saber como a pessoa está. Modo assistido — o assessor confirma.
+            Demanda de saúde ganha o aviso "sensível". */}
+        {cabeCuidado({ estado: d.estado, fechadaEm: d.fechada_em }) && (
+          <button
+            type="button"
+            disabled={cuidando || !d.contacts?.phone_number}
+            title={
+              !d.contacts?.phone_number
+                ? "O cidadão não tem telefone cadastrado"
+                : ehDemandaSaude({ assunto: d.assunto, pol_tipo: d.pol_tipo, pol_orgao_destino: d.pol_orgao_destino })
+                  ? "⚠️ Saúde = assunto sensível. Revise com carinho antes de enviar."
+                  : "Voltar a falar com o cidadão pra saber como ele está"
+            }
+            onClick={async () => {
+              const saude = ehDemandaSaude({ assunto: d.assunto, pol_tipo: d.pol_tipo, pol_orgao_destino: d.pol_orgao_destino });
+              const aviso = saude
+                ? "Mandar um CUIDADO por WhatsApp pra saber como a pessoa está se recuperando?\n\n⚠️ É um assunto de saúde (sensível) — a mensagem não cita diagnóstico, mas confira o tom."
+                : "Voltar a falar com o cidadão por WhatsApp pra saber como ele está?";
+              if (!window.confirm(aviso)) return;
+              setErro(null);
+              setAvisoMsg(null);
+              setCuidando(true);
+              const res = await avisarCuidadoAoCidadao(d.id);
+              setCuidando(false);
+              if (res.ok) {
+                setAvisoMsg("Cuidado enviado — o gabinete voltou a falar com a pessoa. 🙏");
+                router.refresh();
+              } else setErro(res.erro);
+            }}
+            className="wr-btn inline-flex items-center gap-1.5 font-semibold disabled:opacity-50"
+            style={{ background: "rgba(236,72,153,0.16)", color: "#F9A8D4", borderColor: "rgba(236,72,153,0.45)" }}
+          >
+            <Heart className="h-4 w-4" aria-hidden /> {cuidando ? "Enviando…" : "Mandar um cuidado"}
           </button>
         )}
         {vozArmada && d.contact_id && (
