@@ -495,13 +495,13 @@ function GraficoPorHora({ porHora, claro }: { porHora: number[]; pico: number | 
               return (
                 <div
                   key={t.nome}
-                  className="min-w-0 flex-1 px-1 pt-2 text-center"
+                  className="min-w-0 flex-1 pt-2 text-center sm:px-1"
                   style={{
                     borderTop: `3px solid ${cheio ? corForte : "color-mix(in srgb, var(--color-text) 12%, transparent)"}`,
                     marginLeft: i === 0 ? 0 : 4,
                   }}
                 >
-                  <div className="truncate text-[11px] font-semibold sm:text-xs" style={{ color: cheio ? "var(--color-text)" : "var(--color-text-muted)" }}>{t.nome}</div>
+                  <div className="whitespace-nowrap text-[10px] font-semibold tracking-tight sm:text-xs sm:tracking-normal" style={{ color: cheio ? "var(--color-text)" : "var(--color-text-muted)" }}>{t.nome}</div>
                   <div className="text-lg font-bold tabular-nums leading-tight sm:text-xl" style={{ color: cheio ? corForte : "var(--color-text)" }}>{t.fatia}%</div>
                   <div className="whitespace-nowrap text-[10px] tabular-nums sm:text-[11px]" style={{ color: "var(--color-text-subtle)" }}>
                     {t.qtd} <span className="hidden sm:inline">{t.qtd === 1 ? "mensagem" : "mensagens"}</span><span className="sm:hidden">msg</span>
