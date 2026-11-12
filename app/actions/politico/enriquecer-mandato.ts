@@ -19,6 +19,7 @@ import { CHAVE_GABINETE } from "@/lib/politico/aviso-de-resolucao";
 import { CHAVE_MANDATO, CHAVE_MANDATO_GERADO } from "@/lib/politico/setup-do-mandato";
 import { pesquisarMandato, achadoSchema, type ResultadoPesquisa } from "@/lib/politico/pesquisar-mandato";
 import type { DadosDoMandato } from "@/lib/politico/gerar-conhecimento";
+import { acharAgenteDoMandato } from "@/lib/politico/provisionar-agente";
 
 export async function pesquisarMandatoAtual(): Promise<ResultadoPesquisa> {
   const user = await loadAuthUser();
@@ -132,7 +133,13 @@ export async function aplicarEnriquecimento(aprovadosRaw: unknown): Promise<Resu
             p_organization_id: org.orgId,
           } as never);
           // Anexa ao agente do mandato — versão mais recente (mesmo rascunho).
-          const agenteId = gerado.agente_id ?? null;
+          const agenteId = await acharAgenteDoMandato(admin, org.orgId, gerado.agente_id);
+          if (!agenteId) {
+            logger.warn("aplicar-enriquecimento: nenhum agente do mandato para anexar o material", {
+              organization_id: org.orgId,
+              knowledge_source_id: ksId,
+            });
+          }
           if (agenteId) {
             const { data: ver } = await admin
               .from("ai_agent_versions")

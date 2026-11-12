@@ -119,8 +119,58 @@ async function escolherModelo(admin: SupabaseClient, orgId: string): Promise<Mod
   return null;
 }
 
+/**
+ * Acha o agente do mandato desta organização. Primeiro pelo id salvo em
+ * `settings.gabinete.mandato_gerado.agente_id`; se ele faltar ou apontar para um
+ * agente arquivado, RECUPERA pelo rastro que o provisionamento deixa: a fonte de
+ * conhecimento com `origem = mandato_gerado` → a versão que a consulta → o agente.
+ *
+ * Existe porque o id pode não ter sido gravado (provisionamento interrompido
+ * depois de criar o agente): sem esta recuperação, repetir o assistente criava um
+ * SEGUNDO agente e o enriquecimento aprovado não era anexado a nenhum.
+ */
+export async function acharAgenteDoMandato(
+  admin: SupabaseClient,
+  orgId: string,
+  agenteIdSalvo: string | null | undefined,
+): Promise<string | null> {
+  if (agenteIdSalvo) {
+    const { data } = await admin
+      .from("ai_agents")
+      .select("id")
+      .eq("organization_id", orgId)
+      .eq("id", agenteIdSalvo)
+      .is("archived_at", null)
+      .maybeSingle();
+    if (data?.id) return data.id as string;
+  }
+  const { data: fontes } = await admin
+    .from("ai_knowledge_sources")
+    .select("id")
+    .eq("organization_id", orgId)
+    .eq("source_metadata->>origem", "mandato_gerado");
+  for (const fonte of fontes ?? []) {
+    const { data: versoes } = await admin
+      .from("ai_agent_versions")
+      .select("agent_id")
+      .eq("organization_id", orgId)
+      .contains("knowledge_source_ids", [fonte.id as string]);
+    for (const v of versoes ?? []) {
+      const { data: agente } = await admin
+        .from("ai_agents")
+        .select("id")
+        .eq("organization_id", orgId)
+        .eq("id", v.agent_id as string)
+        .is("archived_at", null)
+        .maybeSingle();
+      if (agente?.id) return agente.id as string;
+    }
+  }
+  return null;
+}
+
 /** Arma um teto de IA padrão (modo "avisar") quando o gabinete ainda não tem um. No-op se já existe. */
-async function armarTetoPadrao(admin: SupabaseClient, orgId: string): Promise<void> {
+export async function armarTetoPadrao(admin: SupabaseClient, orgId: string): Promise<void> {
   try {
     const { data: existe } = await admin
       .from("ai_budgets")
@@ -128,13 +178,21 @@ async function armarTetoPadrao(admin: SupabaseClient, orgId: string): Promise<vo
       .eq("organization_id", orgId)
       .maybeSingle();
     if (existe) return; // respeita um teto que o admin já configurou
-    await admin.from("ai_budgets").insert({
+    const { error } = await admin.from("ai_budgets").insert({
       organization_id: orgId,
       monthly_limit_cents: TETO_PADRAO_USD_CENTS,
       enforcement_mode: "avisar",
       alarm_threshold_pct: 80,
       enforcement_effective_at: new Date().toISOString(),
     });
+    // O cliente do Supabase NÃO lança em erro de insert — sem conferir aqui, o
+    // teto podia falhar em silêncio e o gabinete ficar sem proteção sem ninguém saber.
+    if (error) {
+      logger.warn("provisionar-agente: armar teto padrão recusado pelo banco (não bloqueia)", {
+        organization_id: orgId,
+        causa: error.message,
+      });
+    }
   } catch (err) {
     // Não fatal: o teto é defesa em profundidade, não pode impedir o provisionamento.
     logger.warn("provisionar-agente: armar teto padrão falhou (não bloqueia)", {

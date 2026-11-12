@@ -30,7 +30,7 @@ import { logger } from "@/lib/logger";
 import { CHAVE_GABINETE } from "@/lib/politico/aviso-de-resolucao";
 import { CHAVE_SETUP_COMPLETO, CHAVE_SETUP_ADIADO, CHAVE_MANDATO, CHAVE_MANDATO_GERADO } from "@/lib/politico/setup-do-mandato";
 import { montarConhecimentoDoMandato, montarPromptDoMandato, type DadosDoMandato } from "@/lib/politico/gerar-conhecimento";
-import { provisionarAgenteDoMandato } from "@/lib/politico/provisionar-agente";
+import { acharAgenteDoMandato, armarTetoPadrao, provisionarAgenteDoMandato } from "@/lib/politico/provisionar-agente";
 
 const servicoSchema = z.object({
   nome: z.string().trim().max(120),
@@ -140,7 +140,9 @@ export async function salvarSetupDoMandato(entrada: unknown): Promise<ResultadoS
   // Preserva o id de um agente já provisionado (idempotência: re-rodar o
   // assistente não cria um agente novo).
   const geradoAnterior = (gabinete[CHAVE_MANDATO_GERADO] ?? null) as { agente_id?: string | null } | null;
-  const agenteExistente = geradoAnterior?.agente_id ?? null;
+  // Pelo id salvo OU pelo rastro do provisionamento (auto-cura quando o id não
+  // chegou a ser gravado) — ver `acharAgenteDoMandato`.
+  const agenteExistente = await acharAgenteDoMandato(admin, org.orgId, geradoAnterior?.agente_id);
   const gerado = {
     conhecimento: montarConhecimentoDoMandato(dados),
     prompt: montarPromptDoMandato(dados),
@@ -164,7 +166,11 @@ export async function salvarSetupDoMandato(entrada: unknown): Promise<ResultadoS
   // Provisiona o agente do mandato (publica em MODO ASSISTIDO) quando ainda não
   // há um. NÃO FATAL: o assistente conclui mesmo se o provisionamento falhar — o
   // conteúdo gerado fica salvo e a tela do agente segue como caminho manual.
-  if (!agenteExistente) {
+  if (agenteExistente) {
+    // Agente já existe: só garante o teto padrão (pode não ter sido armado se o
+    // provisionamento original foi interrompido). No-op quando já há teto.
+    await armarTetoPadrao(admin, org.orgId);
+  } else {
     try {
       const prov = await provisionarAgenteDoMandato(admin, {
         orgId: org.orgId,
