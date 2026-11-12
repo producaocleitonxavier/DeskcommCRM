@@ -55,28 +55,29 @@ function mdParaHtml(texto: string): string {
   return html;
 }
 const CSS_IMPRESSAO = `
-*{box-sizing:border-box}
-body{margin:0;font-family:-apple-system,Segoe UI,Roboto,Arial,sans-serif;color:#1a1a1a;background:#fff;line-height:1.5}
+*{box-sizing:border-box;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+body{margin:0;font-family:-apple-system,Segoe UI,Roboto,Arial,sans-serif;color:#263445;background:#fff;line-height:1.5}
 .doc{max-width:720px;margin:0 auto;padding:32px 28px}
-.head{border-bottom:2px solid #3d5a1f;padding-bottom:12px;margin-bottom:18px}
+.head{background:#14233A;border-top:5px solid #C4E64A;border-radius:10px;padding:18px 20px 16px;margin-bottom:18px}
 .brandrow{display:flex;align-items:center;gap:9px;margin-bottom:3px}
 .logo{height:30px;width:auto}
-.brand{font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:#5C7F23;font-weight:700}
-h1{font-size:22px;margin:4px 0 2px}
-.meta{font-size:13px;color:#666}
-h2{font-size:15px;color:#3d5a1f;margin:20px 0 6px;border-bottom:1px solid #e3e3df;padding-bottom:3px}
+.brand{font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:#D7F36A;font-weight:700}
+h1{font-size:23px;margin:6px 0 3px;color:#fff}
+.meta{font-size:12.5px;color:#B9C7DA}
+h2{font-size:15px;color:#14233A;margin:20px 0 6px;border-left:4px solid #C4E64A;padding:1px 0 1px 9px}
 h3{font-size:14px;margin:14px 0 4px}
 p{margin:6px 0;font-size:13.5px}
 ul{margin:6px 0;padding-left:20px}li{font-size:13.5px;margin:3px 0}
-.batalha{border:1px solid #d9b3b0;background:#fbf4f3;border-radius:8px;padding:12px 14px;margin:14px 0}
+.batalha{border:1px solid #DDE4EE;background:#F5F8FC;border-radius:10px;padding:14px 16px;margin:14px 0}
 .batalha h3{margin:0 0 2px;font-size:14px}
 .batalha .sub{font-size:12px;color:#555;margin:0 0 8px}
 .advrow{display:flex;justify-content:space-between;font-size:13.5px;padding:2px 0}
-.advrow.me{background:#f3f8e4;border-radius:6px;padding:3px 7px;margin-bottom:3px}
-.advrow .r.me{color:#17784f}
+.advrow.me{background:#14233A;color:#fff;border-radius:6px;padding:5px 9px;margin-bottom:4px}
+.advrow.me .r small{color:#B9C7DA}
+.advrow .r.me{color:#D7F36A}
 .advrow .r{font-weight:700;color:#A3302A;white-space:nowrap}
 .advrow .r small{color:#777;font-weight:400}
-.foot{margin-top:20px;padding-top:10px;border-top:1px solid #e3e3df;font-size:10.5px;color:#777}
+.foot{margin-top:20px;padding-top:10px;border-top:2px solid #14233A;font-size:10.5px;color:#5B6B80}
 @media print{.doc{max-width:none;padding:0 4px}@page{margin:14mm}}
 `;
 
@@ -144,7 +145,7 @@ export default function BriefingClient({ eleicoes, municipios }: { eleicoes: Ele
       ? `<div class="batalha">` +
         `<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;border-bottom:1px solid rgba(163,48,42,0.18);padding-bottom:8px;margin-bottom:10px;">` +
           `<div><div style="font-weight:700;font-size:13px;color:#16181D;">${escHtml(cand.nomeUrna)}${statusBadge}</div><div style="font-size:10px;color:#6b7280;margin-top:2px;">Total de votos em ${escHtml(munNome)}</div></div>` +
-          `<div style="text-align:right;white-space:nowrap;"><span style="font-size:26px;font-weight:800;color:#17784F;">${meuMunicipio.toLocaleString("pt-BR")}</span> <span style="font-size:10px;color:#6b7280;">votos</span></div>` +
+          `<div style="text-align:right;white-space:nowrap;"><span style="font-size:30px;font-weight:800;color:#14233A;">${meuMunicipio.toLocaleString("pt-BR")}</span> <span style="font-size:10px;color:#6b7280;">votos</span></div>` +
         `</div>` +
         `<h3>&#9876;&#65039; A batalha &mdash; quem disputa seus redutos</h3>` +
         `<p class="sub">Nos seus 5 maiores redutos${redutos ? ` (${escHtml(redutos)})` : ""} &mdash; votos no reduto / no munic&iacute;pio.</p>` +
@@ -246,7 +247,7 @@ export default function BriefingClient({ eleicoes, municipios }: { eleicoes: Ele
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img src="/gipchat-elmo.png" alt="GIP" style={{ height: 28, width: "auto" }} />
               <div>
-                <p className="text-[10px] font-bold uppercase tracking-wider" style={{ color: "#5C7F23" }}>
+                <p className="text-[10px] font-bold uppercase tracking-wider" style={{ color: "var(--accent-ink, var(--color-accent))" }}>
                   GIP · Guerrilheiros Inteligência Política
                 </p>
                 <h2 className="font-heading text-lg font-bold leading-tight" style={{ color: "var(--color-text)" }}>
@@ -280,7 +281,7 @@ export default function BriefingClient({ eleicoes, municipios }: { eleicoes: Ele
                   <p className="mt-0.5 text-[11px]" style={{ color: "var(--color-text-muted)" }}>Total de votos em {munNome}</p>
                 </div>
                 <div className="flex items-baseline gap-1.5">
-                  <span className="font-heading text-4xl font-black leading-none tabular-nums" style={{ color: "#17784F" }}>{meuMunicipio.toLocaleString("pt-BR")}</span>
+                  <span className="font-heading text-5xl font-black leading-none tabular-nums" style={{ color: "var(--accent-ink, var(--color-accent))" }}>{meuMunicipio.toLocaleString("pt-BR")}</span>
                   <span className="text-xs font-semibold" style={{ color: "var(--color-text-subtle)" }}>votos</span>
                 </div>
               </div>
@@ -296,7 +297,7 @@ export default function BriefingClient({ eleicoes, municipios }: { eleicoes: Ele
                   <span className="min-w-0 flex-1 truncate font-bold" style={{ color: "var(--color-text)" }}>
                     {cand?.nomeUrna} <span className="font-normal" style={{ color: "var(--color-text-muted)" }}>· você</span>
                   </span>
-                  <span className="shrink-0 tabular-nums font-bold" style={{ color: "#17784F" }}>{meuReduto.toLocaleString("pt-BR")}</span>
+                  <span className="shrink-0 tabular-nums font-bold" style={{ color: "var(--accent-ink, var(--color-accent))" }}>{meuReduto.toLocaleString("pt-BR")}</span>
                   <span className="w-24 shrink-0 text-right text-xs tabular-nums" style={{ color: "var(--color-text-subtle)" }}>{meuMunicipio.toLocaleString("pt-BR")} no mun.</span>
                 </div>
                 {adv.map((a, i) => (
@@ -320,7 +321,7 @@ export default function BriefingClient({ eleicoes, municipios }: { eleicoes: Ele
                         </span>
                       ) : null}
                     </span>
-                    <span className="shrink-0 tabular-nums font-bold" style={{ color: a.votosReduto > meuReduto ? "#A3302A" : "var(--color-text)" }}>{a.votosReduto.toLocaleString("pt-BR")}</span>
+                    <span className="shrink-0 tabular-nums font-bold" style={{ color: a.votosReduto > meuReduto ? "#EF4444" : "var(--color-text)" }}>{a.votosReduto.toLocaleString("pt-BR")}</span>
                     <span className="w-24 shrink-0 text-right text-xs tabular-nums" style={{ color: "var(--color-text-subtle)" }}>{a.votosMunicipio.toLocaleString("pt-BR")} no mun.</span>
                   </div>
                 ))}

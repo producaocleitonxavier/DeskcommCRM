@@ -108,22 +108,23 @@ export default function BoletimClient({
       : `<p class="muted">Nenhuma demanda fora do prazo.</p>`;
     const html = `<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><title>Boletim Semanal — ${esc(lugar)}</title>
 <style>
-  *{box-sizing:border-box} body{font-family:-apple-system,Segoe UI,Roboto,Arial,sans-serif;color:#1a1d23;margin:0;padding:32px;max-width:820px;margin:0 auto}
+  *{box-sizing:border-box;-webkit-print-color-adjust:exact;print-color-adjust:exact} body{font-family:-apple-system,Segoe UI,Roboto,Arial,sans-serif;color:#263445;margin:0;padding:32px;max-width:820px;margin:0 auto}
+  .head{background:#14233A;border-top:5px solid #C4E64A;border-radius:10px;padding:18px 20px 16px;margin-bottom:18px}
   .brandrow{display:flex;align-items:center;gap:8px;margin-bottom:4px}
-  .logo{height:26px;width:auto} .brand{font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#5C7F23}
-  h1{font-size:22px;margin:6px 0 2px} .meta{font-size:12px;color:#6b7280;margin-bottom:16px}
-  .resumo{background:#F3F7E8;border:1px solid #D7E6A8;border-radius:12px;padding:14px 16px;font-size:14px;line-height:1.6;margin-bottom:18px}
-  h2{font-size:13px;text-transform:uppercase;letter-spacing:.06em;color:#6b7280;margin:18px 0 8px;border-bottom:1px solid #e5e7eb;padding-bottom:4px}
+  .logo{height:26px;width:auto} .brand{font-size:11px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:#D7F36A}
+  h1{font-size:23px;margin:6px 0 3px;color:#fff} .meta{font-size:12px;color:#B9C7DA}
+  .resumo{background:#EEF3F9;border-left:4px solid #C4E64A;border-radius:8px;padding:14px 16px;font-size:14px;line-height:1.6;margin-bottom:18px}
+  h2{font-size:12.5px;text-transform:uppercase;letter-spacing:.07em;color:#14233A;margin:18px 0 8px;border-left:4px solid #C4E64A;padding:1px 0 1px 8px}
   .grid{display:grid;grid-template-columns:1fr 1fr;gap:18px}
   .row{display:flex;justify-content:space-between;gap:10px;font-size:13px;padding:3px 0;border-bottom:1px solid #f1f2f4}
-  .n{font-weight:700;white-space:nowrap} .muted{color:#9aa0ae;font-size:12px}
+  .n{font-weight:700;white-space:nowrap;color:#14233A} .muted{color:#9aa0ae;font-size:12px}
   ul{margin:4px 0;padding-left:18px} li{font-size:12.5px;line-height:1.6;margin-bottom:3px}
   .sent{display:flex;align-items:baseline;gap:8px} .idx{font-size:34px;font-weight:800}
-  .foot{margin-top:22px;font-size:10px;color:#9aa0ae;border-top:1px solid #eee;padding-top:8px;line-height:1.5}
+  .foot{margin-top:22px;font-size:10px;color:#5B6B80;border-top:2px solid #14233A;padding-top:8px;line-height:1.5}
 </style></head><body>
-  <div class="brandrow"><img class="logo" src="${origin}/gipchat-elmo.png" alt="GIP"/><div class="brand">GIP &middot; Guerrilheiros Intelig&ecirc;ncia Pol&iacute;tica</div></div>
+  <div class="head"><div class="brandrow"><img class="logo" src="${origin}/gipchat-elmo.png" alt="GIP"/><div class="brand">GIP &middot; Guerrilheiros Intelig&ecirc;ncia Pol&iacute;tica</div></div>
   <h1>Boletim Semanal do Mandato</h1>
-  <div class="meta">${esc(escopoRotulo)} &middot; ${fmtData(bol.periodoDe)} a ${fmtData(bol.periodoAte)}${mandatoNome ? ` &middot; ${esc(mandatoNome)}` : ""}</div>
+  <div class="meta">${esc(escopoRotulo)} &middot; ${fmtData(bol.periodoDe)} a ${fmtData(bol.periodoAte)}${mandatoNome ? ` &middot; ${esc(mandatoNome)}` : ""}</div></div>
   ${bol.resumoIa ? `<div class="resumo">${esc(bol.resumoIa)}</div>` : ""}
   <div class="grid">
     <div><h2>O que o povo pediu (${bol.doresNovas} novas, ${bol.doresResolvidas} resolvidas)</h2>${doresHtml}</div>
