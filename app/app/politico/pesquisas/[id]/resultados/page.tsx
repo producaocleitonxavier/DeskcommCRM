@@ -155,7 +155,7 @@ export default async function ResultadosPage({ params }: { params: Promise<{ id:
             ]}
             pesos={[4, 3, 1, 1]}
             headers={["Pergunta", "Opção", "Votos", "%"]}
-            rows={linhasCsv}
+            rows={linhasCsv.map((l) => [l[0], l[1], l[2], `${l[3] ?? 0}%`])}
           />
         </div>
       )}
