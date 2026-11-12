@@ -1,7 +1,8 @@
 /**
  * Envio real de DMs via Instagram Messaging API (Graph API).
  *
- * Endpoint: POST /{page_id}/messages
+ * Endpoint: POST /{page_id}/messages (login do Facebook com Página) ou
+ *           POST /{ig_user_id}/messages em graph.instagram.com (login do Instagram).
  *
  * ── Requisitos ────────────────────────────────────────────────────────────────
  * - Conta Instagram Business conectada a uma Facebook Page
@@ -17,7 +18,7 @@
  * Ref: https://developers.facebook.com/docs/instagram-platform/instagram-api-with-instagram-login/messaging-api
  */
 
-import { graphBaseUrl } from "@/lib/channels/meta/graph-base";
+import { igApiBase, igRemetenteId } from "./api-base";
 import { logger } from "@/lib/logger";
 import type { IgCredentials } from "./credentials";
 
@@ -53,17 +54,20 @@ export interface IgDmResult {
 /**
  * Envia uma DM para o Instagram user via Graph API.
  *
- * Usa o Page ID (não o Business Account ID) como remetente, porque a
- * Messaging API do Instagram é operada pela Facebook Page vinculada.
+ * O remetente e o host dependem de como a conta foi conectada — ver `api-base.ts`.
  */
 export async function enviarDmInstagram(
   creds: IgCredentials,
   req: IgDmRequest,
 ): Promise<IgDmResult> {
-  if (!creds.pageId) {
+  // Sem Página = conta conectada por Login do Instagram: envia pela própria conta,
+  // na API do Instagram (ver `api-base.ts`). Só falta remetente quando não há nem
+  // Página nem id da conta — credencial quebrada.
+  const remetente = igRemetenteId(creds);
+  if (!remetente) {
     return {
       ok: false,
-      error: "ig_page_id_ausente: DM requer o Page ID da Facebook Page vinculada",
+      error: "ig_remetente_ausente: a conexão não tem nem Página nem id da conta do Instagram",
     };
   }
 
@@ -74,7 +78,7 @@ export async function enviarDmInstagram(
     };
   }
 
-  const url = `${graphBaseUrl(creds.graphVersion)}/${creds.pageId}/messages`;
+  const url = `${igApiBase(creds)}/${remetente}/messages`;
 
   // Instagram Messaging API: text e attachment são mutuamente exclusivos
   // dentro do objeto `message`. Para enviar ambos, são duas chamadas.

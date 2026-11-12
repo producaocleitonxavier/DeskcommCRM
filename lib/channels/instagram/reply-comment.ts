@@ -11,7 +11,7 @@
  * Ref: https://developers.facebook.com/docs/instagram-platform/instagram-api-with-instagram-login/content-publishing#replies
  */
 
-import { graphBaseUrl } from "@/lib/channels/meta/graph-base";
+import { igApiBase } from "./api-base";
 import { logger } from "@/lib/logger";
 import type { IgCredentials } from "./credentials";
 
@@ -39,7 +39,8 @@ export async function responderComentarioInstagram(
   creds: IgCredentials,
   req: IgCommentReplyRequest,
 ): Promise<IgCommentReplyResult> {
-  const url = `${graphBaseUrl(creds.graphVersion)}/${req.instagramCommentId}/replies`;
+  // Host conforme o tipo de conexão (login do Instagram × Página) — ver `api-base.ts`.
+  const url = `${igApiBase(creds)}/${req.instagramCommentId}/replies`;
 
   try {
     const res = await fetch(url, {

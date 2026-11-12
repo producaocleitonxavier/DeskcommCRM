@@ -6,7 +6,7 @@
  * texto de encaminhamento. Grava via Supabase browser client (RLS).
  */
 
-import { useRef, useState } from "react";
+import { useRef, useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, Clock, Flag, Heart, MessageCircle, Mic, Pencil, Printer, Sparkles, Trash2, X } from "lucide-react";
@@ -22,7 +22,7 @@ import { cabeCuidado, ehDemandaSaude, textoCuidadoSaude } from "@/lib/politico/c
 import { ModalEnviarTexto } from "@/components/politico/modal-enviar-texto";
 import { BannerAvisoTse, useAvisoTse } from "@/components/politico/aviso-tse";
 import { textoAvisoCidadao, textoAvisoEncerramento } from "@/lib/politico/aviso-cidadao-texto";
-import { atualizarRegistro, excluirRegistro, registrarEventoDemanda, sincronizarVisitaNaAgenda } from "@/app/actions/politico/gabinete-actions";
+import { atualizarRegistro, excluirRegistro, listarAnexosDemanda, registrarEventoDemanda, sincronizarVisitaNaAgenda } from "@/app/actions/politico/gabinete-actions";
 import { textoCobranca, demandaVencidaSemResposta, textoCobrancaCidadao } from "@/lib/politico/demanda-cobranca";
 import DemandaAnexos from "@/components/politico/demanda-anexos";
 
@@ -160,6 +160,18 @@ export default function DetalheDemandaClient({ demanda, assessores, eventos, voz
   const [erroEncerrar, setErroEncerrar] = useState<string | null>(null);
   const [enviandoEncerrar, setEnviandoEncerrar] = useState(false);
   const avisoTseEncerrar = useAvisoTse(textoEncerrar);
+  // Demanda atendida com UMA foto só: é a do "antes" — lembrar de tirar a do "depois"
+  // (sem ela não há antes & depois). Conta só imagem; documento/ofício não entra.
+  const [fotosDaDemanda, setFotosDaDemanda] = useState<number | null>(null);
+  const estadoAtual = d.estado;
+  useEffect(() => {
+    if (estadoAtual !== "resolvida") { setFotosDaDemanda(null); return; }
+    let vivo = true;
+    void listarAnexosDemanda(demanda.id).then((anexos) => {
+      if (vivo) setFotosDaDemanda(anexos.filter((a) => (a.media_mime ?? "").startsWith("image/")).length);
+    }).catch(() => { if (vivo) setFotosDaDemanda(null); });
+    return () => { vivo = false; };
+  }, [demanda.id, estadoAtual]);
   const [excluindo, setExcluindo] = useState(false);
   const [anexoToken, setAnexoToken] = useState(0);
   const [erro, setErro] = useState<string | null>(null);
@@ -525,6 +537,17 @@ export default function DetalheDemandaClient({ demanda, assessores, eventos, voz
       {avisoMsg && (
         <div className="rounded-xl px-4 py-3 text-sm" style={{ background: "rgba(34,197,94,0.14)", color: "#22C55E" }}>
           {avisoMsg}
+        </div>
+      )}
+
+      {d.estado === "resolvida" && fotosDaDemanda === 1 && (
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl px-4 py-3 text-sm" style={{ background: "rgba(245,158,11,0.14)", color: "#92400E" }} role="status">
+          <span>
+            <strong>Esta demanda tem a foto do antes.</strong> Tire a do depois para mostrar o resultado — sem ela não há antes &amp; depois.
+          </span>
+          <Link href={`/app/politico/vitorias/${d.id}`} className="inline-flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-sm font-bold" style={{ background: "#92400E", color: "#FFFFFF" }}>
+            Enviar a foto do depois
+          </Link>
         </div>
       )}
 
