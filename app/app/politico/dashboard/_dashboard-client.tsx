@@ -338,27 +338,30 @@ function BlocoAtendimento({ m, claro }: { m: MetricasDeAtendimento; claro: boole
 // -- Gráfico: mensagens recebidas por hora do dia ------------------------------
 
 const PERIODOS = [
-  { nome: "Madrugada", de: 0, ate: 5 },
-  { nome: "Manhã", de: 6, ate: 11 },
-  { nome: "Tarde", de: 12, ate: 17 },
-  { nome: "Noite", de: 18, ate: 23 },
+  { nome: "Madrugada", artigo: "de madrugada", de: 0, ate: 5 },
+  { nome: "Manhã", artigo: "de manhã", de: 6, ate: 11 },
+  { nome: "Tarde", artigo: "à tarde", de: 12, ate: 17 },
+  { nome: "Noite", artigo: "à noite", de: 18, ate: 23 },
 ] as const;
 
+const TETOS = [4, 6, 8, 12, 16, 20, 30, 40, 60, 80, 100, 150, 200, 300, 400, 600, 800, 1000];
+
+function listarHoras(horas: number[]): string {
+  const t = horas.map((h) => `${h}h`);
+  if (t.length <= 1) return t.join("");
+  return `${t.slice(0, -1).join(", ")} e ${t[t.length - 1]}`;
+}
+
 /**
- * 24 barras (uma por hora), agrupadas visualmente nos 4 períodos do dia — é a
- * pergunta que o gabinete faz: "em que turno eu preciso de gente?". Série única →
- * um matiz só; o pico é o único com número escrito, o resto responde ao passar o
- * mouse (ou ao toque). Linhas de grade discretas dão a escala sem poluir.
+ * Responde, nesta ordem, o que o gabinete quer saber: (1) em que TURNO chega a
+ * maior parte — frase grande no topo; (2) quais as horas mais cheias — barras
+ * escuras com o número; (3) o detalhe de qualquer hora — passar o mouse/tocar.
+ * Série única → um matiz só. O teto da escala fica sempre acima da maior barra
+ * (respiro), e a barra tem largura máxima para não virar "bloco" em tela larga.
  */
-function GraficoPorHora({ porHora, pico, claro }: { porHora: number[]; pico: number | null; claro: boolean }) {
+function GraficoPorHora({ porHora, claro }: { porHora: number[]; pico: number | null; claro: boolean }) {
   const [sobre, setSobre] = useState<number | null>(null);
   const total = porHora.reduce((a, b) => a + b, 0);
-  const max = Math.max(1, ...porHora);
-  // Teto "redondo" para a grade (4, 8, 10, 20, 40…), nunca abaixo do máximo.
-  const teto = max <= 4 ? 4 : max <= 8 ? 8 : Math.ceil(max / 10) * 10;
-  const corBarra = claro ? "#2F5C94" : "#8FB8F0";
-  const corPico = claro ? "#14315A" : "#C4E64A";
-  const foco = sobre ?? pico;
 
   if (total === 0) {
     return (
@@ -368,52 +371,87 @@ function GraficoPorHora({ porHora, pico, claro }: { porHora: number[]; pico: num
     );
   }
 
+  const max = Math.max(...porHora);
+  const teto = TETOS.find((t) => t >= max * 1.15) ?? Math.ceil((max * 1.15) / 500) * 500;
+  const picos = porHora.map((n, h) => (n === max ? h : -1)).filter((h) => h >= 0);
+  const rotulaPicos = picos.length <= 4;
+  const corBarra = claro ? "#5B84B8" : "#6F97CF";
+  const corForte = claro ? "#14315A" : "#C4E64A";
+
+  const turnos = PERIODOS.map((p) => {
+    const qtd = porHora.slice(p.de, p.ate + 1).reduce((a, b) => a + b, 0);
+    return { ...p, qtd, fatia: Math.round((qtd * 100) / total) };
+  });
+  const turnoCheio = turnos.reduce((a, b) => (b.qtd > a.qtd ? b : a), { ...PERIODOS[0], qtd: -1, fatia: 0 });
+
   return (
-    <div className="mt-5">
-      {/* Leitura em destaque: a hora em foco (pico, ou a barra sob o mouse) */}
-      <p className="mb-3 text-sm" style={{ color: "var(--color-text-muted)" }} aria-live="polite">
-        {foco === null ? "" : (
+    <div className="mt-4">
+      {/* 1. A resposta, em uma frase */}
+      <p className="text-xl font-semibold leading-snug sm:text-2xl" style={{ color: "var(--color-text)" }}>
+        A maior parte chega {turnoCheio.artigo}:{" "}
+        <span className="tabular-nums" style={{ color: corForte }}>{turnoCheio.fatia}%</span>
+        <span className="text-sm font-normal sm:text-base" style={{ color: "var(--color-text-muted)" }}>
+          {" "}das mensagens, entre {turnoCheio.de}h e {turnoCheio.ate + 1}h
+        </span>
+      </p>
+
+      {/* 2. Leitura da hora (mouse/toque) ou as horas mais cheias */}
+      <p className="mt-1 min-h-[1.25rem] text-sm tabular-nums" style={{ color: "var(--color-text-muted)" }} aria-live="polite">
+        {sobre !== null ? (
           <>
-            <strong className="tabular-nums" style={{ color: "var(--color-text)" }}>{foco}h às {(foco + 1) % 24}h</strong>
-            {" · "}
-            <span className="tabular-nums">{porHora[foco] ?? 0} mensagens</span>
-            {" · "}
-            <span className="tabular-nums">{Math.round(((porHora[foco] ?? 0) * 100) / total)}% do total</span>
-            {sobre === null && pico !== null ? " (hora de pico)" : ""}
+            <strong style={{ color: "var(--color-text)" }}>{sobre}h às {(sobre + 1) % 24}h</strong>
+            {" · "}{porHora[sobre] ?? 0} {(porHora[sobre] ?? 0) === 1 ? "mensagem" : "mensagens"}
+            {" · "}{Math.round(((porHora[sobre] ?? 0) * 100) / total)}% do total
+          </>
+        ) : (
+          <>
+            {picos.length === 1 ? "Hora mais cheia: " : "Horas mais cheias: "}
+            <strong style={{ color: "var(--color-text)" }}>{listarHoras(picos)}</strong>
+            {" · "}{max} {max === 1 ? "mensagem" : "mensagens"}{picos.length > 1 ? " cada" : ""}
           </>
         )}
       </p>
 
-      <div className="flex gap-2">
+      <div className="mt-4 flex gap-2">
         {/* Escala */}
-        <div className="flex h-44 w-6 shrink-0 flex-col justify-between text-right text-[10px] tabular-nums" style={{ color: "var(--color-text-subtle)" }} aria-hidden>
-          <span>{teto}</span>
-          <span>{teto / 2}</span>
-          <span>0</span>
+        <div className="relative h-48 w-5 shrink-0 text-right text-[10px] tabular-nums sm:h-56" style={{ color: "var(--color-text-subtle)" }} aria-hidden>
+          <span className="absolute right-0 top-0 -translate-y-1/2">{teto}</span>
+          <span className="absolute right-0 top-1/2 -translate-y-1/2">{teto / 2}</span>
+          <span className="absolute bottom-0 right-0 translate-y-1/2">0</span>
         </div>
 
         <div className="min-w-0 flex-1">
           <div
-            className="relative h-44"
+            className="relative h-48 sm:h-56"
             role="img"
-            aria-label={`Mensagens recebidas por hora do dia, nos últimos 30 dias. ${pico === null ? "" : `Pico às ${pico} horas, com ${porHora[pico] ?? 0} mensagens.`} ${PERIODOS.map((p) => `${p.nome}: ${porHora.slice(p.de, p.ate + 1).reduce((a, b) => a + b, 0)}`).join(", ")}.`}
+            aria-label={`Mensagens recebidas por hora do dia, nos últimos 30 dias. Horas mais cheias: ${listarHoras(picos)}, com ${max} mensagens. ${turnos.map((t) => `${t.nome}: ${t.fatia}%`).join(", ")}.`}
             onMouseLeave={() => setSobre(null)}
           >
-            {/* Grade */}
-            {[0, 50, 100].map((y) => (
-              <div key={y} className="absolute inset-x-0" style={{ bottom: `${y}%`, borderTop: `1px ${y === 0 ? "solid" : "dashed"} color-mix(in srgb, var(--color-text) ${y === 0 ? 22 : 10}%, transparent)` }} aria-hidden />
-            ))}
-            {/* Faixas dos períodos (alternadas, bem leves) */}
+            {/* Turnos: o mais cheio ganha um fundo leve; divisórias finas entre eles */}
             <div className="absolute inset-0 flex" aria-hidden>
-              {PERIODOS.map((p, i) => (
-                <div key={p.nome} className="h-full flex-1" style={{ background: i % 2 === 1 ? "color-mix(in srgb, var(--color-text) 3.5%, transparent)" : "transparent" }} />
+              {turnos.map((t, i) => (
+                <div
+                  key={t.nome}
+                  className="h-full flex-1"
+                  style={{
+                    background: t.nome === turnoCheio.nome ? `color-mix(in srgb, ${corForte} ${claro ? 7 : 9}%, transparent)` : "transparent",
+                    borderLeft: i === 0 ? undefined : "1px solid color-mix(in srgb, var(--color-text) 9%, transparent)",
+                    borderTopLeftRadius: 6,
+                    borderTopRightRadius: 6,
+                  }}
+                />
               ))}
             </div>
+            {/* Grade */}
+            {[0, 50, 100].map((y) => (
+              <div key={y} className="absolute inset-x-0" style={{ bottom: `${y}%`, borderTop: `1px ${y === 0 ? "solid" : "dashed"} color-mix(in srgb, var(--color-text) ${y === 0 ? 25 : 10}%, transparent)` }} aria-hidden />
+            ))}
             {/* Barras */}
-            <div className="absolute inset-0 flex items-end gap-[3px] px-[2px]">
+            <div className="absolute inset-0 flex items-end">
               {porHora.map((n, h) => {
-                const ehPico = h === pico;
-                const ativo = h === foco;
+                const ehPico = n === max;
+                const ativo = h === sobre;
+                const mostraNumero = n > 0 && (ativo || (ehPico && rotulaPicos && sobre === null));
                 return (
                   <button
                     key={h}
@@ -421,19 +459,18 @@ function GraficoPorHora({ porHora, pico, claro }: { porHora: number[]; pico: num
                     onMouseEnter={() => setSobre(h)}
                     onFocus={() => setSobre(h)}
                     onBlur={() => setSobre(null)}
-                    className="group relative flex h-full min-w-0 flex-1 cursor-default flex-col items-center justify-end outline-none"
+                    onClick={() => setSobre(h)}
+                    className="flex h-full min-w-0 flex-1 cursor-default flex-col items-center justify-end px-[1px] outline-none sm:px-[3px]"
                     aria-label={`${h} horas: ${n} mensagens`}
                   >
-                    {ehPico && (
-                      <span className="mb-1 text-[11px] font-bold tabular-nums" style={{ color: "var(--color-text)" }}>{n}</span>
+                    {mostraNumero && (
+                      <span className="mb-1 text-[11px] font-bold tabular-nums leading-none" style={{ color: "var(--color-text)" }}>{n}</span>
                     )}
                     <span
-                      className="block w-full rounded-t-[4px] transition-[opacity,filter] duration-150"
+                      className="block w-full max-w-[28px] rounded-t-[5px] transition-colors duration-150"
                       style={{
-                        height: n === 0 ? 0 : `${Math.max(3, (n / teto) * 100)}%`,
-                        background: ehPico ? corPico : corBarra,
-                        opacity: sobre === null ? 1 : ativo ? 1 : 0.45,
-                        boxShadow: ativo && sobre !== null ? `0 0 0 2px color-mix(in srgb, ${corBarra} 35%, transparent)` : undefined,
+                        height: n === 0 ? 0 : `${Math.max(2.5, (n / teto) * 100)}%`,
+                        background: ehPico || ativo ? corForte : corBarra,
                       }}
                     />
                   </button>
@@ -442,26 +479,33 @@ function GraficoPorHora({ porHora, pico, claro }: { porHora: number[]; pico: num
             </div>
           </div>
 
-          {/* Horas */}
-          <div className="mt-1.5 flex gap-[3px] px-[2px]" aria-hidden>
+          {/* Horas: de 3 em 3, casando com a virada dos turnos */}
+          <div className="mt-1.5 flex" aria-hidden>
             {porHora.map((_, h) => (
-              <span key={h} className="min-w-0 flex-1 text-center text-[10px] tabular-nums" style={{ color: h === foco ? "var(--color-text)" : "var(--color-text-subtle)", fontWeight: h === foco ? 700 : 400 }}>
-                {h % 2 === 0 ? h : ""}
+              <span key={h} className="flex min-w-0 flex-1 justify-center text-[10px] tabular-nums" style={{ color: h === sobre ? "var(--color-text)" : "var(--color-text-subtle)", fontWeight: h === sobre ? 700 : 400 }}>
+                <span className="whitespace-nowrap">{h === sobre || (sobre === null && h % 3 === 0) ? `${h}h` : ""}</span>
               </span>
             ))}
           </div>
 
-          {/* Períodos, com a fatia de cada um */}
-          <div className="mt-3 grid grid-cols-4 gap-2">
-            {PERIODOS.map((p) => {
-              const qtd = porHora.slice(p.de, p.ate + 1).reduce((a, b) => a + b, 0);
-              const fatia = Math.round((qtd * 100) / total);
-              const maior = qtd === Math.max(...PERIODOS.map((x) => porHora.slice(x.de, x.ate + 1).reduce((a, b) => a + b, 0)));
+          {/* Turnos, alinhados com as faixas do gráfico */}
+          <div className="mt-2 flex">
+            {turnos.map((t, i) => {
+              const cheio = t.nome === turnoCheio.nome;
               return (
-                <div key={p.nome} className="rounded-lg px-2 py-2 text-center" style={{ background: maior ? "color-mix(in srgb, var(--color-text) 7%, transparent)" : "transparent", border: "1px solid color-mix(in srgb, var(--color-text) 9%, transparent)" }}>
-                  <div className="text-[11px] font-semibold" style={{ color: "var(--color-text-muted)" }}>{p.nome}</div>
-                  <div className="text-base font-bold tabular-nums leading-tight" style={{ color: "var(--color-text)" }}>{fatia}%</div>
-                  <div className="text-[10px] tabular-nums" style={{ color: "var(--color-text-subtle)" }}>{p.de}h–{p.ate + 1}h · {qtd}</div>
+                <div
+                  key={t.nome}
+                  className="min-w-0 flex-1 px-1 pt-2 text-center"
+                  style={{
+                    borderTop: `3px solid ${cheio ? corForte : "color-mix(in srgb, var(--color-text) 12%, transparent)"}`,
+                    marginLeft: i === 0 ? 0 : 4,
+                  }}
+                >
+                  <div className="truncate text-[11px] font-semibold sm:text-xs" style={{ color: cheio ? "var(--color-text)" : "var(--color-text-muted)" }}>{t.nome}</div>
+                  <div className="text-lg font-bold tabular-nums leading-tight sm:text-xl" style={{ color: cheio ? corForte : "var(--color-text)" }}>{t.fatia}%</div>
+                  <div className="whitespace-nowrap text-[10px] tabular-nums sm:text-[11px]" style={{ color: "var(--color-text-subtle)" }}>
+                    {t.qtd} <span className="hidden sm:inline">{t.qtd === 1 ? "mensagem" : "mensagens"}</span><span className="sm:hidden">msg</span>
+                  </div>
                 </div>
               );
             })}
