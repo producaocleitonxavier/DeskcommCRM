@@ -166,7 +166,31 @@ export async function acharAgenteDoMandato(
       if (agente?.id) return agente.id as string;
     }
   }
+  // Último recurso: a organização JÁ tem UM agente (montado à mão, antes de o
+  // assistente provisionar sozinho — é o caso do primeiro gabinete). Ele É o
+  // agente do mandato: o assistente não cria um segundo ao lado dele, e o
+  // enriquecimento aprovado é anexado a ele. Com dois ou mais não dá para
+  // adivinhar qual — aí devolve null e nada é anexado sozinho.
+  const { data: agentes } = await admin
+    .from("ai_agents")
+    .select("id")
+    .eq("organization_id", orgId)
+    .eq("kind", "mcp_agent")
+    .is("archived_at", null)
+    .limit(2);
+  if (agentes?.length === 1) return agentes[0]!.id as string;
   return null;
+}
+
+/** A organização já tem algum agente não arquivado? (trava contra provisionar um 2º). */
+export async function orgJaTemAgente(admin: SupabaseClient, orgId: string): Promise<boolean> {
+  const { data } = await admin
+    .from("ai_agents")
+    .select("id")
+    .eq("organization_id", orgId)
+    .is("archived_at", null)
+    .limit(1);
+  return (data?.length ?? 0) > 0;
 }
 
 /** Arma um teto de IA padrão (modo "avisar") quando o gabinete ainda não tem um. No-op se já existe. */

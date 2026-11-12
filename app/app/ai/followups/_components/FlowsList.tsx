@@ -54,10 +54,27 @@ export function FlowsList({ initialData, canWrite, surface, nicho = "clinica" }:
   // ou prazo de graça — mandá-lo para uma tela em branco é o caminho mais curto
   // para a clínica nunca ter follow-up nenhum. Desenhar do zero continua a um
   // clique, para quem já sabe o que quer.
+  // GIP (nicho político): a porta PRINCIPAL é o construtor simples ("o que você
+  // quer fazer?"), que grava nesta mesma lista. Modelo pronto e desenho do zero
+  // continuam a um clique, como caminhos secundários.
+  const simples = nicho === "politico" && !deAtendimento;
   const modelosButton = (
-    <Button onClick={() => setModelosOpen(true)} className="w-full sm:w-auto">
-      <Sparkle size={14} aria-hidden className="mr-2" /> {t("Começar de um modelo")}
-    </Button>
+    <>
+      {simples && (
+        <Button asChild className="w-full sm:w-auto">
+          <Link href="/app/politico/follow-up-simples">
+            <Plus size={14} aria-hidden className="mr-2" /> {t("Criar follow-up simples")}
+          </Link>
+        </Button>
+      )}
+      <Button
+        onClick={() => setModelosOpen(true)}
+        variant={simples ? "outline" : "default"}
+        className="w-full sm:w-auto"
+      >
+        <Sparkle size={14} aria-hidden className="mr-2" /> {t("Começar de um modelo")}
+      </Button>
+    </>
   );
 
   const newFlowButton = (
@@ -67,7 +84,7 @@ export function FlowsList({ initialData, canWrite, surface, nicho = "clinica" }:
       className="w-full sm:w-auto"
     >
       <Plus size={14} aria-hidden className="mr-2" />
-      {deAtendimento ? t("Novo fluxo de atendimento") : t("Novo fluxo")}
+      {deAtendimento ? t("Novo fluxo de atendimento") : simples ? t("Montar do zero (avançado)") : t("Novo fluxo")}
     </Button>
   );
 

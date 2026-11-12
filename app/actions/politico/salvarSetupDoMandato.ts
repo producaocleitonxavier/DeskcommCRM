@@ -30,7 +30,7 @@ import { logger } from "@/lib/logger";
 import { CHAVE_GABINETE } from "@/lib/politico/aviso-de-resolucao";
 import { CHAVE_SETUP_COMPLETO, CHAVE_SETUP_ADIADO, CHAVE_MANDATO, CHAVE_MANDATO_GERADO } from "@/lib/politico/setup-do-mandato";
 import { montarConhecimentoDoMandato, montarPromptDoMandato, type DadosDoMandato } from "@/lib/politico/gerar-conhecimento";
-import { acharAgenteDoMandato, armarTetoPadrao, provisionarAgenteDoMandato } from "@/lib/politico/provisionar-agente";
+import { acharAgenteDoMandato, armarTetoPadrao, orgJaTemAgente, provisionarAgenteDoMandato } from "@/lib/politico/provisionar-agente";
 
 const servicoSchema = z.object({
   nome: z.string().trim().max(120),
@@ -170,6 +170,12 @@ export async function salvarSetupDoMandato(entrada: unknown): Promise<ResultadoS
     // Agente já existe: só garante o teto padrão (pode não ter sido armado se o
     // provisionamento original foi interrompido). No-op quando já há teto.
     await armarTetoPadrao(admin, org.orgId);
+  } else if (await orgJaTemAgente(admin, org.orgId)) {
+    // Já há agente(s) nesta organização e não dá para saber qual é "o do
+    // mandato": NÃO cria mais um. A equipe segue com os que tem.
+    logger.info("setup-mandato: organização já tem agente — provisionamento pulado", {
+      organization_id: org.orgId,
+    });
   } else {
     try {
       const prov = await provisionarAgenteDoMandato(admin, {
