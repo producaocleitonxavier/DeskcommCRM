@@ -1,38 +1,30 @@
 "use client";
 
 /**
- * Sub-navegação do módulo "Monitoramento" (GIP): funde Opinião Pública, Alertas,
- * Adversários e Decisão numa só entrada de menu, acessíveis por abas. A escuta
- * social alimenta as outras três via motor de sinais.
+ * Navegação do "Radar da imprensa".
+ *
+ * Até 12/nov eram 4 abas (Opinião Pública, Alertas, Adversários, Decisão). As
+ * três últimas saíram da frente por decisão do cliente: eram derivadas de um
+ * noticiário que não citava o político (alerta velho, conselho genérico) e
+ * ficavam rasas justo onde há comparação com ferramentas de escuta. As rotas
+ * continuam existindo (nada foi apagado); só não são mais anunciadas. Nelas,
+ * este componente mostra apenas o caminho de volta.
  */
 
 import Link from "next/link";
-
-const ABAS = [
-  { id: "escuta", label: "Opinião Pública", href: "/app/politico/social" },
-  { id: "alertas", label: "Alertas", href: "/app/politico/alertas" },
-  { id: "adversarios", label: "Adversários", href: "/app/politico/adversarios" },
-  { id: "decisao", label: "Decisão", href: "/app/politico/decisao" },
-] as const;
+import { ArrowLeft } from "lucide-react";
 
 export default function MonitoramentoTabs({ active }: { active: "escuta" | "alertas" | "adversarios" | "decisao" }) {
+  if (active === "escuta") return null;
   return (
     <div className="mx-auto max-w-[1040px] px-4 pt-5">
-      <div className="flex gap-1 overflow-x-auto rounded-full p-1" style={{ background: "rgba(255,255,255,0.04)", border: "1px solid var(--color-border)" }}>
-        {ABAS.map((a) => {
-          const on = a.id === active;
-          return (
-            <Link
-              key={a.id}
-              href={a.href}
-              className="whitespace-nowrap rounded-full px-4 py-1.5 text-sm font-semibold transition-colors"
-              style={on ? { background: "var(--color-accent)", color: "#16181D" } : { color: "var(--color-text-muted)" }}
-            >
-              {a.label}
-            </Link>
-          );
-        })}
-      </div>
+      <Link
+        href="/app/politico/social"
+        className="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-sm font-semibold"
+        style={{ border: "1px solid var(--color-border)", color: "var(--color-text-muted)" }}
+      >
+        <ArrowLeft className="h-4 w-4" aria-hidden /> Radar da imprensa
+      </Link>
     </div>
   );
 }

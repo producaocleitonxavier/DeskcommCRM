@@ -14,6 +14,7 @@ import {
   salvarConfigMonitor, atualizarMencoes, reavaliarSentimento,
   type MonitorConfig, type ResumoOpiniao, type Mencao,
 } from "@/app/actions/politico/opiniaoPublica";
+import { soTemPerfilComoNome } from "@/lib/politico/radar-imprensa";
 
 const SENT = {
   positivo: { label: "Positivo", cor: "#22C55E", bg: "rgba(34,197,94,0.14)" },
@@ -42,13 +43,20 @@ export default function OpiniaoPublicaClient({ config, resumo, mencoes }: { conf
   const [reav, startReav] = useTransition();
 
   const temConfig = config.termosNome.length > 0 || !!config.cidade || config.temas.length > 0;
-  const net = resumo.total > 0 ? Math.round(((resumo.positivos - resumo.negativos) / resumo.total) * 100) : 0;
+  // O índice é SÓ das notícias que citam o político. O noticiário da cidade
+  // aparece à parte — somar os dois dava um número sobre a cidade com cara de
+  // número sobre a pessoa.
+  const sv = resumo.sobreVoce;
+  const net = sv.total > 0 ? Math.round(((sv.positivos - sv.negativos) / sv.total) * 100) : 0;
+  const diasDesdeColeta = resumo.ultimaColeta ? Math.floor((Date.now() - new Date(resumo.ultimaColeta).getTime()) / 86_400_000) : null;
+  const coletaVelha = diasDesdeColeta !== null && diasDesdeColeta > 7;
+  const nomeSoPerfil = soTemPerfilComoNome(config.termosNome);
   const netCor = net > 10 ? SENT.positivo.cor : net < -10 ? SENT.negativo.cor : SENT.neutro.cor;
   const leitura =
-    resumo.total === 0 ? ""
-    : net < -10 ? "Tom negativo em alta — as dores da cidade dominam a pauta. Oportunidade de resposta."
-    : net > 10 ? "Clima favorável — conquistas e avanços em destaque. Momento de capitalizar."
-    : "Clima majoritariamente neutro — cobertura factual, sem carga forte.";
+    sv.total === 0 ? "Nenhuma notícia citou o seu nome no período. O que aparece ao lado e abaixo é o noticiário da cidade e das pautas que você acompanha."
+    : net < -10 ? "A cobertura que cita você está com tom negativo. Vale ler as notícias abaixo e avaliar uma resposta."
+    : net > 10 ? "A cobertura que cita você está favorável."
+    : "A cobertura que cita você está neutra — factual, sem carga forte.";
 
   function salvar() {
     setMsg(null);
@@ -93,15 +101,19 @@ export default function OpiniaoPublicaClient({ config, resumo, mencoes }: { conf
           </span>
           <div>
             <div className="flex items-center gap-2">
-              <h1 className="font-heading text-[26px] font-bold leading-tight" style={{ color: "var(--color-text)" }}>Opinião Pública</h1>
-              {resumo.total > 0 && (
-                <span className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide" style={{ background: "rgba(34,197,94,0.14)", color: "#22C55E" }}>
-                  <span className="relative flex h-1.5 w-1.5"><span className="absolute inline-flex h-full w-full animate-ping rounded-full opacity-75" style={{ background: "#22C55E" }} /><span className="relative inline-flex h-1.5 w-1.5 rounded-full" style={{ background: "#22C55E" }} /></span>
-                  ao vivo
+              <h1 className="font-heading text-[26px] font-bold leading-tight" style={{ color: "var(--color-text)" }}>Radar da imprensa</h1>
+              {resumo.ultimaColeta && (
+                <span
+                  className="inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide"
+                  style={coletaVelha ? { background: "rgba(245,158,11,0.16)", color: "#B45309" } : { background: "rgba(34,197,94,0.14)", color: "#15803D" }}
+                  title={coletaVelha ? "A coleta está parada. Clique em Atualizar." : undefined}
+                >
+                  última coleta: {new Date(resumo.ultimaColeta).toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" })}
+                  {coletaVelha ? ` · há ${diasDesdeColeta} dias` : ""}
                 </span>
               )}
             </div>
-            <p className="text-sm" style={{ color: "var(--color-text-muted)" }}>O que falam do seu nome, da sua cidade e das suas pautas.</p>
+            <p className="text-sm" style={{ color: "var(--color-text-muted)" }}>O que a imprensa publicou citando você — e, à parte, o noticiário da sua cidade.</p>
           </div>
         </div>
         <div className="flex items-center gap-2">
@@ -126,6 +138,11 @@ export default function OpiniaoPublicaClient({ config, resumo, mencoes }: { conf
             <Campo label="Temas / pautas" hint="separe por vírgula"><input value={temas} onChange={(e) => setTemas(e.target.value)} placeholder="segurança, saúde, buraco, iluminação" className="wr-input w-full" /></Campo>
             <Campo label="Bairros de interesse" hint="separe por vírgula"><input value={bairros} onChange={(e) => setBairros(e.target.value)} placeholder="Centro, Trevo, Venda Nova" className="wr-input w-full" /></Campo>
           </div>
+          {nomeSoPerfil && (
+            <p className="rounded-lg px-3 py-2 text-xs" style={{ background: "rgba(245,158,11,0.12)", color: "var(--color-text)" }}>
+              Dica: a imprensa escreve o nome por extenso. Acrescente o nome como sai no jornal (ex.: <strong>Nome Sobrenome</strong>), além do @perfil — só com o @, a busca pelo nome não encontra notícia.
+            </p>
+          )}
           <div className="flex flex-wrap items-center gap-2">
             <button type="button" onClick={salvar} disabled={salvando} className="rounded-full px-4 py-2 text-sm font-semibold disabled:opacity-60" style={{ background: "var(--color-accent)", color: "#16181D" }}>{salvando ? "Salvando…" : "Salvar termos"}</button>
             <span className="text-xs" style={{ color: "var(--color-text-subtle)" }}>Por enquanto captamos a imprensa (Google Notícias). Os comentários do Instagram entram em breve.</span>
@@ -147,28 +164,29 @@ export default function OpiniaoPublicaClient({ config, resumo, mencoes }: { conf
             <div className="grid grid-cols-1 gap-0 md:grid-cols-[320px_1fr]">
               {/* Índice */}
               <div className="flex flex-col justify-center gap-3 p-6" style={{ background: "linear-gradient(145deg, color-mix(in srgb, var(--color-accent) 6%, transparent), transparent)", borderRight: "1px solid var(--color-border)" }}>
-                <span className="text-[11px] font-bold uppercase tracking-[0.14em]" style={{ color: "var(--color-text-subtle)" }}>Índice de sentimento</span>
+                <span className="text-[11px] font-bold uppercase tracking-[0.14em]" style={{ color: "var(--color-text-subtle)" }}>Sobre você · índice de sentimento</span>
                 <div className="flex items-end gap-2">
-                  <span className="font-heading text-5xl font-bold leading-none tabular-nums" style={{ color: netCor }}>{net > 0 ? `+${net}` : net}</span>
-                  <span className="mb-1 text-xs" style={{ color: "var(--color-text-subtle)" }}>de −100 a +100</span>
+                  <span className="font-heading text-5xl font-bold leading-none tabular-nums" style={{ color: sv.total === 0 ? "var(--color-text-subtle)" : netCor }}>{sv.total === 0 ? "—" : net > 0 ? `+${net}` : net}</span>
+                  <span className="mb-1 text-xs" style={{ color: "var(--color-text-subtle)" }}>{sv.total === 0 ? "sem notícia com o seu nome" : `de −100 a +100 · ${sv.total} notícia${sv.total === 1 ? "" : "s"}`}</span>
                 </div>
                 {/* barra de proporção */}
                 <div className="flex h-2.5 w-full overflow-hidden rounded-full" style={{ background: "rgba(255,255,255,0.06)" }}>
-                  <div style={{ width: `${pct(resumo.positivos, resumo.total)}%`, background: SENT.positivo.cor }} />
-                  <div style={{ width: `${pct(resumo.neutros, resumo.total)}%`, background: SENT.neutro.cor }} />
-                  <div style={{ width: `${pct(resumo.negativos, resumo.total)}%`, background: SENT.negativo.cor }} />
+                  <div style={{ width: `${pct(sv.positivos, sv.total)}%`, background: SENT.positivo.cor }} />
+                  <div style={{ width: `${pct(sv.neutros, sv.total)}%`, background: SENT.neutro.cor }} />
+                  <div style={{ width: `${pct(sv.negativos, sv.total)}%`, background: SENT.negativo.cor }} />
                 </div>
                 <p className="text-xs leading-snug" style={{ color: "var(--color-text-muted)" }}>{leitura}</p>
               </div>
               {/* Tiles + ações */}
               <div className="flex flex-col gap-3 p-6">
+                <span className="text-[11px] font-bold uppercase tracking-[0.14em]" style={{ color: "var(--color-text-subtle)" }}>Noticiário da cidade e das pautas</span>
                 <div className="grid grid-cols-3 gap-3">
                   <StatSent tipo="positivo" n={resumo.positivos} total={resumo.total} icone={<TrendingUp className="h-3.5 w-3.5" aria-hidden />} />
                   <StatSent tipo="neutro" n={resumo.neutros} total={resumo.total} icone={<Minus className="h-3.5 w-3.5" aria-hidden />} />
                   <StatSent tipo="negativo" n={resumo.negativos} total={resumo.total} icone={<TrendingDown className="h-3.5 w-3.5" aria-hidden />} />
                 </div>
                 <div className="mt-auto flex items-center justify-between">
-                  <span className="text-xs" style={{ color: "var(--color-text-subtle)" }}><strong style={{ color: "var(--color-text)" }}>{resumo.total}</strong> menções captadas</span>
+                  <span className="text-xs" style={{ color: "var(--color-text-subtle)" }}><strong style={{ color: "var(--color-text)" }}>{resumo.total}</strong> notícias captadas · <strong style={{ color: "var(--color-text)" }}>{sv.total}</strong> citam você</span>
                   <button type="button" onClick={reavaliar} disabled={reav} className="inline-flex items-center gap-1.5 text-xs font-semibold disabled:opacity-50" style={{ color: "#60A5FA" }}>
                     <Sparkles className={`h-3.5 w-3.5 ${reav ? "animate-pulse" : ""}`} aria-hidden /> {reav ? "Reavaliando…" : "Reavaliar sentimento"}
                   </button>
@@ -191,7 +209,7 @@ export default function OpiniaoPublicaClient({ config, resumo, mencoes }: { conf
           {/* Pautas + origem */}
           <section className="grid grid-cols-1 gap-4 sm:grid-cols-5">
             <div className="gip-glass gip-glass-hover p-5 sm:col-span-3">
-              <div className="mb-3 flex items-center gap-1.5 text-sm font-bold" style={{ color: "var(--color-text)" }}><Flame className="h-4 w-4" style={{ color: "#F59E0B" }} aria-hidden /> Pautas quentes</div>
+              <div className="mb-3 flex items-center gap-1.5 text-sm font-bold" style={{ color: "var(--color-text)" }}><Flame className="h-4 w-4" style={{ color: "#F59E0B" }} aria-hidden /> Pautas do noticiário da cidade</div>
               {resumo.topicos.length === 0 ? <p className="text-xs" style={{ color: "var(--color-text-subtle)" }}>Classificando…</p> : (
                 <div className="flex flex-col gap-2">
                   {resumo.topicos.map((t, i) => {
@@ -229,7 +247,7 @@ export default function OpiniaoPublicaClient({ config, resumo, mencoes }: { conf
           {/* Feed — cards (estilo premium, limitado para não poluir) */}
           <section className="gip-glass p-5">
             <div className="mb-3 flex items-center justify-between">
-              <h2 className="text-sm font-bold" style={{ color: "var(--color-text)" }}>Menções recentes</h2>
+              <h2 className="text-sm font-bold" style={{ color: "var(--color-text)" }}>Notícias recentes</h2>
               <span className="text-[11px]" style={{ color: "var(--color-text-subtle)" }}>as {Math.min(mencoes.length, 15)} mais recentes</span>
             </div>
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
@@ -245,6 +263,7 @@ export default function OpiniaoPublicaClient({ config, resumo, mencoes }: { conf
                       <div className="mb-2 flex items-center gap-2">
                         <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-[10px] font-bold" style={{ background: s.bg, color: s.cor }} aria-hidden>{iniciaisFonte(m)}</span>
                         <span className="min-w-0 flex-1 truncate text-xs font-semibold" style={{ color: "var(--color-text-muted)" }}>{m.fonte || (m.canal === "instagram" ? "Instagram" : m.canal)}</span>
+                        {m.citaVoce && <span className="shrink-0 rounded-full px-1.5 py-0.5 text-[9px] font-bold uppercase" style={{ background: "var(--color-accent)", color: "#16181D" }}>cita você</span>}
                         <span className="shrink-0 rounded-full px-1.5 py-0.5 text-[9px] font-bold uppercase" style={{ background: s.bg, color: s.cor }}>{s.label}</span>
                       </div>
                       <p className="line-clamp-3 text-sm font-medium" style={{ color: "var(--color-text)" }}>{m.titulo}</p>

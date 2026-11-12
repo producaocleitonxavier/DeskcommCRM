@@ -17,6 +17,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { cerebroDaOrg, modeloDoCerebro } from "@/lib/ai/cerebro";
 import { requireAuth, resolveActiveOrg } from "@/lib/auth/server";
 import { gerarSinaisAdversarios } from "@/app/actions/politico/adversarios";
+import { citaONome, ehMencaoDeTeste } from "@/lib/politico/radar-imprensa";
 
 export interface MonitorConfig {
   termosNome: string[];
@@ -39,6 +40,8 @@ export interface Mencao {
   municipio: string | null;
   bairro: string | null;
   termo: string | null;
+  /** A notícia cita o político (achada pelo nome ou com o nome no título)? */
+  citaVoce: boolean;
 }
 
 export interface ResumoOpiniao {
@@ -49,6 +52,10 @@ export interface ResumoOpiniao {
   porDia: { dia: string; total: number; pos: number; neg: number }[];
   porCanal: { canal: string; total: number }[];
   topicos: { topico: string; total: number; polaridadeMedia: number }[];
+  /** Só as notícias que CITAM o político — é sobre isto que o índice é calculado. */
+  sobreVoce: { total: number; positivos: number; neutros: number; negativos: number };
+  /** Quando a coleta rodou pela última vez (ISO). null = nunca. */
+  ultimaColeta: string | null;
 }
 
 export async function obterConfigMonitor(): Promise<MonitorConfig> {
@@ -372,7 +379,11 @@ export async function listarMencoes(limit = 50): Promise<Mencao[]> {
     .eq("organization_id", org.orgId)
     .order("publicado_em", { ascending: false, nullsFirst: false })
     .limit(limit);
-  return ((data ?? []) as Record<string, unknown>[]).map((r) => ({
+  const cfgNomes = (await lerConfigMonitorAdmin(createAdminClient(), org.orgId)).termosNome;
+  return ((data ?? []) as Record<string, unknown>[])
+    .filter((r) => !ehMencaoDeTeste({ fonte: (r.fonte as string | null) ?? null }))
+    .map((r) => ({
+    citaVoce: citaONome({ titulo: (r.titulo as string | null) ?? null, termo: (r.termo as string | null) ?? null }, cfgNomes),
     id: r.id as string, canal: r.canal as string, fonte: (r.fonte as string | null) ?? null, autor: (r.autor as string | null) ?? null,
     titulo: (r.titulo as string | null) ?? null, url: (r.url as string | null) ?? null, publicadoEm: (r.publicado_em as string | null) ?? null,
     polaridade: (r.polaridade as number | null) ?? null, sentimento: (r.sentimento as string | null) ?? null, topico: (r.topico as string | null) ?? null,
@@ -383,22 +394,31 @@ export async function listarMencoes(limit = 50): Promise<Mencao[]> {
 export async function resumoOpiniao(): Promise<ResumoOpiniao> {
   const user = await autenticarComPapel("manager");
   const org = await resolveActiveOrg(user);
-  const vazio: ResumoOpiniao = { total: 0, positivos: 0, neutros: 0, negativos: 0, porDia: [], porCanal: [], topicos: [] };
+  const vazio: ResumoOpiniao = { total: 0, positivos: 0, neutros: 0, negativos: 0, porDia: [], porCanal: [], topicos: [], sobreVoce: { total: 0, positivos: 0, neutros: 0, negativos: 0 }, ultimaColeta: null };
   if (!org) return vazio;
   const db = await createClient();
   const { data } = await db
     .from("intel_mentions")
-    .select("canal, sentimento, polaridade, topico, publicado_em")
+    .select("canal, sentimento, polaridade, topico, publicado_em, titulo, termo, fonte, created_at")
     .eq("organization_id", org.orgId)
     .order("publicado_em", { ascending: false, nullsFirst: false })
     .limit(3000);
-  const rows = (data ?? []) as { canal: string; sentimento: string | null; polaridade: number | null; topico: string | null; publicado_em: string | null }[];
+  const rows = ((data ?? []) as { canal: string; sentimento: string | null; polaridade: number | null; topico: string | null; publicado_em: string | null; titulo: string | null; termo: string | null; fonte: string | null; created_at: string | null }[])
+    .filter((r) => !ehMencaoDeTeste(r));
+  const cfgNomes = (await lerConfigMonitorAdmin(createAdminClient(), org.orgId)).termosNome;
 
-  const resumo: ResumoOpiniao = { ...vazio, total: rows.length };
+  const resumo: ResumoOpiniao = { ...vazio, total: rows.length, sobreVoce: { total: 0, positivos: 0, neutros: 0, negativos: 0 } };
   const diaMap = new Map<string, { total: number; pos: number; neg: number }>();
   const canalMap = new Map<string, number>();
   const topMap = new Map<string, { total: number; soma: number }>();
   for (const r of rows) {
+    if (r.created_at && (!resumo.ultimaColeta || r.created_at > resumo.ultimaColeta)) resumo.ultimaColeta = r.created_at;
+    if (citaONome(r, cfgNomes)) {
+      resumo.sobreVoce.total++;
+      if (r.sentimento === "positivo") resumo.sobreVoce.positivos++;
+      else if (r.sentimento === "negativo") resumo.sobreVoce.negativos++;
+      else resumo.sobreVoce.neutros++;
+    }
     if (r.sentimento === "positivo") resumo.positivos++;
     else if (r.sentimento === "negativo") resumo.negativos++;
     else resumo.neutros++;

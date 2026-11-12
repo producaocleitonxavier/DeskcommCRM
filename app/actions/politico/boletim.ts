@@ -26,7 +26,9 @@ import { ROLE_RANK } from "@/lib/auth/types";
 import {
   lerIdentidadeDoMandato, escopoDaInteligencia, type AbrangenciaMandato,
 } from "@/lib/politico/identidade-do-mandato";
-import { atualizarMencoes } from "@/app/actions/politico/opiniaoPublica";
+import { atualizarMencoes, lerConfigMonitorAdmin } from "@/app/actions/politico/opiniaoPublica";
+import { citaONome, ehMencaoDeTeste } from "@/lib/politico/radar-imprensa";
+import { calcularMetricasDeAtendimento, type MensagemParaMetricas } from "@/lib/politico/atendimento-metricas";
 
 export interface BoletimSemanal {
   ok: true;
@@ -54,6 +56,16 @@ export interface BoletimSemanal {
   acoes: { title: string; descricao: string; acao: string; severity: string }[];
   alertasAbertos: number;
   ultimaMencaoEm: string | null;
+  // ── Boletim centrado no TRABALHO do mandato (12/nov). Opcionais: edições
+  // salvas antes desta data não têm estes campos, e a tela trata a ausência.
+  /** Notícias da semana que CITAM o político (não o noticiário da cidade). */
+  citamVoce?: number;
+  /** Demandas abertas fora do prazo, e por qual órgão estão paradas. */
+  atrasadas?: { total: number; porOrgao: { orgao: string; total: number }[] };
+  /** Atendimento da semana (WhatsApp). mediana em segundos; null = não medido. */
+  atendimento?: { conversas: number; respondidas: number; semResposta: number; medianaPrimeiraRespostaSeg: number | null };
+  /** O que fazer esta semana — tirado dos NÚMEROS do gabinete, não de IA. */
+  paraFazer?: string[];
 }
 export type ResultadoBoletim = BoletimSemanal | { ok: false; erro: string };
 
@@ -104,15 +116,19 @@ async function computarBoletim(admin: AdminClient, orgId: string): Promise<Bolet
   // ── Escuta (intel_mentions, 14d p/ comparar semana vs. semana) ──────────────
   const { data: mRows } = await admin
     .from("intel_mentions")
-    .select("canal, fonte, titulo, url, publicado_em, created_at, sentimento, topico")
+    .select("canal, fonte, titulo, url, publicado_em, created_at, sentimento, topico, termo")
     .eq("organization_id", orgId)
     .gte("created_at", de14.toISOString())
     .order("created_at", { ascending: false })
     .limit(3000);
-  const mencoes = (mRows ?? []) as {
+  const nomesMonitorados = (await lerConfigMonitorAdmin(admin, orgId)).termosNome;
+  // Só entra no boletim a notícia que CITA o político. O noticiário geral da
+  // cidade fica no Radar da imprensa — aqui ele virava "sentimento" e "pauta"
+  // de uma semana em que ninguém falou do mandato.
+  const mencoes = ((mRows ?? []) as {
     canal: string; fonte: string | null; titulo: string | null; url: string | null;
-    publicado_em: string | null; created_at: string; sentimento: string | null; topico: string | null;
-  }[];
+    publicado_em: string | null; created_at: string; sentimento: string | null; topico: string | null; termo: string | null;
+  }[]).filter((m) => !ehMencaoDeTeste(m) && citaONome(m, nomesMonitorados));
   const quando = (m: { publicado_em: string | null; created_at: string }) => m.publicado_em ?? m.created_at;
   const daSemana = mencoes.filter((m) => quando(m) >= deISO);
   const daSemanaAnterior = mencoes.filter((m) => quando(m) < deISO);
@@ -179,6 +195,52 @@ async function computarBoletim(admin: AdminClient, orgId: string): Promise<Bolet
   const dores = [...doresTipoMap.entries()].map(([grupo, total]) => ({ grupo: prettyTipo(grupo), total })).sort((a, b) => b.total - a.total).slice(0, 6);
   const doresBairros = [...doresBairroMap.entries()].map(([bairro, total]) => ({ bairro, total })).sort((a, b) => b.total - a.total).slice(0, 6);
 
+  // ── Fora do prazo: o que está parado, e em qual órgão ───────────────────────
+  const { data: abertasRows } = await admin
+    .from("demandas")
+    .select("estado, aberta_em, pol_prazo_dias, pol_orgao_destino")
+    .eq("organization_id", orgId)
+    .eq("pol_gabinete", true)
+    .not("estado", "in", "(resolvida,encerrada)")
+    .limit(5000);
+  const PRAZO_PADRAO_DIAS = 30;
+  const atrasoPorOrgao = new Map<string, number>();
+  let totalAtrasadas = 0;
+  for (const d of (abertasRows ?? []) as { aberta_em: string | null; pol_prazo_dias: number | null; pol_orgao_destino: string | null }[]) {
+    if (!d.aberta_em) continue;
+    const venceEm = new Date(d.aberta_em).getTime() + (d.pol_prazo_dias ?? PRAZO_PADRAO_DIAS) * DIA;
+    if (Number.isNaN(venceEm) || venceEm >= agora) continue;
+    totalAtrasadas++;
+    const orgao = (d.pol_orgao_destino ?? "").trim() || "Sem órgão definido";
+    atrasoPorOrgao.set(orgao, (atrasoPorOrgao.get(orgao) ?? 0) + 1);
+  }
+  const atrasadas = {
+    total: totalAtrasadas,
+    porOrgao: [...atrasoPorOrgao.entries()].map(([orgao, total]) => ({ orgao, total })).sort((a, b) => b.total - a.total).slice(0, 5),
+  };
+
+  // ── Atendimento da semana (WhatsApp) ────────────────────────────────────────
+  const msgs: MensagemParaMetricas[] = [];
+  for (let pagina = 0; pagina < 5; pagina++) {
+    const { data: lote, error: erroMsgs } = await admin
+      .from("messages")
+      .select("conversation_id, direction, created_at, sent_by_user_id")
+      .eq("organization_id", orgId)
+      .gte("created_at", deISO)
+      .order("created_at", { ascending: true })
+      .range(pagina * 1000, pagina * 1000 + 999);
+    if (erroMsgs || !lote || lote.length === 0) break;
+    msgs.push(...(lote as MensagemParaMetricas[]));
+    if (lote.length < 1000) break;
+  }
+  const mAtend = calcularMetricasDeAtendimento(msgs);
+  const atendimento = {
+    conversas: mAtend.conversas,
+    respondidas: mAtend.respondidas,
+    semResposta: mAtend.semResposta,
+    medianaPrimeiraRespostaSeg: mAtend.medianaPrimeiraRespostaSeg,
+  };
+
   // ── Adversários (radar) ─────────────────────────────────────────────────────
   const { data: oppRows } = await admin
     .from("pol_opponents")
@@ -218,6 +280,22 @@ async function computarBoletim(admin: AdminClient, orgId: string): Promise<Bolet
 
   const ultimaMencaoEm = mencoes[0] ? quando(mencoes[0]) : null;
 
+  // ── Para fazer esta semana: sai dos NÚMEROS, não de conselho genérico ───────
+  const paraFazer: string[] = [];
+  for (const o of atrasadas.porOrgao.slice(0, 3)) {
+    paraFazer.push(`Cobrar ${o.orgao}: ${o.total} demanda${o.total === 1 ? "" : "s"} fora do prazo.`);
+  }
+  if (atendimento.semResposta > 0) {
+    paraFazer.push(`Responder ${atendimento.semResposta} conversa${atendimento.semResposta === 1 ? "" : "s"} que ficou sem resposta nesta semana.`);
+  }
+  const bairroTopo = doresBairros[0];
+  if (bairroTopo && bairroTopo.total >= 3) {
+    paraFazer.push(`${bairroTopo.bairro} concentrou ${bairroTopo.total} pedidos na semana — vale uma visita ou um retorno ao bairro.`);
+  }
+  if (doresResolvidas > 0) {
+    paraFazer.push(`Avisar e registrar as ${doresResolvidas} demanda${doresResolvidas === 1 ? "" : "s"} resolvida${doresResolvidas === 1 ? "" : "s"}: é prova de trabalho para a prestação de contas.`);
+  }
+
   // ── Síntese IA: "a semana em 3 frases" ──────────────────────────────────────
   let resumoIa = "";
   const cerebro = await cerebroDaOrg(admin, orgId);
@@ -226,16 +304,16 @@ async function computarBoletim(admin: AdminClient, orgId: string): Promise<Bolet
     const fatos = [
       `Escopo: ${escopo.rotulo} (abrangência ${escopo.abrangencia}).`,
       `Mandato: ${identidade.nomeParlamentar ?? "o gabinete"}${identidade.cargo ? `, ${identidade.cargo}` : ""}.`,
-      `Sentimento da semana: índice ${c.indice >= 0 ? "+" : ""}${c.indice} (de -100 a +100), com ${c.pos} positivas, ${c.neu} neutras, ${c.neg} negativas em ${c.total} menções. Semana anterior: índice ${cAnt.indice >= 0 ? "+" : ""}${cAnt.indice} em ${cAnt.total} menções (variação ${varInd >= 0 ? "+" : ""}${varInd} pontos).`,
-      `Pautas quentes: ${pautas.length ? pautas.map((p) => `${p.topico} (${p.total}${p.neg ? `, ${p.neg} neg` : ""})`).join("; ") : "sem pautas captadas"}.`,
-      `Dores do mandato (demandas da semana): ${doresNovas} novas, ${doresResolvidas} resolvidas. Por tema: ${dores.length ? dores.map((d) => `${d.grupo} (${d.total})`).join("; ") : "—"}. Bairros: ${doresBairros.length ? doresBairros.map((d) => `${d.bairro} (${d.total})`).join("; ") : "—"}.`,
-      `Adversários no radar: ${adversarios.length ? adversarios.map((a) => `${a.nome} (risco ${a.risco}, ${a.sinais7d} sinais na semana)`).join("; ") : "nenhum cadastrado"}.`,
-      `Ações recomendadas pendentes: ${acoes.length}. Alertas abertos: ${alertasAbertos}.`,
+      `Demandas da semana: ${doresNovas} novas, ${doresResolvidas} resolvidas. Por tema: ${dores.length ? dores.map((d) => `${d.grupo} (${d.total})`).join("; ") : "—"}. Bairros: ${doresBairros.length ? doresBairros.map((b) => `${b.bairro} (${b.total})`).join("; ") : "—"}.`,
+      `Demandas abertas FORA DO PRAZO: ${atrasadas.total}${atrasadas.porOrgao.length ? ` — por órgão: ${atrasadas.porOrgao.map((o) => `${o.orgao} (${o.total})`).join("; ")}` : ""}.`,
+      `Atendimento no WhatsApp: ${atendimento.conversas} pessoas procuraram o gabinete; ${atendimento.respondidas} respondidas; ${atendimento.semResposta} sem resposta.`,
+      `Imprensa: ${c.total} notícia(s) citaram o nome do político nesta semana${c.total > 0 ? ` (${c.pos} positivas, ${c.neg} negativas)` : ""}.`,
     ].join("\n");
     const system =
-      "Você é o chefe de inteligência de um mandato político no Brasil. Escreva o PARÁGRAFO DE ABERTURA de um boletim SEMANAL para o político e sua equipe — 'a semana em 3 a 4 frases'. " +
-      "Linguagem direta, de quem decide, sem jargão. Conecte os pontos que só nós cruzamos: o que a MÍDIA falou (pautas) versus o que o POVO pediu no gabinete (dores/demandas) — se batem ou divergem, diga. " +
-      "Destaque a variação de sentimento vs. a semana passada (subiu/caiu) e a prioridade da semana. Não invente número que não está nos fatos. Respeite o escopo informado (municipal/estadual/nacional). " +
+      "Você é o chefe de gabinete de um mandato político no Brasil. Escreva o PARÁGRAFO DE ABERTURA de um boletim SEMANAL para o político e sua equipe — 'a semana em 3 a 4 frases'. " +
+      "Linguagem direta, de quem decide, sem jargão. Fale do TRABALHO do mandato: o que o povo pediu, onde, o que foi resolvido, o que está parado e em qual órgão, e como foi o atendimento. " +
+      "Só fale de imprensa se alguma notícia citou o político; se nenhuma citou, não trate isso como problema nem como 'silêncio'. Feche com a prioridade da semana. " +
+      "Não invente número que não está nos fatos, não dê conselho genérico e não prometa nada em nome do político. " +
       "Máximo ~90 palavras, em um único parágrafo, sem título.";
     try {
       const { text } = await generateText({ model: modeloDoCerebro(cerebro), system, prompt: fatos, maxOutputTokens: 400 });
@@ -268,6 +346,10 @@ async function computarBoletim(admin: AdminClient, orgId: string): Promise<Bolet
     acoes,
     alertasAbertos,
     ultimaMencaoEm,
+    citamVoce: c.total,
+    atrasadas,
+    atendimento,
+    paraFazer,
   };
 }
 

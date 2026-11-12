@@ -1089,7 +1089,7 @@ export const NAV_CATALOG = [
   },
   {
     href: "/app/politico/social",
-    label: "Opinião Pública",
+    label: "Radar da imprensa",
     description: "Escuta social: o que falam do seu nome, cidade e pautas — menções da imprensa e redes, com sentimento, pautas quentes e origem.",
     icon: "Globe",
     group: "inteligencia",

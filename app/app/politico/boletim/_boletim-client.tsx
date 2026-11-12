@@ -18,6 +18,7 @@ import {
   gerarBoletimSemanal, listarBoletins, lerBoletimSalvo,
   type BoletimSemanal, type BoletimHistItem,
 } from "@/app/actions/politico/boletim";
+import { formatarDuracao } from "@/lib/politico/atendimento-metricas";
 
 const VERDE = "#17784F";
 const VERMELHO = "#A3302A";
@@ -83,22 +84,28 @@ export default function BoletimClient({
     const win = window.open("", "_blank", "width=860,height=1000");
     if (!win) return;
     const origin = window.location.origin;
-    const variacao = bol.sentimento.indice - bol.sentimento.indiceAnterior;
     const pautasHtml = bol.pautas.length
       ? bol.pautas.map((p) => `<div class="row"><span>${esc(p.topico)}</span><span class="n">${p.total}${p.neg ? ` <small style="color:${VERMELHO}">(${p.neg} neg)</small>` : ""}</span></div>`).join("")
-      : `<p class="muted">Sem pautas captadas.</p>`;
+      : `<p class="muted">Nenhuma notícia citou você nesta semana.</p>`;
     const doresHtml = bol.dores.length
       ? bol.dores.map((d) => `<div class="row"><span>${esc(d.grupo)}</span><span class="n">${d.total}</span></div>`).join("")
       : `<p class="muted">Sem demandas novas registradas na semana.</p>`;
     const mencoesHtml = bol.mencoes.length
       ? bol.mencoes.map((m) => `<li><b style="color:${corSent(m.sentimento)}">${labelSent(m.sentimento)}</b> &middot; ${esc(m.titulo)} ${m.fonte ? `<i>(${esc(m.fonte)})</i>` : ""}</li>`).join("")
-      : `<li class="muted">Sem menções na semana.</li>`;
-    const advHtml = bol.adversarios.length
-      ? bol.adversarios.map((a) => `<div class="row"><span>${esc(a.nome)} <small class="muted">(${esc(a.risco)})</small></span><span class="n">${a.sinais7d} sinais</span></div>`).join("")
-      : `<p class="muted">Nenhum adversário cadastrado.</p>`;
-    const acoesHtml = bol.acoes.length
-      ? bol.acoes.map((a) => `<li><b>${esc(a.title)}</b> — ${esc(a.acao || a.descricao)}</li>`).join("")
-      : `<li class="muted">Nenhuma ação pendente.</li>`;
+      : "";
+    const paraFazerHtml = bol.paraFazer && bol.paraFazer.length
+      ? bol.paraFazer.map((t) => `<li>${esc(t)}</li>`).join("")
+      : `<li class="muted">Nada parado e ninguém sem resposta — semana em dia.</li>`;
+    const at = bol.atendimento;
+    const atendimentoHtml = at && at.conversas > 0
+      ? `<div class="row"><span>Pessoas que procuraram o gabinete</span><span class="n">${at.conversas}</span></div>` +
+        `<div class="row"><span>Respondidas</span><span class="n">${at.respondidas}</span></div>` +
+        `<div class="row"><span>Sem resposta</span><span class="n">${at.semResposta}</span></div>` +
+        `<div class="row"><span>Primeira resposta em (metade dos casos)</span><span class="n">${esc(formatarDuracao(at.medianaPrimeiraRespostaSeg))}</span></div>`
+      : `<p class="muted">Ninguém escreveu para o gabinete pelo WhatsApp nesta semana.</p>`;
+    const atrasoHtml = bol.atrasadas && bol.atrasadas.porOrgao.length
+      ? bol.atrasadas.porOrgao.map((o) => `<div class="row"><span>${esc(o.orgao)}</span><span class="n">${o.total}</span></div>`).join("")
+      : `<p class="muted">Nenhuma demanda fora do prazo.</p>`;
     const html = `<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><title>Boletim Semanal — ${esc(lugar)}</title>
 <style>
   *{box-sizing:border-box} body{font-family:-apple-system,Segoe UI,Roboto,Arial,sans-serif;color:#1a1d23;margin:0;padding:32px;max-width:820px;margin:0 auto}
@@ -115,23 +122,19 @@ export default function BoletimClient({
   .foot{margin-top:22px;font-size:10px;color:#9aa0ae;border-top:1px solid #eee;padding-top:8px;line-height:1.5}
 </style></head><body>
   <div class="brandrow"><img class="logo" src="${origin}/gipchat-elmo.png" alt="GIP"/><div class="brand">GIP &middot; Guerrilheiros Intelig&ecirc;ncia Pol&iacute;tica</div></div>
-  <h1>Boletim Semanal de Intelig&ecirc;ncia</h1>
+  <h1>Boletim Semanal do Mandato</h1>
   <div class="meta">${esc(escopoRotulo)} &middot; ${fmtData(bol.periodoDe)} a ${fmtData(bol.periodoAte)}${mandatoNome ? ` &middot; ${esc(mandatoNome)}` : ""}</div>
   ${bol.resumoIa ? `<div class="resumo">${esc(bol.resumoIa)}</div>` : ""}
-  <div class="sent">
-    <span class="idx" style="color:${bol.sentimento.indice >= 0 ? VERDE : VERMELHO}">${bol.sentimento.indice >= 0 ? "+" : ""}${bol.sentimento.indice}</span>
-    <span class="muted">índice de sentimento (-100 a +100) &middot; ${variacao >= 0 ? "+" : ""}${variacao} vs. semana passada &middot; ${bol.sentimento.total} menções (${bol.sentimento.positivos} pos / ${bol.sentimento.neutros} neu / ${bol.sentimento.negativos} neg)</span>
+  <div class="grid">
+    <div><h2>O que o povo pediu (${bol.doresNovas} novas, ${bol.doresResolvidas} resolvidas)</h2>${doresHtml}</div>
+    <div><h2>Fora do prazo, por órgão (${bol.atrasadas?.total ?? 0})</h2>${atrasoHtml}</div>
   </div>
   <div class="grid">
-    <div><h2>Na mídia (pautas)</h2>${pautasHtml}</div>
-    <div><h2>Nas ruas (demandas: ${bol.doresNovas} novas, ${bol.doresResolvidas} resolvidas)</h2>${doresHtml}</div>
+    <div><h2>Para fazer esta semana</h2><ul>${paraFazerHtml}</ul></div>
+    <div><h2>Atendimento da semana</h2>${atendimentoHtml}</div>
   </div>
-  <h2>Menções que importam</h2><ul>${mencoesHtml}</ul>
-  <div class="grid">
-    <div><h2>Radar de adversários</h2>${advHtml}</div>
-    <div><h2>Ações da semana</h2><ul>${acoesHtml}</ul></div>
-  </div>
-  <p class="foot">Boletim gerado por IA a partir da escuta de mídia (Google News) + Instagram, dos sinais de sentimento e das demandas do gabinete. Os contatos e demandas são da sua operação. Documento de apoio; confira antes de decidir.</p>
+  <h2>Na imprensa, citando você</h2>${pautasHtml}${mencoesHtml ? `<ul>${mencoesHtml}</ul>` : ""}
+  <p class="foot">Boletim feito com o que o gabinete registrou na semana (demandas e atendimento) e com as notícias que citaram o mandato. O resumo de abertura é escrito por IA. Documento de apoio; confira antes de decidir.</p>
 </body></html>`;
     win.document.write(html);
     win.document.close();
@@ -239,30 +242,19 @@ export default function BoletimClient({
             </div>
           )}
 
-          {/* Sentimento + KPIs */}
-          <div className="mb-5 grid gap-3 sm:grid-cols-4">
-            <div className="rounded-2xl p-4 sm:col-span-1" style={{ background: "color-mix(in srgb, var(--color-text) 4%, transparent)", border: "1px solid color-mix(in srgb, var(--color-text) 8%, transparent)" }}>
-              <p className="text-[10px] font-bold uppercase tracking-wide" style={{ color: "var(--color-text-subtle)" }}>Sentimento</p>
-              <div className="mt-1 flex items-baseline gap-1.5">
-                <span className="font-heading text-3xl font-black tabular-nums" style={{ color: bol.sentimento.indice >= 0 ? VERDE : VERMELHO }}>
-                  {bol.sentimento.indice >= 0 ? "+" : ""}{bol.sentimento.indice}
-                </span>
-                <Variacao atual={bol.sentimento.indice} anterior={bol.sentimento.indiceAnterior} />
-              </div>
-              <p className="mt-1 text-[11px]" style={{ color: "var(--color-text-subtle)" }}>
-                {bol.sentimento.total} menções · {bol.sentimento.positivos}✓ {bol.sentimento.negativos}✕
-              </p>
-            </div>
+          {/* Os 4 números da semana — todos do trabalho do gabinete */}
+          <div className="mb-5 grid grid-cols-2 gap-3 sm:grid-cols-4">
             <Kpi rotulo="Demandas novas" valor={bol.doresNovas} cor={VERDE} />
             <Kpi rotulo="Resolvidas" valor={bol.doresResolvidas} cor={VERDE} />
-            <Kpi rotulo="Ações pendentes" valor={bol.acoes.length} cor={bol.acoes.length ? "#92600A" : "var(--color-text)"} />
+            <Kpi rotulo="Fora do prazo" valor={bol.atrasadas?.total ?? "—"} cor={(bol.atrasadas?.total ?? 0) > 0 ? "#92600A" : "var(--color-text)"} />
+            <Kpi rotulo="Conversas sem resposta" valor={bol.atendimento?.semResposta ?? "—"} cor={(bol.atendimento?.semResposta ?? 0) > 0 ? "#92600A" : "var(--color-text)"} />
           </div>
 
           {/* MÍDIA × POVO — a justaposição que só nós temos */}
           <div className="mb-5 grid gap-3 lg:grid-cols-2">
             <div className="rounded-2xl p-4" style={{ background: "color-mix(in srgb, var(--color-text) 4%, transparent)", border: "1px solid color-mix(in srgb, var(--color-text) 8%, transparent)" }}>
               <p className="mb-2.5 inline-flex items-center gap-1.5 text-xs font-bold" style={{ color: "var(--color-text)" }}>
-                <Newspaper size={14} style={{ color: "#3B7DC4" }} /> Na mídia <span className="font-normal" style={{ color: "var(--color-text-subtle)" }}>— o que falaram</span>
+                <Newspaper size={14} style={{ color: "#3B7DC4" }} /> Na imprensa <span className="font-normal" style={{ color: "var(--color-text-subtle)" }}>— citando você</span>
               </p>
               {bol.pautas.length ? (
                 <div className="space-y-1.5">
@@ -275,7 +267,7 @@ export default function BoletimClient({
                     </div>
                   ))}
                 </div>
-              ) : <p className="text-xs" style={{ color: "var(--color-text-subtle)" }}>Sem pautas captadas nesta semana.</p>}
+              ) : <p className="text-xs" style={{ color: "var(--color-text-subtle)" }}>Nenhuma notícia citou você nesta semana. O noticiário da cidade fica no Radar da imprensa.</p>}
             </div>
 
             <div className="rounded-2xl p-4" style={{ background: "color-mix(in srgb, var(--color-text) 4%, transparent)", border: "1px solid color-mix(in srgb, var(--color-text) 8%, transparent)" }}>
@@ -303,7 +295,7 @@ export default function BoletimClient({
           {/* Menções que importam */}
           {bol.mencoes.length > 0 && (
             <div className="mb-5">
-              <p className="mb-2 text-xs font-bold uppercase tracking-wide" style={{ color: "var(--color-text-subtle)" }}>Menções que importam</p>
+              <p className="mb-2 text-xs font-bold uppercase tracking-wide" style={{ color: "var(--color-text-subtle)" }}>Notícias que citaram você</p>
               <div className="space-y-1.5">
                 {bol.mencoes.map((m, i) => (
                   <div key={i} className="flex items-start gap-2 rounded-lg px-3 py-2 text-sm" style={{ background: "var(--color-surface-elevated)", border: "1px solid var(--color-border)" }}>
@@ -323,46 +315,49 @@ export default function BoletimClient({
             </div>
           )}
 
-          {/* Adversários + Ações */}
-          <div className="grid gap-3 lg:grid-cols-2">
-            <div className="rounded-2xl p-4" style={{ background: "color-mix(in srgb, var(--color-text) 4%, transparent)", border: "1px solid color-mix(in srgb, var(--color-text) 8%, transparent)" }}>
-              <p className="mb-2.5 inline-flex items-center gap-1.5 text-xs font-bold" style={{ color: "var(--color-text)" }}>
-                <Users size={14} style={{ color: "#A3302A" }} /> Radar de adversários
-              </p>
-              {bol.adversarios.length ? (
-                <div className="space-y-1.5">
-                  {bol.adversarios.map((a) => (
-                    <div key={a.nome} className="flex items-center justify-between gap-2 text-sm">
-                      <span className="truncate" style={{ color: "var(--color-text)" }}>{a.nome}</span>
-                      <span className="shrink-0 text-[11px]" style={{ color: "var(--color-text-subtle)" }}>
-                        <span className="capitalize">{a.risco}</span> · {a.sinais7d} sinais
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              ) : <p className="text-xs" style={{ color: "var(--color-text-subtle)" }}>Cadastre adversários na Opinião Pública para monitorar aqui.</p>}
-            </div>
+          {/* Para fazer + Atendimento — só em edições que já têm estes dados */}
+          {(bol.paraFazer || bol.atendimento) && (
+            <div className="grid gap-3 lg:grid-cols-2">
+              <div className="rounded-2xl p-4" style={{ background: "color-mix(in srgb, var(--color-text) 4%, transparent)", border: "1px solid color-mix(in srgb, var(--color-text) 8%, transparent)" }}>
+                <p className="mb-2.5 inline-flex items-center gap-1.5 text-xs font-bold" style={{ color: "var(--color-text)" }}>
+                  <Lightbulb size={14} style={{ color: "#C9A23A" }} /> Para fazer esta semana
+                </p>
+                {bol.paraFazer && bol.paraFazer.length > 0 ? (
+                  <ul className="space-y-2">
+                    {bol.paraFazer.map((t, i) => (
+                      <li key={i} className="flex gap-2 text-[13px]" style={{ color: "var(--color-text)" }}>
+                        <span aria-hidden style={{ color: "var(--color-text-subtle)" }}>{i + 1}.</span>
+                        <span>{t}</span>
+                      </li>
+                    ))}
+                  </ul>
+                ) : <p className="text-xs" style={{ color: "var(--color-text-subtle)" }}>Nada parado e ninguém sem resposta — semana em dia.</p>}
+              </div>
 
-            <div className="rounded-2xl p-4" style={{ background: "color-mix(in srgb, var(--color-text) 4%, transparent)", border: "1px solid color-mix(in srgb, var(--color-text) 8%, transparent)" }}>
-              <p className="mb-2.5 inline-flex items-center gap-1.5 text-xs font-bold" style={{ color: "var(--color-text)" }}>
-                <Lightbulb size={14} style={{ color: "#C9A23A" }} /> Ações da semana
-              </p>
-              {bol.acoes.length ? (
-                <div className="space-y-2">
-                  {bol.acoes.slice(0, 5).map((a, i) => (
-                    <div key={i}>
-                      <p className="text-[13px] font-semibold" style={{ color: "var(--color-text)" }}>{a.title}</p>
-                      <p className="text-[12px]" style={{ color: "var(--color-text-muted)" }}>{a.acao || a.descricao}</p>
-                    </div>
-                  ))}
-                </div>
-              ) : <p className="text-xs" style={{ color: "var(--color-text-subtle)" }}>Nenhuma ação pendente — semana tranquila.</p>}
+              <div className="rounded-2xl p-4" style={{ background: "color-mix(in srgb, var(--color-text) 4%, transparent)", border: "1px solid color-mix(in srgb, var(--color-text) 8%, transparent)" }}>
+                <p className="mb-2.5 inline-flex items-center gap-1.5 text-xs font-bold" style={{ color: "var(--color-text)" }}>
+                  <Users size={14} style={{ color: "#3B7DC4" }} /> Atendimento da semana
+                </p>
+                {bol.atendimento && bol.atendimento.conversas > 0 ? (
+                  <div className="space-y-1.5 text-sm">
+                    <Linha rotulo="Pessoas que procuraram o gabinete" valor={String(bol.atendimento.conversas)} />
+                    <Linha rotulo="Respondidas" valor={String(bol.atendimento.respondidas)} />
+                    <Linha rotulo="Sem resposta" valor={String(bol.atendimento.semResposta)} />
+                    <Linha rotulo="Primeira resposta em (metade dos casos)" valor={formatarDuracao(bol.atendimento.medianaPrimeiraRespostaSeg)} />
+                  </div>
+                ) : <p className="text-xs" style={{ color: "var(--color-text-subtle)" }}>Ninguém escreveu para o gabinete pelo WhatsApp nesta semana.</p>}
+                {bol.atrasadas && bol.atrasadas.porOrgao.length > 0 && (
+                  <p className="pt-2.5 text-[11px]" style={{ color: "var(--color-text-subtle)" }}>
+                    Fora do prazo por órgão: {bol.atrasadas.porOrgao.map((o) => `${o.orgao} (${o.total})`).join(" · ")}
+                  </p>
+                )}
+              </div>
             </div>
-          </div>
+          )}
 
           <p className="mt-4 text-[11px] leading-relaxed" style={{ color: "var(--color-text-subtle)" }}>
-            Cruza a <strong>escuta de mídia</strong> (Google News + Instagram) com as <strong>demandas do gabinete</strong> — o que o SAM não enxerga.
-            Última menção captada: {fmtData(bol.ultimaMencaoEm)}. Gerado por IA; confira antes de decidir.
+            Feito com o que o gabinete registrou na semana: <strong>demandas</strong>, <strong>atendimento</strong> e as notícias que citaram você.
+            Resumo de abertura escrito por IA; confira antes de decidir.
           </p>
         </section>
       )}
@@ -381,7 +376,16 @@ function Variacao({ atual, anterior }: { atual: number; anterior: number }) {
   );
 }
 
-function Kpi({ rotulo, valor, cor }: { rotulo: string; valor: number; cor: string }) {
+function Linha({ rotulo, valor }: { rotulo: string; valor: string }) {
+  return (
+    <div className="flex items-center justify-between gap-2">
+      <span className="truncate" style={{ color: "var(--color-text)" }}>{rotulo}</span>
+      <span className="shrink-0 tabular-nums font-bold" style={{ color: "var(--color-text)" }}>{valor}</span>
+    </div>
+  );
+}
+
+function Kpi({ rotulo, valor, cor }: { rotulo: string; valor: number | string; cor: string }) {
   return (
     <div className="rounded-2xl p-4" style={{ background: "color-mix(in srgb, var(--color-text) 4%, transparent)", border: "1px solid color-mix(in srgb, var(--color-text) 8%, transparent)" }}>
       <p className="text-[10px] font-bold uppercase tracking-wide" style={{ color: "var(--color-text-subtle)" }}>{rotulo}</p>
