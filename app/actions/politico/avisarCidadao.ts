@@ -68,7 +68,7 @@ function protocoloDe(d: DemandaParaAviso): string {
 
 export async function avisarCidadao(
   demandaId: string,
-  opts?: { incluirAudio?: boolean; texto?: string },
+  opts?: { incluirAudio?: boolean; texto?: string; /** Aviso de encerramento sem solução: sem ofício em anexo. */ encerramento?: boolean },
 ): Promise<AvisoResultado> {
   const user = await autenticarComPapel("agent");
   const org = await resolveActiveOrg(user);
@@ -154,7 +154,7 @@ export async function avisarCidadao(
     // houver encaminhamento. Gera se preciso e baixa os bytes.
     let oficioBytes: Buffer | null = null;
     const oficioPath = `${org.orgId}/${demandaId}/oficio.pdf`;
-    if (!ehResolucao && d.pol_encaminhamento_ia?.trim()) {
+    if (!ehResolucao && !opts?.encerramento && d.pol_encaminhamento_ia?.trim()) {
       let dl = await admin.storage.from("gabinete-anexos").download(oficioPath);
       if (dl.error || !dl.data) {
         const g = await gerarOficioDemanda(demandaId);
@@ -225,7 +225,9 @@ export async function avisarCidadao(
       tipo: "cidadao_avisado",
       descricao: ehResolucao
         ? AVISO_RESOLUCAO_DESCRICAO
-        : `Cidadão avisado por WhatsApp${comOficio ? ` (com ofício ${protocoloLocal})` : ""}`,
+        : opts?.encerramento
+          ? "Cidadão avisado de que a demanda foi encerrada sem solução"
+          : `Cidadão avisado por WhatsApp${comOficio ? ` (com ofício ${protocoloLocal})` : ""}`,
       created_by: user.id,
     });
   }

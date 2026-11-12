@@ -38,3 +38,28 @@ describe("textoAvisoCidadao", () => {
     expect(t).toContain("a sua demanda foi RESOLVIDA");
   });
 });
+
+describe("textoAvisoEncerramento — o NÃO também é uma resposta", () => {
+  it("diz com clareza que não foi possível, com nome, gabinete e protocolo", async () => {
+    const { textoAvisoEncerramento } = await import("./aviso-cidadao-texto");
+    const t = textoAvisoEncerramento({ primeiroNome: "Maria", nomeParlamentar: "Fulano", cargo: "vereador", protocolo: "OF 12/2026" });
+    expect(t).toContain("Olá, Maria!");
+    expect(t).toContain("gabinete do vereador Fulano");
+    expect(t).toContain("(protocolo OF 12/2026)");
+    expect(t).toContain("não foi possível");
+  });
+  it("sem nome/gabinete/protocolo cai no genérico, sem buraco no texto", async () => {
+    const { textoAvisoEncerramento } = await import("./aviso-cidadao-texto");
+    const t = textoAvisoEncerramento({});
+    expect(t.startsWith("Olá! Aqui é do gabinete. Sobre a sua demanda: ")).toBe(true);
+    expect(t).not.toContain("undefined");
+    expect(t).not.toContain("  ");
+  });
+  it("não promete prazo nem nova tentativa, e não acende o alerta eleitoral", async () => {
+    const { textoAvisoEncerramento } = await import("./aviso-cidadao-texto");
+    const { detectarPromessaDeCampanha } = await import("@/lib/agent-engine/guardrails/promessa-de-campanha");
+    const t = textoAvisoEncerramento({ primeiroNome: "João", nomeParlamentar: "Fulano", cargo: "vereador" });
+    expect(t).not.toMatch(/prometo|garanto|vou resolver|em breve|prazo/i);
+    expect(detectarPromessaDeCampanha(t).achou).toBe(false);
+  });
+});

@@ -20,7 +20,8 @@ import { avisarCobrancaAoCidadao } from "@/app/actions/politico/avisarCobranca";
 import { avisarCuidadoAoCidadao } from "@/app/actions/politico/avisarCuidado";
 import { cabeCuidado, ehDemandaSaude, textoCuidadoSaude } from "@/lib/politico/cuidado-saude";
 import { ModalEnviarTexto } from "@/components/politico/modal-enviar-texto";
-import { textoAvisoCidadao } from "@/lib/politico/aviso-cidadao-texto";
+import { BannerAvisoTse, useAvisoTse } from "@/components/politico/aviso-tse";
+import { textoAvisoCidadao, textoAvisoEncerramento } from "@/lib/politico/aviso-cidadao-texto";
 import { atualizarRegistro, excluirRegistro, registrarEventoDemanda, sincronizarVisitaNaAgenda } from "@/app/actions/politico/gabinete-actions";
 import { textoCobranca, demandaVencidaSemResposta, textoCobrancaCidadao } from "@/lib/politico/demanda-cobranca";
 import DemandaAnexos from "@/components/politico/demanda-anexos";
@@ -153,6 +154,12 @@ export default function DetalheDemandaClient({ demanda, assessores, eventos, voz
   const [gerandoIA, setGerandoIA] = useState(false);
   const [gerandoOficio, setGerandoOficio] = useState(false);
   const [avisoMsg, setAvisoMsg] = useState<string | null>(null);
+  // Encerrar sem solução: antes de fechar, a janela de aviso ao cidadão ("o NÃO também é resposta").
+  const [encerrarAberto, setEncerrarAberto] = useState(false);
+  const [textoEncerrar, setTextoEncerrar] = useState("");
+  const [erroEncerrar, setErroEncerrar] = useState<string | null>(null);
+  const [enviandoEncerrar, setEnviandoEncerrar] = useState(false);
+  const avisoTseEncerrar = useAvisoTse(textoEncerrar);
   const [excluindo, setExcluindo] = useState(false);
   const [anexoToken, setAnexoToken] = useState(0);
   const [erro, setErro] = useState<string | null>(null);
@@ -272,6 +279,32 @@ export default function DetalheDemandaClient({ demanda, assessores, eventos, voz
       }
       router.refresh();
     }
+    return ok;
+  }
+
+  function abrirEncerrar() {
+    const protocolo = (d.pol_oficio_rotulo ?? "").trim() || `#${d.id.slice(0, 8).toUpperCase()}`;
+    setTextoEncerrar(textoAvisoEncerramento({ primeiroNome: primeiroNomeCidadao, nomeParlamentar: politicoNome ?? null, cargo: politicoCargo ?? null, protocolo }));
+    setErroEncerrar(null);
+    setEncerrarAberto(true);
+  }
+
+  /** Encerra; se `avisar`, manda antes o texto revisado — e só encerra se o aviso saiu. */
+  async function confirmarEncerrar(avisar: boolean) {
+    setErroEncerrar(null);
+    setEnviandoEncerrar(true);
+    try {
+      if (avisar) {
+        const res = await avisarCidadao(d.id, { texto: textoEncerrar, encerramento: true });
+        if (!res.ok) { setErroEncerrar(res.erro ?? "Não consegui enviar o aviso. A demanda continua aberta."); return; }
+      }
+      const fechou = await mudarEstado("encerrada");
+      if (!fechou) { setErroEncerrar(avisar ? "O aviso foi enviado, mas não consegui encerrar a demanda. Tente encerrar de novo, sem avisar." : "Não consegui encerrar a demanda. Tente de novo."); return; }
+      setAvisoMsg(avisar ? "Demanda encerrada e cidadão avisado." : "Demanda encerrada sem aviso ao cidadão.");
+      setEncerrarAberto(false);
+    } finally {
+      setEnviandoEncerrar(false);
+    }
   }
 
   // Ações de estado — fluxo do gabinete: Nova → Em atendimento → Encaminhada →
@@ -336,7 +369,7 @@ export default function DetalheDemandaClient({ demanda, assessores, eventos, voz
             key={a.estado + a.label}
             type="button"
             disabled={salvando}
-            onClick={() => mudarEstado(a.estado)}
+            onClick={() => (a.estado === "encerrada" ? abrirEncerrar() : mudarEstado(a.estado))}
             className={a.tom === "dark" ? "wr-btn-dark" : "wr-btn"}
             style={a.tom === "ok" ? { background: "#17784F", color: "#FFFFFF", borderColor: "#17784F" } : undefined}
           >
@@ -846,6 +879,71 @@ export default function DetalheDemandaClient({ demanda, assessores, eventos, voz
 
       {/* Histórico / linha do tempo */}
       <LinhaDoTempo aberturaISO={d.aberta_em} eventos={eventos} />
+
+      {/* Encerrar sem solução: o cidadão ouve o "não" do gabinete, não do silêncio. */}
+      {encerrarAberto && (
+        <div
+          className="fixed inset-0 z-50 flex items-end justify-center p-4 sm:items-center"
+          style={{ background: "rgba(0,0,0,0.5)" }}
+          onClick={() => !enviandoEncerrar && setEncerrarAberto(false)}
+        >
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="encerrar-titulo"
+            className="w-full max-w-md rounded-2xl p-5"
+            style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)" }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="mb-2 flex items-center justify-between">
+              <h3 id="encerrar-titulo" className="font-heading text-base font-bold" style={{ color: "var(--color-text)" }}>
+                Encerrar sem solução{primeiroNomeCidadao ? ` · ${primeiroNomeCidadao}` : ""}
+              </h3>
+              <button type="button" onClick={() => !enviandoEncerrar && setEncerrarAberto(false)} className="rounded-full p-1" style={{ color: "var(--color-text-subtle)" }} aria-label="Fechar">
+                <X className="h-4 w-4" aria-hidden />
+              </button>
+            </div>
+            <p className="mb-2 text-sm" style={{ color: "var(--color-text-muted)" }}>
+              O &quot;não&quot; também é uma resposta. Antes de fechar, avise o cidadão: revise o texto e, se puder, diga o motivo.
+            </p>
+            {d.contacts?.phone_number ? (
+              <>
+                <textarea
+                  value={textoEncerrar}
+                  onChange={(e) => setTextoEncerrar(e.target.value)}
+                  rows={7}
+                  aria-label="Texto do aviso de encerramento"
+                  className="w-full rounded-xl px-3.5 py-2.5 text-sm outline-none"
+                  style={{ background: "var(--color-surface-elevated)", border: "1px solid var(--color-border)", color: "var(--color-text)" }}
+                />
+                <BannerAvisoTse aviso={avisoTseEncerrar} className="mt-2" />
+              </>
+            ) : (
+              <p className="rounded-lg px-3 py-2 text-xs font-semibold" style={{ background: "rgba(245,158,11,0.14)", color: "#B45309" }}>
+                O cidadão não tem telefone cadastrado. Avise por outro meio antes de encerrar.
+              </p>
+            )}
+            {erroEncerrar && (
+              <p role="alert" className="mt-2 rounded-lg px-3 py-2 text-sm" style={{ background: "rgba(239,68,68,0.14)", color: "#B91C1C" }}>{erroEncerrar}</p>
+            )}
+            <div className="mt-4 flex flex-wrap justify-end gap-2">
+              <button type="button" disabled={enviandoEncerrar} onClick={() => confirmarEncerrar(false)} className="wr-btn disabled:opacity-60">
+                Encerrar sem avisar
+              </button>
+              {d.contacts?.phone_number && (
+                <button
+                  type="button"
+                  disabled={enviandoEncerrar || textoEncerrar.trim().length < 10}
+                  onClick={() => confirmarEncerrar(true)}
+                  className="wr-btn-dark inline-flex items-center gap-2 disabled:opacity-60"
+                >
+                  <MessageCircle className="h-4 w-4" aria-hidden /> {enviandoEncerrar ? "Enviando…" : "Avisar e encerrar"}
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
