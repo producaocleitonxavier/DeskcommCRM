@@ -151,15 +151,18 @@ export async function pesquisarMandato(
     // (@ai-sdk/anthropic 4.x) não casa 1:1 com o ToolSet do `ai` 7.x por skew de
     // versão do @ai-sdk/provider — o `next build` tolera e o runtime é válido.
     // O cast assume isso explicitamente.
-    const tools = { web_search: anthropic.tools.webSearch_20260209({ maxUses: 3 }) } as unknown as ToolSet;
+    // ⚠️ `webSearch_20250305`, NÃO a `_20260209`: medido no homologação (11/nov), a
+    // mesma pesquisa leva ~12s na 20250305 e passava de 75s (até 3+ min) na
+    // 20260209, que roda um pós-processamento pesado por baixo.
+    const tools = { web_search: anthropic.tools.webSearch_20250305({ maxUses: 3 }) } as unknown as ToolSet;
     const result = await generateText({
       model: anthropic(MODELO_DE_PESQUISA),
       prompt: montarPromptDePesquisa(dados),
       tools,
       stopWhen: [stepCountIs(5)],
-      // Timeout duro: sem isto a busca pode girar por minutos. Desiste em 75s e
-      // o chamador mostra "demorou demais, tente de novo" em vez de pendurar a tela.
-      abortSignal: AbortSignal.timeout(75_000),
+      // Timeout duro: sem isto a busca pode girar por minutos. Desiste em 60s (a
+      // busca normal leva ~15s) e o chamador mostra "demorou demais, tente de novo".
+      abortSignal: AbortSignal.timeout(60_000),
     });
     const achados = parseAchados(result.text ?? "");
     return { ok: true, achados };
