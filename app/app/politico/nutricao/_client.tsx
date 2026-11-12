@@ -145,7 +145,7 @@ export default function NutricaoClient({ inicial }: { inicial: EstadoDaNutricao 
           </button>
         )}
         <div className="flex flex-wrap items-center gap-3 pt-1">
-          <button type="button" onClick={salvar} disabled={salvando || !mudou || !textosValidos} className="wr-btn-dark inline-flex items-center gap-2 disabled:opacity-60">
+          <button type="button" onClick={salvar} disabled={salvando || (!mudou && inicial.publicada) || !textosValidos} className="wr-btn-dark inline-flex items-center gap-2 disabled:opacity-60">
             {salvando ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden /> : <Save className="h-4 w-4" aria-hidden />}
             {salvando ? "Salvando…" : "Salvar textos e número"}
           </button>
