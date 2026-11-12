@@ -141,3 +141,31 @@ export async function verifyIgWebhookSignature(
     return false;
   }
 }
+
+/**
+ * Confere a assinatura contra VÁRIAS chaves e diz qual casou (pelo índice).
+ *
+ * Por que mais de uma: o aviso do Instagram é assinado com a chave do APLICATIVO
+ * DO INSTAGRAM (a mesma do login, `IG_APP_SECRET`), que pode ser diferente da
+ * chave do aplicativo da Meta usada pelo canal oficial de WhatsApp — e esta
+ * última, quando configurada pela tela, fica no banco e tem precedência sobre o
+ * ambiente. Conferir só contra ela recusava todo aviso verdadeiro do Instagram
+ * como "assinatura inválida". Todas as candidatas são chaves NOSSAS; aceitar
+ * qualquer uma não afrouxa nada, e quem não tem nenhuma delas segue barrado.
+ *
+ * Devolve -1 quando nenhuma casa. Chaves vazias ou repetidas são ignoradas.
+ */
+export async function assinaturaValidaComAlguma(
+  body: string,
+  signature: string,
+  segredos: readonly (string | null | undefined)[],
+): Promise<number> {
+  const vistos = new Set<string>();
+  for (let i = 0; i < segredos.length; i++) {
+    const segredo = (segredos[i] ?? "").trim();
+    if (!segredo || vistos.has(segredo)) continue;
+    vistos.add(segredo);
+    if (await verifyIgWebhookSignature(body, signature, segredo)) return i;
+  }
+  return -1;
+}

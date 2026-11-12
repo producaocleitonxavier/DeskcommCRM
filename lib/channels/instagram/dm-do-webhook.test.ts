@@ -54,3 +54,31 @@ describe("extrairDmsRecebidas — a resposta do seguidor no Direct", () => {
     expect(r.map((x) => x.messageId)).toEqual(["m1", "m9"]);
   });
 });
+
+describe("assinaturaValidaComAlguma — aviso assinado com a chave do app do Instagram", () => {
+  it("casa com a chave certa mesmo quando ela não é a primeira, e diz qual foi", async () => {
+    const { createHmac } = await import("node:crypto");
+    const { assinaturaValidaComAlguma } = await import("./comment-parser");
+    const corpo = JSON.stringify({ object: "instagram", entry: [] });
+    const assinatura = "sha256=" + createHmac("sha256", "chave-do-instagram").update(corpo).digest("hex");
+    expect(await assinaturaValidaComAlguma(corpo, assinatura, ["chave-da-meta", "chave-do-instagram"])).toBe(1);
+    expect(await assinaturaValidaComAlguma(corpo, assinatura, ["chave-do-instagram", "chave-da-meta"])).toBe(0);
+  });
+
+  it("controle negativo: nenhuma chave nossa casa → -1 (segue barrado)", async () => {
+    const { createHmac } = await import("node:crypto");
+    const { assinaturaValidaComAlguma } = await import("./comment-parser");
+    const corpo = "{}";
+    const forjada = "sha256=" + createHmac("sha256", "chave-de-fora").update(corpo).digest("hex");
+    expect(await assinaturaValidaComAlguma(corpo, forjada, ["chave-da-meta", "chave-do-instagram"])).toBe(-1);
+    expect(await assinaturaValidaComAlguma(corpo, "", ["chave-da-meta"])).toBe(-1);
+    expect(await assinaturaValidaComAlguma(corpo, forjada, [null, undefined, "", "  "])).toBe(-1);
+  });
+
+  it("corpo adulterado depois de assinado não passa", async () => {
+    const { createHmac } = await import("node:crypto");
+    const { assinaturaValidaComAlguma } = await import("./comment-parser");
+    const assinatura = "sha256=" + createHmac("sha256", "k").update("{\"a\":1}").digest("hex");
+    expect(await assinaturaValidaComAlguma("{\"a\":2}", assinatura, ["k"])).toBe(-1);
+  });
+});

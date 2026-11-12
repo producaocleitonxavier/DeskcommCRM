@@ -30,7 +30,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { fail } from "@/lib/api/wrappers";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { appDaMeta } from "@/lib/channels/meta/app";
-import { parseIgWebhookPayload, verifyIgWebhookSignature } from "@/lib/channels/instagram/comment-parser";
+import { assinaturaValidaComAlguma, parseIgWebhookPayload } from "@/lib/channels/instagram/comment-parser";
 import { ingestIgComment } from "@/lib/channels/instagram/comment-ingest";
 import { extrairDmsRecebidas } from "@/lib/channels/instagram/dm-do-webhook";
 import { logger } from "@/lib/logger";
@@ -121,17 +121,26 @@ export async function POST(req: NextRequest, ctx: RouteCtx): Promise<NextRespons
 
   const { appSecret } = await appDaMeta();
 
-  if (!appSecret) {
+  // A chave certa para o Instagram é a do APLICATIVO DO INSTAGRAM (a do login);
+  // a do aplicativo da Meta (ambiente ou banco) fica como alternativa. Ver
+  // `assinaturaValidaComAlguma`.
+  const NOMES = ["ig_app_secret", "meta_app_secret_env", "meta_app_secret_em_vigor"] as const;
+  const candidatas = [process.env.IG_APP_SECRET, process.env.META_APP_SECRET, appSecret];
+  if (!candidatas.some((c) => (c ?? "").trim())) {
     logger.error("[ig-comments-webhook] meta app secret not configured", { requestId });
     return fail("internal_error", "meta app not configured", 500, { requestId });
   }
 
-  const valid = await verifyIgWebhookSignature(bodyRaw, signature, appSecret);
+  const qual = await assinaturaValidaComAlguma(bodyRaw, signature, candidatas);
+  const valid = qual >= 0;
+  if (valid) logger.info("[ig-comments-webhook] assinatura conferida", { requestId, organizationId, chave: NOMES[qual] });
   if (!valid) {
     logger.warn("[ig-comments-webhook] invalid signature", {
       requestId,
       organizationId,
       token: token.slice(0, 8) + "…",
+      chavesTentadas: new Set(candidatas.map((c) => (c ?? "").trim()).filter(Boolean)).size,
+      temAssinatura: signature.length > 0,
     });
     return fail("forbidden", "invalid signature", 403, { requestId });
   }
