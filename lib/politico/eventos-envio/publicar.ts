@@ -23,6 +23,7 @@ import {
   montarFluxoBoasVindasEbook,
   montarFluxoDripMensal,
   TOQUES_DRIP_PADRAO,
+  type ToqueDrip,
 } from "./fluxos";
 
 export interface PublicarResultado {
@@ -79,9 +80,10 @@ async function garantirFluxoPublicado(
 
 export async function publicarFluxosEventos(
   admin: SupabaseClient,
-  params: { orgId: string; createdBy: string },
+  params: { orgId: string; createdBy: string; /** Textos mensais escritos pelo gabinete (padrão: rascunho genérico). */ toques?: ToqueDrip[] },
 ): Promise<PublicarResultado> {
   const { orgId, createdBy } = params;
+  const toques = params.toques && params.toques.length > 0 ? params.toques : [...TOQUES_DRIP_PADRAO];
   const resultado: PublicarResultado = { dripPointerId: null, ebooks: [], erros: [] };
 
   // 1) Drip mensal (um só por org). Textos de rascunho — o gabinete edita depois.
@@ -90,7 +92,7 @@ export async function publicarFluxosEventos(
       admin,
       orgId,
       "Eventos · Conteúdo mensal",
-      montarFluxoDripMensal({ toques: [...TOQUES_DRIP_PADRAO] }),
+      montarFluxoDripMensal({ toques }),
       createdBy,
     );
     resultado.dripPointerId = dripPointerId;

@@ -1270,6 +1270,15 @@ export const NAV_CATALOG = [
     sidebar: true,
   },
   {
+    href: "/app/politico/nutricao",
+    label: "Nutrição mensal",
+    description: "Uma mensagem por mês para quem se aproximou do mandato: escolha o número, escreva os textos e ligue. Nasce desligada.",
+    icon: "ListChecks",
+    group: "gabinete",
+    minRole: "manager",
+    sidebar: true,
+  },
+  {
     href: "/app/politico/follow-up-simples",
     label: "Follow-up simples",
     description: "Monte um acompanhamento em 1 minuto: escolha o objetivo (acolher, oferecer conteúdo, cobrar, lembrar de evento), escreva a mensagem e veja a jornada antes de ligar.",

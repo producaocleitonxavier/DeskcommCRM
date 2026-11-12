@@ -60,6 +60,7 @@ export const REGRAS_DE_ACESSO_POLITICO = {
   identidade: { min: "manager" },
   enriquecer: { min: "manager" },
   "follow-up-simples": { min: "manager" },
+  nutricao: { min: "manager" },
 } as const satisfies Record<string, RegraDeAcesso>;
 
 export type ModuloPolitico = keyof typeof REGRAS_DE_ACESSO_POLITICO;

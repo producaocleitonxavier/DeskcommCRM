@@ -24,6 +24,7 @@ import { autorizaCron } from "@/lib/auth/cron-auth";
 import { rodarUmaRodadaDeCampanha } from "@/lib/campanhas/rodada";
 import { processarRetries } from "@/lib/campanhas/retry";
 import { esfriarInativos } from "@/lib/politico/esfriamento";
+import { graduarOrgsArmadas } from "@/lib/politico/eventos-envio/graduar";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 export const dynamic = "force-dynamic";
@@ -42,8 +43,11 @@ async function handle(req: NextRequest): Promise<Response> {
   // Esfriamento do funil ~1x/hora (o worker roda a cada minuto): a temperatura
   // reflete o AGORA — quem some esfria. Barato (só o conjunto quente/morno).
   const esfriados = new Date().getMinutes() === 17 ? (await esfriarInativos(admin)).esfriados : 0;
+  // Nutrição mensal: quem respondeu "sim" ao material do evento sobe a simpatizante
+  // e entra na cadência. Só age em organização com a nutrição ligada; a cada 10 min.
+  const nutricao = new Date().getMinutes() % 10 === 3 ? await graduarOrgsArmadas(admin) : { graduados: 0, inscritosNoDrip: 0 };
 
-  if (r.enviadas > 0 || r.pulados > 0 || r.concluidas > 0 || r.promovidas > 0 || retry.enviados > 0 || esfriados > 0) {
+  if (r.enviadas > 0 || r.pulados > 0 || r.concluidas > 0 || r.promovidas > 0 || retry.enviados > 0 || esfriados > 0 || nutricao.graduados > 0) {
     void audit({
       action: "cron.campaign_worker",
       requestId,

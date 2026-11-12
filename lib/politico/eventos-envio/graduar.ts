@@ -90,3 +90,30 @@ export async function graduarRespostasDeEvento(
 
   return resultado;
 }
+
+/**
+ * Roda a graduação em toda organização com a nutrição LIGADA (ativo + número).
+ * É o que o cron chama: barato quando ninguém ligou (uma consulta e sai), e
+ * idempotente por organização. Nunca lança — falha de uma org não para as outras.
+ */
+export async function graduarOrgsArmadas(admin: SupabaseClient): Promise<GraduarResultado> {
+  const total: GraduarResultado = { graduados: 0, inscritosNoDrip: 0 };
+  const { data } = await admin
+    .from("pol_eventos_envio_config")
+    .select("organization_id")
+    .eq("ativo", true)
+    .not("channel_session_id", "is", null);
+  for (const linha of (data ?? []) as { organization_id: string }[]) {
+    try {
+      const r = await graduarRespostasDeEvento(admin, linha.organization_id);
+      total.graduados += r.graduados;
+      total.inscritosNoDrip += r.inscritosNoDrip;
+    } catch (err) {
+      logger.warn("[eventos-envio] graduação da org falhou (segue para a próxima)", {
+        organization_id: linha.organization_id,
+        detail: err instanceof Error ? err.message.slice(0, 120) : "?",
+      });
+    }
+  }
+  return total;
+}
