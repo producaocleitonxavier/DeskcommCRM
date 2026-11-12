@@ -12,6 +12,7 @@ import { requireAuth, resolveActiveOrg } from "@/lib/auth/server";
 import { obterIdentidade } from "@/app/actions/politico/gabinete-identidade";
 import IdentidadeClient from "./_client";
 import PageTabs from "@/components/politico/page-tabs";
+import { exigirAcessoPolitico } from "@/lib/politico/acesso";
 
 const GABINETE_CFG_TABS = [
   { id: "transparencia", label: "Portal da Transparência", href: "/app/politico/transparencia" },
@@ -21,6 +22,7 @@ const GABINETE_CFG_TABS = [
 export const dynamic = "force-dynamic";
 
 export default async function IdentidadeGabinetePage() {
+  await exigirAcessoPolitico("identidade");
   const user = await requireAuth();
   const org = await resolveActiveOrg(user);
   if (!org) redirect("/app/onboarding");

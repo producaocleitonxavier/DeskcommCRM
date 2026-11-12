@@ -12,12 +12,14 @@ import { requireAuth, resolveActiveOrg } from "@/lib/auth/server";
 import { listarAnexosDemanda } from "@/app/actions/politico/gabinete-actions";
 import { CommandHero } from "@/components/politico/command-hero";
 import GeradorVitoriaClient from "./_gerador-client";
+import { exigirAcessoPolitico } from "@/lib/politico/acesso";
 
 export const dynamic = "force-dynamic";
 
 const MIMES_IMAGEM = ["image/jpeg", "image/jpg", "image/png"];
 
 export default async function GerarVitoriaPage({ params }: { params: Promise<{ id: string }> }) {
+  await exigirAcessoPolitico("vitorias");
   const user = await requireAuth();
   const org = await resolveActiveOrg(user);
   if (!org) redirect("/app/onboarding");

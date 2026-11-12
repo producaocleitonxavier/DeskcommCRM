@@ -9,6 +9,7 @@
  * Caminho leve de IA (lib/ai/cerebro). Sem env nova; degrada em PT.
  */
 
+import { autenticarComPapel } from "@/lib/politico/acesso";
 import { generateText } from "ai";
 
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -32,7 +33,7 @@ export async function analiseProjecaoIA(
   cargoAno: string,
   ano: number,
 ): Promise<ResultadoAnaliseProjecao> {
-  const user = await requireAuth();
+  const user = await autenticarComPapel("manager");
   const org = await resolveActiveOrg(user);
   if (!org) return { ok: false, erro: "Sessão ou organização inválida." };
 

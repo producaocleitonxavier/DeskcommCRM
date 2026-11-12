@@ -7,6 +7,7 @@
  * `organization_id` vem SEMPRE de resolveActiveOrg, nunca do input.
  */
 
+import { autenticarComPapel } from "@/lib/politico/acesso";
 import { revalidatePath } from "next/cache";
 
 import { createClient } from "@/lib/supabase/server";
@@ -22,7 +23,7 @@ function traduzErro(error: { code?: string; message: string }): string {
 }
 
 async function contexto() {
-  const user = await requireAuth();
+  const user = await autenticarComPapel("agent");
   const org = await resolveActiveOrg(user);
   if (!org) return null;
   const db = await createClient();

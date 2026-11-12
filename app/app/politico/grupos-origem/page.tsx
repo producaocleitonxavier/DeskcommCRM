@@ -5,11 +5,13 @@ import { requireAuth, resolveActiveOrg } from "@/lib/auth/server";
 import { createClient } from "@/lib/supabase/server";
 import { listarOrigensEGrupos, conversaoDasOrigens } from "@/lib/politico/origens-grupos";
 import GruposOrigemClient from "./_client";
+import { exigirAcessoPolitico } from "@/lib/politico/acesso";
 
 export const dynamic = "force-dynamic";
 export const metadata: Metadata = { title: "Grupos de origem" };
 
 export default async function GruposOrigemPage() {
+  await exigirAcessoPolitico("grupos-origem");
   const user = await requireAuth();
   const org = await resolveActiveOrg(user);
   if (!org) redirect("/app/onboarding");

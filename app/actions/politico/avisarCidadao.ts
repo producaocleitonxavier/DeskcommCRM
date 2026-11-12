@@ -11,6 +11,7 @@
  * como qualquer atendimento. Tudo no servidor (sessão autenticada).
  */
 
+import { autenticarComPapel } from "@/lib/politico/acesso";
 import { randomUUID } from "node:crypto";
 
 import { createClient } from "@/lib/supabase/server";
@@ -69,7 +70,7 @@ export async function avisarCidadao(
   demandaId: string,
   opts?: { incluirAudio?: boolean; texto?: string },
 ): Promise<AvisoResultado> {
-  const user = await requireAuth();
+  const user = await autenticarComPapel("agent");
   const org = await resolveActiveOrg(user);
   if (!org) return { ok: false, erro: "Sessão ou organização inválida." };
   const db = await createClient();
@@ -318,7 +319,7 @@ export type AvisoAutoResultado =
   | { ok: false; erro: string };
 
 export async function avisarResolucaoAutomatica(demandaId: string): Promise<AvisoAutoResultado> {
-  const user = await requireAuth();
+  const user = await autenticarComPapel("agent");
   const org = await resolveActiveOrg(user);
   if (!org) return { ok: false, erro: "Sessão ou organização inválida." };
   const db = await createClient();

@@ -11,6 +11,7 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { requireAuth, resolveActiveOrg } from "@/lib/auth/server";
 import FunilClient from "./_funil-client";
+import { exigirAcessoPolitico } from "@/lib/politico/acesso";
 
 export const dynamic = "force-dynamic";
 
@@ -147,6 +148,7 @@ async function buscarVelocidadeDias(organizationId: string): Promise<number> {
 }
 
 export default async function FunilPoliticoPage() {
+  await exigirAcessoPolitico("funil");
   const user = await requireAuth();
 
   const org = await resolveActiveOrg(user);

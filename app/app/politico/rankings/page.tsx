@@ -12,6 +12,7 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { requireAuth, resolveActiveOrg } from "@/lib/auth/server";
 import { CommandHero } from "@/components/politico/command-hero";
+import { exigirAcessoPolitico } from "@/lib/politico/acesso";
 
 export const dynamic = "force-dynamic";
 
@@ -106,6 +107,7 @@ export default async function RankingsPage({
 }: {
   searchParams: Promise<{ tab?: string }>;
 }) {
+  await exigirAcessoPolitico("rankings");
   const user = await requireAuth();
 
   const org = await resolveActiveOrg(user);

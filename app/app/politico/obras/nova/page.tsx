@@ -3,10 +3,12 @@ import { requireAuth, resolveActiveOrg } from "@/lib/auth/server";
 import { createClient } from "@/lib/supabase/server";
 import { CommandHero } from "@/components/politico/command-hero";
 import ObraForm, { type EmendaOpcao } from "../form";
+import { exigirAcessoPolitico } from "@/lib/politico/acesso";
 
 export const dynamic = "force-dynamic";
 
 export default async function NovaObraPage() {
+  await exigirAcessoPolitico("obras");
   const user = await requireAuth();
   const org = await resolveActiveOrg(user);
   if (!org) redirect("/app/onboarding");

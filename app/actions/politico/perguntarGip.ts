@@ -9,6 +9,7 @@
  * contexto para o modelo preencher os parâmetros.
  */
 
+import { autenticarComPapel } from "@/lib/politico/acesso";
 import { generateText, tool, stepCountIs } from "ai";
 import { z } from "zod";
 
@@ -31,7 +32,7 @@ async function tseCodeDe(db: Awaited<ReturnType<typeof createClient>>, municipio
 }
 
 export async function perguntarGip(pergunta: string, historico: GipMsg[] = []): Promise<GipResposta> {
-  const user = await requireAuth();
+  const user = await autenticarComPapel("manager");
   const org = await resolveActiveOrg(user);
   if (!org) return { ok: false, erro: "Sessão inválida." };
   if (!pergunta.trim()) return { ok: false, erro: "Escreva uma pergunta." };

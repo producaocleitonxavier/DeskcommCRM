@@ -13,6 +13,7 @@
  * resolveActiveOrg, nunca do corpo). Limites de tamanho evitam payload abusivo.
  */
 
+import { autenticarComPapel } from "@/lib/politico/acesso";
 import { z } from "zod";
 
 import { createClient } from "@/lib/supabase/server";
@@ -62,7 +63,7 @@ export async function gerarRelatorioGabinete(bruto: RelatorioGabineteInputClient
   if (!parsed.success) return { ok: false, erro: "Dados do relatório inválidos." };
   const input = parsed.data;
 
-  const user = await requireAuth();
+  const user = await autenticarComPapel("agent");
   const org = await resolveActiveOrg(user);
   if (!org) return { ok: false, erro: "Sessão ou organização inválida." };
   const db = await createClient();

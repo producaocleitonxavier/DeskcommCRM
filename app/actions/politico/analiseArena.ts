@@ -11,6 +11,7 @@
  * de gerarEncaminhamento), sem env nova; degrada com mensagem em PT.
  */
 
+import { autenticarComPapel } from "@/lib/politico/acesso";
 import { generateText } from "ai";
 
 import { createClient } from "@/lib/supabase/server";
@@ -37,7 +38,7 @@ export interface EntradaAnaliseArena {
 const DIM_LABEL: Record<Dim, string> = { zona: "zona eleitoral", bairro: "bairro", local: "local de votação (escola)", secao: "seção" };
 
 export async function analiseArenaIA(entrada: EntradaAnaliseArena): Promise<ResultadoAnaliseArena> {
-  const user = await requireAuth();
+  const user = await autenticarComPapel("manager");
   const org = await resolveActiveOrg(user);
   if (!org) return { ok: false, erro: "Sessão ou organização inválida." };
   if (entrada.candidatos.length < 2) return { ok: false, erro: "Selecione pelo menos 2 candidatos." };

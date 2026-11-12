@@ -4,10 +4,12 @@ import { createClient } from "@/lib/supabase/server";
 import { listarVistorias, listarFotosObra, obterMandatoTse, pesoBairro, type PesoBairro } from "@/app/actions/politico/obras-actions";
 import { lerVozConfig, vozArmada } from "@/lib/voz/config";
 import ObraDetalhe, { type ObraDetalheData } from "./_detalhe-client";
+import { exigirAcessoPolitico } from "@/lib/politico/acesso";
 
 export const dynamic = "force-dynamic";
 
 export default async function ObraDetalhePage({ params }: { params: Promise<{ id: string }> }) {
+  await exigirAcessoPolitico("obras");
   const { id } = await params;
   const user = await requireAuth();
   const org = await resolveActiveOrg(user);

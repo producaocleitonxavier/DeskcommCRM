@@ -8,10 +8,12 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { requireAuth, resolveActiveOrg } from "@/lib/auth/server";
 import NovoLocalForm, { type MaterialOpcao, type LiderancaOpcao } from "./form";
+import { exigirAcessoPolitico } from "@/lib/politico/acesso";
 
 export const dynamic = "force-dynamic";
 
 export default async function NovoLocalPage() {
+  await exigirAcessoPolitico("locais");
   const user = await requireAuth();
   const org = await resolveActiveOrg(user);
   if (!org) redirect("/app/onboarding");

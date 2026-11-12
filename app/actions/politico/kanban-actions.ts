@@ -13,6 +13,7 @@
  * resolveActiveOrg, nunca do input.
  */
 
+import { autenticarComPapel } from "@/lib/politico/acesso";
 import { revalidatePath } from "next/cache";
 
 import { createClient } from "@/lib/supabase/server";
@@ -38,7 +39,7 @@ export async function moverEtapa(contactId: string, etapa: string): Promise<Acao
   if (!ETAPAS.includes(etapa as Etapa)) return { ok: false, erro: "Etapa inválida." };
   const alvo = etapa as Etapa;
 
-  const user = await requireAuth();
+  const user = await autenticarComPapel("agent");
   const org = await resolveActiveOrg(user);
   if (!org) return { ok: false, erro: "Sessão ou organização inválida." };
   const db = await createClient();

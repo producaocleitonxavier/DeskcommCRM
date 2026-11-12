@@ -20,6 +20,7 @@ import { lerMandatoConfig } from "@/lib/politico/setup-do-mandato";
 import { visitaPendente, visitaAgendada, visitaSemResponsavel } from "@/lib/politico/visita-tecnica";
 import { listarAnexosDemanda } from "@/app/actions/politico/gabinete-actions";
 import VisitasClient, { type VisitaItem, type FotoVisita } from "./_visitas-client";
+import { exigirAcessoPolitico } from "@/lib/politico/acesso";
 
 export const dynamic = "force-dynamic";
 
@@ -29,6 +30,7 @@ async function colunaExiste(db: Awaited<ReturnType<typeof createClient>>, org: s
 }
 
 export default async function VisitasPage() {
+  await exigirAcessoPolitico("visitas");
   const user = await requireAuth();
   const org = await resolveActiveOrg(user);
   if (!org) redirect("/app/onboarding");

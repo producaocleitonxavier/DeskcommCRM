@@ -7,6 +7,7 @@
  * (`lib/politico/prestacao-contas-dados`). Salva em `gabinete-anexos`
  * {org}/relatorios/prestacao-contas.pdf (upsert) e devolve URL assinada.
  */
+import { autenticarComPapel } from "@/lib/politico/acesso";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { requireAuth, resolveActiveOrg } from "@/lib/auth/server";
@@ -17,7 +18,7 @@ import { renderRelatorioPrestacaoContasPdf } from "@/lib/politico/prestacao-pdf"
 export type RelatorioResultado = { ok: true; url: string } | { ok: false; erro: string };
 
 export async function gerarRelatorioPrestacaoContas(periodoRaw?: string): Promise<RelatorioResultado> {
-  const user = await requireAuth();
+  const user = await autenticarComPapel("manager");
   const org = await resolveActiveOrg(user);
   if (!org) return { ok: false, erro: "Sessão ou organização inválida." };
   const orgId = org.orgId;

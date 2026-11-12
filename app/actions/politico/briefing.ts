@@ -8,6 +8,7 @@
  * só o que está nas tabelas. Caminho leve de IA (lib/ai/cerebro); degrada em PT.
  */
 
+import { autenticarComPapel } from "@/lib/politico/acesso";
 import { generateText } from "ai";
 
 import { createClient } from "@/lib/supabase/server";
@@ -51,7 +52,7 @@ export async function briefingEstrategico(
   cargoAno: string,
   ano: number,
 ): Promise<ResultadoBriefing> {
-  const user = await requireAuth();
+  const user = await autenticarComPapel("manager");
   const org = await resolveActiveOrg(user);
   if (!org) return { ok: false, erro: "Sessão ou organização inválida." };
 

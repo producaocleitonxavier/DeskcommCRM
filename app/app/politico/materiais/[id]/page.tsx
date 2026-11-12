@@ -9,10 +9,12 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { requireAuth, resolveActiveOrg } from "@/lib/auth/server";
 import MaterialDetalheClient, { type MaterialDetalhe } from "./_detalhe-client";
+import { exigirAcessoPolitico } from "@/lib/politico/acesso";
 
 export const dynamic = "force-dynamic";
 
 export default async function MaterialDetalhePage({ params }: { params: Promise<{ id: string }> }) {
+  await exigirAcessoPolitico("materiais");
   const { id } = await params;
   const user = await requireAuth();
   const org = await resolveActiveOrg(user);

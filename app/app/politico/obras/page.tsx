@@ -15,10 +15,12 @@ import { CommandHero } from "@/components/politico/command-hero";
 import { listarEleicoes, type EleicaoOpcao } from "@/app/actions/politico/intelEleitoral";
 import { obterMandatoTse } from "@/app/actions/politico/obras-actions";
 import ObrasClient, { type ObraRow } from "./_obras-client";
+import { exigirAcessoPolitico } from "@/lib/politico/acesso";
 
 export const dynamic = "force-dynamic";
 
 export default async function ObrasPage() {
+  await exigirAcessoPolitico("obras");
   const user = await requireAuth();
   const org = await resolveActiveOrg(user);
   if (!org) redirect("/app/onboarding");

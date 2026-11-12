@@ -10,6 +10,7 @@
  * edita e decide); nada envia (o card é só pra baixar). Reusa cerebroDaOrg.
  */
 
+import { autenticarComPapel } from "@/lib/politico/acesso";
 import { generateText } from "ai";
 
 import { createClient } from "@/lib/supabase/server";
@@ -34,7 +35,7 @@ export interface VitoriaRadar {
  * nova). Duas queries: resolvidas recentes + anexos-imagem delas, cruzadas em JS.
  */
 export async function listarVitorias(limite = 60): Promise<VitoriaRadar[]> {
-  const user = await requireAuth();
+  const user = await autenticarComPapel("agent");
   const org = await resolveActiveOrg(user);
   if (!org) return [];
   const db = await createClient();
@@ -98,7 +99,7 @@ export type ResultadoLegenda = { ok: true; legenda: string } | { ok: false; erro
  * do trabalho, não de propaganda. O gabinete edita antes de usar.
  */
 export async function gerarLegendaVitoria(demandaId: string): Promise<ResultadoLegenda> {
-  const user = await requireAuth();
+  const user = await autenticarComPapel("agent");
   const org = await resolveActiveOrg(user);
   if (!org) return { ok: false, erro: "Sessão ou organização inválida." };
   const admin = createAdminClient();

@@ -16,10 +16,12 @@ import { lerMandatoConfig } from "@/lib/politico/setup-do-mandato";
 import { orgaosSugeridos } from "@/lib/politico/demanda-cobranca";
 import { vozDisponivel } from "@/app/actions/politico/captura-campo";
 import CapturaCampoClient from "./_captura-client";
+import { exigirAcessoPolitico } from "@/lib/politico/acesso";
 
 export const dynamic = "force-dynamic";
 
 export default async function CapturaCampoPage() {
+  await exigirAcessoPolitico("campo");
   const user = await requireAuth();
   const org = await resolveActiveOrg(user);
   if (!org) redirect("/app/onboarding");

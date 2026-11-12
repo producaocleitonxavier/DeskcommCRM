@@ -17,6 +17,7 @@
  * 1:1 no canal pronto e envia pelo handler de mensagens. Idempotente: uma
  * cobrança por demanda (o evento de histórico é a trava) — não martela a pessoa.
  */
+import { autenticarComPapel } from "@/lib/politico/acesso";
 import { randomUUID } from "node:crypto";
 
 import { createClient } from "@/lib/supabase/server";
@@ -51,7 +52,7 @@ interface DemandaCobrancaRow {
 }
 
 export async function avisarCobrancaAoCidadao(demandaId: string, textoEditado?: string): Promise<CobrancaResultado> {
-  const user = await requireAuth();
+  const user = await autenticarComPapel("agent");
   const org = await resolveActiveOrg(user);
   if (!org) return { ok: false, erro: "Sessão ou organização inválida." };
   const db = await createClient();

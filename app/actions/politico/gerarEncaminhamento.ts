@@ -12,6 +12,7 @@
  * sozinho) — quem decide o que vai ao órgão é o gabinete.
  */
 
+import { autenticarComPapel } from "@/lib/politico/acesso";
 import { generateText } from "ai";
 
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -90,7 +91,7 @@ async function cerebroDaOrg(
 }
 
 export async function gerarEncaminhamento(demandaId: string): Promise<ResultadoEncaminhamento> {
-  const user = await requireAuth();
+  const user = await autenticarComPapel("agent");
   const org = await resolveActiveOrg(user);
   if (!org) return { ok: false, erro: "Sessão ou organização inválida." };
 

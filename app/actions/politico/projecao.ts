@@ -10,6 +10,7 @@
  * tem pouca presença.
  */
 
+import { autenticarComPapel } from "@/lib/politico/acesso";
 import { createClient } from "@/lib/supabase/server";
 import { requireAuth } from "@/lib/auth/server";
 
@@ -33,7 +34,7 @@ export interface ProjecaoResumo {
 }
 
 export async function projecaoZonal(electionId: number, municipioTse: string, ano: number): Promise<ProjecaoResumo> {
-  await requireAuth();
+  await autenticarComPapel("manager");
   const db = await createClient();
   const cd = Number(municipioTse);
 
@@ -95,7 +96,7 @@ export interface ProjecaoRegionalResumo {
 
 /** Projeção agregada por REGIONAL administrativa (só para municípios com o mapa, ex.: BH, Contagem). */
 export async function projecaoRegional(electionId: number, municipioTse: string, ano: number): Promise<ProjecaoRegionalResumo> {
-  await requireAuth();
+  await autenticarComPapel("manager");
   const db = await createClient();
   const cd = Number(municipioTse);
 

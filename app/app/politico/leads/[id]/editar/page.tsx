@@ -13,10 +13,12 @@ import { createClient } from "@/lib/supabase/server";
 import { requireAuth, resolveActiveOrg } from "@/lib/auth/server";
 import { CommandHero } from "@/components/politico/command-hero";
 import EditarLeadForm, { type LeadParaEdicao } from "./form";
+import { exigirAcessoPolitico } from "@/lib/politico/acesso";
 
 export const dynamic = "force-dynamic";
 
 export default async function EditarLeadPage({ params }: { params: Promise<{ id: string }> }) {
+  await exigirAcessoPolitico("pessoas");
   const user = await requireAuth();
   const org = await resolveActiveOrg(user);
   if (!org) redirect("/app/onboarding");

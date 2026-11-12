@@ -13,6 +13,7 @@ import { CommandHero } from "@/components/politico/command-hero";
 import { QuemVai, type Presente } from "@/components/politico/quem-vai";
 import { createClient } from "@/lib/supabase/server";
 import { requireAuth, resolveActiveOrg } from "@/lib/auth/server";
+import { exigirAcessoPolitico } from "@/lib/politico/acesso";
 
 export const dynamic = "force-dynamic";
 
@@ -97,6 +98,7 @@ export default async function EventosPage({
 }: {
   searchParams: Promise<{ status?: string; type?: string }>;
 }) {
+  await exigirAcessoPolitico("eventos");
   const user = await requireAuth();
   const org = await resolveActiveOrg(user);
   if (!org) redirect("/app/onboarding");

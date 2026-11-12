@@ -12,6 +12,7 @@
  * resolveActiveOrg, nunca do input.
  */
 
+import { autenticarComPapel } from "@/lib/politico/acesso";
 import { randomUUID } from "node:crypto";
 
 import { revalidatePath } from "next/cache";
@@ -40,7 +41,7 @@ function isWhatsappBRPlausivel(phone: string): boolean {
 
 /** Quantos apoiadores+ podem ser convidados agora (pra o rótulo do botão). */
 export async function contarElegiveis(): Promise<number> {
-  const user = await requireAuth();
+  const user = await autenticarComPapel("agent");
   const org = await resolveActiveOrg(user);
   if (!org) return 0;
   const db = await createClient();
@@ -67,7 +68,7 @@ export type ConviteResultado =
  * claro (no teste não há WAHA). Sequencial e gentil.
  */
 export async function convidarDivulgadores(): Promise<ConviteResultado> {
-  const user = await requireAuth();
+  const user = await autenticarComPapel("agent");
   const org = await resolveActiveOrg(user);
   if (!org) return { ok: false, erro: "Sessão ou organização inválida." };
   const db = await createClient();

@@ -100,16 +100,49 @@ export async function aplicarEnriquecimento(aprovadosRaw: unknown): Promise<Resu
 
   // 1) 🟢 cidadão → nova fonte de conhecimento + anexa ao agente do mandato (RAG).
   if (cidadao.length > 0) {
+    // O material de enriquecimento é UM por organização e ACUMULA: o nome é único
+    // por org (`ai_knowledge_sources_nome_unico_por_org`), então uma 2ª aprovação
+    // não pode inserir outra linha — ela acrescenta ao MESMO documento e pede o
+    // re-preparo. (Bug de 11/nov: o 2º insert era recusado, o erro era engolido e
+    // a tela dizia "acrescentado" sem gravar nada.)
+    const secoes = (itens: typeof cidadao) =>
+      itens.map((a) => `## ${a.titulo}\n${a.resumo}\nFonte: ${a.fonte}`).join("\n\n");
     try {
-      const md =
-        "# Enriquecimento do mandato (pesquisa pública)\n\n" +
-        cidadao.map((a) => `## ${a.titulo}\n${a.resumo}\nFonte: ${a.fonte}`).join("\n\n");
-      const blobPath = `${org.orgId}/${randomUUID()}.md`;
-      const { error: upErr } = await admin.storage
-        .from(BUCKET_DE_CONHECIMENTO)
-        .upload(blobPath, Buffer.from(md, "utf8"), { contentType: "text/markdown", upsert: false });
-      if (!upErr) {
-        const { data: ks } = await admin
+      const { data: existente } = await admin
+        .from("ai_knowledge_sources")
+        .select("id, source_metadata")
+        .eq("organization_id", org.orgId)
+        .eq("source_metadata->>origem", "enriquecimento")
+        .neq("status", "archived")
+        .order("created_at", { ascending: true })
+        .limit(1)
+        .maybeSingle();
+      const atual = existente as { id: string; source_metadata: { blob_path?: string } | null } | null;
+
+      let ksId: string;
+      if (atual?.id && atual.source_metadata?.blob_path) {
+        const caminho = atual.source_metadata.blob_path;
+        const { data: blob, error: downErr } = await admin.storage.from(BUCKET_DE_CONHECIMENTO).download(caminho);
+        if (downErr || !blob) throw new Error(`download: ${downErr?.message ?? "vazio"}`);
+        const anterior = await blob.text();
+        // Não repete item que já está lá (mesmo título).
+        const novos = cidadao.filter((a) => !anterior.includes(`## ${a.titulo}\n`));
+        if (novos.length > 0) {
+          const md = `${anterior.trimEnd()}\n\n${secoes(novos)}\n`;
+          const { error: upErr } = await admin.storage
+            .from(BUCKET_DE_CONHECIMENTO)
+            .upload(caminho, Buffer.from(md, "utf8"), { contentType: "text/markdown", upsert: true });
+          if (upErr) throw new Error(`upload: ${upErr.message}`);
+        }
+        ksId = atual.id;
+      } else {
+        const md = `# Enriquecimento do mandato (pesquisa pública)\n\n${secoes(cidadao)}\n`;
+        const blobPath = `${org.orgId}/${randomUUID()}.md`;
+        const { error: upErr } = await admin.storage
+          .from(BUCKET_DE_CONHECIMENTO)
+          .upload(blobPath, Buffer.from(md, "utf8"), { contentType: "text/markdown", upsert: false });
+        if (upErr) throw new Error(`upload: ${upErr.message}`);
+        const { data: ks, error: insErr } = await admin
           .from("ai_knowledge_sources")
           .insert({
             organization_id: org.orgId,
@@ -123,8 +156,11 @@ export async function aplicarEnriquecimento(aprovadosRaw: unknown): Promise<Resu
           })
           .select("id")
           .single();
-        const ksId = (ks as { id: string } | null)?.id;
-        if (ksId) {
+        if (insErr || !ks) throw new Error(`insert: ${insErr?.message ?? "sem linha"}`);
+        ksId = (ks as { id: string }).id;
+      }
+      {
+        {
           await admin.rpc("emit_event" as never, {
             p_event_type: "knowledge_source.updated",
             p_entity_kind: "ai_knowledge_source",
@@ -158,7 +194,9 @@ export async function aplicarEnriquecimento(aprovadosRaw: unknown): Promise<Resu
         }
       }
     } catch (err) {
+      // Falhou de verdade → DIZ que falhou. Nunca "acrescentado" sem ter gravado.
       logger.warn("aplicar-enriquecimento: falha no RAG", { organization_id: org.orgId, causa: err instanceof Error ? err.message : String(err) });
+      return { ok: false, erro: "Não consegui gravar no conhecimento do agente. Nada foi acrescentado — tente de novo." };
     }
   }
 
@@ -175,7 +213,11 @@ export async function aplicarEnriquecimento(aprovadosRaw: unknown): Promise<Resu
         ],
       },
     };
-    await admin.from("organizations").update({ settings: novo }).eq("id", org.orgId);
+    const { error: erroEquipe } = await admin.from("organizations").update({ settings: novo }).eq("id", org.orgId);
+    if (erroEquipe) {
+      logger.warn("aplicar-enriquecimento: falha ao gravar a inteligência da equipe", { organization_id: org.orgId, causa: erroEquipe.message });
+      return { ok: false, erro: "Não consegui gravar a inteligência da equipe. Tente de novo." };
+    }
   }
 
   return { ok: true, acrescentados: aprovados.length };

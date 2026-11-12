@@ -19,6 +19,7 @@ import { contarVitorias } from "@/app/actions/politico/vitoria-actions";
 import { destinosDaInterface } from "@/lib/navigation/interface";
 import HojeClient from "./_hoje-client";
 import PageTabs from "@/components/politico/page-tabs";
+import { exigirAcessoPolitico } from "@/lib/politico/acesso";
 
 const COMANDO_TABS = [
   { id: "hoje", label: "Hoje", href: "/app/politico" },
@@ -772,6 +773,7 @@ async function buscarCargaEquipe(organizationId: string): Promise<CargaMembro[]>
 // -- Componente (server) -----------------------------------------------------
 
 export default async function HojePage() {
+  await exigirAcessoPolitico("hoje");
   const user = await requireAuth();
 
   const org = await resolveActiveOrg(user);

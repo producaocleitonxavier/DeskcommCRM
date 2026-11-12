@@ -15,6 +15,7 @@
  * servidor, `organization_id` sempre de resolveActiveOrg (nunca do input).
  */
 
+import { autenticarComPapel } from "@/lib/politico/acesso";
 import { randomUUID } from "node:crypto";
 
 import { requireAuth, resolveActiveOrg } from "@/lib/auth/server";
@@ -53,7 +54,7 @@ export interface VideoDaBiblioteca {
  * do Instagram, não pelo `tipo` (um reel pode estar como "video" ou "link").
  */
 export async function listarVideosDaBiblioteca(): Promise<VideoDaBiblioteca[]> {
-  const user = await requireAuth();
+  const user = await autenticarComPapel("manager");
   const org = await resolveActiveOrg(user);
   if (!org) return [];
   const db = await createClient();
@@ -111,7 +112,7 @@ export async function enviarVideoAosMultiplicadores(
   materialId: string,
   grupo: GrupoMultiplicador = "todos",
 ): Promise<EnvioMultiplicadoresResultado> {
-  const user = await requireAuth();
+  const user = await autenticarComPapel("manager");
   const org = await resolveActiveOrg(user);
   if (!org) return { ok: false, erro: "Sessão ou organização inválida." };
   const db = await createClient();
@@ -261,7 +262,7 @@ export interface EnqueteParaEnviar {
 
 /** Enquetes ATIVAS da org — as que podem ser espalhadas (têm link público). */
 export async function listarEnquetesParaEnviar(): Promise<EnqueteParaEnviar[]> {
-  const user = await requireAuth();
+  const user = await autenticarComPapel("manager");
   const org = await resolveActiveOrg(user);
   if (!org) return [];
   const db = await createClient();
@@ -297,7 +298,7 @@ export async function enviarEnqueteAosMultiplicadores(
   surveyId: string,
   grupo: GrupoMultiplicador = "todos",
 ): Promise<EnvioMultiplicadoresResultado> {
-  const user = await requireAuth();
+  const user = await autenticarComPapel("manager");
   const org = await resolveActiveOrg(user);
   if (!org) return { ok: false, erro: "Sessão ou organização inválida." };
   const db = await createClient();

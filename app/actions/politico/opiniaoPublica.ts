@@ -8,6 +8,7 @@
  * Espelha a lógica do SAM (sentimento + tópico + território) sem a infra pesada.
  */
 
+import { autenticarComPapel } from "@/lib/politico/acesso";
 import { generateText } from "ai";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
@@ -51,7 +52,7 @@ export interface ResumoOpiniao {
 }
 
 export async function obterConfigMonitor(): Promise<MonitorConfig> {
-  const user = await requireAuth();
+  const user = await autenticarComPapel("manager");
   const org = await resolveActiveOrg(user);
   if (!org) return { termosNome: [], cidade: null, bairros: [], temas: [] };
   const db = await createClient();
@@ -66,7 +67,7 @@ export async function obterConfigMonitor(): Promise<MonitorConfig> {
 }
 
 export async function salvarConfigMonitor(cfg: MonitorConfig): Promise<{ ok: boolean; erro?: string }> {
-  const user = await requireAuth();
+  const user = await autenticarComPapel("manager");
   const org = await resolveActiveOrg(user);
   if (!org) return { ok: false, erro: "Sessão inválida." };
   const db = await createClient();
@@ -235,7 +236,7 @@ export async function atualizarMencoesDaOrg(admin: SupabaseClient, orgId: string
 }
 
 export async function atualizarMencoes(): Promise<{ ok: boolean; novas: number; erro?: string }> {
-  const user = await requireAuth();
+  const user = await autenticarComPapel("manager");
   const org = await resolveActiveOrg(user);
   if (!org) return { ok: false, novas: 0, erro: "Sessão inválida." };
   const admin = createAdminClient();
@@ -279,7 +280,7 @@ async function classificar(admin: SupabaseClient, orgId: string, itens: { id: st
 
 /** Reavalia o sentimento das menções recentes com a lógica atual (uso pontual). */
 export async function reavaliarSentimento(limite = 40): Promise<{ ok: boolean; n: number; erro?: string }> {
-  const user = await requireAuth();
+  const user = await autenticarComPapel("manager");
   const org = await resolveActiveOrg(user);
   if (!org) return { ok: false, n: 0, erro: "Sessão inválida." };
   const admin = createAdminClient();
@@ -350,7 +351,7 @@ async function gerarSinaisDaOpiniao(db: Awaited<ReturnType<typeof createClient>>
 
 /** Gera sinais sob demanda (botão). */
 export async function gerarSinais(): Promise<{ ok: boolean; alertas: number; sinais: number; erro?: string }> {
-  const user = await requireAuth();
+  const user = await autenticarComPapel("manager");
   const org = await resolveActiveOrg(user);
   if (!org) return { ok: false, alertas: 0, sinais: 0, erro: "Sessão inválida." };
   const db = await createClient();
@@ -361,7 +362,7 @@ export async function gerarSinais(): Promise<{ ok: boolean; alertas: number; sin
 // ── Leitura ──────────────────────────────────────────────────────────────────
 
 export async function listarMencoes(limit = 50): Promise<Mencao[]> {
-  const user = await requireAuth();
+  const user = await autenticarComPapel("manager");
   const org = await resolveActiveOrg(user);
   if (!org) return [];
   const db = await createClient();
@@ -380,7 +381,7 @@ export async function listarMencoes(limit = 50): Promise<Mencao[]> {
 }
 
 export async function resumoOpiniao(): Promise<ResumoOpiniao> {
-  const user = await requireAuth();
+  const user = await autenticarComPapel("manager");
   const org = await resolveActiveOrg(user);
   const vazio: ResumoOpiniao = { total: 0, positivos: 0, neutros: 0, negativos: 0, porDia: [], porCanal: [], topicos: [] };
   if (!org) return vazio;

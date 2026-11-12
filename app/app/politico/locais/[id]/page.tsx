@@ -12,10 +12,12 @@ import LocalDetalheClient, {
   type EventoDoLocal,
   type PessoaRegistrada,
 } from "./_detalhe-client";
+import { exigirAcessoPolitico } from "@/lib/politico/acesso";
 
 export const dynamic = "force-dynamic";
 
 export default async function LocalDetalhePage({ params }: { params: Promise<{ id: string }> }) {
+  await exigirAcessoPolitico("locais");
   const { id } = await params;
   const user = await requireAuth();
   const org = await resolveActiveOrg(user);

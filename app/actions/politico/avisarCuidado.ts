@@ -11,6 +11,7 @@
  * desastre. O assessor revisa e confirma. Reusa o caminho de envio do CRM (como
  * `avisarCidadao`/`avisarCobranca`). Idempotente: um cuidado por demanda.
  */
+import { autenticarComPapel } from "@/lib/politico/acesso";
 import { randomUUID } from "node:crypto";
 
 import { createClient } from "@/lib/supabase/server";
@@ -45,7 +46,7 @@ interface DemandaCuidadoRow {
 }
 
 export async function avisarCuidadoAoCidadao(demandaId: string, textoEditado?: string): Promise<CuidadoResultado> {
-  const user = await requireAuth();
+  const user = await autenticarComPapel("agent");
   const org = await resolveActiveOrg(user);
   if (!org) return { ok: false, erro: "Sessão ou organização inválida." };
   const db = await createClient();

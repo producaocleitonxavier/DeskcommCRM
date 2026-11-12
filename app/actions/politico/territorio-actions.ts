@@ -5,6 +5,7 @@
  * DEMANDA e só os que TÊM cadastro (a função 9061 agrega o que existe) — nunca
  * pré-popula bairro. `organization_id` sempre de resolveActiveOrg (nunca do input).
  */
+import { autenticarComPapel } from "@/lib/politico/acesso";
 import { requireAuth, resolveActiveOrg } from "@/lib/auth/server";
 import { createClient } from "@/lib/supabase/server";
 
@@ -16,7 +17,7 @@ export interface BairroRow {
 export async function bairrosDaCidade(cidade: string): Promise<BairroRow[]> {
   const termo = (cidade ?? "").trim();
   if (!termo) return [];
-  const user = await requireAuth();
+  const user = await autenticarComPapel("agent");
   const org = await resolveActiveOrg(user);
   if (!org) return [];
   const db = await createClient();

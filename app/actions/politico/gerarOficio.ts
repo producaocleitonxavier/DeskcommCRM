@@ -11,6 +11,7 @@
  * devolveria vazio. Posse pela RLS de `demandas` + filtro explícito de org.
  */
 
+import { autenticarComPapel } from "@/lib/politico/acesso";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { requireAuth, resolveActiveOrg } from "@/lib/auth/server";
@@ -25,7 +26,7 @@ export type OficioResultado =
   | { ok: false; erro: string };
 
 export async function gerarOficioDemanda(demandaId: string): Promise<OficioResultado> {
-  const user = await requireAuth();
+  const user = await autenticarComPapel("agent");
   const org = await resolveActiveOrg(user);
   if (!org) return { ok: false, erro: "Sessão ou organização inválida." };
 

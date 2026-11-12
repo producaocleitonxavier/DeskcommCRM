@@ -8,6 +8,7 @@
  * Persiste em intel_territorial_narratives (cache + histórico). Degrada em PT.
  */
 
+import { autenticarComPapel } from "@/lib/politico/acesso";
 import { generateText } from "ai";
 
 import { createClient } from "@/lib/supabase/server";
@@ -62,7 +63,7 @@ function mapRow(r: Record<string, unknown>): NarrativaTerritorial {
 
 /** Narrativa mais recente salva para um bairro (cache / histórico). */
 export async function obterNarrativaRecente(cdMunicipio: number, bairro: string): Promise<NarrativaTerritorial | null> {
-  const user = await requireAuth();
+  const user = await autenticarComPapel("manager");
   const org = await resolveActiveOrg(user);
   if (!org) return null;
   const db = await createClient();
@@ -80,7 +81,7 @@ export async function obterNarrativaRecente(cdMunicipio: number, bairro: string)
 
 /** Abre uma narrativa salva pelo id (clique no histórico). */
 export async function obterNarrativaPorId(id: string): Promise<NarrativaTerritorial | null> {
-  const user = await requireAuth();
+  const user = await autenticarComPapel("manager");
   const org = await resolveActiveOrg(user);
   if (!org) return null;
   const db = await createClient();
@@ -95,7 +96,7 @@ export async function obterNarrativaPorId(id: string): Promise<NarrativaTerritor
 
 /** Histórico de narrativas da org (lista). */
 export async function listarNarrativas(limit = 20): Promise<{ id: string; bairro: string; regional: string | null; municipioNome: string; geradoEm: string }[]> {
-  const user = await requireAuth();
+  const user = await autenticarComPapel("manager");
   const org = await resolveActiveOrg(user);
   if (!org) return [];
   const db = await createClient();
@@ -128,7 +129,7 @@ function extrairJson(texto: string): { narrativa?: string; riscos?: string[]; op
 
 /** Gera (ou regenera) a narrativa territorial de um bairro. */
 export async function gerarNarrativa(cdMunicipio: number, munNome: string, bairro: string): Promise<Resultado> {
-  const user = await requireAuth();
+  const user = await autenticarComPapel("manager");
   const org = await resolveActiveOrg(user);
   if (!org) return { ok: false, erro: "Sessão ou organização inválida." };
   if (!bairro.trim()) return { ok: false, erro: "Escolha um bairro." };

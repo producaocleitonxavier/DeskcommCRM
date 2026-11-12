@@ -10,6 +10,7 @@ import Link from "next/link";
 import { requireAuth, resolveActiveOrg } from "@/lib/auth/server";
 import { listarVitorias } from "@/app/actions/politico/vitoria-actions";
 import { CommandHero } from "@/components/politico/command-hero";
+import { exigirAcessoPolitico } from "@/lib/politico/acesso";
 
 export const dynamic = "force-dynamic";
 
@@ -19,6 +20,7 @@ function formatarData(iso: string | null): string {
 }
 
 export default async function VitoriasPage() {
+  await exigirAcessoPolitico("vitorias");
   const user = await requireAuth();
   const org = await resolveActiveOrg(user);
   if (!org) redirect("/app/onboarding");

@@ -8,6 +8,7 @@
  * "pol_obras"). organization_id vem sempre de resolveActiveOrg.
  */
 
+import { autenticarComPapel } from "@/lib/politico/acesso";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { requireAuth, resolveActiveOrg } from "@/lib/auth/server";
@@ -46,7 +47,7 @@ function traduzErro(error: { code?: string; message: string }): string {
 
 /** Sugere a natureza do registro pelo cargo do mandato: Executivo gere (execucao), Legislativo fiscaliza. */
 export async function sugestaoNatureza(): Promise<"execucao" | "fiscalizacao"> {
-  const user = await requireAuth();
+  const user = await autenticarComPapel("agent");
   const org = await resolveActiveOrg(user);
   if (!org) return "fiscalizacao";
   const db = await createClient();
@@ -60,7 +61,7 @@ export async function registrarVistoria(
   obraId: string,
   dados: { data?: string; situacao: string; percentual?: number | null; parecer?: string; checklist?: ChecklistItem[]; responsavel?: string },
 ): Promise<AcaoResultado> {
-  const user = await requireAuth();
+  const user = await autenticarComPapel("agent");
   const org = await resolveActiveOrg(user);
   if (!org) return { ok: false, erro: "Sessão ou organização inválida." };
   const db = await createClient();
@@ -88,7 +89,7 @@ export async function registrarVistoria(
 }
 
 export async function listarVistorias(obraId: string): Promise<VistoriaObra[]> {
-  const user = await requireAuth();
+  const user = await autenticarComPapel("agent");
   const org = await resolveActiveOrg(user);
   if (!org) return [];
   const db = await createClient();
@@ -112,7 +113,7 @@ export async function listarVistorias(obraId: string): Promise<VistoriaObra[]> {
 
 /** Upload de foto/documento de obra (multipart via FormData). Bucket privado. */
 export async function uploadFotoObra(formData: FormData): Promise<AcaoResultado> {
-  const user = await requireAuth();
+  const user = await autenticarComPapel("agent");
   const org = await resolveActiveOrg(user);
   if (!org) return { ok: false, erro: "Sessão ou organização inválida." };
   const obraId = String(formData.get("obraId") ?? "");
@@ -145,7 +146,7 @@ export async function uploadFotoObra(formData: FormData): Promise<AcaoResultado>
 }
 
 export async function listarFotosObra(obraId: string): Promise<FotoObra[]> {
-  const user = await requireAuth();
+  const user = await autenticarComPapel("agent");
   const org = await resolveActiveOrg(user);
   if (!org) return [];
   const db = await createClient();
@@ -170,7 +171,7 @@ export async function listarFotosObra(obraId: string): Promise<FotoObra[]> {
 export interface MandatoTse { electionId: number; sq: string; nome: string }
 
 export async function obterMandatoTse(): Promise<MandatoTse | null> {
-  const user = await requireAuth();
+  const user = await autenticarComPapel("agent");
   const org = await resolveActiveOrg(user);
   if (!org) return null;
   const db = await createClient();
@@ -181,7 +182,7 @@ export async function obterMandatoTse(): Promise<MandatoTse | null> {
 }
 
 export async function salvarMandatoTse(electionId: number, sq: string, nome: string): Promise<AcaoResultado> {
-  const user = await requireAuth();
+  const user = await autenticarComPapel("agent");
   const org = await resolveActiveOrg(user);
   if (!org) return { ok: false, erro: "Sessão ou organização inválida." };
   const db = await createClient();
@@ -197,7 +198,7 @@ export interface PesoBairro { meusVotos: number; universo: number; leads: number
 
 /** Peso eleitoral de um bairro para o candidato do mandato: seus votos ali, universo e seus leads. */
 export async function pesoBairro(electionId: number, sq: string, municipioTse: string, bairro: string): Promise<PesoBairro | null> {
-  await requireAuth();
+  await autenticarComPapel("agent");
   const db = await createClient();
   const { data, error } = await db.rpc("intel_peso_bairro", { p_election: electionId, p_sq: Number(sq), p_municipio: Number(municipioTse), p_bairro: bairro });
   if (error || !data || !Array.isArray(data) || data.length === 0) return null;
@@ -209,7 +210,7 @@ export interface BeneficiarioObra { contactId: string | null; nome: string | nul
 
 /** Beneficiários captados pelo link público da obra (pol_leads.pol_obra_id → contacts). */
 export async function listarBeneficiariosObra(obraId: string): Promise<BeneficiarioObra[]> {
-  const user = await requireAuth();
+  const user = await autenticarComPapel("agent");
   const org = await resolveActiveOrg(user);
   if (!org) return [];
   const db = await createClient();
@@ -236,7 +237,7 @@ export async function listarBeneficiariosObra(obraId: string): Promise<Beneficia
 
 /** Beneficiários captados pelo link público da EMENDA (pol_leads.pol_emenda_id). */
 export async function listarBeneficiariosEmenda(emendaId: string): Promise<BeneficiarioObra[]> {
-  const user = await requireAuth();
+  const user = await autenticarComPapel("agent");
   const org = await resolveActiveOrg(user);
   if (!org) return [];
   const db = await createClient();
@@ -255,7 +256,7 @@ export async function listarBeneficiariosEmenda(emendaId: string): Promise<Benef
 }
 
 export async function removerFotoObra(fotoId: string): Promise<AcaoResultado> {
-  const user = await requireAuth();
+  const user = await autenticarComPapel("agent");
   const org = await resolveActiveOrg(user);
   if (!org) return { ok: false, erro: "Sessão ou organização inválida." };
   const db = await createClient();

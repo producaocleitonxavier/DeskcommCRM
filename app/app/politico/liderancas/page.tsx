@@ -11,6 +11,7 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { requireAuth, resolveActiveOrg } from "@/lib/auth/server";
 import LiderancasClient from "./_liderancas-client";
+import { exigirAcessoPolitico } from "@/lib/politico/acesso";
 
 export const dynamic = "force-dynamic";
 
@@ -93,6 +94,7 @@ async function buscarLiderancas(organizationId: string): Promise<Lideranca[]> {
 }
 
 export default async function LiderancasPage() {
+  await exigirAcessoPolitico("liderancas");
   const user = await requireAuth();
 
   const org = await resolveActiveOrg(user);

@@ -13,10 +13,12 @@ import { createClient } from "@/lib/supabase/server";
 import { requireAuth, resolveActiveOrg, exigirPapelNaOrg } from "@/lib/auth/server";
 import { lerMandatoConfig } from "@/lib/politico/setup-do-mandato";
 import NovaEmendaForm from "./form";
+import { exigirAcessoPolitico } from "@/lib/politico/acesso";
 
 export const dynamic = "force-dynamic";
 
 export default async function NovaEmendaPage() {
+  await exigirAcessoPolitico("emendas");
   const user = await requireAuth();
   const org = await resolveActiveOrg(user);
   if (!org) redirect("/app/onboarding");

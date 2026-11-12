@@ -14,6 +14,7 @@ import { requireAuth, resolveActiveOrg } from "@/lib/auth/server";
 import { ROLE_RANK } from "@/lib/auth/types";
 import type { BaseTerritorioResumo } from "@/components/politico/base-territorio-hero";
 import LeadsClient from "./_leads-client";
+import { exigirAcessoPolitico } from "@/lib/politico/acesso";
 
 export const dynamic = "force-dynamic";
 
@@ -177,6 +178,7 @@ export default async function PessoasPage({
 }: {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
+  await exigirAcessoPolitico("pessoas");
   const user = await requireAuth();
 
   const org = await resolveActiveOrg(user);

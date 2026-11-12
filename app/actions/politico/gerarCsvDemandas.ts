@@ -7,6 +7,7 @@
  * Assunto, Tipo, Órgão destino, Status, Prazo (dias), Atrasada, Respondeu.
  */
 
+import { autenticarComPapel } from "@/lib/politico/acesso";
 import { createClient } from "@/lib/supabase/server";
 import { requireAuth, resolveActiveOrg } from "@/lib/auth/server";
 
@@ -48,7 +49,7 @@ interface LinhaDemanda {
 }
 
 export async function gerarCsvDemandas(filtros: FiltrosCsvDemandas = {}): Promise<CsvResultado> {
-  const user = await requireAuth();
+  const user = await autenticarComPapel("agent");
   const org = await resolveActiveOrg(user);
   if (!org) return { ok: false, erro: "Sessão ou organização inválida." };
   const db = await createClient();

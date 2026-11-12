@@ -19,6 +19,7 @@ import VideoDivulgar, { type VideoItem } from "./_video-divulgar";
 import MarcarFuncao from "./_marcar-funcao";
 import { TAG_MULTIPLICADOR } from "@/lib/politico/multiplicadores";
 import { TAG_DIVULGADOR } from "@/lib/politico/divulgador";
+import { exigirAcessoPolitico } from "@/lib/politico/acesso";
 
 export const dynamic = "force-dynamic";
 
@@ -381,6 +382,7 @@ export default async function FichaPage({
 }: {
   params: Promise<{ id: string }>;
 }) {
+  await exigirAcessoPolitico("pessoas");
   const user = await requireAuth();
 
   const org = await resolveActiveOrg(user);

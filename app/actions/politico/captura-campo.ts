@@ -17,6 +17,7 @@
  * "Demanda de campo" (não polui o funil).
  */
 
+import { autenticarComPapel } from "@/lib/politico/acesso";
 import { generateText } from "ai";
 
 import { createClient } from "@/lib/supabase/server";
@@ -67,7 +68,7 @@ function primeiraFrase(texto: string, max = 90): string {
  * senão, o "escrever" é o protagonista (a IA ainda limpa e sugere o órgão).
  */
 export async function vozDisponivel(): Promise<boolean> {
-  const user = await requireAuth();
+  const user = await autenticarComPapel("agent");
   const org = await resolveActiveOrg(user);
   if (!org) return false;
   const admin = createAdminClient();
@@ -95,7 +96,7 @@ export type ResultadoTranscricao = { ok: true; texto: string } | { ok: false; er
  * o assessor escreve (a voz é opcional).
  */
 export async function transcreverCaptura(audioBase64: string, mime: string): Promise<ResultadoTranscricao> {
-  const user = await requireAuth();
+  const user = await autenticarComPapel("agent");
   const org = await resolveActiveOrg(user);
   if (!org) return { ok: false, erro: "Sessão ou organização inválida." };
   if (!audioBase64) return { ok: false, erro: "Áudio vazio." };
@@ -152,7 +153,7 @@ export async function estruturarOcorrencia(input: {
   /** Órgãos reais DESTE mandato (ex.: Cemig, Copasa, PBH…) — a IA nomeia o certo, não o genérico. */
   orgaos?: string[];
 }): Promise<ResultadoEstrutura> {
-  const user = await requireAuth();
+  const user = await autenticarComPapel("agent");
   const org = await resolveActiveOrg(user);
   if (!org) return { ok: false, erro: "Sessão ou organização inválida." };
 
@@ -325,7 +326,7 @@ export async function criarOcorrenciaCampo(input: {
   contatoNome?: string | null;
   contatoFone?: string | null;
 }): Promise<ResultadoCriacao> {
-  const user = await requireAuth();
+  const user = await autenticarComPapel("agent");
   const org = await resolveActiveOrg(user);
   if (!org) return { ok: false, erro: "Sessão ou organização inválida." };
 

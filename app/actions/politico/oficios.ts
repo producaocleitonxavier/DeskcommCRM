@@ -8,6 +8,7 @@
  * Tudo no servidor (sessão autenticada, RLS + filtro explícito de org).
  */
 
+import { autenticarComPapel } from "@/lib/politico/acesso";
 import { createClient } from "@/lib/supabase/server";
 import { requireAuth, resolveActiveOrg } from "@/lib/auth/server";
 
@@ -28,7 +29,7 @@ export async function buscarOficios(
   termo?: string,
   pagina = 0,
 ): Promise<{ itens: OficioItem[]; temMais: boolean }> {
-  const user = await requireAuth();
+  const user = await autenticarComPapel("agent");
   const org = await resolveActiveOrg(user);
   if (!org) return { itens: [], temMais: false };
   const db = await createClient();

@@ -22,11 +22,13 @@ import {
   listarCanaisDisponiveis,
 } from "@/app/actions/politico/multiplicadores-canal-actions";
 import MultiplicadoresClient from "./_client";
+import { exigirAcessoPolitico } from "@/lib/politico/acesso";
 
 export const dynamic = "force-dynamic";
 export const metadata: Metadata = { title: "Multiplicadores" };
 
 export default async function MultiplicadoresPage() {
+  await exigirAcessoPolitico("multiplicadores");
   const user = await requireAuth();
   const org = await resolveActiveOrg(user);
   if (!org) redirect("/app/onboarding");

@@ -16,6 +16,7 @@ import { lerMandatoConfig } from "@/lib/politico/setup-do-mandato";
 import { derivarPainel, resumoPorMunicipio, AREA_LABELS, type EmendaLite, type TipoMandato } from "@/lib/politico/emenda-painel";
 import { buscarEmendaVotos } from "@/app/actions/politico/emenda-votos-actions";
 import EmendasClient, { type EmendaItem } from "./_emendas-client";
+import { exigirAcessoPolitico } from "@/lib/politico/acesso";
 
 export const dynamic = "force-dynamic";
 
@@ -31,6 +32,7 @@ function emReais(cents: number): number {
 }
 
 export default async function EmendasPage() {
+  await exigirAcessoPolitico("emendas");
   const user = await requireAuth();
 
   const org = await resolveActiveOrg(user);

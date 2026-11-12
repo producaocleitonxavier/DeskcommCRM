@@ -10,10 +10,12 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { requireAuth, resolveActiveOrg } from "@/lib/auth/server";
 import MateriaisClient, { type MaterialItem } from "./_materiais-client";
+import { exigirAcessoPolitico } from "@/lib/politico/acesso";
 
 export const dynamic = "force-dynamic";
 
 export default async function MateriaisPage() {
+  await exigirAcessoPolitico("materiais");
   const user = await requireAuth();
 
   const org = await resolveActiveOrg(user);

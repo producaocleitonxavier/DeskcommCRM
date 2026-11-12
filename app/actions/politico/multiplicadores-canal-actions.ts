@@ -7,6 +7,7 @@
  * `organization_id` SEMPRE de resolveActiveOrg (nunca do input).
  */
 
+import { autenticarComPapel } from "@/lib/politico/acesso";
 import { revalidatePath } from "next/cache";
 
 import { requireAuth, resolveActiveOrg } from "@/lib/auth/server";
@@ -20,7 +21,7 @@ export interface CanalDisponivel {
 
 /** Canais de mensagem conectados da org (pra escolher o número dos multiplicadores). */
 export async function listarCanaisDisponiveis(): Promise<CanalDisponivel[]> {
-  const user = await requireAuth();
+  const user = await autenticarComPapel("manager");
   const org = await resolveActiveOrg(user);
   if (!org) return [];
   const db = await createClient();
@@ -39,7 +40,7 @@ export async function listarCanaisDisponiveis(): Promise<CanalDisponivel[]> {
 
 /** O canal atualmente escolhido pros multiplicadores (null = automático). */
 export async function canalMultiplicadoresAtual(): Promise<string | null> {
-  const user = await requireAuth();
+  const user = await autenticarComPapel("manager");
   const org = await resolveActiveOrg(user);
   if (!org) return null;
   const db = await createClient();
@@ -51,7 +52,7 @@ export type CanalResultado = { ok: true } | { ok: false; erro: string };
 
 /** Define (ou limpa, com null) o número dedicado dos multiplicadores. Mescla no jsonb. */
 export async function definirCanalMultiplicadores(sessionId: string | null): Promise<CanalResultado> {
-  const user = await requireAuth();
+  const user = await autenticarComPapel("manager");
   const org = await resolveActiveOrg(user);
   if (!org) return { ok: false, erro: "Sessão ou organização inválida." };
   const db = await createClient();

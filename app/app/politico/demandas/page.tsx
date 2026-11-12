@@ -19,6 +19,7 @@ import { RelatorioPdfButton } from "@/components/politico/relatorio-pdf-button";
 import { ExcelDemandasButton } from "@/components/politico/excel-demandas-button";
 import { CommandHero } from "@/components/politico/command-hero";
 import { corDoOrgao, normalizarOrgao, rollupPorOrgao, ordenarUrgencia, alertaCobranca, type DemandaCobranca, type OrgaoRollup, type AlertaCobranca } from "@/lib/politico/demanda-cobranca";
+import { exigirAcessoPolitico } from "@/lib/politico/acesso";
 
 export const dynamic = "force-dynamic";
 
@@ -366,6 +367,7 @@ export default async function GabinetePage({
 }: {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
+  await exigirAcessoPolitico("demandas");
   const user = await requireAuth();
 
   const org = await resolveActiveOrg(user);

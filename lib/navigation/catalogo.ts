@@ -987,7 +987,7 @@ export const NAV_CATALOG = [
     icon: "FileText",
     group: "comando",
     section: "Comando",
-    minRole: "agent",
+    minRole: "manager",
     sidebar: true,
   },
   {

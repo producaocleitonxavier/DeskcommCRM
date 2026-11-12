@@ -8,6 +8,7 @@
  * (browser client não vê a sessão → RLS vazia).
  */
 
+import { autenticarComPapel } from "@/lib/politico/acesso";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { requireAuth, resolveActiveOrg } from "@/lib/auth/server";
@@ -43,7 +44,7 @@ export interface IdentidadeGabinete {
 export type IdentidadeResultado = { ok: true } | { ok: false; erro: string };
 
 async function orgAtiva(): Promise<string | null> {
-  const user = await requireAuth();
+  const user = await autenticarComPapel("manager");
   const org = await resolveActiveOrg(user);
   return org?.orgId ?? null;
 }

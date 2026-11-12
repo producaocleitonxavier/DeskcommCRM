@@ -7,6 +7,7 @@
  * (RLS libera só a org), `organization_id` vem de resolveActiveOrg — nunca do input.
  */
 
+import { autenticarComPapel } from "@/lib/politico/acesso";
 import { revalidatePath } from "next/cache";
 
 import { createClient } from "@/lib/supabase/server";
@@ -29,7 +30,7 @@ export async function definirFuncao(contactId: string, funcao: FuncaoMultiplicad
   const cid = (contactId ?? "").trim();
   if (!cid) return { ok: false, erro: "Contato inválido." };
 
-  const user = await requireAuth();
+  const user = await autenticarComPapel("agent");
   const org = await resolveActiveOrg(user);
   if (!org) return { ok: false, erro: "Sessão ou organização inválida." };
   const db = await createClient();
@@ -65,7 +66,7 @@ async function alternarTag(contactId: string, adicionar: boolean): Promise<AcaoR
   const cid = (contactId ?? "").trim();
   if (!cid) return { ok: false, erro: "Contato inválido." };
 
-  const user = await requireAuth();
+  const user = await autenticarComPapel("agent");
   const org = await resolveActiveOrg(user);
   if (!org) return { ok: false, erro: "Sessão ou organização inválida." };
   const db = await createClient();
@@ -115,7 +116,7 @@ export async function buscarContatosParaMarcar(termo: string): Promise<ContatoPa
   const q = (termo ?? "").trim();
   if (q.length < 2) return [];
 
-  const user = await requireAuth();
+  const user = await autenticarComPapel("agent");
   const org = await resolveActiveOrg(user);
   if (!org) return [];
   const db = await createClient();

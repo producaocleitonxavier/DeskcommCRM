@@ -7,6 +7,7 @@
  * p/ autenticado). As agregações pesadas rodam em RPC no Postgres.
  */
 
+import { autenticarComPapel } from "@/lib/politico/acesso";
 import { createClient } from "@/lib/supabase/server";
 import { requireAuth } from "@/lib/auth/server";
 
@@ -40,7 +41,7 @@ function rotuloEleicao(e: { ano: number; turno: number; cargo: string }): string
 
 /** Lista as eleições disponíveis (ordenadas: ano desc, cargo, turno). */
 export async function listarEleicoes(): Promise<EleicaoOpcao[]> {
-  await requireAuth();
+  await autenticarComPapel("agent");
   const db = await createClient();
   const { data, error } = await db
     .from("intel_elections")
@@ -54,7 +55,7 @@ export async function listarEleicoes(): Promise<EleicaoOpcao[]> {
 
 /** Candidatos de uma eleição, ordenados por votos (para o seletor). */
 export async function candidatosDaEleicao(electionId: number, limite = 100): Promise<CandidatoOpcao[]> {
-  await requireAuth();
+  await autenticarComPapel("agent");
   const db = await createClient();
   const { data, error } = await db.rpc("intel_eleicao_candidatos", { p_election: electionId, p_limit: limite });
   if (error || !data) return [];
@@ -68,7 +69,7 @@ export async function candidatosDaEleicao(electionId: number, limite = 100): Pro
 
 /** Mapa ibge_code -> nome do município (para rótulos/tooltips do choropleth). */
 export async function listarMunicipios(uf = "MG"): Promise<Record<string, string>> {
-  await requireAuth();
+  await autenticarComPapel("agent");
   const db = await createClient();
   const { data, error } = await db.from("intel_municipios").select("ibge_code, nome").eq("uf", uf);
   if (error || !data) return {};
@@ -79,7 +80,7 @@ export async function listarMunicipios(uf = "MG"): Promise<Record<string, string
 
 /** Dados do choropleth: por município, votos do candidato e total do cargo. */
 export async function mapaMunicipio(electionId: number, nr: string): Promise<MapaMunicipioPonto[]> {
-  await requireAuth();
+  await autenticarComPapel("agent");
   const db = await createClient();
   const { data, error } = await db.rpc("intel_mapa_municipio", { p_election: electionId, p_nr: nr });
   if (error || !data) return [];
@@ -96,7 +97,7 @@ export async function mapaMunicipio(electionId: number, nr: string): Promise<Map
  * inflando o mapa (ex.: um vereador aparecendo "em 435 municípios").
  */
 export async function mapaMunicipioSq(electionId: number, sq: string): Promise<MapaMunicipioPonto[]> {
-  await requireAuth();
+  await autenticarComPapel("agent");
   const db = await createClient();
   const { data, error } = await db.rpc("intel_mapa_municipio_sq", { p_election: electionId, p_sq: Number(sq) });
   if (error || !data) return [];

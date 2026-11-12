@@ -14,6 +14,7 @@ import { requireAuth, resolveActiveOrg } from "@/lib/auth/server";
 import { createClient } from "@/lib/supabase/server";
 import { corDoGrupo, corDaOrigem, humanizarOrigem } from "@/lib/politico/rotulo-origem";
 import KanbanClient, { type CardPessoa, type ColunaKanban, type GrupoChip } from "./_client";
+import { exigirAcessoPolitico } from "@/lib/politico/acesso";
 
 export const dynamic = "force-dynamic";
 export const metadata: Metadata = { title: "Mobilização" };
@@ -41,6 +42,7 @@ interface LeadRow {
 }
 
 export default async function KanbanPage() {
+  await exigirAcessoPolitico("kanban");
   const user = await requireAuth();
   const org = await resolveActiveOrg(user);
   if (!org) redirect("/app/onboarding");

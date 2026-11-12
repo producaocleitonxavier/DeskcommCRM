@@ -8,6 +8,7 @@
  * resolveActiveOrg, nunca do input (doutrina do gabinete).
  */
 
+import { autenticarComPapel } from "@/lib/politico/acesso";
 import { createClient } from "@/lib/supabase/server";
 import { requireAuth, resolveActiveOrg } from "@/lib/auth/server";
 
@@ -20,7 +21,7 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 /** O assessor logado marca "eu vou" numa tarefa de campo (idempotente). */
 export async function marcarPresenca(kind: TarefaKind, tarefaId: string): Promise<PresencaResultado> {
   if (!KINDS.has(kind) || !UUID.test(tarefaId)) return { ok: false, erro: "Tarefa inválida." };
-  const user = await requireAuth();
+  const user = await autenticarComPapel("agent");
   const org = await resolveActiveOrg(user);
   if (!org) return { ok: false, erro: "Organização não encontrada." };
 
@@ -42,7 +43,7 @@ export async function marcarPresenca(kind: TarefaKind, tarefaId: string): Promis
 /** O assessor desmarca ("não vou mais"). */
 export async function desmarcarPresenca(kind: TarefaKind, tarefaId: string): Promise<PresencaResultado> {
   if (!KINDS.has(kind) || !UUID.test(tarefaId)) return { ok: false, erro: "Tarefa inválida." };
-  const user = await requireAuth();
+  const user = await autenticarComPapel("agent");
   const org = await resolveActiveOrg(user);
   if (!org) return { ok: false, erro: "Organização não encontrada." };
 

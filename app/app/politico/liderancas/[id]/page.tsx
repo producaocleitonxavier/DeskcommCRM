@@ -12,6 +12,7 @@ import { createClient } from "@/lib/supabase/server";
 import { requireAuth, resolveActiveOrg } from "@/lib/auth/server";
 import { lerVozConfig, vozArmada } from "@/lib/voz/config";
 import DetalheLiderancaClient, { type LiderancaDetalhe } from "./_detalhe-client";
+import { exigirAcessoPolitico } from "@/lib/politico/acesso";
 
 export const dynamic = "force-dynamic";
 
@@ -20,6 +21,7 @@ export default async function LiderancaDetalhePage({
 }: {
   params: Promise<{ id: string }>;
 }) {
+  await exigirAcessoPolitico("liderancas");
   const { id } = await params;
   const user = await requireAuth();
   const org = await resolveActiveOrg(user);

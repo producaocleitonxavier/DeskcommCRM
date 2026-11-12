@@ -14,10 +14,12 @@ import { requireAuth, resolveActiveOrg } from "@/lib/auth/server";
 import { nomesDosAtendentes } from "@/lib/users/nome-do-atendente";
 import { lerMandatoConfig } from "@/lib/politico/setup-do-mandato";
 import NovaDemandaForm from "./form";
+import { exigirAcessoPolitico } from "@/lib/politico/acesso";
 
 export const dynamic = "force-dynamic";
 
 export default async function NovaDemandaPage() {
+  await exigirAcessoPolitico("demandas");
   const user = await requireAuth();
   const org = await resolveActiveOrg(user);
   if (!org) redirect("/app/onboarding");

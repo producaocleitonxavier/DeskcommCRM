@@ -8,6 +8,7 @@
  * Servidor-only (RLS pela sessão autenticada).
  */
 
+import { autenticarComPapel } from "@/lib/politico/acesso";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { requireAuth, resolveActiveOrg } from "@/lib/auth/server";
@@ -39,7 +40,7 @@ function dataBR(iso: string | null): string {
 }
 
 export async function gerarRelatorioDemandas(filtroEstado?: string): Promise<RelatorioResultado> {
-  const user = await requireAuth();
+  const user = await autenticarComPapel("agent");
   const org = await resolveActiveOrg(user);
   if (!org) return { ok: false, erro: "Sessão ou organização inválida." };
   const db = await createClient();

@@ -11,10 +11,12 @@ import { requireAuth, resolveActiveOrg } from "@/lib/auth/server";
 import { ROLE_RANK } from "@/lib/auth/types";
 import { grupoSituacao, autoriaEhColetiva } from "@/lib/politico/projeto-lei";
 import ProjetosClient, { type ProjetoItem } from "./_projetos-client";
+import { exigirAcessoPolitico } from "@/lib/politico/acesso";
 
 export const dynamic = "force-dynamic";
 
 export default async function ProjetosLeiPage() {
+  await exigirAcessoPolitico("projetos-lei");
   const user = await requireAuth();
 
   const org = await resolveActiveOrg(user);

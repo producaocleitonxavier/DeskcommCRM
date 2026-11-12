@@ -6,6 +6,7 @@
  * `organization_id` vem SEMPRE de resolveActiveOrg (nunca do input). Confere que
  * o material é desta org antes de mintar — não se gera link de material alheio.
  */
+import { autenticarComPapel } from "@/lib/politico/acesso";
 import { requireAuth, resolveActiveOrg } from "@/lib/auth/server";
 import { obterOuCriarShare, urlDoVideoShare } from "@/lib/politico/video-share";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -17,7 +18,7 @@ export type LinkVideoResultado = { ok: true; url: string } | { ok: false; erro: 
  * total); com contactId = link PESSOAL do multiplicador (alcance dele).
  */
 export async function gerarLinkDeVideo(materialId: string, contactId?: string | null): Promise<LinkVideoResultado> {
-  const user = await requireAuth();
+  const user = await autenticarComPapel("agent");
   const org = await resolveActiveOrg(user);
   if (!org) return { ok: false, erro: "Organização não resolvida." };
 

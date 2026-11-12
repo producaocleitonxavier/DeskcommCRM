@@ -8,6 +8,7 @@
  * intel_* = leitura pública); agregações pesadas em RPC.
  */
 
+import { autenticarComPapel } from "@/lib/politico/acesso";
 import { createClient } from "@/lib/supabase/server";
 import { requireAuth } from "@/lib/auth/server";
 
@@ -56,7 +57,7 @@ export interface ComparativoLinha {
 
 /** Lista de municípios (para o seletor), ordenada por nome. */
 export async function listarMunicipiosRaioX(uf = "MG"): Promise<MunicipioOpcao[]> {
-  await requireAuth();
+  await autenticarComPapel("agent");
   const db = await createClient();
   const { data, error } = await db.from("intel_municipios").select("tse_code, nome").eq("uf", uf).order("nome");
   if (error || !data) return [];
@@ -65,7 +66,7 @@ export async function listarMunicipiosRaioX(uf = "MG"): Promise<MunicipioOpcao[]
 
 /** Ranking de candidatos DENTRO de um município (votos no município). */
 export async function rankingCandidatosMun(electionId: number, municipioTse: string, q = "", limit = 50, offset = 0): Promise<CandidatoRank[]> {
-  await requireAuth();
+  await autenticarComPapel("agent");
   const db = await createClient();
   const { data, error } = await db.rpc("intel_cand_ranking_mun", {
     p_election: electionId, p_municipio: Number(municipioTse), p_q: q || null, p_limit: limit, p_offset: offset,
@@ -79,7 +80,7 @@ export async function rankingCandidatosMun(electionId: number, municipioTse: str
 
 /** Total de votos válidos do cargo num município (p/ % no modo município). */
 export async function totalMunicipio(electionId: number, municipioTse: string): Promise<number> {
-  await requireAuth();
+  await autenticarComPapel("agent");
   const db = await createClient();
   const { data } = await db.rpc("intel_total_municipio", { p_election: electionId, p_municipio: Number(municipioTse) });
   return Number(data ?? 0);
@@ -98,7 +99,7 @@ export async function comparativo(
   zona: number | null = null,
   bairro: string | null = null,
 ): Promise<ComparativoLinha[]> {
-  await requireAuth();
+  await autenticarComPapel("agent");
   const db = await createClient();
   const { data, error } = await db.rpc("intel_comparativo", {
     p_election: electionId, p_municipio: Number(municipioTse), p_dim: dim, p_sqs: sqs.map((s) => Number(s)),
@@ -117,7 +118,7 @@ export interface RecortesMunicipio {
 
 /** Zonas e bairros disponíveis de um município — para os seletores de recorte da Arena. */
 export async function recortesMunicipio(electionId: number, municipioTse: string): Promise<RecortesMunicipio> {
-  await requireAuth();
+  await autenticarComPapel("agent");
   const db = await createClient();
   const { data } = await db.rpc("intel_recortes_municipio", { p_election: electionId, p_municipio: Number(municipioTse) });
   const zonas: number[] = [];
@@ -147,7 +148,7 @@ export interface ZonaLocal {
 
 /** Radar Zonal: por zona de um município, votos do candidato + bairros + leads do CRM. */
 export async function radarZonal(electionId: number, sq: string, municipioTse: string, ano: number): Promise<ZonaRadar[]> {
-  await requireAuth();
+  await autenticarComPapel("agent");
   const db = await createClient();
   const [{ data: zonas }, { data: leadsRows }] = await Promise.all([
     db.rpc("intel_radar_zonal", { p_election: electionId, p_sq: sq, p_municipio: Number(municipioTse) }),
@@ -165,7 +166,7 @@ export async function radarZonal(electionId: number, sq: string, municipioTse: s
 
 /** Top locais de votação (escolas) do candidato numa zona. */
 export async function zonaLocais(electionId: number, sq: string, municipioTse: string, zona: number): Promise<ZonaLocal[]> {
-  await requireAuth();
+  await autenticarComPapel("agent");
   const db = await createClient();
   const { data, error } = await db.rpc("intel_zona_locais", { p_election: electionId, p_sq: sq, p_municipio: Number(municipioTse), p_zona: zona });
   if (error || !data) return [];
@@ -176,7 +177,7 @@ export async function zonaLocais(electionId: number, sq: string, municipioTse: s
 
 /** Total de votos válidos (nominais) do cargo na eleição (p/ % no ranking). */
 export async function eleicaoTotal(electionId: number): Promise<number> {
-  await requireAuth();
+  await autenticarComPapel("agent");
   const db = await createClient();
   const { data } = await db.rpc("intel_eleicao_total", { p_election: electionId });
   return Number(data ?? 0);
@@ -184,7 +185,7 @@ export async function eleicaoTotal(electionId: number): Promise<number> {
 
 /** Ranking/busca de candidatos de uma eleição (q opcional = nome/número). */
 export async function rankingCandidatos(electionId: number, q = "", limit = 50, offset = 0): Promise<CandidatoRank[]> {
-  await requireAuth();
+  await autenticarComPapel("agent");
   const db = await createClient();
   const { data, error } = await db.rpc("intel_cand_ranking", {
     p_election: electionId,
@@ -210,7 +211,7 @@ export async function rankingCandidatos(electionId: number, q = "", limit = 50, 
 
 /** Cabeçalho do candidato: metadados + total da eleição (p/ % estadual). */
 export async function resumoCandidato(electionId: number, sq: string): Promise<ResumoCandidato | null> {
-  await requireAuth();
+  await autenticarComPapel("agent");
   const db = await createClient();
   const [{ data: c }, { data: total }] = await Promise.all([
     db.from("intel_candidatos")
@@ -245,7 +246,7 @@ export async function drillCandidato(
   dim: "municipio" | "zona" | "bairro" | "local" | "secao",
   municipio?: number,
 ): Promise<DrillLinha[]> {
-  await requireAuth();
+  await autenticarComPapel("agent");
   const db = await createClient();
   const { data, error } = await db.rpc("intel_cand_drill", {
     p_election: electionId,
