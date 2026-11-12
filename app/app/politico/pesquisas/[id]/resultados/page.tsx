@@ -146,7 +146,13 @@ export default async function ResultadosPage({ params }: { params: Promise<{ id:
         <div className="flex justify-end">
           <RelatorioTabela
             slug="pesquisa"
-            titulo="Resultado da Pesquisa"
+            titulo={`Pesquisa: ${s.title}`.slice(0, 80)}
+            destaque
+            kpis={[
+              { num: String(total), label: "Respostas" },
+              { num: String(completas), label: "Completas" },
+              { num: String(perguntas.length), label: "Perguntas" },
+            ]}
             pesos={[4, 3, 1, 1]}
             headers={["Pergunta", "Opção", "Votos", "%"]}
             rows={linhasCsv}

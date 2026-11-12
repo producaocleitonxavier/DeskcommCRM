@@ -131,6 +131,11 @@ export default function LocaisClient({ locais, kpis }: LocaisClientProps) {
               <RelatorioTabela
                 slug="locais"
                 titulo="Relatório de Locais"
+                kpis={[
+                  { num: String(visiveis.length), label: "Locais" },
+                  { num: String(visiveis.reduce((s, l) => s + (l.nEventos || 0), 0)), label: "Eventos realizados" },
+                  { num: String(visiveis.reduce((s, l) => s + (l.nPessoas || 0), 0)), label: "Pessoas cadastradas" },
+                ]}
                 pesos={[3, 1.3, 1.5, 1.5, 1, 0.8, 1.2, 0.7]}
                 headers={["Nome", "Tipo", "Bairro", "Cidade", "Zona eleitoral", "Eventos", "Pessoas cadastradas", "Ativo"]}
                 rows={visiveis.map((l) => [

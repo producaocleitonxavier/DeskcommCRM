@@ -176,7 +176,9 @@ export default function EmendasClient(props: EmendasClientProps) {
                 titulo: "Relatório de Emendas Parlamentares",
                 resumo: `${emendas.length} emenda(s)`,
                 kpis: [
-                  { num: String(kpis.destinosAtendidos), label: destinoLabel },
+                  kpis.destinosAtendidos > 0
+                    ? { num: String(kpis.destinosAtendidos), label: destinoLabel }
+                    : { num: String(new Set(emendas.map((e) => (e.entidade ?? "").trim().toLowerCase()).filter(Boolean)).size), label: "Entidades beneficiadas" },
                   { num: kpis.valorTotalIndicado, label: "Valor total indicado" },
                   { num: financeiro.executado, label: "Executado (pago)" },
                 ],
@@ -199,7 +201,7 @@ export default function EmendasClient(props: EmendasClientProps) {
                   e.area ?? "",
                   rotuloModalidade(e.modalidade),
                   [
-                    (ehDeputado ? e.municipio : e.bairro) ?? "",
+                    (ehDeputado ? e.municipio : e.bairro) || e.municipio || e.bairro || "—",
                     e.repartida ? "(município todo)" : "",
                     ehDeputado && e.microRegiao ? `· ${e.microRegiao}` : "",
                   ].filter(Boolean).join(" "),

@@ -11,7 +11,7 @@ import { FileText, Loader2 } from "lucide-react";
 
 import { gerarRelatorioGabinete, type RelatorioGabineteInputCliente } from "@/app/actions/politico/gerarRelatorioGabinete";
 
-export function RelatorioGabineteButton({ dados, label = "Relatório PDF" }: { dados: RelatorioGabineteInputCliente; label?: string }) {
+export function RelatorioGabineteButton({ dados, label = "Relatório PDF", destaque = false }: { dados: RelatorioGabineteInputCliente; label?: string; /** Botão em destaque (verde) quando é a ação principal da faixa. */ destaque?: boolean }) {
   const [gerando, setGerando] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
   const vazio = dados.linhas.length === 0;
@@ -29,7 +29,7 @@ export function RelatorioGabineteButton({ dados, label = "Relatório PDF" }: { d
           if (res.ok) window.open(res.url, "_blank", "noopener,noreferrer");
           else setErro(res.erro);
         }}
-        className="wr-btn inline-flex items-center gap-2 disabled:opacity-60"
+        className={`${destaque ? "wr-btn-dark" : "wr-btn"} inline-flex items-center gap-2 disabled:opacity-60`}
       >
         {gerando ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden /> : <FileText className="h-4 w-4" aria-hidden />}
         {gerando ? "Gerando…" : label}

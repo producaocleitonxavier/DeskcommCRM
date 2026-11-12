@@ -215,6 +215,12 @@ export default function VisitasClient({ visitas, kpis, assessores, usuarioAtualI
         <RelatorioTabela
           slug="visitas"
           titulo="Relatório de Visitas Técnicas"
+          kpis={[
+            { num: String(kpis.agendadas), label: "Agendadas" },
+            { num: String(kpis.atrasadas), label: "Atrasadas" },
+            { num: String(kpis.semResponsavel), label: "Sem responsável" },
+            { num: String(kpis.realizadas), label: "Realizadas" },
+          ]}
           pesos={[3, 1.5, 1.2, 1, 1, 1, 1.3, 2.5, 1.8, 2.2]}
           headers={["Assunto", "Órgão", "Município", "Situação", "Data da visita", "Realizada em", "Responsável", "O que foi feito", "Presentes", "Decidido"]}
           rows={lista.map((v) => {

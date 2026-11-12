@@ -100,6 +100,12 @@ export default function ObrasClient({ obras, executivo, eleicoes, mandatoInicial
           <RelatorioTabela
             slug="obras"
             titulo="Relatório de Obras e Fiscalização"
+            kpis={[
+              { num: String(filtradas.length), label: "Obras e contratos" },
+              { num: String(filtradas.filter((o) => o.status === "em_andamento").length), label: "Em andamento" },
+              { num: String(filtradas.filter((o) => o.status === "concluida").length), label: "Concluídas" },
+              { num: (filtradas.reduce((s, o) => s + (o.valor_cents || 0), 0) / 100).toLocaleString("pt-BR", { style: "currency", currency: "BRL", maximumFractionDigits: 0 }), label: "Valor acompanhado" },
+            ]}
             pesos={[3, 1.4, 1, 1.2, 1, 1.3, 1.5, 1.3, 2]}
             headers={["Título", "Natureza", "Tipo", "Situação", "Execução", "Valor", "Município", "Bairro", "Órgão responsável"]}
             rows={filtradas.map((o) => [

@@ -439,6 +439,13 @@ export default function MultiplicadoresClient({
         <RelatorioTabela
           slug="multiplicadores"
           titulo="Relatório de Multiplicadores"
+          destaque
+          kpis={[
+            { num: String(assessores.length + divulgadores.length), label: "Multiplicadores" },
+            { num: String([...assessores, ...divulgadores].filter((m) => m.compartilhou).length), label: "Já espalhando" },
+            { num: String([...assessores, ...divulgadores].reduce((s, m) => s + (m.alcancou || 0), 0)), label: "Alcance gerado" },
+            { num: String([...assessores, ...divulgadores].reduce((s, m) => s + (m.trouxe || 0), 0)), label: "Cadastros trazidos" },
+          ]}
           pesos={[2.5, 1.2, 1.2, 1, 1.5, 1.1, 1.3]}
           headers={["Nome", "Grupo", "Cadastros trazidos", "Alcance", "Situação", "Recebeu o link", "Última atividade"]}
           rows={[...assessores, ...divulgadores].map((m) => [

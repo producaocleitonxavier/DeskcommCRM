@@ -22,15 +22,17 @@ export interface RelatorioTabelaProps {
   resumo?: string;
   kpis?: { num: string; label: string }[];
   label?: string;
+  /** Botão em destaque (verde). */
+  destaque?: boolean;
 }
 
-export function RelatorioTabela({ slug, titulo, headers, rows, pesos, resumo, kpis, label = "Baixar relatório (PDF)" }: RelatorioTabelaProps) {
+export function RelatorioTabela({ slug, titulo, headers, rows, pesos, resumo, kpis, label = "Baixar relatório (PDF)", destaque }: RelatorioTabelaProps) {
   const p = headers.map((_, i) => pesos?.[i] ?? (i === 0 ? 2 : 1));
   const soma = p.reduce((a, b) => a + b, 0) || 1;
   const dados: RelatorioGabineteInputCliente = {
     slug,
     titulo,
-    resumo: resumo ?? `${rows.length} registro(s)`,
+    resumo: resumo ?? `${rows.length} ${rows.length === 1 ? "registro" : "registros"}`,
     kpis: kpis ?? [{ num: String(rows.length), label: "Registros" }],
     colunas: headers.map((h, i) => ({ header: h, largura: `${(((p[i] ?? 1) * 100) / soma).toFixed(2)}%` })),
     linhas: rows.slice(0, 3000).map((r) =>
@@ -41,7 +43,7 @@ export function RelatorioTabela({ slug, titulo, headers, rows, pesos, resumo, kp
       }),
     ),
   };
-  return <RelatorioGabineteButton dados={dados} label={label} />;
+  return <RelatorioGabineteButton dados={dados} label={label} {...(destaque ? { destaque: true } : {})} />;
 }
 
 export default RelatorioTabela;
