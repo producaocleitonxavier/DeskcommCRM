@@ -1260,6 +1260,24 @@ export const NAV_CATALOG = [
     minRole: "admin",
     sidebar: true,
   },
+  {
+    href: "/app/politico/enriquecer",
+    label: "Aprofundar o mandato",
+    description: "A inteligência pesquisa o mandato na fonte oficial (Câmara/Assembleia), no TSE e em notícias. Você aprova item a item o que entra no conhecimento do agente.",
+    icon: "Globe",
+    group: "gabinete",
+    minRole: "manager",
+    sidebar: true,
+  },
+  {
+    href: "/app/politico/follow-up-simples",
+    label: "Follow-up simples",
+    description: "Monte um acompanhamento em 1 minuto: escolha o objetivo (acolher, oferecer conteúdo, cobrar, lembrar de evento), escreva a mensagem e veja a jornada antes de ligar.",
+    icon: "ListChecks",
+    group: "gabinete",
+    minRole: "manager",
+    sidebar: true,
+  },
 
   // ── Rotas políticas que existiam sem porta no menu (Prompt 6) ────────
   {
