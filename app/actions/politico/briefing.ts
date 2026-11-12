@@ -216,13 +216,16 @@ export async function briefingEstrategico(
     }
   }
 
+  // Base INTEIRA da operação (para o leitor não confundir com o recorte por zona abaixo).
+  const { count: baseInteira } = await db.from("contacts").select("id", { count: "exact", head: true }).eq("organization_id", org.orgId);
+
   const fatos: string[] = [
     `Candidato analisado (dados TSE): ${nome} (nº ${resumo.nr}${resumo.partido ? `, ${resumo.partido}` : ""})${resumo.situacao ? ` — situação no TSE: ${resumo.situacao}` : ""}. STATUS NESTA ELEIÇÃO: ${statusCandidato.label || "não informado"}${statusCandidato.cat === "suplente" ? " (ficou SUPLENTE — NÃO assumiu a cadeira; segue no mandato/situação atual e é quem pode disputar a próxima eleição)" : statusCandidato.cat === "eleito" ? " (foi ELEITO para esta vaga)" : statusCandidato.cat === "nao_eleito" ? " (NÃO foi eleito nesta disputa)" : ""}.`,
     `Cargo/eleição: ${cargoAno}. Votos totais do candidato (MG): ${resumo.votos.toLocaleString("pt-BR")} (${pctEstado}% do estado).`,
     `Município analisado: ${munNome}. Votos do candidato no município: ${votosNoMun.toLocaleString("pt-BR")}.`,
     `Redutos do candidato (bairros onde mais fez voto, com a regional administrativa entre colchetes): ${redutos.length ? redutos.join("; ") : "sem bairros com voto"}.`,
     ...(temRegional && forcaRegional.length ? [`Força do candidato POR REGIONAL administrativa (soma dos votos nos bairros de cada regional): ${forcaRegional.join("; ")}.`] : []),
-    `BASE DE CRM DA OPERAÇÃO (contatos da campanha que usa a ferramenta — NÃO são eleitores nem a base do candidato analisado): ${proj.baseTotal.toLocaleString("pt-BR")} contatos em ${munNome}.`,
+    `BASE DE CRM DA OPERAÇÃO (contatos da campanha que usa a ferramenta — NÃO são eleitores nem a base do candidato analisado): ${proj.baseTotal.toLocaleString("pt-BR")} contatos COM ZONA ELEITORAL IDENTIFICADA em ${munNome}${typeof baseInteira === "number" && baseInteira > proj.baseTotal ? ` — de um total de ${baseInteira.toLocaleString("pt-BR")} pessoas na base inteira (as demais ainda não têm zona/endereço localizado ou são de outra cidade)` : ""}. Ao citar o tamanho da base, diga SEMPRE os dois números e que a cobertura é calculada só sobre os contatos com zona identificada.`,
     `Universo de VOTOS do cargo em ${munNome} (total de votos válidos, não eleitorado): ${proj.universoTotal.toLocaleString("pt-BR")}. Cobertura da base de CRM sobre esse volume: ${(proj.coberturaMedia * 100).toFixed(2)}%.`,
     `Zonas de oportunidade (muito VOTO do cargo e pouca presença da base de CRM): ${oportunidades.length ? oportunidades.join("; ") : "—"}.`,
     `Votos do PRÓPRIO candidato nesses 5 redutos: ${votosCandidatoReduto.toLocaleString("pt-BR")} (compare diretamente com cada adversário abaixo).`,
@@ -269,6 +272,7 @@ export async function briefingEstrategico(
     "Você é chefe de inteligência de uma campanha eleitoral no Brasil. Recebe dados REAIS do TSE e a base de contatos (CRM) da operação que usa a ferramenta, e escreve um " +
     "BRIEFING ESTRATÉGICO executivo, direto e acionável, em português do Brasil. " +
     "Use APENAS os números fornecidos — nunca invente votos, pesquisas, nomes ou fatos. " +
+    "NUNCA afirme PRAZO ou DURAÇÃO que não esteja nos dados (ex.: 'sem entrega há 2 anos', 'há meses'): você não recebeu datas das entregas; diga apenas 'sem entrega registrada'. " +
     "DISTINÇÃO CRÍTICA, nunca confunda: (a) o VOTO do candidato é dado do TSE; (b) a BASE DE CRM é da OPERAÇÃO que usa a ferramenta — NÃO é do candidato analisado nem é 'eleitorado'. Nunca escreva que os contatos do CRM são do candidato; chame-os de 'base de CRM da operação' ou 'sua base'. " +
     "Chame o universo sempre de 'votos do cargo' (jamais 'eleitores'/'eleitorado'). " +
     regraRegional +
