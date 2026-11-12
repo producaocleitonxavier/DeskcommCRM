@@ -16,7 +16,7 @@ import { CommandHero } from "@/components/politico/command-hero";
 import { KpiCard } from "@/components/politico/kpi-card";
 import { EmptyState } from "@/components/politico/empty-state";
 import { QuemVai } from "@/components/politico/quem-vai";
-import { ExportCsv } from "@/components/politico/export-csv";
+import { RelatorioTabela } from "@/components/politico/relatorio-tabela";
 import { corDoOrgao } from "@/lib/politico/demanda-cobranca";
 import { visitaPendente, visitaAgendada, visitaSemResponsavel, statusVisita, ordenarVisitas } from "@/lib/politico/visita-tecnica";
 import { definirResponsavelVisita, marcarVisitaRealizada, registrarRelatoVisita } from "@/app/actions/politico/gabinete-actions";
@@ -196,7 +196,7 @@ export default function VisitasClient({ visitas, kpis, assessores, usuarioAtualI
  </div>
  <button onclick="window.print()">Imprimir / Salvar PDF</button>
 </body></html>`;
-    const w = window.open("", "_blank", "noopener,noreferrer");
+    const w = window.open("", "_blank");
     if (!w) { setErro("Permita pop-ups para gerar o relatório da visita."); return; }
     w.document.write(html);
     w.document.close();
@@ -212,8 +212,10 @@ export default function VisitasClient({ visitas, kpis, assessores, usuarioAtualI
 
       {/* Nova visita (ficha rápida) */}
       <div className="flex flex-wrap items-center justify-end gap-2">
-        <ExportCsv
-          filename={`visitas-${new Date().toISOString().slice(0, 10)}.csv`}
+        <RelatorioTabela
+          slug="visitas"
+          titulo="Relatório de Visitas Técnicas"
+          pesos={[3, 1.5, 1.2, 1, 1, 1, 1.3, 2.5, 1.8, 2.2]}
           headers={["Assunto", "Órgão", "Município", "Situação", "Data da visita", "Realizada em", "Responsável", "O que foi feito", "Presentes", "Decidido"]}
           rows={lista.map((v) => {
             const st = statusVisita(arg(v));

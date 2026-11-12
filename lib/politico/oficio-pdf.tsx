@@ -7,8 +7,11 @@
  * encaminhamento (gerado pela IA ou escrito à mão). Renderiza com
  * @react-pdf/renderer, o mesmo motor das propostas.
  */
-import { Document, Image, Page, StyleSheet, Text, View, renderToBuffer } from "@react-pdf/renderer";
+import { Font, Document, Image, Page, StyleSheet, Text, View, renderToBuffer } from "@react-pdf/renderer";
 import React from "react";
+
+// Sem hifenização automática (a regra embutida é a do inglês: "ref-erente").
+Font.registerHyphenationCallback((palavra) => [palavra]);
 
 const styles = StyleSheet.create({
   page: { paddingTop: 48, paddingBottom: 64, paddingHorizontal: 56, fontSize: 11, lineHeight: 1.5, color: "#1A1A1A" },

@@ -11,7 +11,7 @@ import { redirect } from "next/navigation";
 import Link from "next/link";
 import { CommandHero } from "@/components/politico/command-hero";
 import { QuemVai, type Presente } from "@/components/politico/quem-vai";
-import { ExportCsv } from "@/components/politico/export-csv";
+import { RelatorioTabela } from "@/components/politico/relatorio-tabela";
 import { createClient } from "@/lib/supabase/server";
 import { requireAuth, resolveActiveOrg } from "@/lib/auth/server";
 import { exigirAcessoPolitico } from "@/lib/politico/acesso";
@@ -139,8 +139,10 @@ export default async function EventosPage({
 
       {/* Ação principal (em breve) */}
       <div className="flex flex-wrap items-center justify-end gap-2">
-        <ExportCsv
-          filename={`eventos-${new Date().toISOString().slice(0, 10)}.csv`}
+        <RelatorioTabela
+          slug="eventos"
+          titulo="Relatório de Eventos"
+          pesos={[3, 1.2, 1.2, 1, 1.5, 1.2, 1.2]}
           headers={["Título", "Tipo", "Situação", "Data", "Cidade", "Público estimado", "Presença real"]}
           rows={eventos.map((e) => [
             e.title,

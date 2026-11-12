@@ -28,7 +28,7 @@ import {
 import { KpiCard } from "@/components/politico/kpi-card";
 import { CommandHero } from "@/components/politico/command-hero";
 import { EmptyState } from "@/components/politico/empty-state";
-import { ExportCsv } from "@/components/politico/export-csv";
+import { RelatorioTabela } from "@/components/politico/relatorio-tabela";
 
 const TIPO: Record<string, { label: string; icon: typeof MapPin }> = {
   escola: { label: "Escola", icon: GraduationCap },
@@ -128,8 +128,10 @@ export default function LocaisClient({ locais, kpis }: LocaisClientProps) {
               );
             })}
             <div className="ml-auto">
-              <ExportCsv
-                filename={`locais-${new Date().toISOString().slice(0, 10)}.csv`}
+              <RelatorioTabela
+                slug="locais"
+                titulo="Relatório de Locais"
+                pesos={[3, 1.3, 1.5, 1.5, 1, 0.8, 1.2, 0.7]}
                 headers={["Nome", "Tipo", "Bairro", "Cidade", "Zona eleitoral", "Eventos", "Pessoas cadastradas", "Ativo"]}
                 rows={visiveis.map((l) => [
                   l.nome,

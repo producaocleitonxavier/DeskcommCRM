@@ -11,7 +11,10 @@
  * fica ilegível. O accent entra só em ELEMENTOS (faixas, barras, bordas), onde
  * clareza não vira problema de leitura.
  */
-import { Image, StyleSheet, Text, View } from "@react-pdf/renderer";
+import { Font, Image, StyleSheet, Text, View } from "@react-pdf/renderer";
+
+// Sem hifenização automática: a regra embutida é a do inglês e quebra errado em pt-BR.
+Font.registerHyphenationCallback((palavra) => [palavra]);
 import React from "react";
 
 export const TINTA = {

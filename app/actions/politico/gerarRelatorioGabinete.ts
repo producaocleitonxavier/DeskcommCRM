@@ -24,7 +24,7 @@ import { renderRelatorioGabinetePdf } from "@/lib/politico/relatorio-gabinete-pd
 
 export type RelatorioResultado = { ok: true; url: string } | { ok: false; erro: string };
 
-const SLUGS = ["liderancas", "emendas", "emendas-municipio", "projetos"] as const;
+const SLUGS = ["liderancas", "emendas", "emendas-municipio", "projetos", "obras", "visitas", "eventos", "locais", "multiplicadores", "pesquisa"] as const;
 
 const corHex = z.string().trim().regex(/^#?[0-9a-fA-F]{6}$/);
 

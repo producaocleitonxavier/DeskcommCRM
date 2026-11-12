@@ -14,7 +14,6 @@ import { KpiCard } from "@/components/politico/kpi-card";
 import { CommandHero } from "@/components/politico/command-hero";
 import { EmptyState } from "@/components/politico/empty-state";
 import { RelatorioGabineteButton } from "@/components/politico/relatorio-gabinete-button";
-import { ExportCsv } from "@/components/politico/export-csv";
 import { SincronizarProposicoesButton } from "@/components/politico/sincronizar-proposicoes-button";
 import { classificarArea, rotuloArea } from "@/lib/politico/emenda-classificar";
 import { corDoOrgao } from "@/lib/politico/demanda-cobranca";
@@ -60,7 +59,7 @@ export interface ProjetosClientProps {
 }
 
 function data(d: string | null): string {
-  return d ? new Date(d).toLocaleDateString("pt-BR", { day: "2-digit", month: "short", year: "numeric" }) : "—";
+  return d ? new Date(d.length === 10 ? `${d}T12:00:00` : d).toLocaleDateString("pt-BR", { day: "2-digit", month: "short", year: "numeric" }) : "—";
 }
 
 /** Tema que aparece na tela: o escrito; se vazio, a área adivinhada pelo título. */
@@ -109,22 +108,6 @@ export default function ProjetosClient({ kpis, projetos, ehAdmin }: ProjetosClie
 
       {projetos.length > 0 && (
         <div className="flex flex-wrap items-center justify-end gap-2">
-          <ExportCsv
-            filename={`projetos-lei-${new Date().toISOString().slice(0, 10)}.csv`}
-            headers={["Número", "Esfera", "Título", "Área/Tema", "Situação", "Comissão", "Autoria", "Alinhado", "Apresentado em", "Última movimentação"]}
-            rows={filtrados.map((p) => [
-              p.numero,
-              ESFERA[p.esfera] ?? p.esfera,
-              p.titulo,
-              temaDoProjeto(p),
-              STATUS[p.status]?.label ?? p.status,
-              p.comissao,
-              p.coletiva ? "Coautoria" : "Autoria única",
-              p.alinhamento ? "Sim" : "Não",
-              p.dataApresentacao ? new Date(p.dataApresentacao).toLocaleDateString("pt-BR") : "",
-              p.dataUltimaMov ? new Date(p.dataUltimaMov).toLocaleDateString("pt-BR") : "",
-            ])}
-          />
           <RelatorioGabineteButton
             dados={{
               slug: "projetos",

@@ -238,11 +238,11 @@ export default function DetalheProjetoClient({ projeto }: { projeto: ProjetoDeta
         )}
       </div>
 
-      <header className="gip-glass p-6 sm:p-7">
+      <header className="wr-card p-6 sm:p-7" style={{ background: "var(--hero-grad)", border: "1px solid var(--hero-border)" }}>
         <div className="flex flex-wrap gap-2">
-          {p.autor_mandatario && <span className="rounded-full px-2.5 py-1 text-xs font-bold" style={{ background: "color-mix(in srgb, var(--accent-ink, var(--color-accent)) 12%, transparent)", color: "var(--accent-ink, var(--color-accent))", border: "1px solid color-mix(in srgb, var(--accent-ink, var(--color-accent)) 30%, transparent)" }}>De autoria</span>}
+          {p.autor_mandatario && <span className="rounded-full px-2.5 py-1 text-xs font-bold" style={{ background: "var(--hero-btn-bg)", color: "var(--hero-btn-fg)" }}>De autoria</span>}
           {p.alinhamento_campanha && <span className="rounded-full px-2 py-0.5 text-xs font-medium" style={{ background: "#E2F5EC", color: "#17784F" }}>Alinhado</span>}
-          {p.comissao_atual && <span className="rounded-full px-2 py-0.5 text-xs font-medium" style={{ background: "var(--color-surface-elevated)", color: "var(--color-text-subtle)" }}>{p.comissao_atual}</span>}
+          {p.comissao_atual && <span className="rounded-full px-2 py-0.5 text-xs font-medium" style={{ background: "rgba(255,255,255,0.12)", color: "rgba(255,255,255,0.9)" }}>{p.comissao_atual}</span>}
         </div>
 
         {/* Timeline de tramitação */}
@@ -261,14 +261,14 @@ export default function DetalheProjetoClient({ projeto }: { projeto: ProjetoDeta
                   <span
                     className="rounded-full px-2.5 py-1 text-[11px] font-semibold"
                     style={{
-                      background: reached ? "color-mix(in srgb, var(--color-accent) 14%, transparent)" : "rgba(255,255,255,0.04)",
-                      color: reached ? "var(--color-accent)" : "var(--color-text-subtle)",
-                      border: `1px solid ${i === idx ? "color-mix(in srgb, var(--color-accent) 50%, transparent)" : "transparent"}`,
+                      background: i === idx ? "var(--hero-btn-bg)" : reached ? "rgba(215,243,106,0.16)" : "rgba(255,255,255,0.07)",
+                      color: i === idx ? "var(--hero-btn-fg)" : reached ? "var(--hero-eyebrow)" : "rgba(255,255,255,0.6)",
+                      border: "1px solid transparent",
                     }}
                   >
                     {FLOW_CURTO[s]}
                   </span>
-                  {i < FLOW.length - 1 && <span style={{ color: "var(--color-text-subtle)" }}>›</span>}
+                  {i < FLOW.length - 1 && <span style={{ color: "rgba(255,255,255,0.4)" }}>›</span>}
                 </div>
               );
             })}

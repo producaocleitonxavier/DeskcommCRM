@@ -166,6 +166,53 @@ export default function EmendasClient(props: EmendasClientProps) {
         />
       ) : (
         <>
+          {/* Relatórios (reaproveitam o motor do gabinete). */}
+          <div className="flex flex-wrap justify-end gap-2">
+            {ehDeputado && <RelatorioGabineteButton dados={relatorioMunicipio} label="Relatório por Município" />}
+            <RelatorioGabineteButton
+              label="Baixar relatório (PDF)"
+              dados={{
+                slug: "emendas",
+                titulo: "Relatório de Emendas Parlamentares",
+                resumo: `${emendas.length} emenda(s)`,
+                kpis: [
+                  { num: String(kpis.destinosAtendidos), label: destinoLabel },
+                  { num: kpis.valorTotalIndicado, label: "Valor total indicado" },
+                  { num: financeiro.executado, label: "Executado (pago)" },
+                ],
+                colunas: [
+                  { header: "Número", largura: "8%" },
+                  { header: "Ano", largura: "6%" },
+                  { header: "Área", largura: "12%" },
+                  { header: "Modalidade", largura: "12%" },
+                  { header: destinoCol, largura: "12%" },
+                  { header: "Entidade", largura: "12%" },
+                  { header: "Status", largura: "10%", pilula: true },
+                  { header: "Indicado", largura: "9%" },
+                  { header: "Empenhado", largura: "9%" },
+                  { header: "Pago", largura: "10%" },
+                ],
+                coresPilula: coresPilulaPdf,
+                linhas: emendas.map((e) => [
+                  e.numero ?? "—",
+                  String(e.ano),
+                  e.area ?? "",
+                  rotuloModalidade(e.modalidade),
+                  [
+                    (ehDeputado ? e.municipio : e.bairro) ?? "",
+                    e.repartida ? "(município todo)" : "",
+                    ehDeputado && e.microRegiao ? `· ${e.microRegiao}` : "",
+                  ].filter(Boolean).join(" "),
+                  e.entidade ?? "",
+                  STATUS[e.status]?.label ?? e.status,
+                  e.valorIndicado,
+                  e.valorEmpenhado,
+                  e.valorPago,
+                ]),
+              }}
+            />
+          </div>
+
           {/* Os 3 números grandes (Indicadores). */}
           <section className="grid grid-cols-1 gap-4 sm:grid-cols-3">
             <KpiCard label={destinoLabel} valor={String(kpis.destinosAtendidos)} icone={ehDeputado ? MapPin : Building2} />
@@ -249,52 +296,6 @@ export default function EmendasClient(props: EmendasClientProps) {
               )}
             </section>
           )}
-
-          {/* Relatórios (reaproveitam o motor do gabinete). */}
-          <div className="flex flex-wrap justify-end gap-2">
-            {ehDeputado && <RelatorioGabineteButton dados={relatorioMunicipio} label="Relatório por Município" />}
-            <RelatorioGabineteButton
-              dados={{
-                slug: "emendas",
-                titulo: "Relatório de Emendas Parlamentares",
-                resumo: `${emendas.length} emenda(s)`,
-                kpis: [
-                  { num: String(kpis.destinosAtendidos), label: destinoLabel },
-                  { num: kpis.valorTotalIndicado, label: "Valor total indicado" },
-                  { num: financeiro.executado, label: "Executado (pago)" },
-                ],
-                colunas: [
-                  { header: "Número", largura: "8%" },
-                  { header: "Ano", largura: "6%" },
-                  { header: "Área", largura: "12%" },
-                  { header: "Modalidade", largura: "12%" },
-                  { header: destinoCol, largura: "12%" },
-                  { header: "Entidade", largura: "12%" },
-                  { header: "Status", largura: "10%", pilula: true },
-                  { header: "Indicado", largura: "9%" },
-                  { header: "Empenhado", largura: "9%" },
-                  { header: "Pago", largura: "10%" },
-                ],
-                coresPilula: coresPilulaPdf,
-                linhas: emendas.map((e) => [
-                  e.numero ?? "—",
-                  String(e.ano),
-                  e.area ?? "",
-                  rotuloModalidade(e.modalidade),
-                  [
-                    (ehDeputado ? e.municipio : e.bairro) ?? "",
-                    e.repartida ? "(município todo)" : "",
-                    ehDeputado && e.microRegiao ? `· ${e.microRegiao}` : "",
-                  ].filter(Boolean).join(" "),
-                  e.entidade ?? "",
-                  STATUS[e.status]?.label ?? e.status,
-                  e.valorIndicado,
-                  e.valorEmpenhado,
-                  e.valorPago,
-                ]),
-              }}
-            />
-          </div>
 
           {/* Gráficos didáticos. */}
           {porAno.length > 0 && <BarChartCard title="Valor indicado por ano (R$)" data={porAno} horizontal height={Math.max(220, porAno.length * 44)} />}

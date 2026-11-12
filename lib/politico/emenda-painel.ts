@@ -101,19 +101,21 @@ export interface ResumoMunicipio {
  * indicado desc. Puro.
  */
 export function resumoPorMunicipio(rows: EmendaLite[]): ResumoMunicipio[] {
-  const m = new Map<string, { total: number; indicadoCents: number; pagoCents: number }>();
+  // Chave sem acento/caixa: "BELO HORIZONTE" e "Belo Horizonte" são a mesma cidade.
+  const m = new Map<string, { nome: string; total: number; indicadoCents: number; pagoCents: number }>();
   for (const e of rows) {
     if (!ehDecidida(e.status)) continue;
-    const nome = (e.municipio ?? "").trim() || "Não informado";
-    const cur = m.get(nome) ?? { total: 0, indicadoCents: 0, pagoCents: 0 };
+    const bruto = (e.municipio ?? "").trim() || "Não informado";
+    const nome = bruto.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toUpperCase();
+    const cur = m.get(nome) ?? { nome: bruto, total: 0, indicadoCents: 0, pagoCents: 0 };
     cur.total += 1;
     cur.indicadoCents += e.valorIndicadoCents || 0;
     cur.pagoCents += e.valorPagoCents || 0;
     m.set(nome, cur);
   }
   return [...m.entries()]
-    .map(([municipio, v]) => ({
-      municipio,
+    .map(([, v]) => ({
+      municipio: v.nome,
       total: v.total,
       indicadoCents: v.indicadoCents,
       pagoCents: v.pagoCents,

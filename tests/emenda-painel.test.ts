@@ -116,6 +116,16 @@ describe("resumoPorMunicipio — relatório agregado por município (à la Tramo
     expect(r.some((x) => x.municipio === "Uberaba")).toBe(false);
     expect(r.some((x) => x.municipio === "Juiz de Fora")).toBe(false);
   });
+  it("junta a mesma cidade escrita com caixa/acento diferente (BELO HORIZONTE = Belo Horizonte)", () => {
+    const base = DEPUTADO.find((e) => e.municipio === "Betim")!;
+    const r = resumoPorMunicipio([
+      { ...base, municipio: "POÇOS DE CALDAS", valorIndicadoCents: 100, valorPagoCents: 100 },
+      { ...base, municipio: "Pocos de Caldas", valorIndicadoCents: 50, valorPagoCents: 0 },
+      { ...base, municipio: "Betim", valorIndicadoCents: 10, valorPagoCents: 0 },
+    ]);
+    expect(r).toHaveLength(2);
+    expect(r[0]).toMatchObject({ municipio: "POÇOS DE CALDAS", total: 2, indicadoCents: 150, pagoCents: 100 });
+  });
   it("ordena por valor INDICADO desc (não por % de execução) — anti-tautologia", () => {
     const r = resumoPorMunicipio(DEPUTADO);
     expect(r.map((x) => x.municipio)).toEqual(["Betim", "Contagem", "Poços de Caldas"]);

@@ -13,7 +13,7 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { requireAuth, resolveActiveOrg, exigirPapelNaOrg } from "@/lib/auth/server";
 import { CommandHero } from "@/components/politico/command-hero";
-import { ExportCsv } from "@/components/politico/export-csv";
+import { RelatorioTabela } from "@/components/politico/relatorio-tabela";
 import { temaPesquisaDe } from "../../_temas";
 
 export const dynamic = "force-dynamic";
@@ -144,8 +144,10 @@ export default async function ResultadosPage({ params }: { params: Promise<{ id:
 
       {total > 0 && (
         <div className="flex justify-end">
-          <ExportCsv
-            filename={`pesquisa-resultados-${new Date().toISOString().slice(0, 10)}.csv`}
+          <RelatorioTabela
+            slug="pesquisa"
+            titulo="Resultado da Pesquisa"
+            pesos={[4, 3, 1, 1]}
             headers={["Pergunta", "Opção", "Votos", "%"]}
             rows={linhasCsv}
           />
