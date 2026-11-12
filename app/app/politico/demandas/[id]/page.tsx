@@ -71,6 +71,14 @@ export default async function DemandaDetalhePage({
     .eq("id", id)
     .maybeSingle();
 
+  // Nota do cidadão (migration 9096) — à parte e fail-soft, como os blocos acima.
+  const { data: notaRow } = await db
+    .from("demandas")
+    .select("pol_avaliacao_nota, pol_avaliacao_comentario, pol_avaliacao_em")
+    .eq("organization_id", org.orgId)
+    .eq("id", id)
+    .maybeSingle();
+
   // Voz do Mandato armada? (liga a opção "incluir recado em áudio" no aviso.)
   const vozOk = vozArmada(await lerVozConfig(db, org.orgId));
 
@@ -106,7 +114,7 @@ export default async function DemandaDetalhePage({
 
   return (
     <DetalheDemandaClient
-      demanda={{ ...(demRes.data as Record<string, unknown>), ...(respRow ?? {}), ...(relatoRow ?? {}) } as unknown as DemandaDetalhe}
+      demanda={{ ...(demRes.data as Record<string, unknown>), ...(respRow ?? {}), ...(relatoRow ?? {}), ...(notaRow ?? {}) } as unknown as DemandaDetalhe}
       assessores={assessores}
       eventos={eventos}
       vozArmada={vozOk}

@@ -20,6 +20,7 @@ import { CHAVE_MANDATO, CHAVE_MANDATO_GERADO } from "@/lib/politico/setup-do-man
 import { pesquisarMandato, achadoSchema, type ResultadoPesquisa } from "@/lib/politico/pesquisar-mandato";
 import type { DadosDoMandato } from "@/lib/politico/gerar-conhecimento";
 import { acharAgenteDoMandato } from "@/lib/politico/provisionar-agente";
+import { anexarMaterialAoAgente } from "@/lib/politico/anexar-material-ao-agente";
 
 export async function pesquisarMandatoAtual(): Promise<ResultadoPesquisa> {
   const user = await loadAuthUser();
@@ -177,19 +178,13 @@ export async function aplicarEnriquecimento(aprovadosRaw: unknown): Promise<Resu
             });
           }
           if (agenteId) {
-            const { data: ver } = await admin
-              .from("ai_agent_versions")
-              .select("id, knowledge_source_ids")
-              .eq("organization_id", org.orgId)
-              .eq("agent_id", agenteId)
-              .order("version_number", { ascending: false })
-              .limit(1)
-              .maybeSingle();
-            const verRow = ver as { id: string; knowledge_source_ids: string[] | null } | null;
-            if (verRow?.id) {
-              const novos = Array.from(new Set([...(verRow.knowledge_source_ids ?? []), ksId]));
-              await admin.from("ai_agent_versions").update({ knowledge_source_ids: novos }).eq("id", verRow.id).eq("organization_id", org.orgId);
-            }
+            // Versão publicada é imutável: o material entra por uma versão NOVA
+            // publicada (ou no rascunho, se o agente ainda não foi publicado). E o
+            // resultado é CONFERIDO — antes o erro do banco era engolido e a tela
+            // dizia "acrescentado" com o agente sem consultar nada (12/nov).
+            const anexo = await anexarMaterialAoAgente(admin, { orgId: org.orgId, agenteId, materialId: ksId, userId: user.id });
+            if (!anexo.ok) throw new Error(`anexar: ${anexo.motivo}`);
+            logger.info("aplicar-enriquecimento: material anexado ao agente", { organization_id: org.orgId, knowledge_source_id: ksId, como: anexo.como });
           }
         }
       }

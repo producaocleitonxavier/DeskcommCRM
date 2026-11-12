@@ -22,6 +22,8 @@ import { cabeCuidado, ehDemandaSaude, textoCuidadoSaude } from "@/lib/politico/c
 import { ModalEnviarTexto } from "@/components/politico/modal-enviar-texto";
 import { BannerAvisoTse, useAvisoTse } from "@/components/politico/aviso-tse";
 import { textoAvisoCidadao, textoAvisoEncerramento } from "@/lib/politico/aviso-cidadao-texto";
+import { obterLinkDeAvaliacao } from "@/app/actions/politico/avaliacao-actions";
+import { NOTA_MAX, ROTULO_DA_NOTA, notaPedeAtencao } from "@/lib/politico/avaliacao-texto";
 import { atualizarRegistro, excluirRegistro, listarAnexosDemanda, registrarEventoDemanda, sincronizarVisitaNaAgenda } from "@/app/actions/politico/gabinete-actions";
 import { textoCobranca, demandaVencidaSemResposta, textoCobrancaCidadao } from "@/lib/politico/demanda-cobranca";
 import DemandaAnexos from "@/components/politico/demanda-anexos";
@@ -60,6 +62,10 @@ export interface DemandaDetalhe {
   pol_visita_presentes?: string | null;
   pol_visita_decisoes?: string | null;
   pol_visita_relato_por_nome?: string | null;
+  // Nota do cidadão (1 a 5), respondida pelo link do aviso.
+  pol_avaliacao_nota?: number | null;
+  pol_avaliacao_comentario?: string | null;
+  pol_avaliacao_em?: string | null;
   desfecho: string | null;
   fechada_em: string | null;
   created_at: string;
@@ -172,6 +178,15 @@ export default function DetalheDemandaClient({ demanda, assessores, eventos, voz
     }).catch(() => { if (vivo) setFotosDaDemanda(null); });
     return () => { vivo = false; };
   }, [demanda.id, estadoAtual]);
+  // Nota do cidadão: o link vai no aviso de resolução (o modal mostra o texto com ele).
+  const [linkAval, setLinkAval] = useState<string | null>(null);
+  const temTelefone = !!demanda.contacts?.phone_number;
+  useEffect(() => {
+    if (estadoAtual !== "resolvida" || !temTelefone) { setLinkAval(null); return; }
+    let vivo = true;
+    void obterLinkDeAvaliacao(demanda.id).then((l) => { if (vivo) setLinkAval(l); }).catch(() => { if (vivo) setLinkAval(null); });
+    return () => { vivo = false; };
+  }, [demanda.id, estadoAtual, temTelefone]);
   const [excluindo, setExcluindo] = useState(false);
   const [anexoToken, setAnexoToken] = useState(0);
   const [erro, setErro] = useState<string | null>(null);
@@ -294,9 +309,11 @@ export default function DetalheDemandaClient({ demanda, assessores, eventos, voz
     return ok;
   }
 
-  function abrirEncerrar() {
+  async function abrirEncerrar() {
     const protocolo = (d.pol_oficio_rotulo ?? "").trim() || `#${d.id.slice(0, 8).toUpperCase()}`;
-    setTextoEncerrar(textoAvisoEncerramento({ primeiroNome: primeiroNomeCidadao, nomeParlamentar: politicoNome ?? null, cargo: politicoCargo ?? null, protocolo }));
+    // O link da Nota do cidadão entra no texto que o assessor revisa (pode tirar).
+    const linkAvaliacao = d.contacts?.phone_number ? await obterLinkDeAvaliacao(d.id).catch(() => null) : null;
+    setTextoEncerrar(textoAvisoEncerramento({ primeiroNome: primeiroNomeCidadao, nomeParlamentar: politicoNome ?? null, cargo: politicoCargo ?? null, protocolo, linkAvaliacao }));
     setErroEncerrar(null);
     setEncerrarAberto(true);
   }
@@ -385,7 +402,7 @@ export default function DetalheDemandaClient({ demanda, assessores, eventos, voz
             key={a.estado + a.label}
             type="button"
             disabled={salvando}
-            onClick={() => (a.estado === "encerrada" ? abrirEncerrar() : mudarEstado(a.estado))}
+            onClick={() => (a.estado === "encerrada" ? void abrirEncerrar() : mudarEstado(a.estado))}
             className={a.tom === "dark" ? "wr-btn-dark" : "wr-btn"}
             style={a.tom === "ok" ? { background: "#17784F", color: "#FFFFFF", borderColor: "#17784F" } : undefined}
           >
@@ -408,6 +425,7 @@ export default function DetalheDemandaClient({ demanda, assessores, eventos, voz
           const protocolo = (d.pol_oficio_rotulo ?? "").trim() || `#${d.id.slice(0, 8).toUpperCase()}`;
           const sugerido = textoAvisoCidadao({
             ehResolucao,
+            linkAvaliacao: linkAval,
             comOficio,
             primeiroNome: primeiroNomeCidadao,
             nomeParlamentar: politicoNome ?? null,
@@ -534,6 +552,34 @@ export default function DetalheDemandaClient({ demanda, assessores, eventos, voz
         )}
       </div>
 
+      {typeof d.pol_avaliacao_nota === "number" && (
+        <div
+          className="mb-4 flex flex-wrap items-start gap-3 rounded-xl px-4 py-3"
+          role="status"
+          style={
+            notaPedeAtencao(d.pol_avaliacao_nota)
+              ? { background: "rgba(239,68,68,0.10)", border: "1px solid rgba(239,68,68,0.45)" }
+              : { background: "rgba(74,222,128,0.10)", border: "1px solid rgba(74,222,128,0.4)" }
+          }
+        >
+          <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl text-xl font-extrabold" style={{ background: notaPedeAtencao(d.pol_avaliacao_nota) ? "#EF4444" : "#22C55E", color: "#fff" }}>
+            {d.pol_avaliacao_nota}
+          </div>
+          <div className="min-w-0 flex-1">
+            <p className="text-sm font-semibold" style={{ color: "var(--color-text)" }}>
+              Nota do cidadão: {d.pol_avaliacao_nota} de {NOTA_MAX} · {ROTULO_DA_NOTA[d.pol_avaliacao_nota]}
+            </p>
+            {d.pol_avaliacao_comentario ? (
+              <p className="mt-0.5 text-sm" style={{ color: "var(--color-text-muted)" }}>“{d.pol_avaliacao_comentario}”</p>
+            ) : (
+              <p className="mt-0.5 text-xs" style={{ color: "var(--color-text-muted)" }}>A pessoa não escreveu comentário.</p>
+            )}
+            {notaPedeAtencao(d.pol_avaliacao_nota) && (
+              <p className="mt-1 text-xs font-semibold" style={{ color: "#F87171" }}>Nota baixa: vale alguém do gabinete ligar ou escrever para entender o que faltou.</p>
+            )}
+          </div>
+        </div>
+      )}
       {avisoMsg && (
         <div className="rounded-xl px-4 py-3 text-sm" style={{ background: "rgba(34,197,94,0.14)", color: "#22C55E" }}>
           {avisoMsg}
