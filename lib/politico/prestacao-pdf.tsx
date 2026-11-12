@@ -21,6 +21,11 @@ import {
 } from "@/lib/politico/relatorio-kit";
 import type { PrestacaoContas } from "@/lib/politico/prestacao-contas-dados";
 
+/** "1 demanda" / "4 demandas" — sem o "(s)" de formulário. */
+function pl(n: number, um: string, varios: string): string {
+  return `${n} ${n === 1 ? um : varios}`;
+}
+
 export interface PrestacaoPdfInput {
   nome: string | null;
   subtitulo: string | null;
@@ -46,7 +51,7 @@ function Doc({ d }: { d: PrestacaoPdfInput }): React.ReactElement {
 
   const linha1 = [
     { num: String(x.demandasAtendidas), label: "Demandas atendidas" },
-    { num: x.tempoMedioDias != null ? String(x.tempoMedioDias) : "—", label: "Tempo médio (dias)" },
+    { num: x.tempoMedioDias != null ? String(x.tempoMedioDias).replace(".", ",") : "—", label: "Tempo médio (dias)" },
     { num: String(x.oficios), label: "Ofícios emitidos" },
     { num: String(x.avisos), label: "Avisos ao cidadão" },
   ];
@@ -75,13 +80,13 @@ function Doc({ d }: { d: PrestacaoPdfInput }): React.ReactElement {
   const analise: string[] = [];
   if (x.demandasAtendidas > 0) {
     const ritmo = x.tempoMedioDias == null ? "" : x.tempoMedioDias <= 3 ? ", em um ritmo ágil" : x.tempoMedioDias <= 10 ? ", dentro de um prazo saudável" : ", com prazo a melhorar";
-    analise.push(`${x.demandasAtendidas} demanda(s) do cidadão atendida(s) pelo gabinete${ritmo}.`);
+    analise.push(`${pl(x.demandasAtendidas, "demanda do cidadão atendida", "demandas do cidadão atendidas")} pelo gabinete${ritmo}.`);
   }
-  if (x.oficios > 0) analise.push(`${x.oficios} ofício(s) emitido(s) aos órgãos responsáveis.`);
-  if (x.obrasEntregues > 0 || x.obrasAndamento > 0) analise.push(`Obras: ${x.obrasEntregues} entregue(s) e ${x.obrasAndamento} em andamento.`);
-  if (x.emendasQtd > 0) analise.push(`${reais(x.emendasValor)} em emendas destinadas (${x.emendasQtd} emenda(s)).`);
-  if (x.topBairros.length > 0) analise.push(`Trabalho presente em ${x.topBairros.length} bairro(s), com destaque para ${x.topBairros[0]?.bairro}.`);
-  if (x.baseNovos > 0) analise.push(`${x.baseNovos} nova(s) pessoa(s) no relacionamento do gabinete no período.`);
+  if (x.oficios > 0) analise.push(`${pl(x.oficios, "ofício emitido", "ofícios emitidos")} aos órgãos responsáveis.`);
+  if (x.obrasEntregues > 0 || x.obrasAndamento > 0) analise.push(`Obras: ${pl(x.obrasEntregues, "entregue", "entregues")} e ${x.obrasAndamento} em andamento.`);
+  if (x.emendasQtd > 0) analise.push(`${reais(x.emendasValor)} em emendas destinadas (${pl(x.emendasQtd, "emenda", "emendas")}).`);
+  if (x.topBairros.length > 0) analise.push(`Trabalho presente em ${pl(x.topBairros.length, "bairro", "bairros")}${(x.topBairros[0]?.valor ?? 0) > (x.topBairros[1]?.valor ?? 0) ? `, com destaque para ${x.topBairros[0]?.bairro}` : ""}.`);
+  if (x.baseNovos > 0) analise.push(`${pl(x.baseNovos, "nova pessoa", "novas pessoas")} no relacionamento do gabinete no período.`);
 
   return (
     <Document>

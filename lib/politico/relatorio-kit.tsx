@@ -143,7 +143,7 @@ export function Distribuicoes({ titulo, itens }: { titulo: string; itens: BarraI
         <View key={i} style={estilos.barraLinha}>
           <Text style={estilos.barraRotulo}>{b.label}</Text>
           <View style={estilos.barraTrilho}>
-            <View style={[estilos.barraPreenche, { width: `${Math.max(2, Math.min(100, b.pct))}%`, backgroundColor: b.cor }]} />
+            <View style={[estilos.barraPreenche, { width: b.pct <= 0 ? 0 : `${Math.max(2, Math.min(100, b.pct))}%`, backgroundColor: b.cor }]} />
           </View>
           <Text style={estilos.barraValor}>{b.valor}</Text>
         </View>
