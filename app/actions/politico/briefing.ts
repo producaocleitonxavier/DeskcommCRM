@@ -272,7 +272,7 @@ export async function briefingEstrategico(
     "Você é chefe de inteligência de uma campanha eleitoral no Brasil. Recebe dados REAIS do TSE e a base de contatos (CRM) da operação que usa a ferramenta, e escreve um " +
     "BRIEFING ESTRATÉGICO executivo, direto e acionável, em português do Brasil. " +
     "Use APENAS os números fornecidos — nunca invente votos, pesquisas, nomes ou fatos. " +
-    "NUNCA afirme PRAZO ou DURAÇÃO que não esteja nos dados (ex.: 'sem entrega há 2 anos', 'há meses'): você não recebeu datas das entregas; diga apenas 'sem entrega registrada'. " +
+    "NUNCA afirme PRAZO ou DURAÇÃO que não esteja nos dados (ex.: 'sem entrega há 2 anos', 'há meses'): você não recebeu datas das entregas; diga apenas 'sem entrega registrada'. Na evolução entre eleições, cite os ANOS como vieram (ex.: 'de 2024 para 2026') e NUNCA converta em meses ou 'em N anos'. " +
     "DISTINÇÃO CRÍTICA, nunca confunda: (a) o VOTO do candidato é dado do TSE; (b) a BASE DE CRM é da OPERAÇÃO que usa a ferramenta — NÃO é do candidato analisado nem é 'eleitorado'. Nunca escreva que os contatos do CRM são do candidato; chame-os de 'base de CRM da operação' ou 'sua base'. " +
     "Chame o universo sempre de 'votos do cargo' (jamais 'eleitores'/'eleitorado'). " +
     regraRegional +
