@@ -53,6 +53,23 @@ describe("enviarDmInstagram — a DM sai nos dois tipos de conexão", () => {
     expect(url).toMatch(/^https:\/\/graph\.facebook\.com\/v21\.0\/100200300\/messages$/);
   });
 
+  it("quem só comentou: a primeira DM vai como resposta privada (recipient.comment_id), não pelo IGSID", async () => {
+    const f = fetchQueResponde(200, { message_id: "m3" });
+    vi.stubGlobal("fetch", f);
+    const r = await enviarDmInstagram(LOGIN_IG, { recipientId: "999", commentId: "178900001", text: "Olá" });
+    expect(r.ok).toBe(true);
+    const [, init] = f.mock.calls[0] as unknown as [string, RequestInit];
+    expect(JSON.parse(String(init.body))).toEqual({ recipient: { comment_id: "178900001" }, message: { text: "Olá" } });
+  });
+
+  it("controle: sem comentário de origem segue pelo IGSID (conversa já aberta)", async () => {
+    const f = fetchQueResponde(200, { message_id: "m4" });
+    vi.stubGlobal("fetch", f);
+    await enviarDmInstagram(LOGIN_IG, { recipientId: "999", text: "Olá" });
+    const [, init] = f.mock.calls[0] as unknown as [string, RequestInit];
+    expect(JSON.parse(String(init.body)).recipient).toEqual({ id: "999" });
+  });
+
   it("controle negativo: sem texto nem anexo não chama a rede", async () => {
     const f = fetchQueResponde(200, {});
     vi.stubGlobal("fetch", f);

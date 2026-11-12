@@ -183,9 +183,11 @@ export default function WebhooksInstagramPage() {
           <li>Cole a URL como <strong>Callback URL</strong> e o <strong>Verify Token</strong> abaixo (copie o do token). Objeto <strong>Instagram</strong> — não &quot;User&quot;.</li>
           <li>
             Assine os campos:{" "}
-            <code className="rounded-md px-1.5 py-0.5 font-mono text-xs" style={BOX_CODE}>comments</code>{" "}
+            <code className="rounded-md px-1.5 py-0.5 font-mono text-xs" style={BOX_CODE}>comments</code>,{" "}
+            <code className="rounded-md px-1.5 py-0.5 font-mono text-xs" style={BOX_CODE}>mentions</code>{" "}
             e{" "}
-            <code className="rounded-md px-1.5 py-0.5 font-mono text-xs" style={BOX_CODE}>mentions</code>
+            <code className="rounded-md px-1.5 py-0.5 font-mono text-xs" style={BOX_CODE}>messages</code>{" "}
+            (sem o <strong>messages</strong>, a resposta da pessoa no Direct não chega e a captação para no primeiro passo)
           </li>
         </ol>
       </div>

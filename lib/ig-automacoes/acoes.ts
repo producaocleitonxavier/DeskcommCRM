@@ -99,6 +99,7 @@ async function executarEnviarDm(
     payload: {
       channel_session_id: ctx.channelSessionId,
       to_instagram_id: ctx.fromInstagramId,
+      reply_to_comment_id: ctx.instagramCommentId,
       texto: textoFinal,
       flow_id: ctx.flowId,
     },
@@ -406,6 +407,7 @@ async function emitirRespostaEDm(
       payload: {
         channel_session_id: ctx.channelSessionId,
         to_instagram_id: ctx.fromInstagramId,
+        reply_to_comment_id: ctx.instagramCommentId,
         texto: dm,
         flow_id: ctx.flowId,
       },

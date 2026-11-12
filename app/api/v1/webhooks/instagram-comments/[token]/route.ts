@@ -32,6 +32,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { appDaMeta } from "@/lib/channels/meta/app";
 import { parseIgWebhookPayload, verifyIgWebhookSignature } from "@/lib/channels/instagram/comment-parser";
 import { ingestIgComment } from "@/lib/channels/instagram/comment-ingest";
+import { extrairDmsRecebidas } from "@/lib/channels/instagram/dm-do-webhook";
 import { logger } from "@/lib/logger";
 
 export const dynamic = "force-dynamic";
@@ -143,10 +144,56 @@ export async function POST(req: NextRequest, ctx: RouteCtx): Promise<NextRespons
     return fail("bad_request", "invalid json", 400, { requestId });
   }
 
+  // 4b. DMs recebidas (campo `messages`): a resposta do seguidor no Direct. Um app da
+  // Meta aponta para UM endereço só — sem isto, com este endereço configurado, a
+  // DM nunca chegava e a captação parava no primeiro passo. A organização vem do
+  // TOKEN do caminho (fonte confiável), nunca do corpo; a sessão é a do token ou,
+  // na falta, a conexão de Instagram ATIVA desta organização para a conta da entrada.
+  const dms = extrairDmsRecebidas(payload);
+  for (const dm of dms) {
+    let sessaoId: string | null = row.channel_session_id ?? null;
+    if (!sessaoId) {
+      const { data: sessao } = await db
+        .from("channel_sessions")
+        .select("id")
+        .eq("organization_id", organizationId)
+        .eq("provider", "instagram")
+        .eq("ig_business_account_id", dm.igAccountId)
+        .is("archived_at", null)
+        .limit(1)
+        .maybeSingle();
+      sessaoId = (sessao?.id as string | undefined) ?? null;
+    }
+    if (!sessaoId) {
+      logger.warn("[ig-comments-webhook] DM recebida sem conexão de Instagram correspondente", { requestId, organizationId });
+      continue;
+    }
+    const { error: erroDm } = await db.from("event_log").insert({
+      id: randomUUID(),
+      organization_id: organizationId,
+      event_type: "ig.dm_received",
+      entity_kind: "channel_session",
+      entity_id: sessaoId,
+      payload: {
+        channel_session_id: sessaoId,
+        ig_business_account_id: dm.igAccountId,
+        sender_id: dm.senderId,
+        recipient_id: dm.recipientId,
+        message_id: dm.messageId,
+        text: dm.text,
+        attachments: dm.attachments,
+        timestamp: dm.timestamp,
+      },
+      status: "pending",
+    });
+    if (erroDm) logger.error("[ig-comments-webhook] falha ao registrar DM recebida", { requestId, organizationId, error: erroDm.message });
+  }
+
   // 5. Extrair eventos de comentário
   const events = parseIgWebhookPayload(payload, row.ig_business_account_id ?? undefined);
 
   if (events.length === 0) {
+    if (dms.length > 0) logger.info("[ig-comments-webhook] DMs recebidas", { requestId, organizationId, total: dms.length });
     // Payload sem comentários (ex: stories, mentions sem comentário) → 200 silencioso
     return new NextResponse(null, { status: 200 });
   }

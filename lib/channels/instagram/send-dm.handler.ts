@@ -37,6 +37,9 @@ export const igDmOutboundHandler: EventHandler = {
     const toInstagramId =
       typeof payload.to_instagram_id === "string" ? payload.to_instagram_id : null;
     const texto = typeof payload.texto === "string" ? payload.texto : null;
+    // Primeira DM para quem só comentou: vai como resposta privada ao comentário.
+    const replyToCommentId =
+      typeof payload.reply_to_comment_id === "string" && payload.reply_to_comment_id ? payload.reply_to_comment_id : null;
 
     // Attachment de mídia (image/video/audio)
     let attachment: IgDmAttachment | undefined;
@@ -101,6 +104,7 @@ export const igDmOutboundHandler: EventHandler = {
     // Enviar DM real via Graph API
     const result = await enviarDmInstagram(creds, {
       recipientId: toInstagramId,
+      ...(replyToCommentId ? { commentId: replyToCommentId } : {}),
       ...(texto ? { text: texto } : {}),
       ...(attachment ? { attachment } : {}),
     });

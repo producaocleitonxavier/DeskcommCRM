@@ -35,6 +35,14 @@ export interface IgDmAttachment {
 export interface IgDmRequest {
   /** IGSID do destinatário */
   recipientId: string;
+  /**
+   * RESPOSTA PRIVADA a um comentário: o id do comentário que originou o contato.
+   * Quem só COMENTOU (nunca mandou DM) não tem janela de mensagem aberta, e a Meta
+   * recusa `recipient.id`. O caminho permitido é `recipient.comment_id` — uma
+   * mensagem por comentário, em até 7 dias. Depois que a pessoa responde, a
+   * conversa segue normal pelo IGSID.
+   */
+  commentId?: string;
   /** Texto da mensagem (obrigatório quando não há attachment) */
   text?: string;
   /** Attachment de mídia (imagem, vídeo ou áudio). Mutuamente exclusivo com texto na mesma mensagem na API do IG. */
@@ -93,7 +101,7 @@ export async function enviarDmInstagram(
   }
 
   const body: Record<string, unknown> = {
-    recipient: { id: req.recipientId },
+    recipient: req.commentId ? { comment_id: req.commentId } : { id: req.recipientId },
     message: messagePayload,
   };
 
