@@ -15,6 +15,11 @@ import { requireAuth, resolveActiveOrg } from "@/lib/auth/server";
 import { ROLE_RANK } from "@/lib/auth/types";
 import DashboardClient from "./_dashboard-client";
 import PageTabs from "@/components/politico/page-tabs";
+import {
+  calcularMetricasDeAtendimento,
+  type MensagemParaMetricas,
+  type MetricasDeAtendimento,
+} from "@/lib/politico/atendimento-metricas";
 
 const COMANDO_TABS = [
   { id: "hoje", label: "Hoje", href: "/app/politico" },
@@ -117,6 +122,31 @@ async function buscarDashboard(organizationId: string) {
   };
 }
 
+/**
+ * Mensagens dos últimos 30 dias para os números de atendimento. Só 4 colunas,
+ * paginado de 1000 em 1000 (o PostgREST corta em 1000 por pedido) até um teto
+ * de 10 mil — o suficiente para a leitura do mês sem pesar a tela.
+ */
+const JANELA_ATENDIMENTO_DIAS = 30;
+async function buscarAtendimento(organizationId: string): Promise<MetricasDeAtendimento> {
+  const db = await createClient();
+  const desde = new Date(Date.now() - JANELA_ATENDIMENTO_DIAS * 24 * 60 * 60 * 1000).toISOString();
+  const todas: MensagemParaMetricas[] = [];
+  for (let pagina = 0; pagina < 10; pagina++) {
+    const { data, error } = await db
+      .from("messages")
+      .select("conversation_id, direction, created_at, sent_by_user_id")
+      .eq("organization_id", organizationId)
+      .gte("created_at", desde)
+      .order("created_at", { ascending: true })
+      .range(pagina * 1000, pagina * 1000 + 999);
+    if (error || !data || data.length === 0) break;
+    todas.push(...(data as MensagemParaMetricas[]));
+    if (data.length < 1000) break;
+  }
+  return calcularMetricasDeAtendimento(todas);
+}
+
 // -- Componente (server) -----------------------------------------------------
 
 export default async function DashboardPage() {
@@ -128,7 +158,10 @@ export default async function DashboardPage() {
   // papel — o menu/aba escondidos são só apresentação; a rota precisa barrar.
   if (ROLE_RANK[org.role] < ROLE_RANK.manager) redirect("/app/politico");
 
-  const { dash, funil, calls } = await buscarDashboard(org.orgId);
+  const [{ dash, funil, calls }, atendimento] = await Promise.all([
+    buscarDashboard(org.orgId),
+    buscarAtendimento(org.orgId),
+  ]);
 
   // Tema da org (claro?) p/ o client escolher a paleta de gráfico REAL por tema
   // (recharts usa fill como ATRIBUTO SVG — var(--token) não resolve ali).
@@ -143,7 +176,7 @@ export default async function DashboardPage() {
   return (
     <>
       <PageTabs abas={COMANDO_TABS} active="painel" maxW="1140px" />
-      <DashboardClient dash={dash} funil={funil} calls={calls} claro={claro} />
+      <DashboardClient dash={dash} funil={funil} calls={calls} claro={claro} atendimento={atendimento} />
     </>
   );
 }

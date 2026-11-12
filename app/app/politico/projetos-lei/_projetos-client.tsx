@@ -14,6 +14,7 @@ import { KpiCard } from "@/components/politico/kpi-card";
 import { CommandHero } from "@/components/politico/command-hero";
 import { EmptyState } from "@/components/politico/empty-state";
 import { RelatorioGabineteButton } from "@/components/politico/relatorio-gabinete-button";
+import { ExportCsv } from "@/components/politico/export-csv";
 import { SincronizarProposicoesButton } from "@/components/politico/sincronizar-proposicoes-button";
 import { classificarArea, rotuloArea } from "@/lib/politico/emenda-classificar";
 import { corDoOrgao } from "@/lib/politico/demanda-cobranca";
@@ -107,7 +108,23 @@ export default function ProjetosClient({ kpis, projetos, ehAdmin }: ProjetosClie
       />
 
       {projetos.length > 0 && (
-        <div className="flex justify-end">
+        <div className="flex flex-wrap items-center justify-end gap-2">
+          <ExportCsv
+            filename={`projetos-lei-${new Date().toISOString().slice(0, 10)}.csv`}
+            headers={["Número", "Esfera", "Título", "Área/Tema", "Situação", "Comissão", "Autoria", "Alinhado", "Apresentado em", "Última movimentação"]}
+            rows={filtrados.map((p) => [
+              p.numero,
+              ESFERA[p.esfera] ?? p.esfera,
+              p.titulo,
+              temaDoProjeto(p),
+              STATUS[p.status]?.label ?? p.status,
+              p.comissao,
+              p.coletiva ? "Coautoria" : "Autoria única",
+              p.alinhamento ? "Sim" : "Não",
+              p.dataApresentacao ? new Date(p.dataApresentacao).toLocaleDateString("pt-BR") : "",
+              p.dataUltimaMov ? new Date(p.dataUltimaMov).toLocaleDateString("pt-BR") : "",
+            ])}
+          />
           <RelatorioGabineteButton
             dados={{
               slug: "projetos",

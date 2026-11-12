@@ -16,6 +16,7 @@ import { CommandHero } from "@/components/politico/command-hero";
 import { KpiCard } from "@/components/politico/kpi-card";
 import { EmptyState } from "@/components/politico/empty-state";
 import { QuemVai } from "@/components/politico/quem-vai";
+import { ExportCsv } from "@/components/politico/export-csv";
 import { corDoOrgao } from "@/lib/politico/demanda-cobranca";
 import { visitaPendente, visitaAgendada, visitaSemResponsavel, statusVisita, ordenarVisitas } from "@/lib/politico/visita-tecnica";
 import { definirResponsavelVisita, marcarVisitaRealizada, registrarRelatoVisita } from "@/app/actions/politico/gabinete-actions";
@@ -210,7 +211,26 @@ export default function VisitasClient({ visitas, kpis, assessores, usuarioAtualI
       />
 
       {/* Nova visita (ficha rápida) */}
-      <div className="flex justify-end">
+      <div className="flex flex-wrap items-center justify-end gap-2">
+        <ExportCsv
+          filename={`visitas-${new Date().toISOString().slice(0, 10)}.csv`}
+          headers={["Assunto", "Órgão", "Município", "Situação", "Data da visita", "Realizada em", "Responsável", "O que foi feito", "Presentes", "Decidido"]}
+          rows={lista.map((v) => {
+            const st = statusVisita(arg(v));
+            return [
+              v.assunto || "Demanda",
+              v.orgao,
+              v.municipio,
+              STATUS_PILL[st]?.label ?? st,
+              v.visitaEm ? new Date(v.visitaEm).toLocaleDateString("pt-BR") : "",
+              v.realizadaEm ? new Date(v.realizadaEm).toLocaleDateString("pt-BR") : "",
+              v.responsavelId ? v.responsavelNome || "Responsável" : "Sem responsável",
+              v.relato,
+              v.presentes,
+              v.decisoes,
+            ];
+          })}
+        />
         <button onClick={() => setNovaAberta((v) => !v)} className="wr-btn-dark inline-flex items-center gap-2">
           {novaAberta ? <X className="h-4 w-4" /> : <Plus className="h-4 w-4" />} {novaAberta ? "Fechar" : "Nova visita"}
         </button>

@@ -13,6 +13,7 @@ import type { EleicaoOpcao } from "@/app/actions/politico/intelEleitoral";
 import { rankingCandidatos, type CandidatoRank } from "@/app/actions/politico/raioX";
 import { salvarMandatoTse, type MandatoTse } from "@/app/actions/politico/obras-actions";
 import { CandFoto } from "@/components/politico/cand-foto";
+import { ExportCsv } from "@/components/politico/export-csv";
 
 export interface ObraRow {
   id: string;
@@ -95,6 +96,23 @@ export default function ObrasClient({ obras, executivo, eleicoes, mandatoInicial
           <option value="todos">Todos os status</option>
           {Object.entries(STATUS).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
         </select>
+        <div className="ml-auto">
+          <ExportCsv
+            filename={`obras-${new Date().toISOString().slice(0, 10)}.csv`}
+            headers={["Título", "Natureza", "Tipo", "Situação", "Execução (%)", "Valor (R$)", "Município", "Bairro", "Órgão responsável"]}
+            rows={filtradas.map((o) => [
+              o.titulo,
+              o.natureza === "execucao" ? "Execução" : "Fiscalização",
+              TIPO[o.tipo] ?? o.tipo,
+              STATUS[o.status]?.label ?? o.status,
+              o.percentual,
+              ((o.valor_cents || 0) / 100).toFixed(2).replace(".", ","),
+              o.municipio,
+              o.bairro,
+              o.orgao_responsavel,
+            ])}
+          />
+        </div>
       </div>
 
       {/* Lista */}

@@ -11,6 +11,10 @@ import Link from "next/link";
 import {
   ArrowLeft,
   BadgeCheck,
+  Clock,
+  MessageCircle,
+  MessageCircleWarning,
+  Reply,
   BarChart3,
   ChevronDown,
   Heart,
@@ -30,6 +34,7 @@ import { SectionHeader } from "@/components/politico/section-header";
 import { CommandHero } from "@/components/politico/command-hero";
 import { EmptyState } from "@/components/politico/empty-state";
 import type { CallQueueStatus, DashboardData, FunilKpis } from "./page";
+import { formatarDuracao, type MetricasDeAtendimento } from "@/lib/politico/atendimento-metricas";
 
 // Uma COR DISTINTA por tipo de público (novo cadastro → voto certo): a mesma
 // paleta pinta o funil E a pizza "Distribuição por Nível", então a cor vira a
@@ -51,6 +56,8 @@ export interface DashboardClientProps {
   calls: CallQueueStatus | null;
   /** Org em tema claro? Escolhe a paleta de gráfico validada p/ o claro. */
   claro: boolean;
+  /** Números de atendimento dos últimos 30 dias (conversas, resposta, horário). */
+  atendimento: MetricasDeAtendimento;
 }
 
 function Badge({ children }: { children: React.ReactNode }) {
@@ -64,7 +71,7 @@ function Badge({ children }: { children: React.ReactNode }) {
   );
 }
 
-export default function DashboardClient({ dash, funil, calls, claro }: DashboardClientProps) {
+export default function DashboardClient({ dash, funil, calls, claro, atendimento }: DashboardClientProps) {
   const FUNIL_HEX = claro ? FUNIL_HEX_CLARO : FUNIL_HEX_ESCURO;
   const [invisivelAberto, setInvisivelAberto] = useState(true);
   // "Fila de Ligações" exige um serviço de call-center configurado. Sem chamadas
@@ -120,6 +127,8 @@ export default function DashboardClient({ dash, funil, calls, claro }: Dashboard
             <KpiCard label="Militantes" valor={dash.militantes} icone={Megaphone} />
             <KpiCard label="Apoiadores" valor={dash.apoiadores} icone={Heart} />
           </section>
+
+          <BlocoAtendimento m={atendimento} claro={claro} />
 
           {/* ── 3. Funil político ───────────────────────────────── */}
           {funil && funil.funil_total > 0 && (
@@ -250,5 +259,115 @@ export default function DashboardClient({ dash, funil, calls, claro }: Dashboard
         </>
       )}
     </div>
+  );
+}
+
+// -- Atendimento (últimos 30 dias) --------------------------------------------
+
+/**
+ * O que o gabinete precisa bater o olho e saber: quantas pessoas procuraram,
+ * quantas ficaram sem resposta, em quanto tempo sai a 1ª resposta e em que hora
+ * o cidadão escreve. Série única → uma cor só; o pico vai em destaque e é o
+ * único com o número escrito (o resto aparece ao passar o mouse).
+ */
+function BlocoAtendimento({ m, claro }: { m: MetricasDeAtendimento; claro: boolean }) {
+  const maxHora = Math.max(1, ...m.recebidasPorHora);
+  const totalRecebidas = m.recebidasPorHora.reduce((a, b) => a + b, 0);
+  const cor = claro ? "#1F3A5F" : "#C4E64A";
+  const quemRespondeu =
+    m.respondidas === 0
+      ? "Ainda sem respostas no período."
+      : `Primeira resposta: ${m.primeiraRespostaPelaIA} pela IA · ${m.primeiraRespostaPorPessoa} por uma pessoa da equipe.`;
+
+  return (
+    <section aria-label="Atendimento nos últimos 30 dias" className="space-y-4">
+      <div className="flex flex-wrap items-baseline justify-between gap-2">
+        <h2 className="text-lg font-semibold" style={{ color: "var(--color-text)" }}>
+          Atendimento
+        </h2>
+        <span className="text-xs" style={{ color: "var(--color-text-subtle)" }}>
+          últimos 30 dias ·{" "}
+          <Link href="/app/metrics" className="underline underline-offset-2">
+            ver detalhe em Desempenho
+          </Link>
+        </span>
+      </div>
+
+      <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+        <KpiCard label="Pessoas que procuraram o gabinete" valor={m.conversas} icone={MessageCircle} />
+        <KpiCard
+          label="Responderam em (metade dos casos)"
+          valor={formatarDuracao(m.medianaPrimeiraRespostaSeg)}
+          icone={Clock}
+        />
+        <KpiCard
+          label="Conversas respondidas"
+          valor={m.taxaDeResposta === null ? "—" : m.taxaDeResposta}
+          {...(m.taxaDeResposta === null ? {} : { sufixo: "%" })}
+          icone={Reply}
+        />
+        <KpiCard
+          label="Ficaram sem resposta"
+          valor={m.semResposta}
+          icone={MessageCircleWarning}
+          {...(m.semResposta > 0 ? { cor: "#C2410C" } : {})}
+        />
+      </div>
+
+      <div className="gip-glass p-6 sm:p-7">
+        <div className="flex flex-wrap items-baseline justify-between gap-2">
+          <h3 className="text-base font-semibold" style={{ color: "var(--color-text)" }}>
+            Em que hora o cidadão escreve
+          </h3>
+          <span className="text-sm" style={{ color: "var(--color-text-muted)" }}>
+            {m.horaDePico === null
+              ? "Sem mensagens recebidas no período."
+              : `Pico às ${m.horaDePico}h · ${totalRecebidas.toLocaleString("pt-BR")} mensagens recebidas`}
+          </span>
+        </div>
+
+        <div
+          className="mt-5 flex h-40 items-end gap-[2px]"
+          role="img"
+          aria-label={
+            m.horaDePico === null
+              ? "Sem mensagens recebidas nos últimos 30 dias."
+              : `Mensagens recebidas por hora do dia. Pico às ${m.horaDePico} horas, com ${m.recebidasPorHora[m.horaDePico] ?? 0} mensagens.`
+          }
+        >
+          {m.recebidasPorHora.map((n, h) => {
+            const pico = h === m.horaDePico;
+            return (
+              <div key={h} className="flex h-full min-w-0 flex-1 flex-col items-center justify-end" title={`${h}h — ${n} mensagens`}>
+                {pico && (
+                  <span className="mb-1 text-xs font-semibold tabular-nums" style={{ color: "var(--color-text)" }}>
+                    {n}
+                  </span>
+                )}
+                <div
+                  className="w-full rounded-t-[4px]"
+                  style={{
+                    height: n === 0 ? 2 : `${Math.max(4, Math.round((n / maxHora) * 100))}%`,
+                    background: cor,
+                    opacity: n === 0 ? 0.18 : pico ? 1 : 0.55,
+                  }}
+                />
+              </div>
+            );
+          })}
+        </div>
+        <div className="mt-1.5 flex gap-[2px]" aria-hidden>
+          {m.recebidasPorHora.map((_, h) => (
+            <span key={h} className="min-w-0 flex-1 text-center text-[10px] tabular-nums" style={{ color: "var(--color-text-subtle)" }}>
+              {h % 3 === 0 ? `${h}h` : ""}
+            </span>
+          ))}
+        </div>
+
+        <p className="mt-4 text-sm" style={{ color: "var(--color-text-muted)" }}>
+          {quemRespondeu}
+        </p>
+      </div>
+    </section>
   );
 }

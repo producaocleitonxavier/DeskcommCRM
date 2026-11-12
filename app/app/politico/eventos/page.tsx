@@ -11,6 +11,7 @@ import { redirect } from "next/navigation";
 import Link from "next/link";
 import { CommandHero } from "@/components/politico/command-hero";
 import { QuemVai, type Presente } from "@/components/politico/quem-vai";
+import { ExportCsv } from "@/components/politico/export-csv";
 import { createClient } from "@/lib/supabase/server";
 import { requireAuth, resolveActiveOrg } from "@/lib/auth/server";
 import { exigirAcessoPolitico } from "@/lib/politico/acesso";
@@ -137,7 +138,20 @@ export default async function EventosPage({
       />
 
       {/* Ação principal (em breve) */}
-      <div className="flex justify-end">
+      <div className="flex flex-wrap items-center justify-end gap-2">
+        <ExportCsv
+          filename={`eventos-${new Date().toISOString().slice(0, 10)}.csv`}
+          headers={["Título", "Tipo", "Situação", "Data", "Cidade", "Público estimado", "Presença real"]}
+          rows={eventos.map((e) => [
+            e.title,
+            e.type ? (TYPE_LABELS[e.type] ?? e.type) : "",
+            STATUS_LABELS[e.status] ?? e.status,
+            e.event_date ? new Date(e.event_date).toLocaleDateString("pt-BR") : "",
+            e.city,
+            e.estimated_audience,
+            e.actual_attendance,
+          ])}
+        />
         <span
           className="inline-flex items-center rounded-full px-4 py-2 text-sm font-semibold"
           style={{ background: "var(--color-surface-elevated)", color: "var(--color-text-subtle)", border: "1px dashed var(--color-border)", cursor: "not-allowed" }}

@@ -13,6 +13,7 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { requireAuth, resolveActiveOrg, exigirPapelNaOrg } from "@/lib/auth/server";
 import { CommandHero } from "@/components/politico/command-hero";
+import { ExportCsv } from "@/components/politico/export-csv";
 import { temaPesquisaDe } from "../../_temas";
 
 export const dynamic = "force-dynamic";
@@ -96,6 +97,40 @@ export default async function ResultadosPage({ params }: { params: Promise<{ id:
   for (const r of respondidas) { const c = (r.city ?? "").trim(); if (c) cidadeMap.set(c, (cidadeMap.get(c) ?? 0) + 1); }
   const topCidades = [...cidadeMap.entries()].sort((a, b) => b[1] - a[1]).slice(0, 5);
 
+  // Planilha: SÓ o agregado que a tela mostra (pergunta, opção, votos, %) —
+  // nunca a identidade de quem respondeu nem o texto das respostas abertas.
+  const linhasCsv: (string | number)[][] = perguntas.flatMap((p) => {
+    const valores = respondidas.map((r) => r.answers[p.id]).filter((v) => v != null && v !== "");
+    const pct = (n: number, t: number) => (t > 0 ? Math.round((n / t) * 100) : 0);
+    if (p.response_type === "scale") {
+      const nums = valores.map((v) => Number(v)).filter((n) => Number.isFinite(n));
+      return [1, 2, 3, 4, 5].map((nivel) => {
+        const n = nums.filter((x) => x === nivel).length;
+        return [p.question, `Nota ${nivel}`, n, pct(n, nums.length)];
+      });
+    }
+    if (p.response_type === "boolean") {
+      const sim = valores.filter((v) => v === true).length;
+      const nao = valores.filter((v) => v === false).length;
+      return [
+        [p.question, "Sim", sim, pct(sim, valores.length)],
+        [p.question, "Não", nao, pct(nao, valores.length)],
+      ];
+    }
+    if (p.response_type === "multi_choice" || p.response_type === "choice") {
+      const tally = new Map<string, number>();
+      for (const v of valores) {
+        const arr = Array.isArray(v) ? v.map((x) => String(x)) : [String(v)];
+        for (const o of arr) tally.set(o, (tally.get(o) ?? 0) + 1);
+      }
+      const ops: [string, number][] = p.options.length
+        ? p.options.map((o) => [o, tally.get(o) ?? 0])
+        : [...tally.entries()].sort((a, b) => b[1] - a[1]);
+      return ops.map(([op, n]) => [p.question, op, n, pct(n, valores.length)]);
+    }
+    return [[p.question, "(respostas abertas)", valores.length, ""]];
+  });
+
   const fmtData = (iso: string) => { try { return new Date(iso).toLocaleDateString("pt-BR", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" }); } catch { return ""; } };
 
   return (
@@ -106,6 +141,16 @@ export default async function ResultadosPage({ params }: { params: Promise<{ id:
         subtitulo={`${temaS.l} · ${total} resposta${total !== 1 ? "s" : ""}${completas !== total ? ` (${completas} completa${completas !== 1 ? "s" : ""})` : ""}`}
         acoes={[{ href: "/app/politico/pesquisas", label: "← Pesquisas" }, { href: `/app/politico/pesquisas/${id}/editar`, label: "Editar perguntas" }]}
       />
+
+      {total > 0 && (
+        <div className="flex justify-end">
+          <ExportCsv
+            filename={`pesquisa-resultados-${new Date().toISOString().slice(0, 10)}.csv`}
+            headers={["Pergunta", "Opção", "Votos", "%"]}
+            rows={linhasCsv}
+          />
+        </div>
+      )}
 
       {temIntencao && (
         <div className="gip-glass flex items-start gap-2 p-3.5 text-[12px]" style={{ color: "var(--color-text-muted)" }}>

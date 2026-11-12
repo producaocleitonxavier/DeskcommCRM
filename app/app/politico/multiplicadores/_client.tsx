@@ -14,6 +14,7 @@ import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 
 import { CommandHero } from "@/components/politico/command-hero";
+import { ExportCsv } from "@/components/politico/export-csv";
 import { Button } from "@/components/ui/button";
 import {
   CaretDown,
@@ -434,6 +435,21 @@ export default function MultiplicadoresClient({
       </p>
 
       {/* ── O PLACAR (o centro) ──────────────────────────────────────────── */}
+      <div className="flex justify-end">
+        <ExportCsv
+          filename={`multiplicadores-${new Date().toISOString().slice(0, 10)}.csv`}
+          headers={["Nome", "Grupo", "Cadastros trazidos", "Alcance", "Situação", "Recebeu o link", "Última atividade"]}
+          rows={[...assessores, ...divulgadores].map((m) => [
+            m.nome,
+            m.tipo === "assessor" ? "Assessor" : "Divulgador",
+            m.trouxe,
+            m.alcancou,
+            m.compartilhou ? "Gerou alcance" : "Sem alcance ainda",
+            m.recebeuLink ? "Sim" : "Não",
+            m.ultimaAtividadeISO ? new Date(m.ultimaAtividadeISO).toLocaleDateString("pt-BR") : "",
+          ])}
+        />
+      </div>
       <SecaoPlacar
         titulo="Assessores"
         subtitulo="Sua equipe e lideranças — marcados por você."
