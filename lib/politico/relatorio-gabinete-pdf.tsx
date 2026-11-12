@@ -13,6 +13,9 @@ import {
   Analise,
   type BarraItem,
   Cabecalho,
+  Composicao,
+  type FatiaComposicao,
+  TituloSecao,
   type ColunaKit,
   Distribuicoes,
   FaixaTopo,
@@ -41,6 +44,8 @@ export interface RelatorioGabineteInput {
   analise?: string[];
   /** Barras de distribuição (opcional), ex.: valor por área. */
   distribuicoes?: { titulo: string; itens: BarraItem[] };
+  /** Composição de um total em partes coloridas (opcional), ex.: por situação. */
+  composicao?: { titulo: string; itens: FatiaComposicao[] };
   /** Mapa valor→cor para colunas marcadas como pílula (ex.: status). */
   coresPilula?: Record<string, string>;
 }
@@ -58,9 +63,10 @@ function Doc({ d }: { d: RelatorioGabineteInput }): React.ReactElement {
           <Cabecalho nome={nome} subtitulo={subtitulo} logoUrl={d.logoUrl} />
           <TituloRelatorio titulo={d.titulo} meta={meta} />
           <Kpis itens={d.kpis} accent={accent} />
+          {d.composicao ? <Composicao titulo={d.composicao.titulo} itens={d.composicao.itens} /> : null}
           {d.distribuicoes ? <Distribuicoes titulo={d.distribuicoes.titulo} itens={d.distribuicoes.itens} /> : null}
           {d.analise && d.analise.length > 0 ? <Analise pontos={d.analise} accent={accent} /> : null}
-          <Text style={estilos.secTitulo}>Registros ({d.linhas.length})</Text>
+          <TituloSecao>{`Registros (${d.linhas.length})`}</TituloSecao>
           <Tabela colunas={d.colunas} linhas={d.linhas} accent={accent} coresPilula={d.coresPilula} />
         </View>
         <Rodape nome={nome} titulo={d.titulo} />

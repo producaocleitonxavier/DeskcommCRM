@@ -131,6 +131,7 @@ export default function LocaisClient({ locais, kpis }: LocaisClientProps) {
               <RelatorioTabela
                 slug="locais"
                 titulo="Relatório de Locais"
+                grafico={{ coluna: 1, titulo: "Locais por tipo" }}
                 kpis={[
                   { num: String(visiveis.length), label: "Locais" },
                   { num: String(visiveis.reduce((s, l) => s + (l.nEventos || 0), 0)), label: "Eventos realizados" },

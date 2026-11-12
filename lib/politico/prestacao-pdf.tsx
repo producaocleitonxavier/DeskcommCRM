@@ -67,14 +67,14 @@ function Doc({ d }: { d: PrestacaoPdfInput }): React.ReactElement {
     label: e.mes,
     valor: String(e.valor),
     pct: (e.valor / maxEvol) * 100,
-    cor: accent,
+    cor: "#2F6FB5",
   }));
   const maxBairro = Math.max(1, ...x.topBairros.map((b) => b.valor));
   const barrasBairro: BarraItem[] = x.topBairros.map((b) => ({
     label: b.bairro,
     valor: String(b.valor),
     pct: (b.valor / maxBairro) * 100,
-    cor: accent,
+    cor: "#17A673",
   }));
 
   const analise: string[] = [];

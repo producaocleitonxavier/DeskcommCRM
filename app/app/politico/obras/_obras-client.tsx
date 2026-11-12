@@ -100,6 +100,7 @@ export default function ObrasClient({ obras, executivo, eleicoes, mandatoInicial
           <RelatorioTabela
             slug="obras"
             titulo="Relatório de Obras e Fiscalização"
+            grafico={{ coluna: 3, titulo: "Obras por situação" }}
             kpis={[
               { num: String(filtradas.length), label: "Obras e contratos" },
               { num: String(filtradas.filter((o) => o.status === "em_andamento").length), label: "Em andamento" },

@@ -52,6 +52,8 @@ const inputSchema = z.object({
   analise: z.array(z.string().trim().max(240)).max(8).optional(),
   // Barras de distribuição (ex.: valor por área).
   distribuicoes: z.object({ titulo: z.string().trim().max(60), itens: z.array(barraSchema).max(12) }).optional(),
+  // Gráfico de composição (barra segmentada em cores + legenda), ex.: por situação.
+  composicao: z.object({ titulo: z.string().trim().max(60), itens: z.array(z.object({ label: z.string().trim().max(40), valor: z.number().int().min(0).max(1_000_000), cor: corHex })).max(8) }).optional(),
   // Mapa valor→cor para colunas com `pilula`.
   coresPilula: z.record(z.string().max(60), corHex).optional(),
 });
@@ -99,6 +101,7 @@ export async function gerarRelatorioGabinete(bruto: RelatorioGabineteInputClient
       linhas: input.linhas,
       analise: input.analise,
       distribuicoes: input.distribuicoes,
+      composicao: input.composicao,
       coresPilula: input.coresPilula,
     });
   } catch {

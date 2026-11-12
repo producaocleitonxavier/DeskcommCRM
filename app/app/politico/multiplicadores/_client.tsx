@@ -439,6 +439,7 @@ export default function MultiplicadoresClient({
         <RelatorioTabela
           slug="multiplicadores"
           titulo="Relatório de Multiplicadores"
+          grafico={{ coluna: 4, titulo: "Quem já gerou alcance" }}
           destaque
           kpis={[
             { num: String(assessores.length + divulgadores.length), label: "Multiplicadores" },

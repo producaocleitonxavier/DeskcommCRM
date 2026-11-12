@@ -354,8 +354,12 @@ export default function DetalheDemandaClient({ demanda, assessores, eventos, voz
         titulo={d.assunto || "Sem assunto"}
         subtitulo={`${d.contacts?.name ?? "Cidadão sem nome"}${d.contacts?.phone_number ? ` · ${d.contacts.phone_number}` : ""}`}
         extra={
-          <span className="inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold" style={{ background: ec.bg, color: ec.color }}>
+          <span
+            className="inline-flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-sm font-bold"
+            style={{ background: d.estado === "encerrada" ? "#E5E7EB" : ec.color, color: "#0E1622" }}
+          >
             {ESTADO_LABEL[d.estado] ?? d.estado}
+            {fechada && d.fechada_em ? <span className="font-medium opacity-80">· {fmtData(d.fechada_em)}</span> : null}
           </span>
         }
       />

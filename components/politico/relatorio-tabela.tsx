@@ -9,6 +9,7 @@
 
 import { RelatorioGabineteButton } from "@/components/politico/relatorio-gabinete-button";
 import type { RelatorioGabineteInputCliente } from "@/app/actions/politico/gerarRelatorioGabinete";
+import { fatiasPorValor } from "@/lib/politico/relatorio-cores";
 
 type Celula = string | number | null | undefined;
 
@@ -24,16 +25,21 @@ export interface RelatorioTabelaProps {
   label?: string;
   /** Botão em destaque (verde). */
   destaque?: boolean;
+  /** Gráfico colorido: conta os valores desta coluna (índice) e mostra a composição. */
+  grafico?: { coluna: number; titulo: string };
 }
 
-export function RelatorioTabela({ slug, titulo, headers, rows, pesos, resumo, kpis, label = "Baixar relatório (PDF)", destaque }: RelatorioTabelaProps) {
+export function RelatorioTabela({ slug, titulo, headers, rows, pesos, resumo, kpis, label = "Baixar relatório (PDF)", destaque, grafico }: RelatorioTabelaProps) {
   const p = headers.map((_, i) => pesos?.[i] ?? (i === 0 ? 2 : 1));
   const soma = p.reduce((a, b) => a + b, 0) || 1;
+  // Só vale gráfico com 2+ categorias — uma fatia só não mostra composição nenhuma.
+  const fatias = grafico ? fatiasPorValor(rows.map((r) => r[grafico.coluna])) : [];
   const dados: RelatorioGabineteInputCliente = {
     slug,
     titulo,
     resumo: resumo ?? `${rows.length} ${rows.length === 1 ? "registro" : "registros"}`,
     kpis: kpis ?? [{ num: String(rows.length), label: "Registros" }],
+    ...(grafico && fatias.length > 1 ? { composicao: { titulo: grafico.titulo, itens: fatias.map((f) => ({ ...f, label: f.label.slice(0, 40) })) } } : {}),
     colunas: headers.map((h, i) => ({ header: h, largura: `${(((p[i] ?? 1) * 100) / soma).toFixed(2)}%` })),
     linhas: rows.slice(0, 3000).map((r) =>
       headers.map((_, i) => {

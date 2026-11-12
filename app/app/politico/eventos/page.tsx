@@ -142,6 +142,7 @@ export default async function EventosPage({
         <RelatorioTabela
           slug="eventos"
           titulo="Relatório de Eventos"
+          grafico={{ coluna: 2, titulo: "Eventos por situação" }}
           pesos={[3, 1.2, 1.2, 1, 1.5, 1.2, 1.2]}
           headers={["Título", "Tipo", "Situação", "Data", "Cidade", "Público estimado", "Presença real"]}
           rows={eventos.map((e) => [

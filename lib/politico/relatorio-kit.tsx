@@ -1,82 +1,139 @@
 // lib/politico/relatorio-kit.tsx
 /**
- * KIT VISUAL dos relatórios do Gabinete em PDF (@react-pdf/renderer) — o
- * "Executivo Premium": fundo branco, econômico pra impressão, com a cor da marca
- * (accent) nos detalhes (faixa do topo, topo dos KPIs, barras, espinha da caixa
- * de análise, régua da tabela). Um só kit para Demandas, Lideranças, Emendas e
- * Projetos — assim o timbre não diverge de um relatório pro outro.
+ * KIT VISUAL dos relatórios do Gabinete em PDF (@react-pdf/renderer) — a
+ * IDENTIDADE GIP: capa marinho com o filete lima, números em cartões com espinha
+ * colorida, gráfico de composição em cores, tabela com cabeçalho marinho. Um só
+ * kit para Demandas, Prestação de Contas, Lideranças, Emendas, Projetos, Obras,
+ * Visitas, Locais, Multiplicadores e Pesquisas — o timbre não diverge.
  *
- * Decisão de contraste: o TEXTO é sempre escuro (nunca na cor da marca), porque
- * o accent de um cliente pode ser claro (ex.: lima) e nome em lima sobre branco
- * fica ilegível. O accent entra só em ELEMENTOS (faixas, barras, bordas), onde
- * clareza não vira problema de leitura.
+ * O relatório é o que o gabinete MOSTRA para fora: é peça de imagem, não extrato.
+ * Por isso a paleta é a da ferramenta (marinho + lima), e não a cor genérica da
+ * instalação — o parâmetro `accent` segue na assinatura por compatibilidade, mas
+ * os elementos estruturais usam as cores da marca GIP abaixo.
+ *
+ * Contraste: texto corrido sempre escuro sobre claro, ou branco sobre marinho.
+ * O lima só entra em FILETES e marcas (nunca em texto sobre branco). As cores de
+ * gráfico (`CORES_GRAFICO`) foram validadas para daltonismo e sempre vêm com
+ * legenda escrita — identidade nunca depende só da cor.
  */
 import { Font, Image, StyleSheet, Text, View } from "@react-pdf/renderer";
+import React from "react";
 
 // Sem hifenização automática: a regra embutida é a do inglês e quebra errado em pt-BR.
 Font.registerHyphenationCallback((palavra) => [palavra]);
-import React from "react";
+
+/** Marca GIP. */
+export const MARCA = {
+  marinho: "#14233A",
+  marinhoClaro: "#24415E",
+  lima: "#C4E64A",
+  limaTexto: "#D7F36A", // lima para texto sobre marinho
+} as const;
+
+/** Paleta categórica dos gráficos (ordem fixa; validada para daltonismo). */
+export const CORES_GRAFICO = ["#2F6FB5", "#17A673", "#E08A1E", "#8B5CF6", "#D9486A", "#0E9AA7"] as const;
 
 export const TINTA = {
-  forte: "#161616",
-  texto: "#2A2A2A",
-  medio: "#5A5A5A",
-  fraco: "#8A8A8A",
-  linha: "#E6E6E6",
-  zebra: "#FafafA",
-  trilho: "#EFEFEF",
-  caixa: "#F7F7F5",
+  forte: "#14233A",
+  texto: "#263445",
+  medio: "#5B6B80",
+  fraco: "#8A97A8",
+  linha: "#DDE4EE",
+  zebra: "#F5F8FC",
+  trilho: "#E6ECF4",
+  caixa: "#EEF3F9",
 } as const;
+
+const MARGEM = 34;
 
 export const estilos = StyleSheet.create({
   page: { paddingTop: 0, paddingBottom: 46, paddingHorizontal: 0, fontSize: 9, color: TINTA.texto, fontFamily: "Helvetica" },
-  // Faixa fina na cor da marca no topo absoluto da página.
+  // Filete lima no topo absoluto de TODA página (assinatura da marca).
   faixaTopo: { height: 5 },
-  corpo: { paddingHorizontal: 34 },
+  corpo: { paddingHorizontal: MARGEM },
 
-  cabecalho: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingTop: 22, paddingBottom: 12, borderBottomWidth: 1, borderBottomColor: TINTA.linha, marginBottom: 14 },
+  // Capa marinho (só na 1ª página): identidade do mandato + selo da ferramenta.
+  cabecalho: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginHorizontal: -MARGEM,
+    paddingHorizontal: MARGEM,
+    paddingTop: 20,
+    paddingBottom: 14,
+    backgroundColor: MARCA.marinho,
+  },
   cabecalhoEsq: { flexDirection: "row", alignItems: "center", gap: 12 },
-  logo: { width: 46, height: 46, objectFit: "contain" },
-  marcaNome: { fontSize: 15, fontWeight: 700, color: TINTA.forte, letterSpacing: 0.2 },
-  marcaSub: { fontSize: 8, color: TINTA.medio, marginTop: 2 },
-  selo: { fontSize: 7, color: TINTA.fraco, textTransform: "uppercase", letterSpacing: 1 },
+  logoMoldura: { width: 50, height: 50, borderRadius: 8, backgroundColor: "#FFFFFF", alignItems: "center", justifyContent: "center" },
+  logo: { width: 42, height: 42, objectFit: "contain" },
+  marcaNome: { fontSize: 16, fontWeight: 700, color: "#FFFFFF", letterSpacing: 0.2 },
+  marcaSub: { fontSize: 8.5, color: "#B9C7DA", marginTop: 3 },
+  seloBloco: { alignItems: "flex-end" },
+  selo: { fontSize: 7.5, fontWeight: 700, color: MARCA.limaTexto, textTransform: "uppercase", letterSpacing: 1.6 },
+  seloSub: { fontSize: 7, color: "#93A5BD", marginTop: 3, letterSpacing: 0.4 },
 
-  titulo: { fontSize: 15, fontWeight: 700, color: TINTA.forte, marginBottom: 2 },
-  meta: { fontSize: 8, color: TINTA.medio, marginBottom: 14 },
+  // Título do relatório: continua a capa marinho, separado por um fio.
+  tituloBloco: {
+    marginHorizontal: -MARGEM,
+    paddingHorizontal: MARGEM,
+    paddingTop: 12,
+    paddingBottom: 16,
+    backgroundColor: MARCA.marinho,
+    borderTopWidth: 0.5,
+    borderTopColor: MARCA.marinhoClaro,
+    marginBottom: 18,
+  },
+  tituloFilete: { width: 34, height: 3, borderRadius: 2, backgroundColor: MARCA.lima, marginBottom: 8 },
+  titulo: { fontSize: 19, fontWeight: 700, color: "#FFFFFF", marginBottom: 4, letterSpacing: 0.1 },
+  meta: { fontSize: 8.5, color: "#B9C7DA" },
 
-  kpis: { flexDirection: "row", gap: 9, marginBottom: 16 },
-  kpi: { flex: 1, borderWidth: 0.5, borderColor: TINTA.linha, borderTopWidth: 2, borderRadius: 5, paddingVertical: 9, paddingHorizontal: 10 },
-  kpiNum: { fontSize: 17, fontWeight: 700, color: TINTA.forte },
-  kpiLabel: { fontSize: 7.5, color: TINTA.medio, marginTop: 3 },
+  kpis: { flexDirection: "row", gap: 9, marginBottom: 12 },
+  kpi: { flex: 1, backgroundColor: TINTA.zebra, borderRadius: 7, borderLeftWidth: 3.5, paddingVertical: 10, paddingHorizontal: 12 },
+  kpiDestaque: { backgroundColor: MARCA.marinho },
+  kpiNum: { fontSize: 19, fontWeight: 700, color: TINTA.forte },
+  kpiLabel: { fontSize: 7.5, color: TINTA.medio, marginTop: 4, textTransform: "uppercase", letterSpacing: 0.5 },
 
-  secTitulo: { fontSize: 9.5, fontWeight: 700, color: TINTA.forte, marginTop: 2, marginBottom: 8, textTransform: "uppercase", letterSpacing: 0.6 },
+  secLinha: { flexDirection: "row", alignItems: "center", gap: 6, marginTop: 8, marginBottom: 9 },
+  secMarca: { width: 7, height: 7, borderRadius: 2, backgroundColor: MARCA.lima },
+  secTitulo: { fontSize: 9.5, fontWeight: 700, color: TINTA.forte, marginTop: 8, marginBottom: 9, textTransform: "uppercase", letterSpacing: 0.8 },
+  secTituloEmLinha: { fontSize: 9.5, fontWeight: 700, color: TINTA.forte, textTransform: "uppercase", letterSpacing: 0.8 },
 
-  barraLinha: { flexDirection: "row", alignItems: "center", marginBottom: 6, gap: 8 },
-  barraRotulo: { width: 120, fontSize: 8, color: TINTA.texto },
-  barraTrilho: { flex: 1, height: 9, backgroundColor: TINTA.trilho, borderRadius: 5 },
-  barraPreenche: { height: 9, borderRadius: 5 },
-  barraValor: { width: 70, fontSize: 8, color: TINTA.medio, textAlign: "right" },
+  barraLinha: { flexDirection: "row", alignItems: "center", marginBottom: 7, gap: 8 },
+  barraRotulo: { width: 130, fontSize: 8.5, color: TINTA.texto },
+  barraTrilho: { flex: 1, height: 10, backgroundColor: TINTA.trilho, borderRadius: 5 },
+  barraPreenche: { height: 10, borderRadius: 5 },
+  barraValor: { width: 70, fontSize: 8.5, fontWeight: 700, color: TINTA.forte, textAlign: "right" },
 
-  analise: { backgroundColor: TINTA.caixa, borderLeftWidth: 3, borderRadius: 4, paddingVertical: 10, paddingHorizontal: 12, marginBottom: 16 },
-  analiseTitulo: { fontSize: 9, fontWeight: 700, color: TINTA.forte, marginBottom: 5, textTransform: "uppercase", letterSpacing: 0.6 },
-  analiseItem: { flexDirection: "row", gap: 5, marginBottom: 3 },
-  analiseBolinha: { fontSize: 8.5, color: TINTA.medio },
-  analiseTexto: { fontSize: 8.5, color: TINTA.texto, lineHeight: 1.4, flex: 1 },
+  composicaoBarra: { flexDirection: "row", height: 16, borderRadius: 8, overflow: "hidden", backgroundColor: TINTA.trilho, gap: 2 },
+  legenda: { flexDirection: "row", flexWrap: "wrap", gap: 14, marginTop: 8 },
+  legendaItem: { flexDirection: "row", alignItems: "center", gap: 5 },
+  legendaCor: { width: 8, height: 8, borderRadius: 2 },
+  legendaTexto: { fontSize: 8.5, color: TINTA.texto },
+  legendaNum: { fontSize: 8.5, fontWeight: 700, color: TINTA.forte },
 
-  thead: { flexDirection: "row", borderBottomWidth: 1.2, paddingBottom: 5, marginBottom: 1 },
-  th: { fontSize: 8, fontWeight: 700, color: TINTA.forte, paddingRight: 4 },
-  tr: { flexDirection: "row", borderBottomWidth: 0.5, borderBottomColor: TINTA.linha, paddingVertical: 4.5, paddingHorizontal: 3 },
-  td: { fontSize: 8, color: TINTA.texto, paddingRight: 4 },
+  analise: { backgroundColor: TINTA.caixa, borderLeftWidth: 3.5, borderLeftColor: MARCA.lima, borderRadius: 6, paddingVertical: 11, paddingHorizontal: 13, marginBottom: 16 },
+  analiseTitulo: { fontSize: 9, fontWeight: 700, color: TINTA.forte, marginBottom: 6, textTransform: "uppercase", letterSpacing: 0.8 },
+  analiseItem: { flexDirection: "row", gap: 6, marginBottom: 3.5 },
+  analiseBolinha: { fontSize: 8.5, color: CORES_GRAFICO[0] },
+  analiseTexto: { fontSize: 9, color: TINTA.texto, lineHeight: 1.45, flex: 1 },
+
+  thead: { flexDirection: "row", backgroundColor: MARCA.marinho, borderRadius: 4, paddingVertical: 6, paddingHorizontal: 6, marginBottom: 1 },
+  th: { fontSize: 8, fontWeight: 700, color: "#FFFFFF", paddingRight: 4, letterSpacing: 0.2 },
+  tr: { flexDirection: "row", borderBottomWidth: 0.5, borderBottomColor: TINTA.linha, paddingVertical: 5.5, paddingHorizontal: 6 },
+  td: { fontSize: 8.5, color: TINTA.texto, paddingRight: 4 },
+  tdPrimeira: { fontWeight: 700, color: TINTA.forte },
   pilula: { alignSelf: "flex-start", borderRadius: 8, paddingVertical: 1.5, paddingHorizontal: 6, fontSize: 7.5, fontWeight: 700 },
 
-  footer: { position: "absolute", bottom: 18, left: 34, right: 34, flexDirection: "row", justifyContent: "space-between", alignItems: "center", borderTopWidth: 0.5, borderTopColor: TINTA.linha, paddingTop: 5 },
-  footerTxt: { fontSize: 6.5, color: TINTA.fraco },
+  footer: { position: "absolute", bottom: 18, left: MARGEM, right: MARGEM, flexDirection: "row", justifyContent: "space-between", alignItems: "center", borderTopWidth: 1, borderTopColor: MARCA.marinho, paddingTop: 6 },
+  footerTxt: { fontSize: 7, color: TINTA.medio },
+  footerMarca: { fontSize: 7, fontWeight: 700, color: TINTA.forte, letterSpacing: 0.6 },
 });
 
 // ── Componentes ────────────────────────────────────────────────────────────
 
-export function FaixaTopo({ accent }: { accent: string }): React.ReactElement {
-  return <View style={[estilos.faixaTopo, { backgroundColor: accent }]} fixed />;
+/** Filete lima no topo de toda página. `accent` é ignorado (identidade fixa da ferramenta). */
+export function FaixaTopo(_props: { accent: string }): React.ReactElement {
+  return <View style={[estilos.faixaTopo, { backgroundColor: MARCA.lima }]} fixed />;
 }
 
 export function Cabecalho({
@@ -91,36 +148,63 @@ export function Cabecalho({
   return (
     <View style={estilos.cabecalho}>
       <View style={estilos.cabecalhoEsq}>
-        {logoUrl ? <Image src={logoUrl} style={estilos.logo} /> : null}
+        {logoUrl ? (
+          <View style={estilos.logoMoldura}>
+            <Image src={logoUrl} style={estilos.logo} />
+          </View>
+        ) : null}
         <View>
           <Text style={estilos.marcaNome}>{nome}</Text>
           {subtitulo ? <Text style={estilos.marcaSub}>{subtitulo}</Text> : null}
         </View>
       </View>
-      <Text style={estilos.selo}>Prestação de contas</Text>
+      <View style={estilos.seloBloco}>
+        <Text style={estilos.selo}>Relatório do mandato</Text>
+        <Text style={estilos.seloSub}>GIP · Guerrilheiros Inteligência Política</Text>
+      </View>
     </View>
   );
 }
 
 export function TituloRelatorio({ titulo, meta }: { titulo: string; meta: string }): React.ReactElement {
   return (
-    <>
+    <View style={estilos.tituloBloco}>
+      <View style={estilos.tituloFilete} />
       <Text style={estilos.titulo}>{titulo}</Text>
       <Text style={estilos.meta}>{meta}</Text>
-    </>
+    </View>
   );
 }
 
-export function Kpis({ itens, accent }: { itens: { num: string; label: string }[]; accent: string }): React.ReactElement | null {
+/**
+ * Cartões de número. O primeiro vai em marinho (o número que abre a leitura); os
+ * demais em cartão claro com a espinha na cor do gráfico — a mesma ordem de cores
+ * da paleta, para a página ter cor sem virar carnaval.
+ */
+export function Kpis({ itens }: { itens: { num: string; label: string }[]; accent: string }): React.ReactElement | null {
   if (itens.length === 0) return null;
   return (
     <View style={estilos.kpis}>
-      {itens.map((k, i) => (
-        <View key={i} style={[estilos.kpi, { borderTopColor: accent }]}>
-          <Text style={estilos.kpiNum}>{k.num}</Text>
-          <Text style={estilos.kpiLabel}>{k.label}</Text>
-        </View>
-      ))}
+      {itens.map((k, i) => {
+        const destaque = i === 0;
+        const cor = destaque ? MARCA.lima : CORES_GRAFICO[(i - 1) % CORES_GRAFICO.length]!;
+        return (
+          <View key={i} style={[estilos.kpi, { borderLeftColor: cor }, destaque ? estilos.kpiDestaque : {}]}>
+            <Text style={[estilos.kpiNum, destaque ? { color: "#FFFFFF" } : {}]}>{k.num}</Text>
+            <Text style={[estilos.kpiLabel, destaque ? { color: "#B9C7DA" } : {}]}>{k.label}</Text>
+          </View>
+        );
+      })}
+    </View>
+  );
+}
+
+/** Título de seção com a marca lima — use no lugar de `estilos.secTitulo` solto. */
+export function TituloSecao({ children }: { children: string }): React.ReactElement {
+  return (
+    <View style={estilos.secLinha}>
+      <View style={estilos.secMarca} />
+      <Text style={estilos.secTituloEmLinha}>{children}</Text>
     </View>
   );
 }
@@ -137,8 +221,8 @@ export interface BarraItem {
 export function Distribuicoes({ titulo, itens }: { titulo: string; itens: BarraItem[] }): React.ReactElement | null {
   if (itens.length === 0) return null;
   return (
-    <View style={{ marginBottom: 14 }}>
-      <Text style={estilos.secTitulo}>{titulo}</Text>
+    <View style={{ marginBottom: 14 }} wrap={false}>
+      <TituloSecao>{titulo}</TituloSecao>
       {itens.map((b, i) => (
         <View key={i} style={estilos.barraLinha}>
           <Text style={estilos.barraRotulo}>{b.label}</Text>
@@ -152,14 +236,52 @@ export function Distribuicoes({ titulo, itens }: { titulo: string; itens: BarraI
   );
 }
 
-export function Analise({ pontos, accent, titulo = "Leitura do período" }: { pontos: string[]; accent: string; titulo?: string }): React.ReactElement | null {
+export interface FatiaComposicao {
+  label: string;
+  valor: number;
+  cor: string;
+}
+
+/**
+ * Composição de um total em partes (ex.: visitas por situação): UMA barra
+ * segmentada em cores + legenda com rótulo, quantidade e percentual. A legenda é
+ * obrigatória — é ela que diz o que cada cor é, mesmo em impressão P&B.
+ */
+export function Composicao({ titulo, itens }: { titulo: string; itens: FatiaComposicao[] }): React.ReactElement | null {
+  const validos = itens.filter((f) => f.valor > 0);
+  const total = validos.reduce((s, f) => s + f.valor, 0);
+  if (total <= 0) return null;
+  return (
+    <View style={{ marginBottom: 16 }} wrap={false}>
+      <TituloSecao>{titulo}</TituloSecao>
+      <View style={estilos.composicaoBarra}>
+        {validos.map((f, i) => (
+          <View key={i} style={{ flexGrow: f.valor, flexBasis: 0, backgroundColor: f.cor }} />
+        ))}
+      </View>
+      <View style={estilos.legenda}>
+        {validos.map((f, i) => (
+          <View key={i} style={estilos.legendaItem}>
+            <View style={[estilos.legendaCor, { backgroundColor: f.cor }]} />
+            <Text style={estilos.legendaTexto}>{f.label}</Text>
+            <Text style={estilos.legendaNum}>
+              {f.valor} · {Math.round((f.valor * 100) / total)}%
+            </Text>
+          </View>
+        ))}
+      </View>
+    </View>
+  );
+}
+
+export function Analise({ pontos, titulo = "Leitura do período" }: { pontos: string[]; accent: string; titulo?: string }): React.ReactElement | null {
   if (pontos.length === 0) return null;
   return (
-    <View style={[estilos.analise, { borderLeftColor: accent }]} wrap={false}>
+    <View style={estilos.analise} wrap={false}>
       <Text style={estilos.analiseTitulo}>{titulo}</Text>
       {pontos.map((p, i) => (
         <View key={i} style={estilos.analiseItem}>
-          <Text style={estilos.analiseBolinha}>•</Text>
+          <Text style={estilos.analiseBolinha}>■</Text>
           <Text style={estilos.analiseTexto}>{p}</Text>
         </View>
       ))}
@@ -177,7 +299,6 @@ export interface ColunaKit {
 export function Tabela({
   colunas,
   linhas,
-  accent,
   coresPilula,
 }: {
   colunas: ColunaKit[];
@@ -188,7 +309,7 @@ export function Tabela({
 }): React.ReactElement {
   return (
     <View>
-      <View style={[estilos.thead, { borderBottomColor: accent }]} fixed>
+      <View style={estilos.thead} fixed>
         {colunas.map((c, i) => (
           <Text key={i} style={[estilos.th, { width: c.largura }]}>
             {c.header}
@@ -200,7 +321,7 @@ export function Tabela({
           {colunas.map((c, j) => {
             const valor = linha[j] ?? "";
             if (c.pilula && valor) {
-              const cor = coresPilula?.[valor] ?? TINTA.fraco;
+              const cor = coresPilula?.[valor] ?? TINTA.medio;
               return (
                 <View key={j} style={{ width: c.largura }}>
                   <Text style={[estilos.pilula, { backgroundColor: tintaDeFundo(cor), color: cor }]}>{valor}</Text>
@@ -208,7 +329,7 @@ export function Tabela({
               );
             }
             return (
-              <Text key={j} style={[estilos.td, { width: c.largura }]}>
+              <Text key={j} style={[estilos.td, j === 0 ? estilos.tdPrimeira : {}, { width: c.largura }]}>
                 {valor}
               </Text>
             );
@@ -223,19 +344,19 @@ export function Rodape({ nome, titulo }: { nome: string; titulo: string }): Reac
   return (
     <View style={estilos.footer} fixed>
       <Text style={estilos.footerTxt} render={({ pageNumber, totalPages }) => `${nome} · ${titulo} · página ${pageNumber} de ${totalPages}`} />
-      <Text style={estilos.footerTxt}>Inteligência por Guerrilheiros</Text>
+      <Text style={estilos.footerMarca}>GIP · INTELIGÊNCIA POR GUERRILHEIROS</Text>
     </View>
   );
 }
 
 export function dataHoraPdf(iso: string): string {
-  return new Date(iso).toLocaleString("pt-BR", { day: "2-digit", month: "long", year: "numeric", hour: "2-digit", minute: "2-digit" });
+  return new Date(iso).toLocaleString("pt-BR", { day: "2-digit", month: "long", year: "numeric", hour: "2-digit", minute: "2-digit", timeZone: "America/Sao_Paulo" });
 }
 
 /** Fundo bem claro derivado de uma cor de pílula (hex #RRGGBB) para o texto respirar. */
 function tintaDeFundo(hex: string): string {
   const m = /^#?([0-9a-f]{6})$/i.exec(hex.trim());
-  if (!m) return "#F0F0F0";
+  if (!m) return "#EEF1F5";
   const n = parseInt(m[1]!, 16);
   const r = (n >> 16) & 255;
   const g = (n >> 8) & 255;

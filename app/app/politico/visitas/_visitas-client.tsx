@@ -215,6 +215,7 @@ export default function VisitasClient({ visitas, kpis, assessores, usuarioAtualI
         <RelatorioTabela
           slug="visitas"
           titulo="Relatório de Visitas Técnicas"
+          grafico={{ coluna: 3, titulo: "Visitas por situação" }}
           kpis={[
             { num: String(kpis.agendadas), label: "Agendadas" },
             { num: String(kpis.atrasadas), label: "Atrasadas" },
