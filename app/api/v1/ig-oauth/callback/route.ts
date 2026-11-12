@@ -14,6 +14,8 @@
  */
 
 import { NextResponse, type NextRequest } from "next/server";
+import { inscreverContaNosAvisos } from "@/lib/channels/instagram/inscricao";
+import { graphVersion } from "@/lib/graph-version";
 import { randomBytes } from "node:crypto";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { encryptWebhookSecret } from "@/lib/webhooks/secrets";
@@ -195,6 +197,11 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
       return redirectTo(`${UI_PATH}?error=save_failed`, baseUrl);
     }
   }
+
+  // Inscreve a conta nos avisos de comentário e mensagem — sem isto a Meta não
+  // avisa nada desta conta. Melhor esforço: a tela do canal mostra o estado e
+  // deixa religar, então uma recusa aqui não desfaz a conexão.
+  void inscreverContaNosAvisos({ token: longLived.accessToken, graphVersion: graphVersion() }).catch(() => undefined);
 
   void audit({
     action: "instagram.oauth_connected",

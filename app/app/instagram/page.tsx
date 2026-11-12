@@ -17,6 +17,7 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { requireAuth, resolveActiveOrg } from "@/lib/auth/server";
 import { CommandHero } from "@/components/politico/command-hero";
+import { AvisosDoInstagram } from "@/components/instagram/avisos-do-instagram";
 
 export const dynamic = "force-dynamic";
 
@@ -432,7 +433,9 @@ export default async function InstagramHubPage() {
             Gerenciar conexão →
           </Link>
         </section>
-      ) : (
+      ) : null}
+      {conectado ? <AvisosDoInstagram /> : null}
+      {conectado ? null : (
         <section className="wr-card-accent p-6 flex flex-wrap items-center justify-between gap-4">
           <div className="flex items-start gap-3.5 min-w-0">
             <span
