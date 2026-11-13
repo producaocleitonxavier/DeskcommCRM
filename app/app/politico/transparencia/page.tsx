@@ -12,12 +12,7 @@ import { redirect } from "next/navigation";
 import { requireAuth, resolveActiveOrg, exigirPapelNaOrg } from "@/lib/auth/server";
 import { obterPortalConfig } from "@/app/actions/politico/transparencia-actions";
 import TransparenciaClient from "./_client";
-import PageTabs from "@/components/politico/page-tabs";
 
-const GABINETE_CFG_TABS = [
-  { id: "transparencia", label: "Portal da Transparência", href: "/app/politico/transparencia" },
-  { id: "identidade", label: "Identidade", href: "/app/politico/identidade" },
-];
 
 export const dynamic = "force-dynamic";
 
@@ -32,7 +27,6 @@ export default async function TransparenciaPage() {
 
   return (
     <>
-      <PageTabs abas={GABINETE_CFG_TABS} active="transparencia" maxW="840px" />
       <TransparenciaClient config={cfg} />
     </>
   );

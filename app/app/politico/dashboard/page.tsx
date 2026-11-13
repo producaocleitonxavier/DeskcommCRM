@@ -14,18 +14,12 @@ import { createClient } from "@/lib/supabase/server";
 import { requireAuth, resolveActiveOrg } from "@/lib/auth/server";
 import { ROLE_RANK } from "@/lib/auth/types";
 import DashboardClient from "./_dashboard-client";
-import PageTabs from "@/components/politico/page-tabs";
 import {
   calcularMetricasDeAtendimento,
   type MensagemParaMetricas,
   type MetricasDeAtendimento,
 } from "@/lib/politico/atendimento-metricas";
 
-const COMANDO_TABS = [
-  { id: "hoje", label: "Hoje", href: "/app/politico" },
-  { id: "painel", label: "Painel", href: "/app/politico/dashboard" },
-  { id: "prestacao", label: "Prestação de Contas", href: "/app/politico/prestacao-contas" },
-];
 
 export const dynamic = "force-dynamic";
 
@@ -175,7 +169,6 @@ export default async function DashboardPage() {
 
   return (
     <>
-      <PageTabs abas={COMANDO_TABS} active="painel" maxW="1140px" />
       <DashboardClient dash={dash} funil={funil} calls={calls} claro={claro} atendimento={atendimento} />
     </>
   );

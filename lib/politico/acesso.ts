@@ -116,6 +116,61 @@ export async function exigirAcessoPolitico(modulo: ModuloPolitico): Promise<void
  * Aqui a régua é só o PAPEL (não o perfil de menu): várias ações são usadas por
  * mais de uma tela, e travar por porta de menu quebraria fluxos legítimos.
  */
+/**
+ * A TRAVA DE PERFIL NAS TELAS DO SISTEMA BASE.
+ *
+ * A varredura de 13/nov, feita com a conta de assessor de rua, mostrou que o
+ * perfil de menu só era cobrado nas telas `/app/politico/*`. Digitando o endereço,
+ * o assessor abria Contatos (a base inteira), Disparos, Conversas, Funis, Tarefas…
+ * — telas que o menu dele não mostra. Estas duas funções fecham essa porta:
+ * abaixo de gestor, só abre a tela cuja porta está no perfil da pessoa.
+ *
+ * `decidirPortaDoPerfil` é pura (testável). Gestor para cima e administrador da
+ * plataforma passam sempre: o perfil de menu é a régua de quem atende, não de
+ * quem coordena. Telas-índice ("Ver tudo em…") não são porta de ninguém: exigem
+ * gestor.
+ */
+export function decidirPortaDoPerfil(
+  href: string,
+  papel: Role,
+  portasDoMenu: ReadonlySet<string>,
+  opts: {
+    ehPlataforma?: boolean;
+    /** Tela-índice ("Ver tudo em…"): não é porta de ninguém. */
+    indice?: boolean;
+    /** A pessoa tem um perfil de menu que ESTREITA o que ela vê (rua, gabinete…)? */
+    perfilRestrito?: boolean;
+    /** Outra porta que também dá direito a esta área (ex.: a ficha da pessoa vale para quem tem "Pessoas"). */
+    ouPorta?: string;
+  } = {},
+): DecisaoDeAcesso {
+  if (opts.ehPlataforma) return "ok";
+  if (ROLE_RANK[papel] >= ROLE_RANK.manager) return "ok";
+  // Índice: quem tem o menu inteiro continua abrindo (ele só lista o que a pessoa
+  // já enxerga); quem tem perfil restrito, não.
+  if (opts.indice) return opts.perfilRestrito ? "sem_papel" : "ok";
+  if (portasDoMenu.has(href)) return "ok";
+  if (opts.ouPorta && portasDoMenu.has(opts.ouPorta)) return "ok";
+  return "fora_do_perfil";
+}
+
+/** Uso em `layout.tsx`/`page.tsx` de tela do sistema base: recusa quem não tem a porta no perfil. */
+export async function exigirPortaDoPerfil(href: string, opts: { indice?: boolean; ouPorta?: string } = {}): Promise<void> {
+  const user = await requireAuth();
+  const org = await resolveActiveOrg(user);
+  // Sem organização não há perfil a cobrar: a própria tela trata esse caso.
+  if (!org) return;
+  const ehPlataforma = !!user.is_platform_admin && !user.support;
+  const portas = new Set(
+    destinosDaInterface(org.interface_settings, ehPlataforma, org.role).map((d) => d.href),
+  );
+  const perfilRestrito = Array.isArray((org.interface_settings as { destinos?: unknown } | null | undefined)?.destinos);
+  if (decidirPortaDoPerfil(href, org.role, portas, { ehPlataforma, indice: opts.indice, perfilRestrito, ouPorta: opts.ouPorta }) === "ok") return;
+  // Mesma saída da trava do módulo político: volta para a Hoje do gabinete (ou
+  // para a entrada do sistema, quando nem a Hoje a pessoa tem).
+  redirect(portas.has("/app/politico") ? "/app/politico" : "/403");
+}
+
 export async function autenticarComPapel(min: Role): Promise<Awaited<ReturnType<typeof requireAuth>>> {
   const user = await requireAuth();
   const org = await resolveActiveOrg(user);

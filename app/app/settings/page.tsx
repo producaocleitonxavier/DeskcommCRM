@@ -1,5 +1,8 @@
 import type { Metadata } from "next";
 import { NavHub } from "@/components/shell/NavHub";
+import { SecoesDoGabinete } from "@/components/shell/SecoesDoGabinete";
+import { destinosDaInterface } from "@/lib/navigation/interface";
+import { ehGabinete } from "@/lib/navigation/menu-do-gabinete";
 import { requireAuth, resolveActiveOrg } from "@/lib/auth/server";
 import { traduzir } from "@/lib/i18n/dicionario";
 import { modulosLigados } from "@/lib/instalacao/modulos";
@@ -29,18 +32,27 @@ export default async function SettingsHubPage() {
   const user = await requireAuth();
   const activeOrg = await resolveActiveOrg(user);
   const idioma = user.idioma;
+  const modulos = await modulosLigados(createAdminClient());
+  // Gabinete político: o que saiu do menu lateral (mandato, canais, IA, avançado)
+  // tem porta aqui, em seções, só para quem já podia abrir cada tela.
+  const visiveis = new Set(
+    destinosDaInterface(activeOrg?.interface_settings, user.is_platform_admin && !user.support, activeOrg?.role ?? null, modulos).map((d) => d.href),
+  );
 
   return (
+    <>
+    {ehGabinete(visiveis) ? <SecoesDoGabinete visiveis={visiveis} /> : null}
     <NavHub
       group="organizacao"
       isPlatformAdmin={user.is_platform_admin && !user.support}
       role={activeOrg?.role ?? null}
       interfaceSettings={activeOrg?.interface_settings}
       // A porta do banco externo mora neste hub, e só existe com o módulo ligado.
-      modulosLigados={await modulosLigados(createAdminClient())}
+      modulosLigados={modulos}
       title={traduzir("Configurações", idioma)}
       subtitle={traduzir("Sua conta, os dados da empresa e quem tem acesso ao quê.", idioma)}
       locale={idioma}
     />
+    </>
   );
 }

@@ -6,6 +6,7 @@ import { ROLE_RANK } from "@/lib/auth/types";
 import { createClient } from "@/lib/supabase/server";
 import { CommandHero } from "@/components/politico/command-hero";
 import { FunisClient, type FunilDaLista } from "./_client";
+import { exigirPortaDoPerfil } from "@/lib/politico/acesso";
 
 export const dynamic = "force-dynamic";
 export const metadata: Metadata = { title: "Funis" };
@@ -30,6 +31,7 @@ export const metadata: Metadata = { title: "Funis" };
  * botão que o servidor recusaria seria prometer o que não se cumpre.
  */
 export default async function KanbanPickerPage() {
+  await exigirPortaDoPerfil("/app/kanban");
   const user = await requireAuth();
   const activeOrg = await resolveActiveOrg(user);
   if (!activeOrg) redirect("/app");

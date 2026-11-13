@@ -11,8 +11,10 @@ import type { ReactNode } from "react";
 import { requireAuth, resolveActiveOrg } from "@/lib/auth/server";
 import { capacidadesDaOrganizacao } from "@/lib/organizacao/capacidades";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { exigirPortaDoPerfil } from "@/lib/politico/acesso";
 
 export default async function PropostasLayout({ children }: { children: ReactNode }) {
+  await exigirPortaDoPerfil("/app/proposals");
   const user = await requireAuth();
   const activeOrg = await resolveActiveOrg(user);
   if (!activeOrg) redirect("/app");

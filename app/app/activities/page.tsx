@@ -3,6 +3,7 @@ import { requireAuth } from "@/lib/auth/server";
 import { CommandHero } from "@/components/politico/command-hero";
 
 import { Relatorios } from "./_components/Relatorios";
+import { exigirPortaDoPerfil } from "@/lib/politico/acesso";
 
 export const dynamic = "force-dynamic";
 export const metadata: Metadata = { title: "Atividades" };
@@ -22,6 +23,7 @@ export default async function ActivitiesReportPage({
 }: {
   searchParams: Promise<{ aba?: string }>;
 }) {
+  await exigirPortaDoPerfil("/app/activities");
   await requireAuth();
   const { aba } = await searchParams;
   const abaInicial = ABAS[aba ?? ""] ?? "atividades";

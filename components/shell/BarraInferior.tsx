@@ -8,7 +8,7 @@ import { ContadorDeCasos } from "@/components/shell/ContadorDeCasos";
 import { GavetaDeNavegacao } from "@/components/shell/MobileSidebar";
 import { useAuth } from "@/hooks/auth/AuthProvider";
 import { useT } from "@/hooks/i18n/useT";
-import { sidebarGroups, type NavDestination } from "@/lib/navigation/registry";
+import { menuLateral, type NavDestination } from "@/lib/navigation/registry";
 import { usePecaDoRodape, type PecaDoRodape } from "@/lib/ui/rodape-ocupado";
 import { cn } from "@/lib/utils";
 
@@ -65,10 +65,6 @@ export const BARRA_INFERIOR: PecaDoRodape = {
  * aba. Contatos e Casos entram nessa ordem como reserva.
  */
 const PREFERIDAS = [
-  // Gabinete político: o assessor de rua precisa de Hoje e Demandas no dedo. Só
-  // entram quando a organização enxerga essas telas — nas demais, a lista segue igual.
-  "/app/politico",
-  "/app/politico/demandas",
   "/app/inbox",
   "/app/kanban",
   "/app/agenda",
@@ -78,6 +74,14 @@ const PREFERIDAS = [
 ] as const;
 
 const VAGAS = 4;
+
+/**
+ * Gabinete político: o assessor de rua precisa de Hoje, Demandas, Conversas e
+ * Agenda no dedo — não de Funis e Contatos, que são do CRM comercial. Vale só
+ * quando a organização enxerga a tela de Demandas; nas demais, `PREFERIDAS`.
+ */
+const PREFERIDAS_DO_GABINETE = ["/app/politico", "/app/politico/demandas", "/app/inbox", "/app/agenda"] as const;
+const HOJE_DO_GABINETE = "/app/politico";
 
 /**
  * Barra de abas do rodapé no celular.
@@ -92,7 +96,7 @@ const VAGAS = 4;
  *
  * ─── O que ela NÃO decide ───────────────────────────────────────────────────
  *
- * Nada sobre permissão. As abas saem de `sidebarGroups()`, a MESMA função que
+ * Nada sobre permissão. As abas saem de `menuLateral()`, a MESMA função que
  * desenha o sidebar e a gaveta, com os mesmos argumentos — papel, módulos
  * ligados, capacidades da organização e áreas do plano. Uma porta que o sidebar
  * não mostraria não aparece aqui, e não há uma segunda régua para divergir.
@@ -108,7 +112,7 @@ export function BarraInferior({ temaClaro = false }: { temaClaro?: boolean }) {
   const ancora = usePecaDoRodape(BARRA_INFERIOR);
 
   const visiveis = new Map<string, NavDestination>();
-  for (const { items } of sidebarGroups(
+  for (const { items } of menuLateral(
     user.is_platform_admin && !user.support,
     activeOrg?.role ?? null,
     activeOrg?.interface_settings,
@@ -118,14 +122,16 @@ export function BarraInferior({ temaClaro = false }: { temaClaro?: boolean }) {
     for (const item of items) visiveis.set(item.href, item);
   }
 
-  const abas = PREFERIDAS.map((href) => visiveis.get(href))
+  const ordem: readonly string[] = visiveis.has("/app/politico/demandas") ? [...PREFERIDAS_DO_GABINETE, ...PREFERIDAS] : PREFERIDAS;
+  const abas = [...new Set(ordem)].map((href) => visiveis.get(href))
     .filter((d): d is NavDestination => d !== undefined)
     .slice(0, VAGAS);
   // Uma aba acesa por vez: a de endereço mais específico (senão "Hoje" acende junto com "Demandas").
   const abaAtiva =
     abas
       .map((a) => a.href)
-      .filter((h) => pathname === h || pathname.startsWith(`${h}/`))
+      // "Hoje" só acende na própria Hoje: ela é a raiz de todas as telas do gabinete.
+      .filter((h) => pathname === h || (h !== HOJE_DO_GABINETE && pathname.startsWith(`${h}/`)))
       .sort((a, b) => b.length - a.length)[0] ?? null;
 
   // Sem nenhuma aba não há barra: um rodapé com só o "Mais" ocuparia altura da

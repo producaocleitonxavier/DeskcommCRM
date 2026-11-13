@@ -18,16 +18,10 @@ import { nomesDosAtendentes } from "@/lib/users/nome-do-atendente";
 import { contarVitorias } from "@/app/actions/politico/vitoria-actions";
 import { destinosDaInterface } from "@/lib/navigation/interface";
 import HojeClient from "./_hoje-client";
-import PageTabs from "@/components/politico/page-tabs";
 import { exigirAcessoPolitico } from "@/lib/politico/acesso";
 import { estaAtrasada } from "@/lib/politico/demanda-cobranca";
 import { rotuloDoTipo } from "@/lib/politico/rotulo-tipo";
 
-const COMANDO_TABS = [
-  { id: "hoje", label: "Hoje", href: "/app/politico" },
-  { id: "painel", label: "Painel", href: "/app/politico/dashboard" },
-  { id: "prestacao", label: "Prestação de Contas", href: "/app/politico/prestacao-contas" },
-];
 
 export const dynamic = "force-dynamic";
 
@@ -835,7 +829,6 @@ export default async function HojePage() {
     destinosDaInterface(org.interface_settings, ehPlataforma, org.role).map((d) => d.href),
   );
   const veGestao = hrefsVisiveis.has("/app/politico/dashboard");
-  const abasVisiveis = COMANDO_TABS.filter((t) => t.id === "hoje" || veGestao);
 
   // Placar da equipe (Comando do Gabinete) — SÓ pro gestor (quem vê o Painel). O
   // assessor de rua vê só o "Hoje pessoal" (o próprio trabalho), não o dos outros.
@@ -854,13 +847,15 @@ export default async function HojePage() {
 
   return (
     <>
-      {abasVisiveis.length > 1 && (
-        <PageTabs abas={abasVisiveis} active="hoje" maxW="1140px" />
-      )}
       <HojeClient
         metrics={metrics}
         gabineteHoje={gabineteHoje}
-        filaAcao={filaAcao}
+        filaAcao={{
+          ...filaAcao,
+          // Cartão que leva a uma tela fora do perfil da pessoa só a devolveria para cá.
+          rascunhosIA: hrefsVisiveis.has("/app/inbox") ? filaAcao.rascunhosIA : 0,
+          disparosRascunho: hrefsVisiveis.has("/app/campaigns") ? filaAcao.disparosRascunho : 0,
+        }}
         nome={primeiroNome(user.full_name)}
         saudacao={saudacao()}
         dataFormatada={dataFormatada()}

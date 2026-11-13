@@ -11,14 +11,8 @@ import { requireAuth, resolveActiveOrg } from "@/lib/auth/server";
 import { ROLE_RANK } from "@/lib/auth/types";
 import { buscarPrestacaoContas, normalizarPeriodo } from "@/lib/politico/prestacao-contas-dados";
 import { buscarOndeInvestir } from "@/lib/politico/onde-investir";
-import PageTabs from "@/components/politico/page-tabs";
 import PrestacaoContasClient from "./_client";
 
-const COMANDO_TABS = [
-  { id: "hoje", label: "Hoje", href: "/app/politico" },
-  { id: "painel", label: "Painel", href: "/app/politico/dashboard" },
-  { id: "prestacao", label: "Prestação de Contas", href: "/app/politico/prestacao-contas" },
-];
 
 export const dynamic = "force-dynamic";
 
@@ -44,7 +38,6 @@ export default async function PrestacaoContasPage({
 
   return (
     <>
-      <PageTabs abas={COMANDO_TABS} active="prestacao" maxW="1140px" />
       <PrestacaoContasClient dados={dados} ondeInvestir={ondeInvestir} ehAdmin={ehAdmin} />
     </>
   );

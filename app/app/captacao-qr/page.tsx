@@ -4,11 +4,13 @@ import { redirect } from "next/navigation";
 import { requireAuth, resolveActiveOrg } from "@/lib/auth/server";
 import { createClient } from "@/lib/supabase/server";
 import { CaptacaoQrClient } from "./_client";
+import { exigirPortaDoPerfil } from "@/lib/politico/acesso";
 
 export const dynamic = "force-dynamic";
 export const metadata: Metadata = { title: "Captação por QR" };
 
 export default async function CaptacaoQrPage() {
+  await exigirPortaDoPerfil("/app/captacao-qr");
   const user = await requireAuth();
   const org = await resolveActiveOrg(user);
   if (!org) redirect("/app/onboarding");

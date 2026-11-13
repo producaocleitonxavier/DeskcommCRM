@@ -4,6 +4,7 @@ import { CommandHero } from "@/components/politico/command-hero";
 import { requireAuth, resolveActiveOrg } from "@/lib/auth/server";
 import { modulosLigados } from "@/lib/instalacao/modulos";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { exigirPortaDoPerfil } from "@/lib/politico/acesso";
 
 export const dynamic = "force-dynamic";
 export const metadata: Metadata = { title: "Agente de IA" };
@@ -20,6 +21,7 @@ export const metadata: Metadata = { title: "Agente de IA" };
  * em português mesmo com idioma=es — títulos, seções e descrições.
  */
 export default async function AiHubPage() {
+  await exigirPortaDoPerfil("/app/ai", { indice: true });
   const user = await requireAuth();
   const activeOrg = await resolveActiveOrg(user);
   const idioma = user.idioma;

@@ -60,3 +60,56 @@ describe("parede de acesso do módulo político", () => {
     expect(decidirAcessoPolitico("oficios", "agent", new Set(["/app/politico/obras"]))).toBe("fora_do_perfil");
   });
 });
+
+import { decidirPortaDoPerfil } from "./acesso";
+
+describe("trava de perfil nas telas do sistema base (varredura de 13/nov)", () => {
+  const BASE = ["/app/inbox", "/app/contacts", "/app/campaigns", "/app/kanban", "/app/tasks", "/app/templates", "/app/radar", "/app/ai/cases", "/app/ai/followups", "/app/captacao-qr", "/app/activities"];
+
+  it("assessor de RUA não abre Contatos, Disparos, Conversas… digitando o endereço", () => {
+    for (const href of BASE) expect(decidirPortaDoPerfil(href, "agent", RUA), href).toBe("fora_do_perfil");
+  });
+
+  it("assessor de GABINETE também não: Conversas é liberada por pessoa, não vem no perfil", () => {
+    for (const href of BASE) expect(decidirPortaDoPerfil(href, "agent", GABINETE), href).toBe("fora_do_perfil");
+  });
+
+  it("quem teve a porta liberada no perfil entra (ex.: o designado para o atendimento)", () => {
+    const designado = new Set([...GABINETE, "/app/inbox", "/app/ai/cases"]);
+    expect(decidirPortaDoPerfil("/app/inbox", "agent", designado)).toBe("ok");
+    expect(decidirPortaDoPerfil("/app/ai/cases", "agent", designado)).toBe("ok");
+    expect(decidirPortaDoPerfil("/app/contacts", "agent", designado)).toBe("fora_do_perfil");
+  });
+
+  it("a agenda, que está no perfil de rua, continua abrindo", () => {
+    expect(decidirPortaDoPerfil("/app/agenda", "agent", RUA)).toBe("ok");
+  });
+
+  it("gestor, administrador e a plataforma passam sempre", () => {
+    for (const href of BASE) {
+      expect(decidirPortaDoPerfil(href, "manager", VAZIO)).toBe("ok");
+      expect(decidirPortaDoPerfil(href, "admin", VAZIO)).toBe("ok");
+      expect(decidirPortaDoPerfil(href, "agent", VAZIO, { ehPlataforma: true })).toBe("ok");
+    }
+  });
+
+  it("tela-índice ('Ver tudo em…') é recusada a quem tem perfil restrito", () => {
+    const completo = new Set([...GABINETE, ...BASE]);
+    for (const href of ["/app/crm", "/app/ai", "/app/analise"]) {
+      expect(decidirPortaDoPerfil(href, "agent", completo, { indice: true, perfilRestrito: true })).toBe("sem_papel");
+      // Atendente com o menu inteiro (sem perfil que estreite) continua abrindo o índice.
+      expect(decidirPortaDoPerfil(href, "agent", completo, { indice: true })).toBe("ok");
+      expect(decidirPortaDoPerfil(href, "manager", VAZIO, { indice: true })).toBe("ok");
+    }
+  });
+
+  it("a ficha de uma pessoa abre para quem tem a porta 'Pessoas', mas a lista de Contatos não", () => {
+    expect(decidirPortaDoPerfil("/app/contacts", "agent", RUA, { ouPorta: "/app/politico/leads" })).toBe("ok");
+    expect(decidirPortaDoPerfil("/app/contacts", "agent", RUA)).toBe("fora_do_perfil");
+    expect(decidirPortaDoPerfil("/app/contacts", "agent", VAZIO, { ouPorta: "/app/politico/leads" })).toBe("fora_do_perfil");
+  });
+
+  it("controle negativo: viewer sem a porta não entra", () => {
+    expect(decidirPortaDoPerfil("/app/contacts", "viewer", VAZIO)).toBe("fora_do_perfil");
+  });
+});

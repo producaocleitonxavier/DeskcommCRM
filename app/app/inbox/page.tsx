@@ -6,6 +6,7 @@ import { InboxLayout } from "@/components/inbox/InboxLayout";
 import { traduzir } from "@/lib/i18n/dicionario";
 import { createClient } from "@/lib/supabase/server";
 import { lerRascunho, type AvisoDeRascunho } from "@/lib/inbox/rascunho-sugerido";
+import { exigirPortaDoPerfil } from "@/lib/politico/acesso";
 
 export const dynamic = "force-dynamic";
 export const metadata: Metadata = { title: "Inbox" };
@@ -15,6 +16,7 @@ export default async function InboxPage({
 }: {
   searchParams: Promise<{ id?: string; rascunho?: string }>;
 }) {
+  await exigirPortaDoPerfil("/app/inbox");
   const user = await loadAuthUser();
   if (!user) redirect("/login");
   const activeOrg = await resolveActiveOrg(user);

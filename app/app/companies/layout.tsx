@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 
 import { moduloLigado } from "@/lib/instalacao/modulos";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { exigirPortaDoPerfil } from "@/lib/politico/acesso";
 
 /**
  * Empresas, pessoas e importação são módulo opcional da instalação, desligado
@@ -10,5 +11,6 @@ import { createAdminClient } from "@/lib/supabase/admin";
  */
 export default async function Layout({ children }: { children: React.ReactNode }) {
   if (!(await moduloLigado(createAdminClient(), "crm_b2b"))) notFound();
+  await exigirPortaDoPerfil("/app/companies");
   return children;
 }

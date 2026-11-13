@@ -4,11 +4,13 @@ import { requireAuth, resolveActiveOrg } from "@/lib/auth/server";
 import { ROLE_RANK } from "@/lib/auth/types";
 import { CommandHero } from "@/components/politico/command-hero";
 import { TemplatesClient } from "./_components/TemplatesClient";
+import { exigirPortaDoPerfil } from "@/lib/politico/acesso";
 
 export const dynamic = "force-dynamic";
 export const metadata: Metadata = { title: "Respostas rápidas" };
 
 export default async function TemplatesPage() {
+  await exigirPortaDoPerfil("/app/templates");
   const user = await requireAuth();
   const activeOrg = await resolveActiveOrg(user);
   if (!activeOrg) redirect("/app/inbox");

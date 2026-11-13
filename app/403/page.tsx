@@ -33,7 +33,7 @@ export default async function ForbiddenPage() {
               <Link href="/">{traduzir("Voltar", idioma)}</Link>
             </Button>
             <Button asChild>
-              <Link href="/app/inbox">{traduzir("Voltar pra Inbox", idioma)}</Link>
+              <Link href="/app">{traduzir("Ir para o início", idioma)}</Link>
             </Button>
           </div>
         </Card>

@@ -5,6 +5,7 @@ import { requireAuth, resolveActiveOrg } from "@/lib/auth/server";
 import { ROLE_RANK } from "@/lib/auth/types";
 
 import { TarefasClient } from "./_components/TarefasClient";
+import { exigirPortaDoPerfil } from "@/lib/politico/acesso";
 
 export const dynamic = "force-dynamic";
 export const metadata: Metadata = { title: "Tarefas" };
@@ -27,6 +28,7 @@ export const metadata: Metadata = { title: "Tarefas" };
  * A tela esconder o botão é cortesia, não autorização.
  */
 export default async function TarefasPage() {
+  await exigirPortaDoPerfil("/app/tasks");
   const user = await requireAuth();
   const activeOrg = await resolveActiveOrg(user);
   if (!activeOrg) redirect("/app");

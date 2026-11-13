@@ -14,7 +14,8 @@ import { VersionFooter } from "@/components/shell/VersionFooter";
 import { LogotipoDoProduto, SimboloDoProduto } from "@/components/branding/MarcaDoProduto";
 import { marcaEhADoProduto } from "@/lib/branding";
 import { useMarcaDaInstalacao } from "@/lib/branding/contexto";
-import { GRUPO_NO_RODAPE, sidebarGroups } from "@/lib/navigation/registry";
+import { GRUPO_NO_RODAPE, portasDoUsuario, menuLateral } from "@/lib/navigation/registry";
+import { portaDaTela } from "@/lib/navigation/menu-do-gabinete";
 
 const CHAVE_GRUPOS_FECHADOS = "sidebar-grupos-fechados";
 
@@ -29,7 +30,7 @@ interface SidebarContentProps {
 /**
  * Navegação principal, agrupada por objetivo.
  *
- * Não decide nada: `sidebarGroups()` (lib/navigation/registry.ts) resolve quais
+ * Não decide nada: `menuLateral()` (lib/navigation/registry.ts) resolve quais
  * grupos e destinos este papel vê, e este componente desenha. Antes, a lista de
  * itens e sete `usePermission()` viviam aqui — e divergiam do hub de
  * Configurações e das abas de IA, que mantinham suas próprias listas.
@@ -46,7 +47,7 @@ export function SidebarContent({
   const pathname = usePathname();
   const [isPending, startTransition] = useTransition();
   const { user, activeOrg } = useAuth();
-  const todos = sidebarGroups(
+  const todos = menuLateral(
     user.is_platform_admin && !user.support,
     activeOrg?.role ?? null,
     activeOrg?.interface_settings,
@@ -59,11 +60,21 @@ export function SidebarContent({
   // O item ATIVO é um só: o de endereço mais específico que casa com a tela atual.
   // Com o teste de prefixo item a item, "/app/politico" (Hoje) ficava aceso em
   // TODAS as telas /app/politico/* — a pessoa nunca sabia onde estava.
-  const hrefAtivo =
-    todos
-      .flatMap((g) => g.items.map((i) => i.href))
-      .filter((h) => pathname === h || pathname.startsWith(h + "/"))
-      .sort((a, b) => b.length - a.length)[0] ?? null;
+  // No gabinete, a porta acesa é a DONA da tela — inclusive quando a pessoa está
+  // numa aba (em "Respostas prontas", acende "Conversas").
+  const portas = portasDoUsuario(
+    user.is_platform_admin && !user.support,
+    activeOrg?.role ?? null,
+    activeOrg?.interface_settings,
+    activeOrg?.modulos_ligados ?? [],
+    activeOrg?.capacidades_ligadas ?? [],
+  );
+  const hrefAtivo = portas
+    ? (portaDaTela(pathname, portas)?.porta.href ?? null)
+    : (todos
+        .flatMap((g) => g.items.map((i) => i.href))
+        .filter((h) => pathname === h || pathname.startsWith(h + "/"))
+        .sort((a, b) => b.length - a.length)[0] ?? null);
   const rodape = todos.find((g) => g.group.id === GRUPO_NO_RODAPE)?.group.hub;
 
   /**
@@ -320,7 +331,12 @@ export function SidebarContent({
                               className={cn(collapsed ? "absolute top-1.5 right-1.5" : "ml-auto")}
                             />
                           )}
-                          {item.contador === "casos" && <ContadorDeCasos compacto={collapsed} />}
+                          {(item.contador === "casos" ||
+                            // No gabinete, "Precisa de gente" virou aba de Conversas: o aviso de que a IA
+                            // está esperando uma pessoa continua aparecendo na porta.
+                            (item.href === "/app/inbox" && !!portas?.some((p) => p.href === item.href && p.abas.some((a) => a.href === "/app/ai/cases")))) && (
+                            <ContadorDeCasos compacto={collapsed} />
+                          )}
                           {item.contador === "fila" && <ContadorDaFila compacto={collapsed} />}
                         </Link>
                       </li>

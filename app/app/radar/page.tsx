@@ -4,11 +4,13 @@ import { redirect } from "next/navigation";
 import { requireAuth, resolveActiveOrg } from "@/lib/auth/server";
 import { CommandHero } from "@/components/politico/command-hero";
 import { RiskRadarList } from "./_components/RiskRadarList";
+import { exigirPortaDoPerfil } from "@/lib/politico/acesso";
 
 export const dynamic = "force-dynamic";
 export const metadata: Metadata = { title: "Radar" };
 
 export default async function RadarPage() {
+  await exigirPortaDoPerfil("/app/radar");
   const user = await requireAuth();
   const activeOrg = await resolveActiveOrg(user);
   if (!activeOrg) redirect("/app");

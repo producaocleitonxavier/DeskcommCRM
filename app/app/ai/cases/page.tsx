@@ -4,10 +4,12 @@ import { requireAuth, resolveActiveOrg } from "@/lib/auth/server";
 import { ROLE_RANK } from "@/lib/auth/types";
 import { CommandHero } from "@/components/politico/command-hero";
 import { CaseList } from "./_components/CaseList";
+import { exigirPortaDoPerfil } from "@/lib/politico/acesso";
 
 export const dynamic = "force-dynamic";
 
 export default async function CasesPage() {
+  await exigirPortaDoPerfil("/app/ai/cases");
   const user = await requireAuth();
   const activeOrg = await resolveActiveOrg(user);
   // GET/POST de /api/v1/ai/cases exigem role agent+ (requireRole("agent")) —

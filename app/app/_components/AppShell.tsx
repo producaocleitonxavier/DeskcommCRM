@@ -12,6 +12,7 @@ import { useInboundCallAlerts } from "@/hooks/calls/useInboundCallAlerts";
 import { useCrmAlerts } from "@/hooks/notifications/useCrmAlerts";
 import { useNotifyOpenFromServiceWorker } from "@/lib/notifications/notify_open";
 import { estiloDaReserva, useOcupacaoDoRodape } from "@/lib/ui/rodape-ocupado";
+import { AbasDaArea } from "@/components/shell/AbasDaArea";
 
 interface AppShellProps {
   sidebarCollapsed: boolean;
@@ -163,14 +164,19 @@ export function AppShell({ sidebarCollapsed, podeAtender, temaClaro, children }:
         >
           {vestirBase ? (
             <div className="war-room wr-claro wr-navy-section min-h-full" data-theme="light">
+              <AbasDaArea />
               {children}
             </div>
           ) : vestirBranco ? (
             <div className="war-room wr-claro min-h-full" data-theme="light">
+              <AbasDaArea />
               {children}
             </div>
           ) : (
-            children
+            <>
+              <AbasDaArea />
+              {children}
+            </>
           )}
         </main>
       </div>
