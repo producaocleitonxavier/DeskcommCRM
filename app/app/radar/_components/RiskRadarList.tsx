@@ -104,11 +104,11 @@ export function RiskRadarList() {
         >
           <div className="mb-3 flex items-center gap-3">
             <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full" style={{ background: "rgba(245,158,11,0.20)" }}>
-              <Warning size={22} style={{ color: "#FBBF24" }} aria-hidden />
+              <Warning size={22} style={{ color: "#B45309" }} aria-hidden />
             </span>
             <div className="min-w-0">
               <p className="font-heading text-xl font-bold leading-tight">
-                <span className="tabular-nums" style={{ color: "#FBBF24" }}>{semPasso.length}</span>{" "}
+                <span className="tabular-nums" style={{ color: "#B45309" }}>{semPasso.length}</span>{" "}
                 <span className="text-sm font-semibold" style={{ color: "var(--color-text)" }}>
                   {semPasso.length === 1 ? t("demanda aberta sem próximo passo") : t("demandas abertas sem próximo passo")}
                 </span>
@@ -131,7 +131,7 @@ export function RiskRadarList() {
                 </Link>
                 <span
                   className="shrink-0 rounded-full px-2 py-0.5 text-[11px] font-bold tabular-nums"
-                  style={d.horas_aberta >= 720 ? { background: "rgba(239,68,68,0.16)", color: "#FCA5A5" } : { background: "rgba(255,255,255,0.06)", color: "var(--color-text-muted)" }}
+                  style={d.horas_aberta >= 720 ? { background: "rgba(239,68,68,0.14)", color: "#DC2626" } : { background: "rgba(127,127,127,0.12)", color: "var(--color-text-muted)" }}
                 >
                   {t("aberta há")} {d.horas_aberta >= 24 ? `${Math.round(d.horas_aberta / 24)} ${Math.round(d.horas_aberta / 24) === 1 ? "dia" : "dias"}` : `${Math.max(1, d.horas_aberta)}h`}
                 </span>
@@ -286,8 +286,8 @@ function RadarRow({ lead }: { lead: AtRiskLead }) {
           className="mt-0.5 shrink-0 inline-flex items-center rounded-full px-2.5 py-0.5 text-[11px] font-bold"
           style={
             meta.variant === "error"
-              ? { background: "rgba(239,68,68,0.22)", color: "#FCA5A5", border: "1px solid rgba(239,68,68,0.5)" }
-              : { background: "rgba(245,158,11,0.20)", color: "#FBBF24", border: "1px solid rgba(245,158,11,0.48)" }
+              ? { background: "rgba(239,68,68,0.14)", color: "#DC2626", border: "1px solid rgba(239,68,68,0.5)" }
+              : { background: "rgba(245,158,11,0.20)", color: "#B45309", border: "1px solid rgba(245,158,11,0.48)" }
           }
         >
           {t(meta.label)}
