@@ -52,12 +52,6 @@ export const PUBLIC_PATHS: RegExp[] = [
   // sub-path nasce público de carona. Mesma natureza de /pesquisa/ e /m/ acima.
   /^\/perfil\/[0-9a-f]{32}$/i,
   /^\/api\/v1\/perfil\/public\/[0-9a-f]{32}$/i,
-  // NOTA DO CIDADÃO: o link /avaliar/<token> vai no aviso de resolução/encerramento
-  // da demanda; o cidadão toca numa nota de 1 a 5 SEM login. Token opaco de 32 hex
-  // (demandas.pol_avaliacao_token), organização resolvida só no servidor. Mesma
-  // natureza de /perfil/ acima: âncora `$` + forma exata, nenhum sub-path de carona.
-  /^\/avaliar\/[0-9a-f]{32}$/i,
-  /^\/api\/v1\/avaliar\/public\/[0-9a-f]{32}$/i,
   /^\/$/,
   /^\/login(\/.*)?$/,
   /^\/signup$/,

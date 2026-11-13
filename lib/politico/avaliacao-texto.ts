@@ -27,10 +27,12 @@ export function notaValida(n: unknown): n is number {
  * (decisão de 12/nov: muita gente acha que link é vírus). A pessoa responde só
  * com o número, como numa enquete.
  */
+export const ABERTURA_DA_PERGUNTA = `Uma pergunta rápida: de ${NOTA_MIN} a ${NOTA_MAX}, como foi o nosso atendimento?`;
+
 export function perguntaDeAvaliacao(): string {
   const linhas = Object.entries(ROTULO_DA_NOTA).map(([n, r]) => `${n} - ${r}`);
   return [
-    `Uma pergunta rápida: de ${NOTA_MIN} a ${NOTA_MAX}, como foi o nosso atendimento?`,
+    ABERTURA_DA_PERGUNTA,
     "",
     ...linhas,
     "",
@@ -38,7 +40,7 @@ export function perguntaDeAvaliacao(): string {
   ].join("\n");
 }
 
-const POR_EXTENSO: Record<string, number> = { um: 1, dois: 2, tres: 3, quatro: 4, cinco: 5 };
+const POR_EXTENSO = new Map<string, number>([["um", 1], ["dois", 2], ["tres", 3], ["quatro", 4], ["cinco", 5]]);
 
 /**
  * Lê a nota de uma RESPOSTA do cidadão. Só vale quando a mensagem É a nota
@@ -56,7 +58,69 @@ export function lerNotaDaResposta(texto: string | null | undefined): number | nu
   if (!t) return null;
   const semPrefixo = t.replace(/^nota\s*:?\s*/, "");
   if (/^[1-5]$/.test(semPrefixo)) return Number(semPrefixo);
-  return POR_EXTENSO[semPrefixo] ?? null;
+  // Map (e não objeto): "constructor"/"__proto__" não podem virar "nota".
+  return POR_EXTENSO.get(semPrefixo) ?? null;
+}
+
+/** Depois disso a pergunta "venceu": um número solto não é mais lido como nota. */
+export const DIAS_PARA_RESPONDER = 10;
+
+export interface UltimaSaida {
+  body: string | null;
+  created_at: string | null;
+  status?: string | null;
+  type?: string | null;
+}
+
+/**
+ * A resposta do cidadão É resposta à nossa pergunta? Só quando a ÚLTIMA mensagem
+ * que o gabinete mandou naquela conversa foi a pergunta (e saiu de verdade, há
+ * no máximo 10 dias). Se depois da pergunta alguém — assessor ou IA — mandou
+ * qualquer outra coisa ("quantas pessoas moram na casa?"), o "2" que vier NÃO é
+ * nota. Achado da revisão independente de 12/nov.
+ */
+export function respostaEhDaPergunta(ultima: UltimaSaida | null, agoraMs: number): boolean {
+  // "failed" não saiu; "queued" ficou na fila e pode nunca ter chegado.
+  if (!ultima || ultima.status === "failed" || ultima.status === "queued") return false;
+  // `includes` (e não `startsWith`): tolera assinatura do emissor antes do texto.
+  if (!(ultima.body ?? "").includes(ABERTURA_DA_PERGUNTA)) return false;
+  const quando = Date.parse(ultima.created_at ?? "");
+  return Number.isFinite(quando) && quando <= agoraMs && agoraMs - quando <= DIAS_PARA_RESPONDER * 24 * 60 * 60 * 1000;
+}
+
+/**
+ * A pergunta está VALENDO nesta conversa? Recebe as últimas mensagens que o
+ * gabinete mandou (da mais nova para a mais velha). Vale quando a pergunta é a
+ * mensagem mais recente que de fato saiu — tolerando, depois dela, só o recado em
+ * ÁUDIO do mandato e o aviso escrito que o acompanha (`textosTolerados`), que
+ * não são pergunta nenhuma. Mensagem que falhou ou ficou na fila é ignorada.
+ * Qualquer outro texto depois da pergunta a derruba. (2ª revisão, 12/nov.)
+ */
+export function perguntaEstaValendo(saidas: readonly UltimaSaida[], agoraMs: number, textosTolerados: readonly string[] = []): boolean {
+  for (const s of saidas) {
+    if (s.status === "failed" || s.status === "queued") continue;
+    if (s.type === "audio") continue;
+    if (textosTolerados.includes((s.body ?? "").trim())) continue;
+    return respostaEhDaPergunta(s, agoraMs);
+  }
+  return false;
+}
+
+/**
+ * De QUAL demanda é a nota, quando a pessoa tem mais de uma pergunta em aberto:
+ * a da pergunta enviada por último (pelo registro no histórico). Sem registro,
+ * só decide se houver uma única pendente — com duas, não adivinha.
+ */
+export function escolherDemandaDaNota(
+  pendentes: readonly string[],
+  perguntas: readonly { demanda_id: string; created_at: string }[],
+): string | null {
+  if (pendentes.length === 0) return null;
+  const validas = perguntas
+    .filter((p) => pendentes.includes(p.demanda_id) && Number.isFinite(Date.parse(p.created_at)))
+    .sort((a, b) => Date.parse(b.created_at) - Date.parse(a.created_at));
+  if (validas[0]) return validas[0].demanda_id;
+  return pendentes.length === 1 ? pendentes[0]! : null;
 }
 
 /** O que o gabinete responde depois da nota. Nota baixa abre a porta para a pessoa contar. */

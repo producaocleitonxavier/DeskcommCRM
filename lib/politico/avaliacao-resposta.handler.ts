@@ -29,13 +29,14 @@ export const polAvaliacaoRespostaHandler: EventHandler = {
     if (!messageId) return { consumer_key: K, status: "skipped", detail: "sem mensagem" };
 
     const admin = createAdminClient();
-    const { data } = await admin
+    const { data, error } = await admin
       .from("messages")
-      .select("body, direction, channel_session_id")
+      .select("body, direction, channel_session_id, conversation_id, created_at")
       .eq("organization_id", row.organization_id)
       .eq("id", messageId)
       .maybeSingle();
-    const m = data as { body: string | null; direction: string | null; channel_session_id: string | null } | null;
+    if (error) return { consumer_key: K, status: "error", detail: `ler mensagem: ${error.message}` };
+    const m = data as { body: string | null; direction: string | null; channel_session_id: string | null; conversation_id: string | null; created_at: string | null } | null;
     if (!m || m.direction !== "inbound") return { consumer_key: K, status: "skipped", detail: "não é inbound" };
     // Corta cedo: a imensa maioria das mensagens não é uma nota.
     if (lerNotaDaResposta(m.body) === null) return { consumer_key: K, status: "skipped", detail: "não é nota" };
@@ -45,6 +46,8 @@ export const polAvaliacaoRespostaHandler: EventHandler = {
       contactId,
       texto: m.body,
       canalId: m.channel_session_id,
+      conversationId: m.conversation_id,
+      recebidaEm: m.created_at,
     });
     return { consumer_key: K, status: r.status, detail: r.detail };
   },

@@ -191,6 +191,10 @@ export async function aplicarEnriquecimento(aprovadosRaw: unknown): Promise<Resu
     } catch (err) {
       // Falhou de verdade → DIZ que falhou. Nunca "acrescentado" sem ter gravado.
       logger.warn("aplicar-enriquecimento: falha no RAG", { organization_id: org.orgId, causa: err instanceof Error ? err.message : String(err) });
+      // Falha só na LIGAÇÃO ao agente: o material já está salvo; repetir liga (não duplica).
+      if (err instanceof Error && err.message.startsWith("anexar:")) {
+        return { ok: false, erro: "O material foi salvo, mas não consegui ligá-lo ao agente que atende (confira se o número do WhatsApp do agente está conectado). Tente de novo: não duplica." };
+      }
       return { ok: false, erro: "Não consegui gravar no conhecimento do agente. Nada foi acrescentado — tente de novo." };
     }
   }

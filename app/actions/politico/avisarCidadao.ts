@@ -53,6 +53,7 @@ function isWhatsappBRPlausivel(phone: string): boolean {
 interface DemandaParaAviso {
   id: string;
   estado: string;
+  fechada_em?: string | null;
   contact_id: string | null;
   assunto: string | null;
   pol_orgao_destino: string | null;
@@ -78,7 +79,7 @@ export async function avisarCidadao(
 
   const { data, error } = await db
     .from("demandas")
-    .select("id, estado, contact_id, assunto, pol_orgao_destino, pol_encaminhamento_ia, pol_oficio_rotulo, contacts(name, phone_number)")
+    .select("id, estado, fechada_em, contact_id, assunto, pol_orgao_destino, pol_encaminhamento_ia, pol_oficio_rotulo, contacts(name, phone_number)")
     .eq("organization_id", org.orgId)
     .eq("id", demandaId)
     .maybeSingle();
@@ -206,11 +207,16 @@ export async function avisarCidadao(
     }
 
     try {
-      await sendMessageHandler(
+      const enviada = await sendMessageHandler(
         db,
         { organization_id: org.orgId, actor: { type: "user", id: user.id }, requestId: randomUUID(), idioma: user.idioma },
         input,
       );
+      // O envio DEVOLVE a mensagem como "failed" em vários casos (canal parado,
+      // erro do WhatsApp) em vez de lançar. Antes isso virava "Cidadão avisado".
+      if ((enviada as { status?: string } | null)?.status === "failed") {
+        return { ok: false, erro: "O WhatsApp não aceitou o envio agora. Confira se o número está conectado e tente de novo." };
+      }
     } catch (e) {
       const msg = e instanceof ApiError ? e.message : e instanceof Error ? e.message : "Falha no envio.";
       return { ok: false, erro: `Não foi possível enviar: ${msg}` };
@@ -235,13 +241,6 @@ export async function avisarCidadao(
 
   const protocolo = rotulo || protocoloDe(d);
 
-  // NOTA DO CIDADÃO: atendimento terminou (resolvida ou encerrada) e o aviso saiu
-  // → uma SEGUNDA mensagem, sem link, pergunta a nota de 1 a 5. Uma vez por
-  // demanda; nunca derruba o aviso que já foi.
-  if (textoEnviado && (ehResolucao || opts?.encerramento)) {
-    await pedirAvaliacaoDoAtendimento({ db, admin, orgId: org.orgId, demandaId, conversationId, userId: user.id, idioma: user.idioma });
-  }
-
   // VOZ DO MANDATO: se o cliente pediu "incluir recado em áudio", manda a nota
   // de voz DEPOIS do texto (ou sozinha, se o texto já tinha ido). Nunca falha o
   // aviso por causa do áudio.
@@ -258,6 +257,17 @@ export async function avisarCidadao(
       primeiroNome,
       idioma: user.idioma,
     });
+  }
+
+  // NOTA DO CIDADÃO: atendimento terminou (resolvida ou encerrada) e o aviso saiu
+  // → uma SEGUNDA mensagem, sem link, pergunta a nota de 1 a 5. Vai por ÚLTIMO
+  // (depois do áudio), para ser a última coisa que o gabinete disse. Uma vez por
+  // demanda (marcador); se a pergunta não saiu antes, um novo clique em "Avisar
+  // cidadão" tenta de novo — mas só em demanda fechada há pouco, para um clique
+  // numa demanda antiga não disparar a pergunta do nada.
+  const fechadaHaPouco = !!d.fechada_em && Date.now() - Date.parse(d.fechada_em) <= 3 * 24 * 60 * 60 * 1000;
+  if ((ehResolucao || opts?.encerramento) && (textoEnviado || (textoJaEnviado && fechadaHaPouco))) {
+    await pedirAvaliacaoDoAtendimento({ db, admin, orgId: org.orgId, demandaId, conversationId, userId: user.id, idioma: user.idioma });
   }
 
   return { ok: true, protocolo, comOficio, audio, textoEnviado };

@@ -183,7 +183,9 @@ export async function criarRegistro(tabela: string, dados: Record<string, unknow
   // Carimba QUEM registrou (placar por assessor). Só na tabela `demandas`, que tem
   // a coluna (9093) — as outras do whitelist não têm. Não sobrescreve se o caller
   // já mandou explicitamente. Nova Demanda e Nova Visita passam por aqui.
-  const payload: Record<string, unknown> = { ...dados, organization_id: sessao.org };
+  // A Nota do cidadão nunca nasce pela mão da equipe (mesma régua do atualizar).
+  const semNota = Object.fromEntries(Object.entries(dados).filter(([k]) => !k.startsWith("pol_avaliacao_")));
+  const payload: Record<string, unknown> = { ...semNota, organization_id: sessao.org };
   if (tabela === "demandas" && payload.pol_registrado_por_id === undefined) {
     payload.pol_registrado_por_id = sessao.userId;
   }
@@ -202,8 +204,12 @@ export async function atualizarRegistro(tabela: string, id: string, patch: Recor
   if (!TABELAS.has(tabela)) return { ok: false, erro: "Tabela inválida." };
   const org = await orgAtiva();
   if (!org) return { ok: false, erro: "Sessão ou organização inválida." };
+  // A Nota do cidadão mede o atendimento da própria equipe: só quem a grava é a
+  // resposta do cidadão (lib/politico/avaliacao.ts), nunca esta ação genérica.
+  const limpo = Object.fromEntries(Object.entries(patch).filter(([k]) => !k.startsWith("pol_avaliacao_")));
+  if (Object.keys(limpo).length === 0) return { ok: false, erro: "Nada para atualizar." };
   const db = await createClient();
-  const { error } = await db.from(tabela).update(patch).eq("id", id).eq("organization_id", org);
+  const { error } = await db.from(tabela).update(limpo).eq("id", id).eq("organization_id", org);
   if (error) return { ok: false, erro: traduzErro(error) };
   return { ok: true };
 }

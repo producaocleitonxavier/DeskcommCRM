@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { agradecimentoDaNota, lerNotaDaResposta, mediaPtBR, notaPedeAtencao, notaValida, perguntaDeAvaliacao, resumirNotas } from "./avaliacao-texto";
+import { ABERTURA_DA_PERGUNTA, agradecimentoDaNota, escolherDemandaDaNota, respostaEhDaPergunta, perguntaEstaValendo, lerNotaDaResposta, mediaPtBR, notaPedeAtencao, notaValida, perguntaDeAvaliacao, resumirNotas } from "./avaliacao-texto";
 import { textoAvisoCidadao, textoAvisoEncerramento } from "./aviso-cidadao-texto";
 
 describe("nota do cidadão — partes puras", () => {
@@ -59,6 +59,76 @@ describe("a pergunta vai SEM LINK e a pessoa responde com o número", () => {
     expect(agradecimentoDaNota(5)).toContain("Obrigado pela sua avaliação");
     expect(agradecimentoDaNota(1)).toContain("contar o que faltou");
     expect(agradecimentoDaNota(2)).not.toMatch(/vamos resolver|prometo|garant/i);
+  });
+});
+
+describe("um número solto só é nota quando responde À PERGUNTA", () => {
+  const AGORA = Date.parse("2026-11-12T12:00:00Z");
+  const pergunta = (quando: string, status = "sent") => ({ body: perguntaDeAvaliacao(), created_at: quando, status });
+
+  it("última mensagem do gabinete foi a pergunta, há pouco → vale", () => {
+    expect(respostaEhDaPergunta(pergunta("2026-11-12T11:00:00Z"), AGORA)).toBe(true);
+    expect(perguntaDeAvaliacao().startsWith(ABERTURA_DA_PERGUNTA)).toBe(true);
+  });
+
+  it("controle negativo: depois da pergunta o gabinete perguntou outra coisa → o número NÃO é nota", () => {
+    expect(respostaEhDaPergunta({ body: "Quantas pessoas moram na casa?", created_at: "2026-11-12T11:30:00Z", status: "sent" }, AGORA)).toBe(false);
+  });
+
+  it("controle negativo: pergunta que não saiu, vencida (mais de 10 dias), do futuro ou ausente", () => {
+    expect(respostaEhDaPergunta(pergunta("2026-11-12T11:00:00Z", "failed"), AGORA)).toBe(false);
+    expect(respostaEhDaPergunta(pergunta("2026-11-01T11:00:00Z"), AGORA)).toBe(false);
+    expect(respostaEhDaPergunta(pergunta("2026-11-13T11:00:00Z"), AGORA)).toBe(false);
+    expect(respostaEhDaPergunta(null, AGORA)).toBe(false);
+    expect(respostaEhDaPergunta({ body: null, created_at: null }, AGORA)).toBe(false);
+  });
+
+  it("pergunta que ficou na fila (queued) não vale", () => {
+    expect(respostaEhDaPergunta(pergunta("2026-11-12T11:00:00Z", "queued"), AGORA)).toBe(false);
+  });
+
+  it("recado em áudio (e o aviso escrito dele) depois da pergunta NÃO a esconde", () => {
+    const AVISO = "Este áudio foi criado com IA.";
+    const saidas = [
+      { body: null, created_at: "2026-11-12T11:02:00Z", status: "sent", type: "audio" },
+      { body: AVISO, created_at: "2026-11-12T11:01:00Z", status: "sent", type: "text" },
+      pergunta("2026-11-12T11:00:00Z"),
+    ];
+    expect(perguntaEstaValendo(saidas, AGORA, [AVISO])).toBe(true);
+  });
+
+  it("mensagem que falhou ou ficou na fila depois da pergunta é ignorada", () => {
+    const saidas = [
+      { body: "resposta da IA barrada", created_at: "2026-11-12T11:05:00Z", status: "failed", type: "text" },
+      { body: "outra", created_at: "2026-11-12T11:04:00Z", status: "queued", type: "text" },
+      pergunta("2026-11-12T11:00:00Z"),
+    ];
+    expect(perguntaEstaValendo(saidas, AGORA)).toBe(true);
+  });
+
+  it("controle negativo: texto de verdade depois da pergunta derruba; lista vazia não vale", () => {
+    const saidas = [{ body: "Quantas pessoas moram na casa?", created_at: "2026-11-12T11:30:00Z", status: "sent", type: "text" }, pergunta("2026-11-12T11:00:00Z")];
+    expect(perguntaEstaValendo(saidas, AGORA)).toBe(false);
+    expect(perguntaEstaValendo([], AGORA)).toBe(false);
+    expect(perguntaEstaValendo([{ body: null, created_at: "2026-11-12T11:02:00Z", status: "sent", type: "audio" }], AGORA)).toBe(false);
+  });
+
+  it("palavras do próprio JavaScript não viram nota", () => {
+    for (const t of ["constructor", "__proto__", "toString", "nota constructor"]) expect(lerNotaDaResposta(t)).toBeNull();
+  });
+
+  it("duas perguntas em aberto: a nota é da pergunta enviada por ÚLTIMO", () => {
+    const perguntas = [{ demanda_id: "A", created_at: "2026-11-10T10:00:00Z" }, { demanda_id: "B", created_at: "2026-11-12T10:00:00Z" }];
+    expect(escolherDemandaDaNota(["A", "B"], perguntas)).toBe("B");
+  });
+
+  it("registro de demanda que não está pendente é ignorado", () => {
+    expect(escolherDemandaDaNota(["A"], [{ demanda_id: "Z", created_at: "2026-11-12T10:00:00Z" }])).toBe("A");
+  });
+
+  it("controle negativo: sem registro e com duas pendentes, não adivinha; sem pendente, nada", () => {
+    expect(escolherDemandaDaNota(["A", "B"], [])).toBeNull();
+    expect(escolherDemandaDaNota([], [{ demanda_id: "A", created_at: "2026-11-12T10:00:00Z" }])).toBeNull();
   });
 });
 
