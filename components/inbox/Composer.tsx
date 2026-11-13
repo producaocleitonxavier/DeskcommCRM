@@ -9,7 +9,7 @@ import {
   type ClipboardEvent,
   type KeyboardEvent,
 } from "react";
-import { PaperPlaneTilt } from "@/lib/ui/icons";
+import { ChatsCircle, PaperPlaneTilt } from "@/lib/ui/icons";
 import { Button } from "@/components/ui/button";
 import { AttachMenu } from "@/components/inbox/composer/AttachMenu";
 import { AttachmentPreviewDialog } from "@/components/inbox/composer/AttachmentPreviewDialog";
@@ -172,7 +172,10 @@ export const Composer = forwardRef<ComposerHandle, Props>(function Composer(
   const createNote = useCreateNote();
   const templates = useMessageTemplates();
   const slash = resolveSlash(text);
-  const menuOpen = mode === "reply" && slash.open && !menuDismissed;
+  // "Respostas prontas" por BOTÃO: o menu só abria digitando "/", um gesto que
+  // ninguém descobre sozinho. O botão abre o mesmo menu, com a lista inteira.
+  const [menuPeloBotao, setMenuPeloBotao] = useState(false);
+  const menuOpen = mode === "reply" && ((slash.open && !menuDismissed) || menuPeloBotao);
 
   // SÓ em nota: a menção é assunto interno, e uma menção no campo de resposta
   // sairia para o cliente como texto solto. A query roda enquanto a lista está
@@ -329,6 +332,7 @@ export const Composer = forwardRef<ComposerHandle, Props>(function Composer(
     const filled = interpolateTemplate(t.body, { name: contactName ?? null });
     setText(filled);
     setMenuDismissed(true);
+    setMenuPeloBotao(false);
     const ta = taRef.current;
     if (!ta) return;
     requestAnimationFrame(() => {
@@ -439,10 +443,10 @@ export const Composer = forwardRef<ComposerHandle, Props>(function Composer(
         )}
         <TemplateMenu
           open={menuOpen}
-          query={slash.query}
+          query={menuPeloBotao ? "" : slash.query}
           templates={templates.data ?? []}
           onPick={applyTemplate}
-          onClose={() => setMenuDismissed(true)}
+          onClose={() => { setMenuDismissed(true); setMenuPeloBotao(false); }}
         />
         {/* A LISTA DE ATENDENTES (#2372) — só em nota, só enquanto o `@` está
             aberto. O MESMO canto do slash-menu, que só existe em resposta: os
@@ -539,6 +543,20 @@ export const Composer = forwardRef<ComposerHandle, Props>(function Composer(
               para o cliente, e nota com cartão de contato não existe. O `disabled`
               continua o de sempre: em modo nota `respostaBarrada` é só
               `isDisabled`, e a janela fechada barra a resposta, não a nota. */}
+          {mode === "reply" && (
+            <button
+              type="button"
+              onClick={() => setMenuPeloBotao((v) => !v)}
+              disabled={respostaBarrada}
+              aria-expanded={menuPeloBotao}
+              aria-label="Respostas prontas"
+              title="Respostas prontas"
+              className="inline-flex h-9 shrink-0 items-center gap-1.5 rounded-md px-2 text-xs font-semibold text-muted-foreground transition-colors hover:bg-muted hover:text-foreground disabled:opacity-50"
+            >
+              <ChatsCircle size={18} weight="regular" aria-hidden />
+              <span className="hidden sm:inline">Respostas prontas</span>
+            </button>
+          )}
           <AttachMenu
             disabled={respostaBarrada}
             onPick={escolherArquivo}

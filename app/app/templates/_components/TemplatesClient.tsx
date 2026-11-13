@@ -25,6 +25,7 @@ import { apiClient } from "@/lib/api/client";
 import { showApiError } from "@/components/feedback/ApiErrorToast";
 import { useMessageTemplates, type MessageTemplate } from "@/hooks/inbox/useMessageTemplates";
 import { TemplateFormDialog } from "./TemplateFormDialog";
+import { criarRespostasSugeridas } from "@/app/actions/politico/respostas-prontas";
 
 const TEMPLATES_KEY = ["message-templates"];
 
@@ -42,6 +43,22 @@ export function TemplatesClient({ canShare, currentUserId }: Props) {
     onError: showApiError,
     onSuccess: () => qc.invalidateQueries({ queryKey: TEMPLATES_KEY }),
   });
+  // "Usar as respostas sugeridas": o conjunto inicial do gabinete, em um clique.
+  const [criandoSugeridas, setCriandoSugeridas] = React.useState(false);
+  const [avisoSugeridas, setAvisoSugeridas] = React.useState<string | null>(null);
+  async function usarSugeridas() {
+    setCriandoSugeridas(true);
+    setAvisoSugeridas(null);
+    try {
+      const r = await criarRespostasSugeridas();
+      if (!r.ok) setAvisoSugeridas(r.erro);
+      else await qc.invalidateQueries({ queryKey: TEMPLATES_KEY });
+    } catch {
+      setAvisoSugeridas("Não consegui criar as respostas sugeridas. Tente de novo.");
+    } finally {
+      setCriandoSugeridas(false);
+    }
+  }
   const [formOpen, setFormOpen] = React.useState(false);
   const [editing, setEditing] = React.useState<MessageTemplate | null>(null);
   // Deep link: `/app/templates?modelo=<id>` abre aquele modelo. É o link que a
@@ -97,11 +114,28 @@ export function TemplatesClient({ canShare, currentUserId }: Props) {
     <div className="space-y-4">
       <div className="flex sm:justify-end">
         <Button type="button" onClick={openNew} className="w-full sm:w-auto">
-          <Plus /> {t("Novo template")}
+          <Plus /> Nova resposta pronta
         </Button>
       </div>
       {!templates?.length ? (
-        <p className="text-sm text-muted-foreground">{t("Nenhum template ainda.")}</p>
+        <div className="rounded-xl border border-dashed border-border p-6 text-center">
+          <p className="text-base font-semibold">Nenhuma resposta pronta ainda</p>
+          <p className="mx-auto mt-1 max-w-xl text-sm text-muted-foreground">
+            São os textos que a equipe repete todo dia: pedir os dados da demanda, avisar que foi registrada, informar o horário do gabinete.
+            Na conversa, a pessoa toca em Respostas prontas, escolhe uma e o nome do cidadão já entra no texto.
+          </p>
+          {canShare ? (
+            <div className="mt-4 flex flex-col items-center gap-2">
+              <Button type="button" onClick={() => void usarSugeridas()} disabled={criandoSugeridas}>
+                {criandoSugeridas ? "Criando…" : "Usar as respostas sugeridas"}
+              </Button>
+              <p className="text-xs text-muted-foreground">Cria 9 respostas para toda a equipe. Depois você revisa e ajusta cada uma.</p>
+            </div>
+          ) : (
+            <p className="mt-3 text-xs text-muted-foreground">Peça ao gestor para criar as respostas da equipe, ou crie as suas em Nova resposta pronta.</p>
+          )}
+          {avisoSugeridas && <p className="mt-3 text-sm" role="status">{avisoSugeridas}</p>}
+        </div>
       ) : (
         <ul className="space-y-2">
           {templates.map((template) => {

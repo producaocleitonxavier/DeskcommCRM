@@ -146,7 +146,7 @@ export const AREAS_DO_GABINETE: readonly AreaDoGabinete[] = [
       { href: `${P}/radar-zonal`, label: "Por zona" },
       { href: `${P}/comparativo`, label: "Comparar" },
       { href: `${P}/cadeiras`, label: "Cadeiras" },
-      { href: `${P}/mapa-eleitoral`, label: "Mapa" },
+      // O antigo "Mapa Eleitoral" hoje só redireciona para "Por zona": não vira aba.
     ],
   },
   {

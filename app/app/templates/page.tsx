@@ -7,7 +7,7 @@ import { TemplatesClient } from "./_components/TemplatesClient";
 import { exigirPortaDoPerfil } from "@/lib/politico/acesso";
 
 export const dynamic = "force-dynamic";
-export const metadata: Metadata = { title: "Respostas rápidas" };
+export const metadata: Metadata = { title: "Respostas prontas" };
 
 export default async function TemplatesPage() {
   await exigirPortaDoPerfil("/app/templates");
@@ -23,9 +23,9 @@ export default async function TemplatesPage() {
           Meta (HSM), em Canais, onde é o termo técnico correto. Duas telas com
           o mesmo nome e propósitos opostos confundiam. A URL não muda. */}
       <CommandHero
-        eyebrow="Atendimento · Respostas rápidas"
-        titulo="Respostas rápidas"
-        subtitulo="Scripts salvos para responder mais rápido; pessoais ou compartilhados com a equipe."
+        eyebrow="Conversas · Respostas prontas"
+        titulo="Respostas prontas"
+        subtitulo="Textos que a equipe repete todo dia, prontos para inserir na conversa com um toque. Na conversa, use o botão Respostas prontas."
       />
       <TemplatesClient canShare={canShare} currentUserId={user.id} />
     </div>
