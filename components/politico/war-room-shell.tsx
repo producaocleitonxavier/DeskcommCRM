@@ -21,6 +21,8 @@
 
 import { usePathname } from "next/navigation";
 
+import { peleDaTela } from "@/lib/navigation/menu-do-gabinete";
+
 /** Rotas de análise/impressão (Inteligência + Território) que recebem o fundo
  * MARINHO no tema claro. As telas de TRABALHO ficam de fora (claras). Exportada
  * p/ o AppShell preencher a TELA inteira de navy nessas rotas também. */
@@ -56,6 +58,16 @@ export const ROTAS_NAVY = [
   "/app/politico/voz",
 ];
 
+/**
+ * A tela política `pathname` é marinho? Quem manda é a ÁREA do menu a que ela
+ * pertence (uma pele por seção); só telas fora das áreas caem na lista acima.
+ */
+export function ehTelaPoliticaNavy(pathname: string): boolean {
+  const pele = peleDaTela(pathname);
+  if (pele) return pele === "marinho";
+  return ROTAS_NAVY.some((r) => pathname.startsWith(r));
+}
+
 export default function WarRoomShell({
   children,
   claro = false,
@@ -65,7 +77,7 @@ export default function WarRoomShell({
   claro?: boolean;
 }) {
   const pathname = usePathname() ?? "";
-  const navy = claro && ROTAS_NAVY.some((r) => pathname.startsWith(r));
+  const navy = claro && ehTelaPoliticaNavy(pathname);
   return (
     <div
       className={`war-room min-h-dvh${claro ? " wr-claro" : ""}${navy ? " wr-navy-section" : ""}`}

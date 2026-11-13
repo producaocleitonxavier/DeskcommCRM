@@ -221,6 +221,35 @@ export function portaDaTela(pathname: string, portas: readonly PortaDoGabinete[]
   return melhor;
 }
 
+/**
+ * A PELE (cor de fundo) é do GRUPO, não da tela — "uma pele por seção".
+ * Comando e Gabinete são o trabalho do dia (branco, cansa menos para ler);
+ * Relacionamento e Inteligência são campanha e análise (marinho). Assim, trocar
+ * de aba dentro de uma área nunca troca a cor da tela.
+ */
+export type Pele = "branco" | "marinho";
+
+export const PELE_DO_GRUPO: Record<GrupoDoGabinete, Pele> = {
+  topo: "branco",
+  gabinete: "branco",
+  relacionamento: "marinho",
+  inteligencia: "marinho",
+};
+
+/** A pele da tela `pathname`, pela área a que ela pertence. `null` = fora das áreas. */
+export function peleDaTela(pathname: string): Pele | null {
+  let melhor: { tamanho: number; pele: Pele } | null = null;
+  for (const area of AREAS_DO_GABINETE) {
+    for (const aba of area.abas) {
+      const ok = aba.href === P ? pathname === P : casa(pathname, aba.href);
+      if (ok && (!melhor || aba.href.length > melhor.tamanho)) {
+        melhor = { tamanho: aba.href.length, pele: PELE_DO_GRUPO[area.grupo] };
+      }
+    }
+  }
+  return melhor?.pele ?? null;
+}
+
 /** Todos os endereços que esta camada cobre (para os testes de "nada se perde"). */
 export function enderecosCobertos(): string[] {
   return AREAS_DO_GABINETE.flatMap((a) => a.abas.map((x) => x.href));

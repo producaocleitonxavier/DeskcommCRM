@@ -82,3 +82,33 @@ describe("menu do gabinete — enxuga sem perder tela", () => {
     expect(portaDaTela("/app/settings", portas)).toBeNull();
   });
 });
+
+describe("uma pele por seção — trocar de aba não troca a cor", () => {
+  it("todas as abas de uma mesma área têm a mesma pele", async () => {
+    const { peleDaTela } = await import("./menu-do-gabinete");
+    for (const area of AREAS_DO_GABINETE) {
+      const peles = new Set(area.abas.map((a) => peleDaTela(a.href)));
+      expect(peles.size, area.label).toBe(1);
+      expect([...peles][0], area.label).not.toBeNull();
+    }
+  });
+
+  it("trabalho do dia é branco; campanha e análise são marinho", async () => {
+    const { peleDaTela } = await import("./menu-do-gabinete");
+    expect(peleDaTela("/app/politico")).toBe("branco");
+    expect(peleDaTela("/app/activities")).toBe("branco");
+    expect(peleDaTela("/app/templates")).toBe("branco");
+    expect(peleDaTela("/app/contacts/abc")).toBe("branco");
+    expect(peleDaTela("/app/politico/materiais")).toBe("branco");
+    expect(peleDaTela("/app/politico/nutricao")).toBe("marinho");
+    expect(peleDaTela("/app/politico/funil")).toBe("marinho");
+    expect(peleDaTela("/app/politico/raio-x")).toBe("marinho");
+  });
+
+  it("controle negativo: tela fora das áreas não ganha pele daqui", async () => {
+    const { peleDaTela } = await import("./menu-do-gabinete");
+    expect(peleDaTela("/app/settings")).toBeNull();
+    expect(peleDaTela("/app/politico/funil-invisivel")).toBeNull();
+    expect(peleDaTela("/app/politico/voz")).toBeNull();
+  });
+});

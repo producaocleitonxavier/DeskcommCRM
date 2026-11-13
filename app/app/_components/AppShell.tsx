@@ -1,7 +1,8 @@
 "use client";
 import type { ReactNode } from "react";
 import { usePathname } from "next/navigation";
-import { ROTAS_NAVY as ROTAS_POLITICO_NAVY } from "@/components/politico/war-room-shell";
+import { ehTelaPoliticaNavy } from "@/components/politico/war-room-shell";
+import { peleDaTela } from "@/lib/navigation/menu-do-gabinete";
 import { Sidebar } from "@/components/shell/Sidebar";
 import { TopBar } from "@/components/shell/TopBar";
 import { BarraInferior } from "@/components/shell/BarraInferior";
@@ -71,16 +72,21 @@ const ROTAS_BASE_BRANCO = [
 export function AppShell({ sidebarCollapsed, podeAtender, temaClaro, children }: AppShellProps) {
   const pathname = usePathname() ?? "";
   // Político se auto-embrulha (WarRoomShell); aqui só vestimos o CRM base listado.
+  // UMA PELE POR SEÇÃO: tela que pertence a uma área do menu do gabinete veste a
+  // cor do GRUPO dela (trocar de aba não troca a cor). As listas acima só decidem
+  // as telas que ficam fora das áreas (Configurações, Conexões, Agentes…).
+  const naBase = !pathname.startsWith("/app/politico");
+  const pele = temaClaro && naBase ? peleDaTela(pathname) : null;
   const vestirBase =
-    !!temaClaro && ROTAS_BASE_TEMA_GIP.some((r) => pathname.startsWith(r));
+    !!temaClaro && naBase &&
+    (pele ? pele === "marinho" : ROTAS_BASE_TEMA_GIP.some((r) => pathname.startsWith(r)));
   // Base em branco GIP (Inbox): pele clara, sem marinho.
   const vestirBranco =
-    !!temaClaro && ROTAS_BASE_BRANCO.some((r) => pathname.startsWith(r));
+    !!temaClaro && naBase &&
+    (pele ? pele === "branco" : ROTAS_BASE_BRANCO.some((r) => pathname.startsWith(r)));
   // Tela NAVY (base OU político navy): o marinho preenche a tela inteira.
   // O branco (vestirBranco) NÃO é navy.
-  const telaNavy =
-    vestirBase ||
-    (!!temaClaro && ROTAS_POLITICO_NAVY.some((r) => pathname.startsWith(r)));
+  const telaNavy = vestirBase || (!!temaClaro && !naBase && ehTelaPoliticaNavy(pathname));
   useInboundMessageAlerts();
   useInboundCallAlerts();
   useCrmAlerts();
