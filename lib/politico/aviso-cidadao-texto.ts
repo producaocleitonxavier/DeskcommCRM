@@ -1,5 +1,3 @@
-import { linhaDeAvaliacao } from "./avaliacao-texto";
-
 /**
  * O TEXTO do aviso ao cidadão (resolução / encaminhamento) — PURO, pra o servidor
  * (`avisarCidadao`) e a tela (preview do modal de edição) dizerem a MESMA coisa.
@@ -21,8 +19,6 @@ export function textoAvisoCidadao(p: {
   cargo?: string | null;
   /** Rótulo/protocolo do ofício (só usado na resolução). */
   protocolo?: string | null;
-  /** Link da Nota do cidadão — só entra na RESOLUÇÃO (atendimento terminado). */
-  linkAvaliacao?: string | null;
 }): string {
   const nome = (p.primeiroNome ?? "").trim();
   const saudacao = nome ? `Olá, ${nome}!` : "Olá!";
@@ -35,8 +31,7 @@ export function textoAvisoCidadao(p: {
     return (
       `${saudacao} Boa notícia: a sua demanda${prot ? ` (protocolo ${prot})` : ""} foi RESOLVIDA.` +
       ` Agradecemos a confiança e seguimos à disposição para o que precisar.` +
-      ` Conte sempre com o nosso gabinete.` +
-      linhaDeAvaliacao(p.linkAvaliacao)
+      ` Conte sempre com o nosso gabinete.`
     );
   }
   return p.comOficio
@@ -55,8 +50,6 @@ export function textoAvisoEncerramento(p: {
   nomeParlamentar?: string | null;
   cargo?: string | null;
   protocolo?: string | null;
-  /** Link da Nota do cidadão (o NÃO também merece ser avaliado). */
-  linkAvaliacao?: string | null;
 }): string {
   const nome = (p.primeiroNome ?? "").trim();
   const saudacao = nome ? `Olá, ${nome}!` : "Olá!";
@@ -68,7 +61,6 @@ export function textoAvisoEncerramento(p: {
     `${saudacao} Aqui é do gabinete${assinatura}. Sobre a sua demanda${prot ? ` (protocolo ${prot})` : ""}: ` +
     `fizemos o encaminhamento e acompanhamos, mas desta vez não foi possível chegar à solução que você pediu. ` +
     `Preferimos te dizer isso com clareza a te deixar sem resposta. ` +
-    `Se a situação mudar ou você tiver uma informação nova, é só me escrever por aqui.` +
-    linhaDeAvaliacao(p.linkAvaliacao)
+    `Se a situação mudar ou você tiver uma informação nova, é só me escrever por aqui.`
   );
 }

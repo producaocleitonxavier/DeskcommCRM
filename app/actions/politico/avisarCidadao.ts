@@ -26,7 +26,7 @@ import { enviarRecadoDeVozNaConversa } from "@/lib/voz/enviar-recado";
 import type { MomentoVoz } from "@/lib/voz/recado";
 import { lerIdentidadeDoMandato } from "@/lib/politico/identidade-do-mandato";
 import { textoAvisoCidadao } from "@/lib/politico/aviso-cidadao-texto";
-import { linkDeAvaliacaoDaDemanda } from "@/lib/politico/avaliacao";
+import { pedirAvaliacaoDoAtendimento } from "@/lib/politico/avaliacao";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { SendMessageInput } from "@/lib/schemas";
 
@@ -169,13 +169,8 @@ export async function avisarCidadao(
 
     // Modo assistido: se o assessor editou o texto no modal, usa o DELE; senão,
     // a sugestão automática (mesma função pura que a tela usa no preview).
-    // Nota do cidadão: só no aviso de RESOLUÇÃO e só quando o texto é o sugerido
-    // (no modal, o link já veio no texto que o assessor revisou — ou ele o tirou).
-    const linkAvaliacao =
-      ehResolucao && !(opts?.texto ?? "").trim() ? await linkDeAvaliacaoDaDemanda(admin, org.orgId, demandaId) : null;
     const sugerido = textoAvisoCidadao({
       ehResolucao,
-      linkAvaliacao,
       comOficio: !!oficioBytes,
       primeiroNome,
       nomeParlamentar: nomeParl || null,
@@ -239,6 +234,13 @@ export async function avisarCidadao(
   }
 
   const protocolo = rotulo || protocoloDe(d);
+
+  // NOTA DO CIDADÃO: atendimento terminou (resolvida ou encerrada) e o aviso saiu
+  // → uma SEGUNDA mensagem, sem link, pergunta a nota de 1 a 5. Uma vez por
+  // demanda; nunca derruba o aviso que já foi.
+  if (textoEnviado && (ehResolucao || opts?.encerramento)) {
+    await pedirAvaliacaoDoAtendimento({ db, admin, orgId: org.orgId, demandaId, conversationId, userId: user.id, idioma: user.idioma });
+  }
 
   // VOZ DO MANDATO: se o cliente pediu "incluir recado em áudio", manda a nota
   // de voz DEPOIS do texto (ou sozinha, se o texto já tinha ido). Nunca falha o

@@ -22,7 +22,6 @@ import { cabeCuidado, ehDemandaSaude, textoCuidadoSaude } from "@/lib/politico/c
 import { ModalEnviarTexto } from "@/components/politico/modal-enviar-texto";
 import { BannerAvisoTse, useAvisoTse } from "@/components/politico/aviso-tse";
 import { textoAvisoCidadao, textoAvisoEncerramento } from "@/lib/politico/aviso-cidadao-texto";
-import { obterLinkDeAvaliacao } from "@/app/actions/politico/avaliacao-actions";
 import { NOTA_MAX, ROTULO_DA_NOTA, notaPedeAtencao } from "@/lib/politico/avaliacao-texto";
 import { atualizarRegistro, excluirRegistro, listarAnexosDemanda, registrarEventoDemanda, sincronizarVisitaNaAgenda } from "@/app/actions/politico/gabinete-actions";
 import { textoCobranca, demandaVencidaSemResposta, textoCobrancaCidadao } from "@/lib/politico/demanda-cobranca";
@@ -178,15 +177,6 @@ export default function DetalheDemandaClient({ demanda, assessores, eventos, voz
     }).catch(() => { if (vivo) setFotosDaDemanda(null); });
     return () => { vivo = false; };
   }, [demanda.id, estadoAtual]);
-  // Nota do cidadão: o link vai no aviso de resolução (o modal mostra o texto com ele).
-  const [linkAval, setLinkAval] = useState<string | null>(null);
-  const temTelefone = !!demanda.contacts?.phone_number;
-  useEffect(() => {
-    if (estadoAtual !== "resolvida" || !temTelefone) { setLinkAval(null); return; }
-    let vivo = true;
-    void obterLinkDeAvaliacao(demanda.id).then((l) => { if (vivo) setLinkAval(l); }).catch(() => { if (vivo) setLinkAval(null); });
-    return () => { vivo = false; };
-  }, [demanda.id, estadoAtual, temTelefone]);
   const [excluindo, setExcluindo] = useState(false);
   const [anexoToken, setAnexoToken] = useState(0);
   const [erro, setErro] = useState<string | null>(null);
@@ -309,11 +299,9 @@ export default function DetalheDemandaClient({ demanda, assessores, eventos, voz
     return ok;
   }
 
-  async function abrirEncerrar() {
+  function abrirEncerrar() {
     const protocolo = (d.pol_oficio_rotulo ?? "").trim() || `#${d.id.slice(0, 8).toUpperCase()}`;
-    // O link da Nota do cidadão entra no texto que o assessor revisa (pode tirar).
-    const linkAvaliacao = d.contacts?.phone_number ? await obterLinkDeAvaliacao(d.id).catch(() => null) : null;
-    setTextoEncerrar(textoAvisoEncerramento({ primeiroNome: primeiroNomeCidadao, nomeParlamentar: politicoNome ?? null, cargo: politicoCargo ?? null, protocolo, linkAvaliacao }));
+    setTextoEncerrar(textoAvisoEncerramento({ primeiroNome: primeiroNomeCidadao, nomeParlamentar: politicoNome ?? null, cargo: politicoCargo ?? null, protocolo }));
     setErroEncerrar(null);
     setEncerrarAberto(true);
   }
@@ -402,7 +390,7 @@ export default function DetalheDemandaClient({ demanda, assessores, eventos, voz
             key={a.estado + a.label}
             type="button"
             disabled={salvando}
-            onClick={() => (a.estado === "encerrada" ? void abrirEncerrar() : mudarEstado(a.estado))}
+            onClick={() => (a.estado === "encerrada" ? abrirEncerrar() : mudarEstado(a.estado))}
             className={a.tom === "dark" ? "wr-btn-dark" : "wr-btn"}
             style={a.tom === "ok" ? { background: "#17784F", color: "#FFFFFF", borderColor: "#17784F" } : undefined}
           >
@@ -425,7 +413,6 @@ export default function DetalheDemandaClient({ demanda, assessores, eventos, voz
           const protocolo = (d.pol_oficio_rotulo ?? "").trim() || `#${d.id.slice(0, 8).toUpperCase()}`;
           const sugerido = textoAvisoCidadao({
             ehResolucao,
-            linkAvaliacao: linkAval,
             comOficio,
             primeiroNome: primeiroNomeCidadao,
             nomeParlamentar: politicoNome ?? null,
@@ -440,7 +427,7 @@ export default function DetalheDemandaClient({ demanda, assessores, eventos, voz
               botaoTitle={!d.contacts?.phone_number ? "O cidadão não tem telefone cadastrado" : "Avisar o cidadão por WhatsApp (edite o texto antes)"}
               titulo={`Avisar cidadão${primeiroNomeCidadao ? ` · ${primeiroNomeCidadao}` : ""}`}
               textoSugerido={sugerido}
-              dica={comOficio ? "O ofício em PDF vai anexado automaticamente — este é o texto que acompanha." : "Revise e ajuste o texto antes de enviar."}
+              dica={comOficio ? "O ofício em PDF vai anexado automaticamente — este é o texto que acompanha." : ehResolucao ? "Revise e ajuste o texto antes de enviar. Em seguida sai uma segunda mensagem perguntando a nota do atendimento, de 1 a 5 (uma vez só por demanda)." : "Revise e ajuste o texto antes de enviar."}
               rotuloEnviar="Enviar aviso"
               onEnviar={async (texto) => {
                 const res = await avisarCidadao(d.id, { texto });
@@ -990,6 +977,9 @@ export default function DetalheDemandaClient({ demanda, assessores, eventos, voz
                   style={{ background: "var(--color-surface-elevated)", border: "1px solid var(--color-border)", color: "var(--color-text)" }}
                 />
                 <BannerAvisoTse aviso={avisoTseEncerrar} className="mt-2" />
+                <p className="mt-2 text-xs" style={{ color: "var(--color-text-muted)" }}>
+                  Depois do aviso sai uma segunda mensagem perguntando a nota do atendimento, de 1 a 5. A pessoa responde só com o número.
+                </p>
               </>
             ) : (
               <p className="rounded-lg px-3 py-2 text-xs font-semibold" style={{ background: "rgba(245,158,11,0.14)", color: "#B45309" }}>

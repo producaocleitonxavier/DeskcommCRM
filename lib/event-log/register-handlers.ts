@@ -20,6 +20,7 @@ import { polGraduacaoEngajamentoHandler } from "@/lib/politico/graduacao-engajam
 import { polEbookNaRespostaHandler } from "@/lib/politico/ebook-na-resposta.handler";
 import { polQrCadastroHandler } from "@/lib/politico/qr-cadastro.handler";
 import { polDivulgadorAceiteHandler } from "@/lib/politico/divulgador-aceite.handler";
+import { polAvaliacaoRespostaHandler } from "@/lib/politico/avaliacao-resposta.handler";
 import { followupGatilhoEtapaHandler } from "@/lib/followup/gatilho-etapa.handler";
 import { followupGatilhoLeadHandler } from "@/lib/followup/gatilho-lead.handler";
 import { followupGatilhoCasoHandler } from "@/lib/followup/gatilho-caso.handler";
@@ -73,6 +74,7 @@ export function ensureHandlersRegistered(): void {
   // multiplicador (tag) + confirmação. Só age em quem tem convite pendente
   // (tag divulgador_convidado); sem isso é no-op. Ao lado do QR, no mesmo evento.
   registerHandler(polDivulgadorAceiteHandler);
+  registerHandler(polAvaliacaoRespostaHandler);
   // Mesmo critério: o gatilho do cliente que volta é escrita curta no banco e
   // precisa rodar antes do LLM. Depois da reatividade, para o match_reply dos
   // fluxos já vivos ler a mensagem primeiro.
