@@ -29,6 +29,10 @@ interface NavHubProps {
   role: Role | null;
   title: string;
   subtitle: string;
+  /** Cartões que este hub não mostra (apresentação: a tela continua existindo e na busca). */
+  ocultar?: readonly string[];
+  /** Troca o nome de uma seção só neste hub (ex.: "Sua empresa" → "Seu gabinete"). */
+  renomearSecoes?: Readonly<Record<string, string>>;
   extensionGuides?: ExtensionGuideView[];
   extensionsUnavailable?: boolean;
   /**
@@ -78,6 +82,8 @@ export function NavHub({
   role,
   title,
   subtitle,
+  ocultar,
+  renomearSecoes,
   interfaceSettings,
   modulosLigados,
   capacidadesLigadas,
@@ -85,7 +91,10 @@ export function NavHub({
   extensionGuides = [],
   extensionsUnavailable = false,
 }: NavHubProps) {
-  const secoes = hubSections(group, isPlatformAdmin, role, interfaceSettings, modulosLigados, capacidadesLigadas);
+  const escondidos = new Set(ocultar ?? []);
+  const secoes = hubSections(group, isPlatformAdmin, role, interfaceSettings, modulosLigados, capacidadesLigadas)
+    .map((s) => ({ section: s.section, items: s.items.filter((i) => !escondidos.has(i.href)) }))
+    .filter((s) => s.items.length > 0);
 
   return (
     <div className="flex h-full flex-col gap-8 p-6">
@@ -104,7 +113,7 @@ export function NavHub({
             id={`hub-${group}-${slug(section)}`}
             className="text-xs font-medium tracking-wider text-muted-foreground uppercase"
           >
-            {traduzir(section, locale)}
+            {traduzir(renomearSecoes?.[section] ?? section, locale)}
           </h2>
           <div className="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-3">
             {items.map((item) => {

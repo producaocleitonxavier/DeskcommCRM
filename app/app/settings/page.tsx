@@ -28,6 +28,21 @@ export const metadata: Metadata = { title: "Configurações" };
  * oficial" por nome — a pergunta passa a ter um lugar só, que é o que a ponte
  * tentava ensinar apontando para outro.
  */
+/**
+ * Cartões herdados do sistema comercial que um gabinete não usa (proposta, cobrança,
+ * conversão de anúncio) ou que já têm porta nas seções do gabinete. Só deixam de
+ * aparecer AQUI: as telas continuam existindo e na busca.
+ */
+const CARTOES_DO_SISTEMA_COMERCIAL = [
+  "/app/settings/tenant/proposals/modelos",
+  "/app/settings/tenant/proposals",
+  "/app/settings/tenant/financeiro",
+  "/app/settings/conversoes",
+  "/app/settings/billing",
+  "/app/settings/meta-ads",
+  "/app/extensions",
+] as const;
+
 export default async function SettingsHubPage() {
   const user = await requireAuth();
   const activeOrg = await resolveActiveOrg(user);
@@ -39,18 +54,22 @@ export default async function SettingsHubPage() {
     destinosDaInterface(activeOrg?.interface_settings, user.is_platform_admin && !user.support, activeOrg?.role ?? null, modulos).map((d) => d.href),
   );
 
+  const gabinete = ehGabinete(visiveis);
+
   return (
     <>
-    {ehGabinete(visiveis) ? <SecoesDoGabinete visiveis={visiveis} /> : null}
+    {gabinete ? <SecoesDoGabinete visiveis={visiveis} /> : null}
     <NavHub
+      ocultar={gabinete ? CARTOES_DO_SISTEMA_COMERCIAL : undefined}
+      renomearSecoes={gabinete ? { "Sua empresa": "Seu gabinete" } : undefined}
       group="organizacao"
       isPlatformAdmin={user.is_platform_admin && !user.support}
       role={activeOrg?.role ?? null}
       interfaceSettings={activeOrg?.interface_settings}
       // A porta do banco externo mora neste hub, e só existe com o módulo ligado.
       modulosLigados={modulos}
-      title={traduzir("Configurações", idioma)}
-      subtitle={traduzir("Sua conta, os dados da empresa e quem tem acesso ao quê.", idioma)}
+      title={gabinete ? "Equipe, conta e sistema" : traduzir("Configurações", idioma)}
+      subtitle={gabinete ? "Quem trabalha no gabinete, a sua conta e os ajustes gerais." : traduzir("Sua conta, os dados da empresa e quem tem acesso ao quê.", idioma)}
       locale={idioma}
     />
     </>

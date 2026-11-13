@@ -151,7 +151,7 @@ export function TemplatesClient({ canShare, currentUserId }: Props) {
                       {t(template.owner_user_id ? "Pessoal" : "Compartilhado")}
                     </Badge>
                   </div>
-                  <p className="line-clamp-2 text-sm text-muted-foreground">{template.body}</p>
+                  <p className="line-clamp-3 whitespace-pre-line text-sm text-muted-foreground">{template.body}</p>
                 </div>
                 {canModify(template) && (
                   <div className="flex shrink-0 gap-1">

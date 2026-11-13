@@ -92,7 +92,11 @@ export function SecoesDoGabinete({ visiveis }: { visiveis: ReadonlySet<string> }
   );
 
   return (
-    <div className="mx-auto mb-8 w-full max-w-6xl space-y-8" data-secoes-do-gabinete>
+    <div className="mx-auto mb-10 w-full max-w-6xl space-y-8" data-secoes-do-gabinete>
+      <header>
+        <h1 className="text-2xl font-semibold tracking-tight" style={{ color: "var(--color-text)" }}>Configurações</h1>
+        <p className="text-sm" style={{ color: "var(--color-text-muted)" }}>O que se ajusta uma vez: o mandato, os canais, o assistente e a equipe.</p>
+      </header>
       {secoes.map((s) =>
         s.recolhida ? (
           <details key={s.titulo} className="rounded-xl border p-4" style={{ borderColor: "var(--color-border)" }}>
