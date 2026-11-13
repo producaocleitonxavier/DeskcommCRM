@@ -65,6 +65,10 @@ export const BARRA_INFERIOR: PecaDoRodape = {
  * aba. Contatos e Casos entram nessa ordem como reserva.
  */
 const PREFERIDAS = [
+  // Gabinete político: o assessor de rua precisa de Hoje e Demandas no dedo. Só
+  // entram quando a organização enxerga essas telas — nas demais, a lista segue igual.
+  "/app/politico",
+  "/app/politico/demandas",
   "/app/inbox",
   "/app/kanban",
   "/app/agenda",
@@ -117,6 +121,12 @@ export function BarraInferior({ temaClaro = false }: { temaClaro?: boolean }) {
   const abas = PREFERIDAS.map((href) => visiveis.get(href))
     .filter((d): d is NavDestination => d !== undefined)
     .slice(0, VAGAS);
+  // Uma aba acesa por vez: a de endereço mais específico (senão "Hoje" acende junto com "Demandas").
+  const abaAtiva =
+    abas
+      .map((a) => a.href)
+      .filter((h) => pathname === h || pathname.startsWith(`${h}/`))
+      .sort((a, b) => b.length - a.length)[0] ?? null;
 
   // Sem nenhuma aba não há barra: um rodapé com só o "Mais" ocuparia altura da
   // tela para repetir o hambúrguer que já está na barra de cima. Acontece com
@@ -155,7 +165,7 @@ export function BarraInferior({ temaClaro = false }: { temaClaro?: boolean }) {
           // continua sendo onde a pessoa está. A igualdade deixaria a barra
           // inteira apagada justamente na tela de conversa, que é onde se passa
           // mais tempo no celular.
-          const aqui = pathname === aba.href || pathname.startsWith(`${aba.href}/`);
+          const aqui = aba.href === abaAtiva;
           return (
             <li key={aba.href} className="flex min-w-0 flex-1">
               <Link

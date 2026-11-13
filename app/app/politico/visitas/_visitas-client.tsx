@@ -93,6 +93,9 @@ export default function VisitasClient({ visitas, kpis, assessores, usuarioAtualI
   const router = useRouter();
   const [novaAberta, setNovaAberta] = useState(false);
   const [filtro, setFiltro] = useState<Filtro>("todas");
+  // Lista em lotes: todas de uma vez dava 12 mil px de rolagem no celular.
+  const LOTE = 12;
+  const [mostrar, setMostrar] = useState<number>(LOTE);
   const [pendente, startTransition] = useTransition();
   const [salvandoRelato, setSalvandoRelato] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
@@ -265,7 +268,7 @@ export default function VisitasClient({ visitas, kpis, assessores, usuarioAtualI
             <button
               key={f.id}
               type="button"
-              onClick={() => setFiltro(f.id)}
+              onClick={() => { setFiltro(f.id); setMostrar(LOTE); }}
               className="inline-flex items-center h-9 px-3.5 rounded-full text-sm font-medium transition-colors"
               style={filtro === f.id ? { background: "var(--chip-active-bg)", color: "var(--chip-active-fg)" } : { background: "var(--color-surface-elevated)", color: "var(--color-text-muted)" }}
             >
@@ -286,7 +289,7 @@ export default function VisitasClient({ visitas, kpis, assessores, usuarioAtualI
         />
       ) : (
         <div className="grid grid-cols-1 gap-4">
-          {lista.map((v) => {
+          {lista.slice(0, mostrar).map((v) => {
             const st = statusVisita(arg(v));
             const pill = STATUS_PILL[st];
             const cor = corDoOrgao(v.orgao ?? "");
@@ -441,6 +444,13 @@ export default function VisitasClient({ visitas, kpis, assessores, usuarioAtualI
               </div>
             );
           })}
+          {(lista.length - Math.min(mostrar, lista.length)) > 0 && (
+            <div className="mt-4 flex justify-center">
+              <button type="button" onClick={() => setMostrar((n) => n + LOTE)} className="wr-btn">
+                Ver mais {Math.min(LOTE, (lista.length - Math.min(mostrar, lista.length)))} · faltam {(lista.length - Math.min(mostrar, lista.length))} visitas
+              </button>
+            </div>
+          )}
         </div>
       )}
     </div>

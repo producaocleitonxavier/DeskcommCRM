@@ -56,6 +56,14 @@ export function SidebarContent({
   // Configurações sai da área que rola e vai para o rodapé fixo: medido em
   // 1280x768, ele caía fora da dobra mesmo em telas de 1080px.
   const grupos = todos.filter((g) => g.group.id !== GRUPO_NO_RODAPE);
+  // O item ATIVO é um só: o de endereço mais específico que casa com a tela atual.
+  // Com o teste de prefixo item a item, "/app/politico" (Hoje) ficava aceso em
+  // TODAS as telas /app/politico/* — a pessoa nunca sabia onde estava.
+  const hrefAtivo =
+    todos
+      .flatMap((g) => g.items.map((i) => i.href))
+      .filter((h) => pathname === h || pathname.startsWith(h + "/"))
+      .sort((a, b) => b.length - a.length)[0] ?? null;
   const rodape = todos.find((g) => g.group.id === GRUPO_NO_RODAPE)?.group.hub;
 
   /**
@@ -278,7 +286,7 @@ export function SidebarContent({
                   className="space-y-1"
                 >
                   {items.map((item) => {
-                    const isActive = pathname === item.href || pathname.startsWith(item.href + "/");
+                    const isActive = item.href === hrefAtivo;
                     const Icon = item.icon;
                     return (
                       <li key={item.href}>

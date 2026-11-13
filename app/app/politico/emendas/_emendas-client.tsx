@@ -7,7 +7,7 @@
  * lente muda com o mandato (deputado = município/região; vereador = bairro).
  */
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { Building2, CheckCircle2, Clock, Inbox, MapPin, TrendingUp, Users, Wallet } from "lucide-react";
 
@@ -94,6 +94,9 @@ export default function EmendasClient(props: EmendasClientProps) {
   const [fModalidade, setFModalidade] = useState<string>(TODOS);
   const [fStatus, setFStatus] = useState<string>(TODOS);
   const [busca, setBusca] = useState<string>("");
+  // Lista em lotes: mostrar todas de uma vez (centenas de cartões) travava o celular.
+  const LOTE = 24;
+  const [mostrar, setMostrar] = useState<number>(LOTE);
 
   const destinoLabel = ehDeputado ? "Municípios atendidos" : "Bairros atendidos";
   const regiaoTitulo = ehDeputado ? "Valor por região (R$)" : "Valor por bairro (R$)";
@@ -125,6 +128,10 @@ export default function EmendasClient(props: EmendasClientProps) {
       return true;
     });
   }, [emendas, fAno, fArea, fModalidade, fStatus, busca]);
+  // Mudou o filtro ou a busca → volta ao primeiro lote.
+  useEffect(() => { setMostrar(LOTE); }, [fAno, fArea, fModalidade, fStatus, busca]);
+  const visiveis = filtradas.slice(0, mostrar);
+  const restantes = filtradas.length - visiveis.length;
 
   const limparFiltros = () => {
     setFAno(TODOS);
@@ -333,7 +340,7 @@ export default function EmendasClient(props: EmendasClientProps) {
               </select>
             </div>
             <div className="flex items-center justify-between">
-              <span className="text-xs" style={{ color: "var(--color-text-subtle)" }}>{filtradas.length} de {emendas.length} emenda(s)</span>
+              <span className="text-xs" style={{ color: "var(--color-text-subtle)" }}>{filtradas.length === emendas.length ? `${emendas.length} ${emendas.length === 1 ? "emenda" : "emendas"}` : `${filtradas.length} de ${emendas.length} emendas`}{restantes > 0 ? ` · mostrando ${visiveis.length}` : ""}</span>
               {temFiltro && (
                 <button onClick={limparFiltros} className="text-xs font-medium underline" style={{ color: "var(--color-text-subtle)" }}>Limpar filtros</button>
               )}
@@ -342,7 +349,7 @@ export default function EmendasClient(props: EmendasClientProps) {
 
           {/* Cards. */}
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {filtradas.map((e) => {
+            {visiveis.map((e) => {
               const st = STATUS[e.status] ?? { label: e.status, bg: "#F0F0EB", fg: "#5B606B" };
               const destino = (ehDeputado ? e.municipio : e.bairro) || e.municipio || e.bairro || e.entidade || "—";
               return (
@@ -398,6 +405,13 @@ export default function EmendasClient(props: EmendasClientProps) {
               );
             })}
           </div>
+          {restantes > 0 && (
+            <div className="mt-4 flex justify-center">
+              <button type="button" onClick={() => setMostrar((n) => n + LOTE)} className="wr-btn">
+                Ver mais {Math.min(LOTE, restantes)} · faltam {restantes} emendas
+              </button>
+            </div>
+          )}
         </>
       )}
     </div>
