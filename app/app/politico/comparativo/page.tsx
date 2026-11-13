@@ -14,6 +14,7 @@ import { CommandHero } from "@/components/politico/command-hero";
 import { listarEleicoes } from "@/app/actions/politico/intelEleitoral";
 import { listarMunicipiosRaioX } from "@/app/actions/politico/raioX";
 import ComparativoClient from "./_comparativo-client";
+import { obterMandatoPadrao } from "@/lib/politico/mandato-padrao";
 
 export const dynamic = "force-dynamic";
 
@@ -24,12 +25,13 @@ export default async function ComparativoPage() {
   exigirPapelNaOrg(user, org, "manager");
 
   const [eleicoes, municipios] = await Promise.all([listarEleicoes(), listarMunicipiosRaioX()]);
+  const padrao = await obterMandatoPadrao(municipios);
 
   return (
     <div className="gip-ambient-bg mx-auto max-w-[1140px] space-y-6 px-4 py-7">
       <CommandHero
         eyebrow="Votos e território · Comparar"
-        titulo="Arena Comparativa"
+        titulo="Comparar candidatos"
         subtitulo="Compare candidatos lado a lado — quem é forte onde, por bairro, local de votação, zona e seção."
       />
       {eleicoes.length === 0 ? (
@@ -39,7 +41,7 @@ export default async function ComparativoPage() {
           </p>
         </div>
       ) : (
-        <ComparativoClient eleicoes={eleicoes} municipios={municipios} />
+        <ComparativoClient eleicoes={eleicoes} municipios={municipios} padrao={padrao} />
       )}
     </div>
   );

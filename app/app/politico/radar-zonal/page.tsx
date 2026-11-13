@@ -24,6 +24,7 @@ import { listarMunicipiosRaioX } from "@/app/actions/politico/raioX";
 import RadarClient from "./_radar-client";
 import ProjecaoClient from "../mapa-eleitoral/_projecao-client";
 import TerritorioClient, { type CidadeRow } from "../mapa-eleitoral/_territorio-client";
+import { obterMandatoPadrao } from "@/lib/politico/mandato-padrao";
 
 export const dynamic = "force-dynamic";
 
@@ -64,6 +65,7 @@ export default async function RadarZonalPage({ searchParams }: { searchParams: P
   const view = params.view === "projecao" || params.view === "base" ? params.view : "radar";
 
   const [eleicoes, municipios] = await Promise.all([listarEleicoes(), listarMunicipiosRaioX()]);
+  const padrao = await obterMandatoPadrao(municipios);
 
   // Dados da visão "Minha Base" (CRM por cidade).
   const oportunidades = view === "base" ? await buscarOportunidades(org.orgId) : [];
@@ -96,8 +98,8 @@ export default async function RadarZonalPage({ searchParams }: { searchParams: P
     <div className="gip-ambient-bg mx-auto max-w-[1140px] space-y-6 px-4 py-7">
       <CommandHero
         eyebrow="Votos e território · Por zona"
-        titulo="Radar Zonal"
-        subtitulo="A zona como unidade de operação: votos, bairros, locais e a sua base — cruzados."
+        titulo="Votos por zona"
+        subtitulo="Onde você é forte e onde está a sua base, zona por zona: votos, bairros e locais de votação."
         extra={
           <div role="tablist" aria-label="Visões do Radar" className="flex gap-1.5">
             {tabs.map((tab) => {
@@ -119,7 +121,7 @@ export default async function RadarZonalPage({ searchParams }: { searchParams: P
           <p className="text-sm" style={{ color: "var(--color-text-subtle)" }}>Dados eleitorais ainda não carregados nesta instalação.</p>
         </div>
       ) : view === "radar" ? (
-        <RadarClient eleicoes={eleicoes} municipios={municipios} />
+        <RadarClient eleicoes={eleicoes} municipios={municipios} padrao={padrao} />
       ) : view === "projecao" ? (
         <ProjecaoClient eleicoes={eleicoes} municipios={municipios} />
       ) : (
@@ -127,7 +129,7 @@ export default async function RadarZonalPage({ searchParams }: { searchParams: P
           <div className="flex items-start gap-2.5 rounded-xl p-3.5" style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.1)" }}>
             <Info className="mt-0.5 h-4 w-4 shrink-0" aria-hidden style={{ color: "var(--accent-ink, var(--color-accent))" }} />
             <p className="text-[13px] leading-relaxed" style={{ color: "rgba(255,255,255,0.72)" }}>
-              <strong style={{ color: "#fff" }}>Minha Base</strong> são os contatos do <strong style={{ color: "#fff" }}>seu CRM</strong> (da sua operação) distribuídos pelas cidades onde moram.
+              <strong style={{ color: "#fff" }}>Minha Base</strong> são as pessoas <strong style={{ color: "#fff" }}>cadastradas pelo gabinete</strong> distribuídos pelas cidades onde moram.
               Cada bolha é uma cidade — tamanho = quantidade de contatos, cor = força (novos ×1, simpatizantes ×3, apoiadores ×6).
             </p>
           </div>

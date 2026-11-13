@@ -169,7 +169,7 @@ export default async function ConectarInstagramPage({
               Conectar Instagram
             </h1>
             <p className="text-[15px] mt-0.5" style={{ color: "var(--color-text-muted)" }}>
-              Comentários, DMs e captação de leads — direto do seu perfil.
+              Comentários e mensagens diretas respondidos, e quem interage entrando na sua lista de pessoas.
             </p>
           </div>
         </div>
@@ -268,8 +268,8 @@ export default async function ConectarInstagramPage({
             </h3>
             <div className="grid gap-3 sm:grid-cols-3">
               <UnlockCard titulo="Opinião Pública" desc="Comentários viram escuta e sentimento, dentro da Inteligência." estado="a ativar" />
-              <UnlockCard titulo="Resposta automática" desc="Responder comentários e DMs no automático — tudo seu, sem ferramenta de fora." estado="a ativar" />
-              <UnlockCard titulo="Captação no funil" desc="Quem chega por DM ou começa a seguir entra no seu Kanban de leads." estado="a ativar" />
+              <UnlockCard titulo="Resposta automática" desc="Responder comentários e mensagens diretas sozinho, sem ferramenta de fora." estado="a ativar" />
+              <UnlockCard titulo="Novas pessoas na base" desc="Quem manda mensagem ou começa a seguir entra na sua lista de pessoas." estado="a ativar" />
             </div>
             <p className="text-xs mt-2.5" style={{ color: "var(--color-text-subtle)" }}>
               A conta já está conectada. Falta só um último passo técnico — que a nossa equipe ativa pra você — e os três ligam sozinhos.
@@ -304,11 +304,11 @@ export default async function ConectarInstagramPage({
             <div className="absolute -top-20 -right-12 w-56 h-56 rounded-full pointer-events-none" style={{ background: "radial-gradient(circle, rgba(215,243,106,0.10), transparent 70%)" }} />
             <div className="relative max-w-xl">
               <h2 className="font-heading text-[24px] font-bold" style={{ color: "#F3F4EC" }}>
-                Transforme seu Instagram em máquina de captação
+                Traga para o mandato quem interage no Instagram
               </h2>
               <p className="text-[15px] mt-2" style={{ color: "#B9BCC6" }}>
-                Conecte uma vez e habilite escuta de comentários, resposta automática por comentário e
-                DM, e captura de leads no funil. Leva menos de 1 minuto.
+                Conecte uma vez e o sistema passa a ler os comentários, responder por mensagem direta
+                e cadastrar quem interage. A conta precisa ser profissional. Leva menos de 1 minuto.
               </p>
               <a
                 href="/api/v1/ig-oauth/authorize"
@@ -320,15 +320,15 @@ export default async function ConectarInstagramPage({
                   <path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z" />
                   <line x1="17.5" y1="6.5" x2="17.51" y2="6.5" />
                 </svg>
-                Conectar Instagram Business
+                Conectar o Instagram
               </a>
             </div>
           </section>
 
           <section className="grid gap-3 sm:grid-cols-3">
             <UnlockCard titulo="Opinião Pública" desc="Comentários viram escuta e sentimento na Inteligência." estado="a ativar" />
-            <UnlockCard titulo="Resposta automática" desc="Comentários e DMs no automático, tudo seu." estado="a ativar" />
-            <UnlockCard titulo="Captação no funil" desc="Quem chega por DM vira lead no seu Kanban." estado="a ativar" />
+            <UnlockCard titulo="Resposta automática" desc="Comentários e mensagens diretas respondidos sozinho." estado="a ativar" />
+            <UnlockCard titulo="Novas pessoas na base" desc="Quem manda mensagem entra na sua lista de pessoas." estado="a ativar" />
           </section>
         </>
       )}
@@ -340,7 +340,7 @@ export default async function ConectarInstagramPage({
         </summary>
         <ul className="text-sm space-y-1.5 mt-3" style={{ color: "var(--color-text-subtle)" }}>
           {[
-            "Conta Instagram Business ou Creator (não pessoal)",
+            "Conta profissional do Instagram (comercial ou criador de conteúdo; conta pessoal não serve)",
             "Login direto pelo Instagram — não precisa de Página do Facebook",
             "Enquanto o app estiver em desenvolvimento, você precisa ser admin ou testador dele",
             "App do Instagram configurado no servidor (IG_APP_ID e IG_APP_SECRET)",

@@ -110,7 +110,7 @@ export default function ProjecaoClient({ eleicoes, municipios }: { eleicoes: Ele
         <Info className="mt-0.5 h-4 w-4 shrink-0" aria-hidden style={{ color: "var(--accent-ink, var(--color-accent))" }} />
         <p className="text-[13px] leading-relaxed" style={{ color: "rgba(255,255,255,0.72)" }}>
           <strong style={{ color: "#fff" }}>Como ler:</strong> <strong style={{ color: "#fff" }}>Universo</strong> = votos que o cargo teve na {unidade} (o tamanho do mercado eleitoral ali).{" "}
-          <strong style={{ color: "#fff" }}>Sua base</strong> = contatos do seu CRM mapeados nessa {unidade}. <strong style={{ color: "#fff" }}>Cobertura</strong> = sua presença frente ao volume de voto.
+          <strong style={{ color: "#fff" }}>Sua base</strong> = pessoas cadastradas no sistema, mapeadas nessa {unidade}. <strong style={{ color: "#fff" }}>Cobertura</strong> = sua presença frente ao volume de voto.
           A <strong style={{ color: "#fff" }}>classificação</strong> aponta onde defender (Reduto), reforçar (Consolidar) e, principalmente, <strong style={{ color: "var(--accent-ink, var(--color-accent))" }}>onde crescer</strong> (Oportunidade/Deserto: muito voto, pouca presença sua).
         </p>
       </div>

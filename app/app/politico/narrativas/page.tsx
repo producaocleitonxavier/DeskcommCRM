@@ -12,6 +12,7 @@ import { obterMandatoTse } from "@/app/actions/politico/obras-actions";
 import { listarMunicipiosRaioX } from "@/app/actions/politico/raioX";
 import { listarNarrativas } from "@/app/actions/politico/narrativa";
 import NarrativasClient from "./_narrativas-client";
+import { obterMandatoPadrao } from "@/lib/politico/mandato-padrao";
 
 export const dynamic = "force-dynamic";
 
@@ -34,6 +35,7 @@ export default async function NarrativasPage() {
       electionId={mandato?.electionId ?? 0}
       municipios={municipios}
       historico={historico}
+      municipioPadrao={mandato ? (await obterMandatoPadrao(municipios))?.municipioTse ?? null : null}
     />
   );
 }

@@ -60,7 +60,7 @@ function tempoRelativo(iso: string | null): string | null {
   if (dias === 0) return "hoje";
   if (dias === 1) return "ontem";
   if (dias < 7) return `há ${dias} dias`;
-  if (dias < 30) return `há ${Math.floor(dias / 7)} sem`;
+  if (dias < 30) { const s = Math.floor(dias / 7); return `há ${s} ${s === 1 ? "semana" : "semanas"}`; }
   if (dias < 365) { const m = Math.floor(dias / 30); return `há ${m} ${m === 1 ? "mês" : "meses"}`; }
   return `há ${Math.floor(dias / 365)} ano${dias < 730 ? "" : "s"}`;
 }
@@ -357,7 +357,7 @@ export default function MultiplicadoresClient({
                   type="button"
                   onClick={() => setVerPrevia((v) => !v)}
                   disabled={!tipoConteudo}
-                  className="text-[12px] font-medium text-text-subtle underline-offset-2 hover:underline disabled:opacity-40"
+                  className="text-[12px] font-medium text-text-muted underline underline-offset-2 disabled:opacity-40"
                 >
                   {verPrevia ? "ocultar prévia" : "ver prévia da mensagem"}
                 </button>
@@ -431,7 +431,7 @@ export default function MultiplicadoresClient({
 
       {/* Nota de segurança — UMA vez, discreta */}
       <p className="text-[11.5px] text-text-subtle">
-        🔒 Antes do go-live, só os números de teste recebem de fato — a trava de segurança continua valendo.
+        🔒 Modo de teste: por enquanto só os números de teste recebem. A trava de segurança continua valendo.
       </p>
 
       {/* ── O PLACAR (o centro) ──────────────────────────────────────────── */}
@@ -578,7 +578,7 @@ export default function MultiplicadoresClient({
           className="flex w-full items-center justify-between gap-2 px-4 py-3 text-left"
         >
           <span className="flex items-center gap-2 text-[13px] font-medium text-text-muted">
-            <Gear size={16} weight="bold" aria-hidden /> Avançado — número de disparo
+            <Gear size={16} weight="bold" aria-hidden /> Avançado: de qual número sai
           </span>
           <CaretDown
             size={16}
@@ -649,7 +649,7 @@ function Kpi({
         >
           {valor}
         </p>
-        <p className="mt-1 truncate text-[11px] font-medium uppercase tracking-wide text-text-subtle">
+        <p className="mt-1 text-[11px] font-medium uppercase leading-tight tracking-wide text-text-subtle">
           {rotulo}
           {sub && <span className="ml-1 normal-case tracking-normal text-text-muted">{sub}</span>}
         </p>
@@ -732,7 +732,7 @@ function LinhaMultiplicador({
   const hue = hueDoNome(m.nome || "?");
   return (
     <li
-      className="group flex items-center gap-3 rounded-2xl px-3.5 py-3 transition-all duration-150 hover:-translate-y-px"
+      className="group flex flex-wrap items-center gap-x-3 gap-y-2 rounded-2xl px-3.5 py-3 transition-all duration-150 hover:-translate-y-px sm:flex-nowrap"
       style={{
         background: "color-mix(in srgb, var(--color-surface-elevated) 45%, transparent)",
         border: "1px solid color-mix(in srgb, var(--color-text) 7%, transparent)",
@@ -752,17 +752,17 @@ function LinhaMultiplicador({
         {iniciaisDe(m.nome || "?")}
       </div>
 
-      <div className="min-w-0 flex-1">
+      <div className="min-w-[60%] flex-1 sm:min-w-0">
         {m.leadId ? (
           <Link
             href={`/app/politico/leads/${m.leadId}`}
-            className="block truncate text-[15px] font-semibold leading-tight text-foreground underline-offset-2 hover:underline"
+            className="block text-[15px] font-semibold leading-tight text-foreground underline-offset-2 hover:underline sm:truncate"
             title="Ver ficha e quem ele trouxe"
           >
             {m.nome}
           </Link>
         ) : (
-          <p className="truncate text-[15px] font-semibold leading-tight text-foreground">{m.nome}</p>
+          <p className="text-[15px] font-semibold leading-tight text-foreground sm:truncate">{m.nome}</p>
         )}
         <div className="mt-1 flex flex-wrap items-center gap-1.5">
           {m.trouxe > 0 && (
@@ -802,14 +802,14 @@ function LinhaMultiplicador({
 
       {m.compartilhou ? (
         <span
-          className="inline-flex shrink-0 items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-bold"
-          style={{ background: "color-mix(in srgb, #34D399 18%, transparent)", color: "#34D399" }}
+          className="ml-14 inline-flex shrink-0 items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-bold sm:ml-0"
+          style={{ background: "color-mix(in srgb, #34D399 22%, transparent)", color: "#6EE7B7" }}
         >
           <CheckCircle size={13} weight="fill" aria-hidden /> Gerou alcance
         </span>
       ) : (
         <span
-          className="inline-flex shrink-0 items-center rounded-full px-2.5 py-1 text-[11px] font-semibold"
+          className="ml-14 inline-flex shrink-0 items-center rounded-full px-2.5 py-1 text-[11px] font-semibold sm:ml-0"
           style={{ background: "color-mix(in srgb, #FBBF24 15%, transparent)", color: "#FBBF24" }}
         >
           Sem alcance ainda

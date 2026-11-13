@@ -14,6 +14,7 @@ import { CommandHero } from "@/components/politico/command-hero";
 import { listarEleicoes } from "@/app/actions/politico/intelEleitoral";
 import { listarMunicipiosRaioX } from "@/app/actions/politico/raioX";
 import RaioXClient from "./_raiox-client";
+import { obterMandatoPadrao } from "@/lib/politico/mandato-padrao";
 
 export const dynamic = "force-dynamic";
 
@@ -24,6 +25,7 @@ export default async function RaioXVotosPage() {
   exigirPapelNaOrg(user, org, "manager");
 
   const [eleicoes, municipios] = await Promise.all([listarEleicoes(), listarMunicipiosRaioX()]);
+  const padrao = await obterMandatoPadrao(municipios);
 
   return (
     <div className="gip-ambient-bg mx-auto max-w-[1140px] space-y-6 px-4 py-7">
@@ -39,7 +41,7 @@ export default async function RaioXVotosPage() {
           </p>
         </div>
       ) : (
-        <RaioXClient eleicoes={eleicoes} municipios={municipios} />
+        <RaioXClient eleicoes={eleicoes} municipios={municipios} padrao={padrao} />
       )}
     </div>
   );

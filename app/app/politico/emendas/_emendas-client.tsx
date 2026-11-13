@@ -175,7 +175,7 @@ export default function EmendasClient(props: EmendasClientProps) {
         <>
           {/* Relatórios (reaproveitam o motor do gabinete). */}
           <div className="flex flex-wrap justify-end gap-2">
-            {ehDeputado && <RelatorioGabineteButton dados={relatorioMunicipio} label="Relatório por Município" />}
+            {ehDeputado && <RelatorioGabineteButton dados={relatorioMunicipio} label="Baixar relatório por município (PDF)" />}
             <RelatorioGabineteButton
               label="Baixar relatório (PDF)"
               dados={{

@@ -21,6 +21,7 @@ import {
   type RecortesMunicipio,
 } from "@/app/actions/politico/raioX";
 import { analiseArenaIA } from "@/app/actions/politico/analiseArena";
+import type { MandatoPadrao } from "@/lib/politico/mandato-padrao";
 
 /** Renderização mínima do markdown da IA: # títulos, **negrito**, bullets e linhas. Sem dependência nova. */
 function MiniMarkdown({ texto }: { texto: string }) {
@@ -63,9 +64,11 @@ function pct(n: number, d: number): string {
   return d > 0 ? `${((n / d) * 100).toFixed(2)}%` : "—";
 }
 
-export default function ComparativoClient({ eleicoes, municipios }: { eleicoes: EleicaoOpcao[]; municipios: MunicipioOpcao[] }) {
-  const [eleicaoId, setEleicaoId] = useState(eleicoes[0]!.id);
-  const [munTse, setMunTse] = useState("");
+export default function ComparativoClient({ eleicoes, municipios, padrao }: { eleicoes: EleicaoOpcao[]; municipios: MunicipioOpcao[]; padrao?: MandatoPadrao | null }) {
+  // Abre já no mandato: a cidade do gabinete, com o candidato do mandato contra os dois mais votados ali.
+  const eleicaoInicial = padrao && eleicoes.some((e) => e.id === padrao.electionId) ? padrao.electionId : eleicoes[0]!.id;
+  const [eleicaoId, setEleicaoId] = useState(eleicaoInicial);
+  const [munTse, setMunTse] = useState(padrao?.municipioTse ?? "");
   const [q, setQ] = useState("");
   const [ranking, setRanking] = useState<CandidatoRank[]>([]);
   const [sel, setSel] = useState<CandidatoRank[]>([]);
@@ -96,6 +99,26 @@ export default function ComparativoClient({ eleicoes, municipios }: { eleicoes: 
     if (!mun) { setRanking([]); return; }
     inicia(async () => setRanking(await rankingCandidatosMun(id, mun, termo, 60)));
   }
+  useEffect(() => {
+    if (!padrao?.municipioTse) return;
+    const mun = padrao.municipioTse;
+    let vivo = true;
+    (async () => {
+      const lista = await rankingCandidatosMun(eleicaoInicial, mun, "", 60);
+      if (!vivo) return;
+      setRanking(lista);
+      const eu = lista.find((c) => c.sq === padrao.sq)
+        ?? (padrao.nome ? (await rankingCandidatosMun(eleicaoInicial, mun, padrao.nome, 10)).find((c) => c.sq === padrao.sq) : undefined);
+      if (!vivo || !eu) return;
+      const escolhidos = [eu, ...lista.filter((c) => c.sq !== eu.sq).slice(0, 2)];
+      setSel(escolhidos);
+      if (escolhidos.length >= 2) setComp(await comparativo(eleicaoInicial, mun, "bairro", escolhidos.map((s) => s.sq), null, null));
+    })().catch(() => {});
+    return () => { vivo = false; };
+    // Só na abertura da tela.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   function limparRecorte() { setRecZona(null); setRecBairro(""); }
   function trocarEleicao(id: number) { setEleicaoId(id); setSel([]); setComp([]); limparRecorte(); carregarRanking(id, munTse, q.trim()); }
   function trocarMun(mun: string) { setMunTse(mun); setSel([]); setComp([]); limparRecorte(); carregarRanking(eleicaoId, mun, q.trim()); }

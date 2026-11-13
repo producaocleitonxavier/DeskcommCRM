@@ -14,6 +14,7 @@ import { rankingCandidatos, type CandidatoRank, type MunicipioOpcao } from "@/ap
 import { briefingEstrategico, type AdversarioReduto } from "@/app/actions/politico/briefing";
 import { CandFoto } from "@/components/politico/cand-foto";
 import { MiniMarkdown } from "@/components/politico/mini-markdown";
+import type { MandatoPadrao } from "@/lib/politico/mandato-padrao";
 
 // ── Impressão dedicada: documento limpo (papel branco, texto preto) ──────────
 function escHtml(s: string): string {
@@ -81,9 +82,11 @@ ul{margin:6px 0;padding-left:20px}li{font-size:13.5px;margin:3px 0}
 @media print{.doc{max-width:none;padding:0 4px}@page{margin:14mm}}
 `;
 
-export default function BriefingClient({ eleicoes, municipios }: { eleicoes: EleicaoOpcao[]; municipios: MunicipioOpcao[] }) {
-  const [eleicaoId, setEleicaoId] = useState(eleicoes[0]!.id);
-  const [munTse, setMunTse] = useState("");
+export default function BriefingClient({ eleicoes, municipios, padrao }: { eleicoes: EleicaoOpcao[]; municipios: MunicipioOpcao[]; padrao?: MandatoPadrao | null }) {
+  // Abre já com o candidato e a cidade do mandato escolhidos; gerar continua sendo um clique.
+  const eleicaoInicial = padrao && eleicoes.some((e) => e.id === padrao.electionId) ? padrao.electionId : eleicoes[0]!.id;
+  const [eleicaoId, setEleicaoId] = useState(eleicaoInicial);
+  const [munTse, setMunTse] = useState(padrao?.municipioTse ?? "");
   const [cand, setCand] = useState<CandidatoRank | null>(null);
   const [q, setQ] = useState("");
   const [resultados, setResultados] = useState<CandidatoRank[]>([]);
@@ -108,6 +111,17 @@ export default function BriefingClient({ eleicoes, municipios }: { eleicoes: Ele
     function onDoc(e: MouseEvent) { if (boxRef.current && !boxRef.current.contains(e.target as Node)) setAberto(false); }
     document.addEventListener("mousedown", onDoc);
     return () => document.removeEventListener("mousedown", onDoc);
+  }, []);
+
+  useEffect(() => {
+    if (!padrao?.nome) return;
+    let vivo = true;
+    rankingCandidatos(eleicaoInicial, padrao.nome, 30)
+      .then((lista) => { const eu = lista.find((c) => c.sq === padrao.sq); if (vivo && eu) setCand(eu); })
+      .catch(() => {});
+    return () => { vivo = false; };
+    // Só na abertura da tela.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   function limparSaida() { setDossie(null); setErro(null); setAdv([]); setRedutos(""); setMeuReduto(0); setMeuMunicipio(0); setMeuStatusLabel(""); setMeuStatusCat("desconhecido"); }

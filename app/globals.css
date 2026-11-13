@@ -1231,6 +1231,14 @@
   color: #eaf0f6;
 }
 
+/* Telas de TRABALHO (brancas): verde-limão como TEXTO não se lê sobre branco.
+   Os utilitários de texto de acento passam a usar a tinta marinho. Dentro do
+   cabeçalho marinho (.wr-hero / .command-hero) e nas telas marinho nada muda. */
+.war-room.wr-claro:not(.wr-navy-section) .text-accent,
+.war-room.wr-claro:not(.wr-navy-section) .text-primary {
+  color: var(--accent-ink, #14233a);
+}
+
 /* ===== SEÇÃO NAVY (tema claro) — Inteligência/Território + CRM base =========
    REGRA DO CLIENTE: fundo MARINHO → letras BRANCAS + ícones VERDES. Pra não
    sobrar texto escuro sumido em card navy (as telas do CRM base usam tokens

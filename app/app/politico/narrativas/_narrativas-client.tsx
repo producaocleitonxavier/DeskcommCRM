@@ -6,7 +6,7 @@
  * a narrativa estratégica do território, com riscos, oportunidades e ações.
  */
 
-import { useState, useTransition } from "react";
+import { useEffect, useState, useTransition } from "react";
 import Link from "next/link";
 import { Sparkles, MapPin, AlertTriangle, TrendingUp, ListChecks, Clock, RefreshCw } from "lucide-react";
 
@@ -29,13 +29,15 @@ interface Props {
   electionId: number;
   municipios: MunicipioOpcao[];
   historico: HistItem[];
+  /** A cidade do gabinete: a tela abre já nela, faltando só escolher o bairro. */
+  municipioPadrao?: string | null;
 }
 
 function fmtData(iso: string): string {
   return new Date(iso).toLocaleDateString("pt-BR", { day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" });
 }
 
-export default function NarrativasClient({ temMandato, mandatoNome, electionId, municipios, historico }: Props) {
+export default function NarrativasClient({ temMandato, mandatoNome, electionId, municipios, historico, municipioPadrao }: Props) {
   const [municipioTse, setMunicipioTse] = useState("");
   const [municipioNome, setMunicipioNome] = useState("");
   const [bairros, setBairros] = useState<string[]>([]);
@@ -60,6 +62,12 @@ export default function NarrativasClient({ temMandato, mandatoNome, electionId, 
       setBairros(r.bairros);
     });
   }
+
+  useEffect(() => {
+    if (temMandato && municipioPadrao) escolherMunicipio(municipioPadrao);
+    // Só na abertura da tela.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   function escolherBairro(b: string) {
     setBairro(b);
@@ -108,7 +116,7 @@ export default function NarrativasClient({ temMandato, mandatoNome, electionId, 
       {/* Cabeçalho */}
       <CommandHero
         eyebrow="Estratégia · Narrativas"
-        titulo="Narrativas Territoriais"
+        titulo="Narrativas por bairro"
         subtitulo="A IA lê um bairro inteiro — voto, sua base, demandas, lideranças e a disputa — e escreve a estratégia do território."
       />
 
@@ -146,7 +154,7 @@ export default function NarrativasClient({ temMandato, mandatoNome, electionId, 
                 <Sparkles className="h-4 w-4" aria-hidden /> {gerando ? "Gerando…" : narrativa ? "Regenerar" : "Gerar narrativa"}
               </button>
             </div>
-            {mandatoNome && <p className="mt-2 text-xs" style={{ color: "var(--color-text-subtle)" }}>Mandato: <strong style={{ color: "var(--color-text-muted)" }}>{mandatoNome}</strong> · o voto do território vem dele (TSE); a base vem do seu CRM.</p>}
+            {mandatoNome && <p className="mt-2 text-xs" style={{ color: "var(--color-text-subtle)" }}>Mandato: <strong style={{ color: "var(--color-text-muted)" }}>{mandatoNome}</strong> · o voto do território vem dele (TSE); a base vem dos seus cadastros.</p>}
           </section>
 
           {erro && <div className="gip-glass p-4 text-sm" style={{ color: "#E08079" }}>{erro}</div>}

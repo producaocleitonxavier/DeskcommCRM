@@ -137,7 +137,7 @@ export default function ObrasClient({ obras, executivo, eleicoes, mandatoInicial
               <Link key={o.id} href={`/app/politico/obras/${o.id}`}
                 className="gip-glass gip-glass-hover block p-4">
                 <div className="flex items-start justify-between gap-2">
-                  <div className="flex items-center gap-2 text-xs font-semibold" style={{ color: o.natureza === "execucao" ? "#7da9bf" : "var(--color-accent)" }}>
+                  <div className="flex items-center gap-2 text-xs font-semibold" style={{ color: o.natureza === "execucao" ? "#7da9bf" : "var(--accent-ink, var(--color-accent))" }}>
                     {o.natureza === "execucao" ? <HardHat className="h-3.5 w-3.5" aria-hidden /> : <ShieldCheck className="h-3.5 w-3.5" aria-hidden />}
                     {o.natureza === "execucao" ? "Execução" : "Fiscalização"} · {TIPO[o.tipo] ?? o.tipo}
                   </div>

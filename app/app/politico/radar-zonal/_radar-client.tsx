@@ -6,11 +6,12 @@
  * Dados via server actions (RLS). Design próprio (dark tático + lime).
  */
 
-import { useMemo, useState, useTransition } from "react";
+import { useEffect, useMemo, useState, useTransition } from "react";
 import { ArrowLeft, Loader2, MapPin, Search, Users } from "lucide-react";
 
 import type { EleicaoOpcao } from "@/app/actions/politico/intelEleitoral";
 import { CandFoto } from "@/components/politico/cand-foto";
+import type { MandatoPadrao } from "@/lib/politico/mandato-padrao";
 import {
   rankingCandidatosMun,
   radarZonal,
@@ -30,9 +31,11 @@ function faixa(v: number, max: number): { cor: string; label: string } {
   return { cor: "#7da9bf", label: "Em construção" };
 }
 
-export default function RadarClient({ eleicoes, municipios }: { eleicoes: EleicaoOpcao[]; municipios: MunicipioOpcao[] }) {
-  const [eleicaoId, setEleicaoId] = useState(eleicoes[0]!.id);
-  const [munTse, setMunTse] = useState("");
+export default function RadarClient({ eleicoes, municipios, padrao }: { eleicoes: EleicaoOpcao[]; municipios: MunicipioOpcao[]; padrao?: MandatoPadrao | null }) {
+  // Abre já no mandato: a eleição e a cidade do gabinete, com o candidato do mandato aberto.
+  const eleicaoInicial = padrao && eleicoes.some((e) => e.id === padrao.electionId) ? padrao.electionId : eleicoes[0]!.id;
+  const [eleicaoId, setEleicaoId] = useState(eleicaoInicial);
+  const [munTse, setMunTse] = useState(padrao?.municipioTse ?? "");
   const [q, setQ] = useState("");
   const [ranking, setRanking] = useState<CandidatoRank[]>([]);
   const [cand, setCand] = useState<CandidatoRank | null>(null);
@@ -58,6 +61,26 @@ export default function RadarClient({ eleicoes, municipios }: { eleicoes: Eleica
     inicia(async () => setLocais(await zonaLocais(eleicaoId, cand!.sq, munTse, z)));
   }
   function voltar() { setCand(null); setZonas([]); setZonaSel(null); setLocais([]); }
+
+  useEffect(() => {
+    if (!padrao?.municipioTse) return;
+    const mun = padrao.municipioTse;
+    let vivo = true;
+    (async () => {
+      const lista = await rankingCandidatosMun(eleicaoInicial, mun, "", 60);
+      if (!vivo) return;
+      setRanking(lista);
+      const eu = lista.find((c) => c.sq === padrao.sq)
+        ?? (padrao.nome ? (await rankingCandidatosMun(eleicaoInicial, mun, padrao.nome, 10)).find((c) => c.sq === padrao.sq) : undefined);
+      if (!vivo || !eu) return;
+      setCand(eu);
+      const ano = eleicoes.find((e) => e.id === eleicaoInicial)?.ano ?? 0;
+      setZonas(await radarZonal(eleicaoInicial, eu.sq, mun, ano));
+    })().catch(() => {});
+    return () => { vivo = false; };
+    // Só na abertura da tela.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const maxVotos = useMemo(() => Math.max(...zonas.map((z) => z.votos), 1), [zonas]);
   const totVotos = zonas.reduce((s, z) => s + z.votos, 0);

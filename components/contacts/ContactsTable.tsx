@@ -185,11 +185,12 @@ export function ContactsTable({ contacts, orderBy, orderDir, onSort }: Props) {
             onSort={onSort}
           />
           <SortableHead
-            label={t("Email")}
+            label="E-mail"
             column="email"
             orderBy={orderBy}
             orderDir={orderDir}
             onSort={onSort}
+            className="hidden md:table-cell"
           />
           <SortableHead
             label={t("Telefone")}
@@ -198,15 +199,16 @@ export function ContactsTable({ contacts, orderBy, orderDir, onSort }: Props) {
             orderDir={orderDir}
             onSort={onSort}
           />
-          <TableHead>{t("Tags")}</TableHead>
+          <TableHead className="hidden md:table-cell">Etiquetas</TableHead>
           <SortableHead
             label={t("Última atividade")}
             column="last_activity_at"
             orderBy={orderBy}
             orderDir={orderDir}
             onSort={onSort}
+            className="hidden md:table-cell"
           />
-          <TableHead>{t("Status")}</TableHead>
+          <TableHead className="hidden md:table-cell">Situação</TableHead>
           <TableHead className="w-[88px]">
             <span className="sr-only">{t("Ações")}</span>
           </TableHead>
@@ -220,13 +222,13 @@ export function ContactsTable({ contacts, orderBy, orderDir, onSort }: Props) {
                 {displayName(c)}
               </Link>
             </TableCell>
-            <TableCell className="text-muted-foreground">
+            <TableCell className="hidden text-muted-foreground md:table-cell">
               {c.email ?? "—"}
             </TableCell>
             <TableCell className="text-muted-foreground">
               {c.phone_number ? phoneForDisplay(c.phone_number) : "—"}
             </TableCell>
-            <TableCell>
+            <TableCell className="hidden md:table-cell">
               <div className="flex flex-wrap gap-1">
                 {c.tags.length === 0
                   ? <span className="text-muted-foreground text-xs">—</span>
@@ -235,12 +237,12 @@ export function ContactsTable({ contacts, orderBy, orderDir, onSort }: Props) {
                     ))}
               </div>
             </TableCell>
-            <TableCell className="text-muted-foreground text-sm">
+            <TableCell className="hidden text-sm text-muted-foreground md:table-cell">
               {c.last_activity_at
                 ? formatUltimaAtividade(c.last_activity_at, localeDaData)
                 : "—"}
             </TableCell>
-            <TableCell>
+            <TableCell className="hidden md:table-cell">
               <div className="flex flex-wrap gap-1">
                 {c.is_anonymized && <Badge variant="destructive">{t("Anonimizado")}</Badge>}
                 {c.is_blocked && <Badge variant="warning">{t("Bloqueado")}</Badge>}

@@ -12,6 +12,7 @@ import { requireAuth, resolveActiveOrg, exigirPapelNaOrg } from "@/lib/auth/serv
 import { listarEleicoes } from "@/app/actions/politico/intelEleitoral";
 import { listarMunicipiosRaioX } from "@/app/actions/politico/raioX";
 import CadeirasClient from "./_cadeiras-client";
+import { obterMandatoPadrao } from "@/lib/politico/mandato-padrao";
 
 export const dynamic = "force-dynamic";
 
@@ -28,5 +29,6 @@ export default async function CadeirasPage() {
     .filter((e) => PROPORCIONAIS.has(e.cargo_cod) && e.turno === 1)
     .map((e) => ({ id: e.id, label: `${e.ano} · ${e.cargo}`, cargoCod: e.cargo_cod, ano: e.ano }));
 
-  return <CadeirasClient eleicoes={proporcionais} municipios={municipios} />;
+  const padrao = await obterMandatoPadrao(municipios);
+  return <CadeirasClient eleicoes={proporcionais} municipios={municipios} padrao={padrao} />;
 }

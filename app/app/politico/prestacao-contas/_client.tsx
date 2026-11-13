@@ -92,7 +92,7 @@ export default function PrestacaoContasClient({ dados, ondeInvestir, ehAdmin }: 
           style={{ background: "var(--color-accent)", color: "#16181D" }}
         >
           {gerando ? <Loader2 size={16} className="animate-spin" /> : <Download size={16} />}
-          {gerando ? "Gerando…" : "Gerar relatório (PDF)"}
+          {gerando ? "Gerando…" : "Baixar relatório (PDF)"}
         </button>
       </div>
       {erroPdf && <p className="text-sm font-medium" style={{ color: "#F87171" }}>{erroPdf}</p>}

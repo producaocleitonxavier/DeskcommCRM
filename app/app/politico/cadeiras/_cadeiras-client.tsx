@@ -7,11 +7,12 @@
  * legenda/federação). Cálculo 100% no cliente → simulação instantânea.
  */
 
-import { useMemo, useState, useTransition } from "react";
+import { useEffect, useMemo, useState, useTransition } from "react";
 import { Landmark, Info, Search, Target } from "lucide-react";
 import { CommandHero } from "@/components/politico/command-hero";
 import type { MunicipioOpcao } from "@/app/actions/politico/raioX";
 import { dadosCadeiras, type DadosCadeiras, type CandidatoCadeira } from "@/app/actions/politico/projecaoCadeiras";
+import type { MandatoPadrao } from "@/lib/politico/mandato-padrao";
 
 interface EleicaoOpt { id: number; label: string; cargoCod: number; ano: number }
 
@@ -76,9 +77,11 @@ function moeda0(n: number): string { return n.toLocaleString("pt-BR"); }
 
 const CORES = ["var(--color-accent)", "#60A5FA", "#F59E0B", "#22C55E", "#A78BFA", "#F472B6", "#38BDF8", "#FB923C", "#4ADE80", "#E879F9"];
 
-export default function CadeirasClient({ eleicoes, municipios }: { eleicoes: EleicaoOpt[]; municipios: MunicipioOpcao[] }) {
-  const [electionId, setElectionId] = useState<number | "">("");
-  const [municipioTse, setMunicipioTse] = useState("");
+export default function CadeirasClient({ eleicoes, municipios, padrao }: { eleicoes: EleicaoOpt[]; municipios: MunicipioOpcao[]; padrao?: MandatoPadrao | null }) {
+  // Abre já na eleição do mandato (e, para vereador, na cidade do gabinete).
+  const eleicaoInicial = padrao && eleicoes.some((e) => e.id === padrao.electionId) ? padrao.electionId : "";
+  const [electionId, setElectionId] = useState<number | "">(eleicaoInicial);
+  const [municipioTse, setMunicipioTse] = useState(eleicaoInicial ? (padrao?.municipioTse ?? "") : "");
   const [dados, setDados] = useState<DadosCadeiras | null>(null);
   const [selSq, setSelSq] = useState("");
   const [sim, setSim] = useState<number | null>(null);
@@ -98,6 +101,12 @@ export default function CadeirasClient({ eleicoes, municipios }: { eleicoes: Ele
       setDados(d); setSelSq(""); setSim(null); setBusca("");
     });
   }
+
+  useEffect(() => {
+    if (eleicaoInicial) carregar(eleicaoInicial, padrao?.municipioTse ?? "");
+    // Só na abertura da tela.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const alocBase = useMemo(() => (dados ? alocar(dados.candidatos, dados.cadeiras) : null), [dados]);
   const alocSim = useMemo(() => {

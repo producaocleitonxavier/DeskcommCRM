@@ -317,25 +317,25 @@ export default async function InstagramHubPage() {
   const secoes = [
     {
       href: "/app/instagram/performance",
-      titulo: "Minha Performance",
+      titulo: "Meus números",
       descricao:
-        "Seguidores, posts e engajamento da sua conta — dados oficiais da API do Instagram.",
+        "Seguidores, publicações e quanto as pessoas interagem com a sua conta — números oficiais do Instagram.",
       icon: "chart",
       badge: conectado ? "ao vivo" : null,
     },
     {
       href: "/app/instagram/captacao",
-      titulo: "Captação (Kanban)",
+      titulo: "Quem chegou pelo Instagram",
       descricao:
-        "Quem interage vira lead qualificado pela sua região e, com o WhatsApp, apoiador ativo.",
+        "Quem comenta ou manda mensagem entra na sua lista de pessoas, por região, e segue a conversa no WhatsApp.",
       icon: "users",
       badge: null,
     },
     {
       href: "/app/instagram/automacoes",
-      titulo: "Automações (GIPCHAT)",
+      titulo: "Respostas automáticas (GIPCHAT)",
       descricao:
-        "O GIPCHAT responde comentários e manda DMs sozinho — o seu motor de automação, sem ferramenta de fora.",
+        "O GIPCHAT responde comentários e manda mensagens diretas sozinho, sem depender de ferramenta de fora.",
       icon: "zap",
       badge:
         metricas.flowsAtivos > 0
@@ -377,7 +377,7 @@ export default async function InstagramHubPage() {
       <CommandHero
         eyebrow="Captação · Pelo Instagram"
         titulo="Instagram"
-        subtitulo="GIPCHAT — comentários e DMs no automático, o seu motor próprio de captação."
+        subtitulo="GIPCHAT: respostas automáticas a comentários e mensagens diretas, para trazer quem interage para perto do mandato."
         extra={
           /* Pílula de status da conexão — é informação (badge), não navegação,
              por isso vai em `extra` e não em `acoes`. */
@@ -449,11 +449,11 @@ export default async function InstagramHubPage() {
             </span>
             <div className="min-w-0">
               <h2 className="font-heading text-[19px] font-bold" style={{ color: "#F3F4EC" }}>
-                Conecte sua conta Instagram Business
+                Conecte o Instagram do mandato
               </h2>
               <p className="text-sm mt-1" style={{ color: "#B9BCC6" }}>
-                Autorize uma vez para ler comentários, enviar DMs e habilitar o monitor de
-                adversários. Leva menos de 1 minuto.
+                Autorize uma vez para o sistema ler os comentários e responder por mensagem direta.
+                A conta precisa ser profissional. Leva menos de 1 minuto.
               </p>
             </div>
           </div>
@@ -483,7 +483,8 @@ export default async function InstagramHubPage() {
       </section>
 
       {/* ── Instrução de setup ──────────────────────────────────── */}
-      {metricas.tokensAtivos === 0 && (
+      {/* Passo de quem instala: só a equipe da plataforma vê. */}
+      {user.is_platform_admin && metricas.tokensAtivos === 0 && (
         <div
           className="wr-card-dark p-5 flex flex-wrap items-start gap-3"
           style={{ borderColor: "color-mix(in srgb, #F59E0B 35%, var(--color-border))" }}

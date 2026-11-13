@@ -11,7 +11,7 @@ import { FileText, Loader2 } from "lucide-react";
 
 import { gerarRelatorioGabinete, type RelatorioGabineteInputCliente } from "@/app/actions/politico/gerarRelatorioGabinete";
 
-export function RelatorioGabineteButton({ dados, label = "Relatório PDF", destaque = false }: { dados: RelatorioGabineteInputCliente; label?: string; /** Botão em destaque (verde) quando é a ação principal da faixa. */ destaque?: boolean }) {
+export function RelatorioGabineteButton({ dados, label = "Baixar relatório (PDF)", destaque = true }: { dados: RelatorioGabineteInputCliente; label?: string; /** Botão em destaque (verde) quando é a ação principal da faixa. */ destaque?: boolean }) {
   const [gerando, setGerando] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
   const vazio = dados.linhas.length === 0;

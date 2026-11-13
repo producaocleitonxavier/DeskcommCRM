@@ -142,7 +142,7 @@ export function ContactsListClient() {
         </Button>
         <Button variant="outline" onClick={() => setImportOpen(true)}>
           <UploadSimple size={16} weight="bold" aria-hidden />
-          <span>{t("Importar CSV")}</span>
+          <span>Importar lista</span>
         </Button>
         <Button onClick={() => setCreateOpen(true)}>
           <Plus size={16} weight="bold" aria-hidden />

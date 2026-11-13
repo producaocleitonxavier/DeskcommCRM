@@ -11,6 +11,7 @@ import { ArrowLeft, Loader2, MapPin, Search, Trophy } from "lucide-react";
 
 import type { EleicaoOpcao } from "@/app/actions/politico/intelEleitoral";
 import { CandFoto } from "@/components/politico/cand-foto";
+import type { MandatoPadrao } from "@/lib/politico/mandato-padrao";
 import {
   rankingCandidatos,
   rankingCandidatosMun,
@@ -39,8 +40,10 @@ function ehEleito(s: string | null): boolean {
   return !!s && /eleito/i.test(s) && !/não/i.test(s);
 }
 
-export default function RaioXClient({ eleicoes, municipios: municipiosLista }: { eleicoes: EleicaoOpcao[]; municipios: MunicipioOpcao[] }) {
-  const [eleicaoId, setEleicaoId] = useState(eleicoes[0]!.id);
+export default function RaioXClient({ eleicoes, municipios: municipiosLista, padrao }: { eleicoes: EleicaoOpcao[]; municipios: MunicipioOpcao[]; padrao?: MandatoPadrao | null }) {
+  // Abre na eleição do mandato; o candidato do mandato fica a um toque (atalho no topo da lista).
+  const eleicaoDoMandato = padrao && eleicoes.some((e) => e.id === padrao.electionId) ? padrao.electionId : null;
+  const [eleicaoId, setEleicaoId] = useState(eleicaoDoMandato ?? eleicoes[0]!.id);
   const [munTse, setMunTse] = useState(""); // "" = todos (estadual)
   const [q, setQ] = useState("");
   const [ranking, setRanking] = useState<CandidatoRank[]>([]);
@@ -246,8 +249,22 @@ export default function RaioXClient({ eleicoes, municipios: municipiosLista }: {
             <Trophy className="mr-1 inline h-4 w-4" aria-hidden style={{ color: "var(--accent-ink, var(--color-accent))" }} />
             {q ? "Resultados" : "Mais votados"}
           </h3>
-          <span className="text-xs" style={{ color: "var(--color-text-subtle)" }}>clique para o raio-x</span>
+          <span className="text-xs" style={{ color: "var(--color-text-subtle)" }}>toque num nome para ver os votos dele</span>
         </div>
+        {padrao && eleicaoId === eleicaoDoMandato && !q && (
+          <button
+            type="button"
+            onClick={() => abrirCandidato(padrao.sq)}
+            className="mx-5 mb-3 flex w-[calc(100%-2.5rem)] items-center justify-between gap-3 rounded-xl px-4 py-3 text-left transition-opacity hover:opacity-90"
+            style={{ background: "var(--color-accent)", color: "#16181D" }}
+          >
+            <span className="min-w-0">
+              <span className="block text-[11px] font-bold uppercase tracking-wide">Seu mandato</span>
+              <span className="block truncate text-sm font-bold">{padrao.nome || "Ver os votos do mandato"}</span>
+            </span>
+            <span className="shrink-0 text-sm font-bold">Ver os votos →</span>
+          </button>
+        )}
         {ranking.length === 0 ? (
           <div className="p-10 text-center text-sm" style={{ color: "var(--color-text-subtle)" }}>
             {carregandoLista ? "Carregando…" : "Nenhum candidato encontrado."}
@@ -259,12 +276,12 @@ export default function RaioXClient({ eleicoes, municipios: municipiosLista }: {
                 <button type="button" onClick={() => abrirCandidato(c.sq)}
                   className="flex w-full items-center gap-3 px-5 py-3 text-left transition-colors hover:bg-[rgba(0,0,0,0.03)]"
                   style={{ borderTop: "1px solid var(--color-border)" }}>
-                  <span className="w-7 shrink-0 text-center text-sm font-bold tabular-nums" style={{ color: c.posicao <= 3 ? "#5C7F23" : "var(--color-text-subtle)" }}>{c.posicao}</span>
+                  <span className="w-7 shrink-0 text-center text-sm font-bold tabular-nums" style={{ color: c.posicao <= 3 ? "var(--color-accent)" : "var(--color-text-subtle)" }}>{c.posicao}</span>
                   <CandFoto sq={c.sq} ano={eleicaoAno} nome={c.nomeUrna} size={40} />
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-2">
                       <span className="truncate text-sm font-semibold" style={{ color: "var(--color-text)" }}>{c.nomeUrna}</span>
-                      {ehEleito(c.situacao) && <span className="rounded-full px-1.5 py-0.5 text-[9px] font-bold uppercase" style={{ background: "#E2F5EC", color: "#17784F" }}>{c.situacao}</span>}
+                      {ehEleito(c.situacao) && <span title={c.situacao ?? undefined} className="shrink-0 rounded-full px-1.5 py-0.5 text-[9px] font-bold uppercase" style={{ background: "rgba(74,222,128,0.16)", color: "#4ADE80", border: "1px solid rgba(74,222,128,0.4)" }}>Eleito</span>}
                     </div>
                     <span className="text-xs" style={{ color: "var(--color-text-muted)" }}>{c.nr}{c.partido ? ` · ${c.partido}` : ""}</span>
                   </div>

@@ -125,7 +125,7 @@ export default function MateriaisClient({ materiais }: MateriaisClientProps) {
                 >
                   {/* Capa */}
                   <a href={m.url} target="_blank" rel="noopener noreferrer" className="group relative block">
-                    <div className="relative aspect-[3/4] w-full overflow-hidden" style={{ background: "var(--hero-grad)" }}>
+                    <div className={`relative w-full overflow-hidden ${m.capaUrl ? "aspect-[3/4]" : "aspect-[16/6]"}`} style={{ background: "var(--hero-grad)" }}>
                       {m.capaUrl ? (
                         // eslint-disable-next-line @next/next/no-img-element
                         <img
@@ -137,13 +137,10 @@ export default function MateriaisClient({ materiais }: MateriaisClientProps) {
                       ) : (
                         <div className="flex h-full w-full flex-col items-center justify-center gap-2 px-4 text-center">
                           <span
-                            className="flex h-14 w-14 items-center justify-center rounded-full"
+                            className="flex h-12 w-12 items-center justify-center rounded-full"
                             style={{ background: "color-mix(in srgb, var(--color-accent) 12%, transparent)", border: "1px solid color-mix(in srgb, var(--color-accent) 25%, transparent)" }}
                           >
-                            <Icone className="h-6 w-6" style={{ color: "var(--accent-ink, var(--color-accent))" }} aria-hidden />
-                          </span>
-                          <span className="line-clamp-3 text-sm font-semibold" style={{ color: "rgba(255,255,255,0.85)" }}>
-                            {m.titulo}
+                            <Icone className="h-6 w-6" style={{ color: "#D7F36A" }} aria-hidden />
                           </span>
                         </div>
                       )}
