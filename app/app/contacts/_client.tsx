@@ -124,7 +124,7 @@ export function ContactsListClient() {
   return (
     <div className="space-y-4 p-6">
       <CommandHero
-        eyebrow="Operação · Contatos"
+        eyebrow="Pessoas · Contatos"
         titulo="Contatos"
         subtitulo="Todas as pessoas com quem o gabinete já falou — busque, filtre e abra a conversa."
       />

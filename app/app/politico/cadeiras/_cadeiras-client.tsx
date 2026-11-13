@@ -123,7 +123,7 @@ export default function CadeirasClient({ eleicoes, municipios }: { eleicoes: Ele
   return (
     <div className="gip-ambient-bg mx-auto max-w-[1040px] px-4 py-7 space-y-4">
       <CommandHero
-        eyebrow="Território · Projeção de Cadeiras"
+        eyebrow="Votos e território · Cadeiras"
         titulo="Projeção de Cadeiras"
         subtitulo="Quociente eleitoral e partidário: quantos votos pegam a cadeira — e quanto falta pra você entrar."
       />

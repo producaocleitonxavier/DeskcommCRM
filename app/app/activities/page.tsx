@@ -6,7 +6,7 @@ import { Relatorios } from "./_components/Relatorios";
 import { exigirPortaDoPerfil } from "@/lib/politico/acesso";
 
 export const dynamic = "force-dynamic";
-export const metadata: Metadata = { title: "Atividades" };
+export const metadata: Metadata = { title: "O que a equipe fez" };
 
 /**
  * As duas abas são endereçáveis, como em `/app/team`: quem mandar o link da
@@ -31,8 +31,8 @@ export default async function ActivitiesReportPage({
   return (
     <div className="flex h-full flex-col gap-6 p-6">
       <CommandHero
-        eyebrow="Análise · Atividades"
-        titulo="Atividades"
+        eyebrow="Hoje · O que a equipe fez"
+        titulo="O que a equipe fez"
         subtitulo="O que aconteceu na operação no período — e quanto disso foi a equipe."
       />
 

@@ -214,7 +214,7 @@ export default function MultiplicadoresClient({
   return (
     <div className="gip-ambient-bg min-h-full space-y-5 p-4 md:p-6">
       <CommandHero
-        eyebrow="OPERAÇÃO · CAMPANHA"
+        eyebrow="Mobilização · Multiplicadores"
         titulo="Multiplicadores"
         subtitulo="Quem está espalhando o seu conteúdo — e quem ainda não."
         extra={

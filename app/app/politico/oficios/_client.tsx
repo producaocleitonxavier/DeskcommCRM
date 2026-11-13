@@ -41,10 +41,10 @@ export default function OficiosClient({
   return (
     <div className="gip-ambient-bg mx-auto max-w-[860px] space-y-5 px-4 py-7">
       <CommandHero
-        eyebrow="Gabinete"
+        eyebrow="Gabinete · Ofícios"
         titulo="Ofícios"
         subtitulo="Busque qualquer ofício por número, assunto, órgão ou nome do cidadão."
-        acoes={[{ href: "/app/politico/demandas", label: "← Gabinete" }]}
+        acoes={[{ href: "/app/politico/demandas", label: "← Demandas" }]}
       />
 
       {/* Busca */}

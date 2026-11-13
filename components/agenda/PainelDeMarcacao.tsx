@@ -56,7 +56,7 @@ function AvisoDeJornadaNaoPublicada({ quemLeEhODono }: { quemLeEhODono: boolean 
       <p className="text-sm font-semibold text-text">
         {quemLeEhODono
           ? t("Você ainda não publicou seus horários de atendimento")
-          : t("A jornada de atendimento ainda não foi publicada")}
+          : "Os horários de atendimento ainda não foram publicados"}
       </p>
       <p className="mt-1 text-xs leading-4 text-text-muted">
         {quemLeEhODono

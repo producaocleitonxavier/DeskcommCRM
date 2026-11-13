@@ -126,7 +126,7 @@ export default async function PesquisasPage({
     <div className="mx-auto max-w-5xl px-4 py-8 space-y-6">
       {/* Cabeçalho */}
       <CommandHero
-        eyebrow="Inteligência · Pesquisas"
+        eyebrow="Relacionamento · Pesquisas"
         titulo="Pesquisas"
         subtitulo="Pesquisas de opinião e intenção de voto com links públicos e contagem de respostas."
         acoes={[

@@ -178,3 +178,47 @@ export async function autenticarComPapel(min: Role): Promise<Awaited<ReturnType<
   if (org && !ehPlataforma && ROLE_RANK[org.role] < ROLE_RANK[min]) redirect("/app");
   return user;
 }
+
+/**
+ * O PERFIL TAMBÉM VALE NA GRAVAÇÃO GENÉRICA do gabinete (`criarRegistro` /
+ * `atualizarRegistro` recebem o NOME da tabela). Sem isto, um assessor de rua
+ * conseguia gravar em Lideranças ou Emendas chamando a ação direto, mesmo sem a
+ * tela no perfil. Só estreita quem tem perfil restrito e está abaixo de gestor.
+ */
+export const PORTAS_DA_TABELA: Readonly<Record<string, readonly string[]>> = {
+  demandas: ["/app/politico/demandas", "/app/politico/visitas"],
+  pol_liderancas: ["/app/politico/liderancas"],
+  pol_emendas: ["/app/politico/emendas"],
+  pol_projetos_lei: ["/app/politico/projetos-lei"],
+  pol_obras: ["/app/politico/obras"],
+  pol_locais: ["/app/politico/locais"],
+  pol_materiais: ["/app/politico/materiais"],
+  pol_agenda: ["/app/agenda", "/app/politico/visitas", "/app/politico/demandas", "/app/politico/locais"],
+};
+
+export function decidirGravacaoNaTabela(
+  tabela: string,
+  papel: Role,
+  perfilRestrito: boolean,
+  portasDoMenu: ReadonlySet<string>,
+  ehPlataforma = false,
+): DecisaoDeAcesso {
+  if (ehPlataforma || !perfilRestrito || ROLE_RANK[papel] >= ROLE_RANK.manager) return "ok";
+  const portas = PORTAS_DA_TABELA[tabela];
+  // Tabela sem porta declarada: para perfil restrito, falha fechado.
+  if (!portas) return "fora_do_perfil";
+  return portas.some((p) => portasDoMenu.has(p)) ? "ok" : "fora_do_perfil";
+}
+
+/** Para as ações de gravação: o perfil de quem está logado alcança esta tabela? */
+export async function perfilAlcancaTabela(tabela: string): Promise<boolean> {
+  const user = await requireAuth();
+  const org = await resolveActiveOrg(user);
+  if (!org) return false;
+  const ehPlataforma = !!user.is_platform_admin && !user.support;
+  const portas = new Set(
+    destinosDaInterface(org.interface_settings, ehPlataforma, org.role).map((d) => d.href),
+  );
+  const perfilRestrito = Array.isArray((org.interface_settings as { destinos?: unknown } | null | undefined)?.destinos);
+  return decidirGravacaoNaTabela(tabela, org.role, perfilRestrito, portas, ehPlataforma) === "ok";
+}

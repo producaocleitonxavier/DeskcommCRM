@@ -52,7 +52,7 @@ export default function TransparenciaClient({ config }: { config: PortalConfig }
   return (
     <div className="gip-ambient-bg mx-auto max-w-[840px] px-4 py-7 space-y-5">
       <CommandHero
-        eyebrow="Gabinete · Prestação de contas"
+        eyebrow="Configurações · Meu mandato"
         titulo="Portal da Transparência"
         subtitulo="Sua vitrine pública de prestação de contas: obras e emendas, com valores e mapa de entregas."
       />

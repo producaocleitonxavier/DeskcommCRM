@@ -179,7 +179,7 @@ export function CaptacaoQrClient({ materiais, canais }: { materiais: Material[];
   return (
     <div className="mx-auto max-w-[1140px] space-y-[18px] px-4 py-7" style={{ background: "var(--color-bg)" }}>
       <CommandHero
-        eyebrow="Operação · Captação"
+        eyebrow="Captação · Por QR"
         titulo="Captação por QR"
         subtitulo="Gere um QR (e um link) por lugar. A pessoa escaneia, manda a mensagem pronta e recebe o material na hora — sem link pra clicar, risco de bloqueio quase zero."
       />

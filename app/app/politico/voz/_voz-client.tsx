@@ -243,10 +243,10 @@ export default function VozClient({ inicial }: { inicial: Inicial }) {
   return (
     <div className="gip-ambient-bg mx-auto max-w-[760px] space-y-[18px] px-4 py-7">
       <CommandHero
-        eyebrow="Gabinete · Fase 2"
+        eyebrow="Configurações · Voz do Mandato"
         titulo="Voz do Mandato"
         subtitulo="Clone a sua própria voz para mandar mensagens pessoais (ex.: feliz aniversário) — com as travas da lei eleitoral."
-        acoes={[{ href: "/app/politico", label: "← Voltar" }]}
+        acoes={[{ href: "/app/settings", label: "← Configurações" }]}
       />
 
       {/* Regras TSE */}

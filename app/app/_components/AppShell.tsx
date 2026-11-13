@@ -182,7 +182,7 @@ export function AppShell({ sidebarCollapsed, podeAtender, temaClaro, children }:
             // Tela política BRANCA: a barra de abas mora fora do WarRoomShell da
             // página; sem esta pele ela saía escura em cima de uma tela clara.
             <>
-              <div className="war-room wr-claro" data-theme="light">
+              <div className="war-room wr-claro flow-root" data-theme="light">
                 <AbasDaArea />
               </div>
               {children}

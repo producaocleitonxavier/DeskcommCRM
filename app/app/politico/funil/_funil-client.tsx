@@ -84,9 +84,9 @@ export default function FunilClient({
   return (
     <div className="gip-ambient-bg mx-auto max-w-[1140px] px-4 py-7 space-y-6">
       <CommandHero
-        eyebrow="Comando · Funil"
-        titulo="Funil Político"
-        subtitulo={`${total.toLocaleString("pt-BR")} ${total === 1 ? "pessoa" : "pessoas"} no funil — de novo cadastro a voto certo.`}
+        eyebrow="Mobilização · Funil"
+        titulo="Funil"
+        subtitulo={`${total.toLocaleString("pt-BR")} ${total === 1 ? "pessoa" : "pessoas"} na base — de novo cadastro a voto certo.`}
         acoes={[{ href: "/app/politico/leads/novo", label: "+ Novo cadastro", primary: true }]}
       />
 
@@ -94,8 +94,8 @@ export default function FunilClient({
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-[2fr_1fr]">
         <section className="gip-glass p-6 sm:p-7">
           <div className="mb-5 flex items-center justify-between gap-2">
-            <h2 className="font-heading text-base font-bold">Distribuição por estágio</h2>
-            <span className="text-xs" style={{ color: "var(--color-text-subtle)" }}>clique num estágio para ver as pessoas →</span>
+            <h2 className="font-heading text-base font-bold">Quantas pessoas em cada nível</h2>
+            <span className="text-xs" style={{ color: "var(--color-text-subtle)" }}>clique num nível para ver as pessoas →</span>
           </div>
           <FunnelBoard data={heroData} showConversion={false} />
         </section>
@@ -112,7 +112,7 @@ export default function FunilClient({
                 </div>
                 <span
                   className="shrink-0 rounded-full px-2 py-0.5 text-xs font-bold tabular-nums"
-                  style={{ background: "var(--color-accent-100)", color: "var(--color-accent-900)" }}
+                  style={{ background: "color-mix(in srgb, var(--color-accent) 16%, transparent)", color: "var(--color-accent)", border: "1px solid color-mix(in srgb, var(--color-accent) 40%, transparent)" }}
                 >
                   {c.pct}%
                 </span>
@@ -162,9 +162,9 @@ export default function FunilClient({
 
       {/* ── KPIs ────────────────────────────────────────────────── */}
       <section className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-        <KpiCard label="Taxa de ativação" valor={taxaAtivacao} sufixo="%" icone={TrendingUp} />
-        <KpiCard label="Taxa de conversão" valor={taxaConversao} sufixo="%" icone={Target} />
-        <KpiCard label="Velocidade do funil" valor={velocidadeDias} sufixo="dias" icone={Clock} />
+        <KpiCard label="Já se envolveram com o mandato" valor={taxaAtivacao} sufixo="%" icone={TrendingUp} />
+        <KpiCard label="Já são voto certo" valor={Math.round(taxaConversao)} sufixo="%" icone={Target} />
+        {velocidadeDias > 0 && <KpiCard label="Tempo médio para subir de nível" valor={velocidadeDias} sufixo="dias" icone={Clock} />}
       </section>
 
       {/* ── Multiplicadores (quem TROUXE gente — o ouro) ────────── */}
@@ -186,7 +186,7 @@ export default function FunilClient({
         </div>
         {multiplicadores.length === 0 ? (
           <p className="text-sm" style={{ color: "var(--color-text-subtle)" }}>
-            Ninguém indicou ainda. Quando alguém trouxer um novo cadastro, aparece aqui — o sinal mais forte do funil.
+            Ninguém indicou ainda. Quando alguém trouxer um novo cadastro, aparece aqui — o sinal mais forte de que a base está crescendo.
           </p>
         ) : (
           <ol className="space-y-2">
@@ -228,13 +228,13 @@ export default function FunilClient({
       {/* ── Transições recentes ─────────────────────────────────── */}
       <section className="gip-glass overflow-hidden p-0">
         <div className="px-6 py-4">
-          <h2 className="font-heading text-base font-bold">Transições recentes</h2>
-          <p className="mt-0.5 text-sm text-muted-foreground">Últimas {transicoes.length} mudanças de nível</p>
+          <h2 className="font-heading text-base font-bold">Quem mudou de nível</h2>
+          <p className="mt-0.5 text-sm text-muted-foreground">{transicoes.length === 0 ? "Quando alguém subir de nível, aparece aqui." : `As ${transicoes.length} mudanças mais recentes`}</p>
         </div>
 
         {transicoes.length === 0 ? (
           <div className="px-6 pb-10 pt-4 text-center text-sm text-muted-foreground">
-            Nenhuma transição registrada ainda.
+            Ninguém mudou de nível ainda.
           </div>
         ) : (
           <div className="max-h-[520px] overflow-auto">

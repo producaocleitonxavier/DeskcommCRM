@@ -35,7 +35,7 @@ function pct(part: number, whole: number): number {
 
 /** 1 casa decimal só quando pequeno; evita "0.0%" poluindo números cheios. */
 function fmtPct(p: number): string {
-  return `${p > 0 && p < 10 ? p.toFixed(1) : Math.round(p)}%`;
+  return `${p > 0 && p < 1 ? "menos de 1" : Math.round(p)}%`;
 }
 
 /** Clareia um hex misturando com branco (amt 0..1) — para o gradiente da barra. */
@@ -117,7 +117,7 @@ export function FunnelBoard({ data, className, showConversion = true }: FunnelBo
                   className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-[11px] font-bold tabular-nums"
                   style={{
                     background: vazio ? "color-mix(in srgb, var(--color-text) 6%, transparent)" : `${d.color}24`,
-                    color: vazio ? "var(--color-text-subtle, rgba(255,255,255,0.4))" : d.color,
+                    color: vazio ? "var(--color-text-subtle, rgba(255,255,255,0.4))" : "var(--color-text, #E8E8E4)",
                     border: `1px solid ${vazio ? "color-mix(in srgb, var(--color-text) 10%, transparent)" : `${d.color}55`}`,
                     boxShadow: vazio ? "none" : `0 0 12px -2px ${d.color}66`,
                   }}

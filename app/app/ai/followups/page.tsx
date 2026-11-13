@@ -63,14 +63,14 @@ export default async function FollowupFlowsPage() {
   return (
     <div className="flex h-full flex-col gap-6 p-6">
       <CommandHero
-        eyebrow="Agente de IA · Follow-ups"
-        titulo="Follow-ups"
-        subtitulo="Fluxos automáticos de reengajamento — silêncio, etapa, webhook ou resposta do contato, sem intervenção em cada mensagem."
+        eyebrow="Mensagens automáticas · Todos os fluxos"
+        titulo="Todos os fluxos"
+        subtitulo="As mensagens que o sistema manda sozinho: quando a pessoa some, muda de etapa ou responde. Cada fluxo só envia depois de ligado."
       />
       <Tabs defaultValue="fluxos" className="flex flex-1 flex-col">
         <TabsList>
           <TabsTrigger value="fluxos">{t("Fluxos")}</TabsTrigger>
-          <TabsTrigger value="fila">Fila</TabsTrigger>
+          <TabsTrigger value="fila">Na fila de envio</TabsTrigger>
         </TabsList>
         <TabsContent value="fluxos">
           <FlowsList initialData={flows} canWrite={canWrite} nicho={nicho} />

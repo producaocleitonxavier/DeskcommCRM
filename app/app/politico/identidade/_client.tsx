@@ -143,10 +143,10 @@ export default function IdentidadeClient({ inicial }: { inicial: IdentidadeGabin
   return (
     <div className="gip-ambient-bg mx-auto max-w-[760px] px-4 py-7 space-y-5">
       <CommandHero
-        eyebrow="Gabinete · Identidade"
+        eyebrow="Configurações · Meu mandato"
         titulo="Identidade do gabinete"
         subtitulo="Logo, assinatura e dados do parlamentar que entram no timbre dos ofícios e relatórios."
-        acoes={[{ href: "/app/politico/demandas", label: "← Gabinete" }]}
+        acoes={[{ href: "/app/settings", label: "← Configurações" }]}
       />
 
       {erro && <div role="alert" className="rounded-xl px-4 py-3 text-sm" style={{ background: "#FBE4E2", color: "#A3302A" }}>{erro}</div>}

@@ -28,7 +28,7 @@ export default async function ComparativoPage() {
   return (
     <div className="gip-ambient-bg mx-auto max-w-[1140px] space-y-6 px-4 py-7">
       <CommandHero
-        eyebrow="Inteligência · TSE"
+        eyebrow="Votos e território · Comparar"
         titulo="Arena Comparativa"
         subtitulo="Compare candidatos lado a lado — quem é forte onde, por bairro, local de votação, zona e seção."
       />

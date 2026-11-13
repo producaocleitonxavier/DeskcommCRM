@@ -28,7 +28,7 @@ export default async function RaioXVotosPage() {
   return (
     <div className="gip-ambient-bg mx-auto max-w-[1140px] space-y-6 px-4 py-7">
       <CommandHero
-        eyebrow="Inteligência · TSE"
+        eyebrow="Votos e território · Raio-X"
         titulo="Raio-X de Votos"
         subtitulo="Busque um candidato e veja os votos por município, zona, bairro, local de votação e seção."
       />

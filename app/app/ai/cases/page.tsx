@@ -19,9 +19,9 @@ export default async function CasesPage() {
   return (
     <div className="flex h-full flex-col gap-6 p-6">
       <CommandHero
-        eyebrow="Atendimento · Casos"
-        titulo="Casos"
-        subtitulo="Quando a IA trava em algo que só um humano resolve, ela abre um caso aqui — e continua conversando com a pessoa enquanto espera sua resposta."
+        eyebrow="Conversas · Precisa de gente"
+        titulo="Precisa de gente"
+        subtitulo="Quando o assistente não consegue resolver sozinho, ele deixa o caso aqui e segue conversando com a pessoa enquanto espera a sua resposta."
       />
       <CaseList />
     </div>

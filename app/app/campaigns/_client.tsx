@@ -61,8 +61,8 @@ export function ListaDeCampanhas() {
   return (
     <div className="mx-auto max-w-[1140px] space-y-[18px] px-4 py-7" style={{ background: "var(--color-bg)" }}>
       <CommandHero
-        eyebrow="Operação · Comunicação"
-        titulo="Disparos"
+        eyebrow="Relacionamento · Envio em massa"
+        titulo="Envio em massa"
         subtitulo="Fale com a base que você escolhe — por origem e estágio no funil, no ritmo que não queima o número. Quem responde entra no atendimento e recebe o material sozinho."
         acoes={[
           { href: "/app/campaigns/new", label: "Novo disparo", primary: true },

@@ -78,7 +78,7 @@ export default function LocaisClient({ locais, kpis }: LocaisClientProps) {
   return (
     <div className="gip-ambient-bg mx-auto max-w-[1140px] px-4 py-7 space-y-6">
       <CommandHero
-        eyebrow="Gabinete · Eventos"
+        eyebrow="Agenda · Locais & Eventos"
         titulo="Locais & Eventos"
         subtitulo="Escolas, igrejas e associações onde o mandato faz eventos — cada local agrupa os cadastros e vira público quente."
         acoes={[

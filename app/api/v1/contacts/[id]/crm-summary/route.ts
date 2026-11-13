@@ -35,6 +35,7 @@ import { ok, fail } from "@/lib/api/wrappers";
 import { camposDoFunil, settingsDoEmbed } from "@/lib/leads/campos-do-funil";
 import { createClient } from "@/lib/supabase/server";
 import { nomesDosAtendentes } from "@/lib/users/nome-do-atendente";
+import { exigirPerfilDaApi } from "@/lib/auth/require-role";
 
 export const dynamic = "force-dynamic";
 
@@ -89,6 +90,8 @@ export async function GET(
   if (authErr || !user) {
     return fail("unauthenticated", "Auth required.", 401, { requestId });
   }
+  const foraDoPerfil = await exigirPerfilDaApi({ requestId });
+  if (foraDoPerfil) return foraDoPerfil;
 
   const { data: contactScope, error: scopeError } = await supabase.from("contacts")
     .select("organization_id, is_anonymized").eq("id", contactId).maybeSingle();

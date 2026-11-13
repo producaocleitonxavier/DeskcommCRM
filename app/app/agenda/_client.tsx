@@ -8,6 +8,7 @@ import { VinculoDaMarcacao } from "@/components/agenda/VinculoDaMarcacao";
 import { useLocaleDeData } from "@/hooks/i18n/useLocaleDeData";
 
 import { useT } from "@/hooks/i18n/useT";
+import { useAuth } from "@/hooks/auth/AuthProvider";
 
 import { addDays, format, startOfDay, startOfMonth, startOfWeek } from "date-fns";
 import * as React from "react";
@@ -135,6 +136,9 @@ export function AgendaClient({
 }) {
   const localeDaData = useLocaleDeData();
   const t = useT();
+  // O aviso de configuração do Google fala de variáveis do servidor: só o administrador o vê.
+  const { activeOrg: orgDaAgenda } = useAuth();
+  const ehAdminDaAgenda = orgDaAgenda?.role === "admin";
   const router = useRouter();
   const [marcando, setMarcando] = React.useState(false);
   // O compromisso criado NESTA abertura do painel. Serve para levar a grade até
@@ -476,16 +480,16 @@ export function AgendaClient({
         <EntradaDaAgenda onContext={onContext} />
       </React.Suspense>
 
-      <CartaoDaConexaoGoogle
+      {(googleConfigurado || ehAdminDaAgenda) && <CartaoDaConexaoGoogle
         configurado={googleConfigurado}
         falta={faltaNoGoogle}
         linkDeConfiguracao={linkDeConfiguracaoDoGoogle}
         contaConectada={contaConectada}
         enderecoDeRetorno={enderecoDeRetorno}
-      />
+      />}
 
       <CommandHero
-        eyebrow="Gabinete · Agenda"
+        eyebrow="Agenda"
         titulo={t("Agenda")}
         subtitulo={t("O que está marcado, com quem, e quem atende — seu e da equipe.")}
       />

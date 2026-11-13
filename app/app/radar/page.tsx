@@ -7,7 +7,7 @@ import { RiskRadarList } from "./_components/RiskRadarList";
 import { exigirPortaDoPerfil } from "@/lib/politico/acesso";
 
 export const dynamic = "force-dynamic";
-export const metadata: Metadata = { title: "Radar" };
+export const metadata: Metadata = { title: "Demandas paradas" };
 
 export default async function RadarPage() {
   await exigirPortaDoPerfil("/app/radar");
@@ -18,9 +18,9 @@ export default async function RadarPage() {
   return (
     <div className="flex h-full flex-col gap-6 p-6">
       <CommandHero
-        eyebrow="Atendimento · Radar"
-        titulo="Radar de risco"
-        subtitulo="Demandas abertas que pararam e precisam de você. Cada uma é um cidadão esperando resposta. Se o assistente já marcou um retorno, ela aparece como “com retorno marcado”."
+        eyebrow="Conversas · Demandas paradas"
+        titulo="Demandas paradas"
+        subtitulo="Demandas abertas em que ninguém combinou o próximo passo. Cada uma é um cidadão esperando resposta. Toque numa linha para abrir e resolver."
       />
       <RiskRadarList />
     </div>

@@ -76,6 +76,10 @@ export interface DemandaSemProximoPasso {
   aberta_em: string;
   horas_aberta: number;
   origem: string;
+  /** Do que se trata (o assunto registrado). Sem ele a linha era só um nome. */
+  assunto?: string | null;
+  /** Demanda registrada pelo gabinete: tem tela própria para abrir e agir. */
+  do_gabinete?: boolean;
   /**
    * Conversa VIGENTE da demanda (via `demanda_conversas`) — o deep-link que a
    * tela abre para `#parte1` da #2035. `null` quando a demanda não tem conversa
@@ -328,7 +332,7 @@ export async function carregaRadarDeRisco(
   // paridade sem necessidade; acrescentar não arrisca nada.
   let consultaDeDemandas = admin
     .from("demandas")
-    .select("id, lead_id, contact_id, aberta_em, origem, contacts(name, display_name)")
+    .select("id, lead_id, contact_id, aberta_em, origem, assunto, pol_gabinete, contacts(name, display_name)")
     .eq("organization_id", organizationId)
     .is("fechada_em", null)
     .is("proximo_passo", null);
@@ -445,6 +449,8 @@ export async function carregaRadarDeRisco(
         (now.getTime() - new Date(d.aberta_em as string).getTime()) / 3_600_000,
       ),
       origem: d.origem as string,
+      assunto: ((d as { assunto?: string | null }).assunto ?? null) || null,
+      do_gabinete: (d as { pol_gabinete?: boolean | null }).pol_gabinete === true,
       conversation_id: conversaPorDemanda.get(d.id as string)?.id ?? null,
     };
   });

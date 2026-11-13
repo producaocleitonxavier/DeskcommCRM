@@ -31,8 +31,9 @@ export function CaseList() {
   const { data, isLoading } = useCases(tab);
 
   return (
-    <div className="flex min-h-0 flex-1 gap-6">
-      <div className="flex w-full max-w-xs shrink-0 flex-col gap-4">
+    <div className="flex min-h-0 flex-1 flex-col gap-6 md:flex-row">
+      {/* No celular: a lista some quando um caso está aberto (e volta pelo botão). */}
+      <div className={`w-full shrink-0 flex-col gap-4 md:flex md:max-w-xs ${selectedId ? "hidden" : "flex"}`}>
         <Tabs value={tab} onValueChange={(v) => setTab(v as "open" | "resolved")}>
           <TabsList>
             <TabsTrigger value="open">{t("Abertos")}{data ? ` (${data.open_count})` : ""}</TabsTrigger>
@@ -71,7 +72,16 @@ export function CaseList() {
         )}
       </div>
 
-      <div className="min-w-0 flex-1">
+      <div className={`min-w-0 flex-1 md:block ${selectedId ? "block" : "hidden"}`}>
+        {selectedId && (
+          <button
+            type="button"
+            onClick={() => setSelectedId(null)}
+            className="mb-3 inline-flex items-center gap-1 text-sm font-semibold text-muted-foreground hover:text-foreground md:hidden"
+          >
+            ← Voltar para a lista
+          </button>
+        )}
         <CaseDetail caseId={selectedId} />
       </div>
     </div>

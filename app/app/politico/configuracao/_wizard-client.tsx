@@ -186,7 +186,7 @@ export default function SetupWizard({ inicial }: { inicial: SetupInicial }) {
   return (
     <div className="gip-ambient-bg mx-auto max-w-[900px] space-y-[18px] px-4 py-7">
       <CommandHero
-        eyebrow="Gabinete · Configuração"
+        eyebrow="Configurações · Meu mandato"
         titulo="Configuração do Mandato"
         subtitulo="Em poucos passos simples, deixamos o sistema pronto para o seu mandato. A sua equipe só preenche; a inteligência monta o resto."
       />

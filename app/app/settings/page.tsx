@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { NavHub } from "@/components/shell/NavHub";
-import { SecoesDoGabinete } from "@/components/shell/SecoesDoGabinete";
+import { ENDERECOS_DAS_SECOES, SecoesDoGabinete } from "@/components/shell/SecoesDoGabinete";
+import { hubSections } from "@/lib/navigation/registry";
 import { destinosDaInterface } from "@/lib/navigation/interface";
 import { ehGabinete } from "@/lib/navigation/menu-do-gabinete";
 import { requireAuth, resolveActiveOrg } from "@/lib/auth/server";
@@ -56,20 +57,28 @@ export default async function SettingsHubPage() {
 
   const gabinete = ehGabinete(visiveis);
 
+  if (gabinete) {
+    // O que o grupo "organização" tem e as seções não declararam cai no Avançado
+    // (menos o que é só do sistema comercial): nenhuma tela de ajuste se perde.
+    const comerciais = new Set<string>(CARTOES_DO_SISTEMA_COMERCIAL);
+    const resto = hubSections("organizacao", user.is_platform_admin && !user.support, activeOrg?.role ?? null, activeOrg?.interface_settings, modulos)
+      .flatMap((sec) => sec.items)
+      .filter((d) => !ENDERECOS_DAS_SECOES.has(d.href) && !comerciais.has(d.href))
+      .map((d) => ({ href: d.href, titulo: traduzir(d.label, idioma), texto: d.description ? traduzir(d.description, idioma) : "" }));
+    return <SecoesDoGabinete visiveis={visiveis} resto={resto} />;
+  }
+
   return (
     <>
-    {gabinete ? <SecoesDoGabinete visiveis={visiveis} /> : null}
     <NavHub
-      ocultar={gabinete ? CARTOES_DO_SISTEMA_COMERCIAL : undefined}
-      renomearSecoes={gabinete ? { "Sua empresa": "Seu gabinete" } : undefined}
       group="organizacao"
       isPlatformAdmin={user.is_platform_admin && !user.support}
       role={activeOrg?.role ?? null}
       interfaceSettings={activeOrg?.interface_settings}
       // A porta do banco externo mora neste hub, e só existe com o módulo ligado.
       modulosLigados={modulos}
-      title={gabinete ? "Equipe, conta e sistema" : traduzir("Configurações", idioma)}
-      subtitle={gabinete ? "Quem trabalha no gabinete, a sua conta e os ajustes gerais." : traduzir("Sua conta, os dados da empresa e quem tem acesso ao quê.", idioma)}
+      title={traduzir("Configurações", idioma)}
+      subtitle={traduzir("Sua conta, os dados da empresa e quem tem acesso ao quê.", idioma)}
       locale={idioma}
     />
     </>

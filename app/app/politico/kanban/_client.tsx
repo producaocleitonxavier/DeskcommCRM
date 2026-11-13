@@ -159,7 +159,7 @@ export default function KanbanClient({ colunas, grupos }: Props) {
   return (
     <div className="gip-ambient-bg min-h-full space-y-5 p-4 md:p-6">
       <CommandHero
-        eyebrow="OPERAÇÃO · CAMPANHA"
+        eyebrow="Relacionamento · Mobilização"
         titulo="Mobilização"
         subtitulo="Seu público andando pelo funil, por etapa. O sistema move sozinho conforme a pessoa se engaja — e você pode mover à mão quando conhecer alguém."
       />

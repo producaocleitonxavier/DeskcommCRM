@@ -25,6 +25,7 @@ import { loadAuthUser } from "@/lib/auth/server";
 import { traduzir } from "@/lib/i18n/dicionario";
 import { createClient } from "@/lib/supabase/server";
 import type { TimelineItem } from "@/lib/types/contacts";
+import { exigirPerfilDaApi } from "@/lib/auth/require-role";
 import {
   TIMELINE_COLS,
   comNomeDoAtor,
@@ -50,6 +51,8 @@ export async function GET(
   if (authErr || !user) {
     return fail("unauthenticated", "Auth required.", 401, { requestId });
   }
+  const foraDoPerfil = await exigirPerfilDaApi({ requestId });
+  if (foraDoPerfil) return foraDoPerfil;
   const authUser = await loadAuthUser();
   const t = (texto: string) => traduzir(texto, authUser?.idioma ?? "pt-BR");
 

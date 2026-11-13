@@ -95,7 +95,7 @@ export default async function RadarZonalPage({ searchParams }: { searchParams: P
   return (
     <div className="gip-ambient-bg mx-auto max-w-[1140px] space-y-6 px-4 py-7">
       <CommandHero
-        eyebrow="Inteligência · TSE + CRM"
+        eyebrow="Votos e território · Por zona"
         titulo="Radar Zonal"
         subtitulo="A zona como unidade de operação: votos, bairros, locais e a sua base — cruzados."
         extra={

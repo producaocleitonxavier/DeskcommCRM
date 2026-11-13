@@ -135,10 +135,9 @@ export default function FollowupSimplesClient() {
     return (
       <div className="gip-ambient-bg mx-auto max-w-[860px] px-4 py-7 space-y-5">
         <CommandHero
-          eyebrow="Relacionamento · Follow-up"
+          eyebrow="Mensagens automáticas · Por objetivo"
           titulo="O que você quer fazer?"
           subtitulo="Escolha o objetivo. O fluxo certo já vem montado — você só escreve as mensagens."
-          acoes={[{ href: "/app/ai/followups", label: "← Follow-ups" }]}
         />
         <div className="grid gap-3 sm:grid-cols-2">
           {OBJETIVOS.map((o) => (
@@ -169,10 +168,9 @@ export default function FollowupSimplesClient() {
   return (
     <div className="gip-ambient-bg mx-auto max-w-[1040px] px-4 py-7 space-y-5">
       <CommandHero
-        eyebrow="Relacionamento · Follow-up"
+        eyebrow="Mensagens automáticas · Por objetivo"
         titulo={meta.titulo}
         subtitulo={`${meta.quando}. Nasce como rascunho — ninguém recebe nada até você publicar.`}
-        acoes={[{ href: "/app/ai/followups", label: "← Follow-ups" }]}
         extra={
           <button type="button" onClick={() => setObjetivo(null)}
             className="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[12.5px] font-medium text-white/85 transition-colors hover:bg-white/10">

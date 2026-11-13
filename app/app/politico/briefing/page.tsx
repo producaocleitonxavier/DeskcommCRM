@@ -28,7 +28,7 @@ export default async function BriefingPage() {
   return (
     <div className="gip-ambient-bg mx-auto max-w-[1140px] space-y-6 px-4 py-7">
       <CommandHero
-        eyebrow="Inteligência · IA Estratégica"
+        eyebrow="Estratégia · Dossiê"
         titulo="Dossiê Estratégico"
         subtitulo="Escolha um candidato e um município — a IA cruza voto, redutos e sua base e escreve o plano de campanha."
       />

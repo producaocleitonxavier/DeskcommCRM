@@ -113,3 +113,30 @@ describe("trava de perfil nas telas do sistema base (varredura de 13/nov)", () =
     expect(decidirPortaDoPerfil("/app/contacts", "viewer", VAZIO)).toBe("fora_do_perfil");
   });
 });
+
+describe("gravação genérica do gabinete respeita o perfil", () => {
+  const rua = new Set(["/app/politico", "/app/politico/leads", "/app/agenda", "/app/politico/demandas", "/app/politico/visitas", "/app/politico/obras", "/app/politico/locais"]);
+
+  it("assessor de rua grava demanda, obra, local e agenda", async () => {
+    const { decidirGravacaoNaTabela } = await import("./acesso");
+    for (const t of ["demandas", "pol_obras", "pol_locais", "pol_agenda"]) {
+      expect(decidirGravacaoNaTabela(t, "agent", true, rua), t).toBe("ok");
+    }
+  });
+
+  it("assessor de rua NÃO grava liderança, emenda, projeto de lei nem material", async () => {
+    const { decidirGravacaoNaTabela } = await import("./acesso");
+    for (const t of ["pol_liderancas", "pol_emendas", "pol_projetos_lei", "pol_materiais"]) {
+      expect(decidirGravacaoNaTabela(t, "agent", true, rua), t).toBe("fora_do_perfil");
+    }
+  });
+
+  it("controle negativo: gestor, menu completo e plataforma não mudam; tabela sem porta falha fechado só no perfil restrito", async () => {
+    const { decidirGravacaoNaTabela } = await import("./acesso");
+    expect(decidirGravacaoNaTabela("pol_emendas", "manager", true, rua)).toBe("ok");
+    expect(decidirGravacaoNaTabela("pol_emendas", "agent", false, new Set())).toBe("ok");
+    expect(decidirGravacaoNaTabela("pol_emendas", "agent", true, rua, true)).toBe("ok");
+    expect(decidirGravacaoNaTabela("tabela_nova", "agent", true, rua)).toBe("fora_do_perfil");
+    expect(decidirGravacaoNaTabela("tabela_nova", "agent", false, rua)).toBe("ok");
+  });
+});

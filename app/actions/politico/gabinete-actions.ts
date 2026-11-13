@@ -12,6 +12,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { requireAuth, resolveActiveOrg, orgSeAoMenos } from "@/lib/auth/server";
+import { perfilAlcancaTabela } from "@/lib/politico/acesso";
 import { nomesDosAtendentes } from "@/lib/users/nome-do-atendente";
 
 export type AcaoResultado = { ok: true; id?: string } | { ok: false; erro: string };
@@ -33,6 +34,7 @@ export interface AnexoDemanda {
 const BUCKET_ANEXOS = "gabinete-anexos";
 
 // Tabelas do gabinete que as actions podem gravar (whitelist).
+const FORA_DO_PERFIL = "Esta área não faz parte do seu perfil de acesso.";
 const TABELAS = new Set(["demandas", "pol_liderancas", "pol_emendas", "pol_projetos_lei", "pol_agenda", "pol_obras", "pol_materiais", "pol_locais"]);
 
 async function orgAtiva(): Promise<string | null> {
@@ -178,6 +180,7 @@ export async function carimbarCidadesDosLeads(): Promise<{ ok: true; carimbados:
 /** Insere um registro numa tabela do gabinete, escopado à org ativa. */
 export async function criarRegistro(tabela: string, dados: Record<string, unknown>): Promise<AcaoResultado> {
   if (!TABELAS.has(tabela)) return { ok: false, erro: "Tabela inválida." };
+  if (!(await perfilAlcancaTabela(tabela))) return { ok: false, erro: FORA_DO_PERFIL };
   const sessao = await orgEUsuario();
   if (!sessao) return { ok: false, erro: "Sessão ou organização inválida." };
   // Carimba QUEM registrou (placar por assessor). Só na tabela `demandas`, que tem
@@ -202,6 +205,7 @@ export async function criarRegistro(tabela: string, dados: Record<string, unknow
 /** Atualiza um registro de uma tabela do gabinete (escopado à org ativa). */
 export async function atualizarRegistro(tabela: string, id: string, patch: Record<string, unknown>): Promise<AcaoResultado> {
   if (!TABELAS.has(tabela)) return { ok: false, erro: "Tabela inválida." };
+  if (!(await perfilAlcancaTabela(tabela))) return { ok: false, erro: FORA_DO_PERFIL };
   const org = await orgAtiva();
   if (!org) return { ok: false, erro: "Sessão ou organização inválida." };
   // A Nota do cidadão mede o atendimento da própria equipe: só quem a grava é a

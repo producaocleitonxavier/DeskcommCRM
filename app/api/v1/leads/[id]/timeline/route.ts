@@ -46,6 +46,7 @@ import {
   encodeCursor,
 } from "@/lib/leads/timeline-query";
 import type { TimelineItem } from "@/lib/types/contacts";
+import { exigirPerfilDaApi } from "@/lib/auth/require-role";
 
 export const dynamic = "force-dynamic";
 
@@ -65,6 +66,8 @@ export async function GET(req: NextRequest, ctx: RouteCtx): Promise<Response> {
   if (authErr || !user) {
     return fail("unauthenticated", "Auth required.", 401, { requestId });
   }
+  const foraDoPerfil = await exigirPerfilDaApi({ requestId });
+  if (foraDoPerfil) return foraDoPerfil;
   const authUser = await loadAuthUser();
   const t = (texto: string) => traduzir(texto, authUser?.idioma ?? "pt-BR");
 

@@ -276,9 +276,9 @@ export function AgendaInterativa({
                 {/* Sem "Você": esta grade é a de quem a agenda mostra, que não é
                     necessariamente quem está logado (o atendente abre a agenda
                     da dona). Quem é, o cabeçalho acima já nomeia. */}
-                {t("A jornada de atendimento ainda não foi publicada.")}
+                Os horários de atendimento ainda não foram publicados.
               </span>{" "}
-              {t("Sem eles ninguém consegue marcar clicando na grade — nem você, nem o agente.")}
+              Sem eles não dá para marcar clicando na grade. Use o botão Novo agendamento.
             </>
           ) : motivo === "erro" ? (
             <>

@@ -63,17 +63,15 @@ export function FlowsList({ initialData, canWrite, surface, nicho = "clinica" }:
       {simples && (
         <Button asChild className="w-full sm:w-auto">
           <Link href="/app/politico/follow-up-simples">
-            <Plus size={14} aria-hidden className="mr-2" /> {t("Criar follow-up simples")}
+            <Plus size={14} aria-hidden className="mr-2" /> Criar mensagem automática
           </Link>
         </Button>
       )}
-      <Button
-        onClick={() => setModelosOpen(true)}
-        variant={simples ? "outline" : "default"}
-        className="w-full sm:w-auto"
-      >
-        <Sparkle size={14} aria-hidden className="mr-2" /> {t("Começar de um modelo")}
-      </Button>
+      {!simples && (
+        <Button onClick={() => setModelosOpen(true)} variant="default" className="w-full sm:w-auto">
+          <Sparkle size={14} aria-hidden className="mr-2" /> {t("Começar de um modelo")}
+        </Button>
+      )}
     </>
   );
 
@@ -146,21 +144,18 @@ export function FlowsList({ initialData, canWrite, surface, nicho = "clinica" }:
             <Card className="flex h-full flex-col gap-3 p-4 transition-colors hover:border-accent-400">
               <Link href={`${baseHref}/${flow.id}`} className="flex flex-1 flex-col gap-3">
                 <div className="flex items-start justify-between gap-2">
-                  <h3 className="min-w-0 flex-1 truncate font-medium" title={flow.name}>
+                  <h3 className="min-w-0 flex-1 line-clamp-2 font-medium" title={flow.name}>
                     {flow.name}
                   </h3>
                   <FlowStatusBadge status={flow.status} />
                 </div>
-                <dl className="grid grid-cols-2 gap-2 pt-1 text-xs">
-                  <div>
-                    <dt className="text-text-muted">{t("Versão")}</dt>
-                    <dd className="font-mono">{flow.active_version_id ? "publicada" : "—"}</dd>
-                  </div>
-                  <div>
-                    <dt className="text-text-muted">Handoff</dt>
-                    <dd className="font-mono">{flow.handoff_policy}</dd>
-                  </div>
-                </dl>
+                <p className="pt-1 text-xs text-text-muted">
+                  {flow.status === "active"
+                    ? "Ligado: está enviando sozinho."
+                    : flow.status === "disabled"
+                      ? "Pausado: não envia até ser ligado de novo."
+                      : "Ainda não envia nada. Abra para revisar o texto e ligar."}
+                </p>
                 <p className="mt-auto pt-2 text-xs text-text-muted">
                   Atualizado em {formatUpdatedAt(flow.updated_at, tagDoIdioma)}
                 </p>

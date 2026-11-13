@@ -40,7 +40,7 @@ export function ConfiguracaoDeCampanhas() {
         eyebrow="Operação · Comunicação"
         titulo="Ajustes dos disparos"
         subtitulo="O que vale para TODOS os disparos. Já vem no modo seguro — você só mexe se quiser."
-        acoes={[{ href: "/app/campaigns", label: "← Disparos" }]}
+        acoes={[{ href: "/app/campaigns", label: "← Envio em massa" }]}
       />
       <Padroes />
       <TextosSalvos />

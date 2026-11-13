@@ -462,8 +462,8 @@ export default async function GabinetePage({
     <div className="gip-ambient-bg mx-auto max-w-[1140px] px-4 py-7 space-y-[18px]">
       {/* ── Hero + barra de ferramentas ─────────────────────────── */}
       <CommandHero
-        eyebrow="GIP · Gabinete"
-        titulo="Gabinete"
+        eyebrow="Gabinete · Demandas"
+        titulo="Demandas"
         subtitulo="Demandas, lideranças e projetos de lei do mandato."
         acoes={[{ href: "/app/politico/demandas/nova", label: "+ Nova demanda", primary: true }]}
       />

@@ -65,8 +65,8 @@ export default function MateriaisClient({ materiais }: MateriaisClientProps) {
   return (
     <div className="gip-ambient-bg mx-auto max-w-[1140px] px-4 py-7 space-y-6">
       <CommandHero
-        eyebrow="Gabinete · Biblioteca"
-        titulo="Biblioteca de Materiais"
+        eyebrow="Gabinete · Materiais"
+        titulo="Materiais"
         subtitulo="E-books, PDFs e conteúdos do mandato — organizados por tema, prontos para enviar e construir relacionamento."
         acoes={[{ href: "/app/politico/materiais/novo", label: "+ Novo material", primary: true }]}
       />

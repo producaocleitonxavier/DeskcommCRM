@@ -146,7 +146,7 @@ export default function BoletimClient({
   return (
     <div className="gip-ambient-bg mx-auto max-w-[960px] px-4 py-7 space-y-5">
       <CommandHero
-        eyebrow="Inteligência · Boletim"
+        eyebrow="Estratégia · Boletim"
         titulo="Boletim Semanal"
         subtitulo="O raio-x da semana num lugar só — e o que fazer. O escopo se adapta ao seu mandato."
         extra={

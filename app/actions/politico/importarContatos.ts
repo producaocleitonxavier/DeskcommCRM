@@ -57,7 +57,7 @@ export async function previewImportacao(formData: FormData): Promise<ResultadoPr
   const user = await requireAuth();
   const org = await resolveActiveOrg(user);
   if (!org) return { ok: false, erro: "Sessão ou organização inválida." };
-  if (ROLE_RANK[org.role] < ROLE_RANK.agent) return { ok: false, erro: "Sem permissão." };
+  if (ROLE_RANK[org.role] < ROLE_RANK.manager) return { ok: false, erro: "Sem permissão (requer Gerente ou Administrador)." };
 
   const r = await lerPlanilha(formData);
   if ("erro" in r) return { ok: false, erro: r.erro };
@@ -80,7 +80,7 @@ export async function importarContatos(formData: FormData): Promise<ResultadoImp
   const user = await requireAuth();
   const org = await resolveActiveOrg(user);
   if (!org) return { ok: false, erro: "Sessão ou organização inválida." };
-  if (ROLE_RANK[org.role] < ROLE_RANK.agent) return { ok: false, erro: "Sem permissão." };
+  if (ROLE_RANK[org.role] < ROLE_RANK.manager) return { ok: false, erro: "Sem permissão (requer Gerente ou Administrador)." };
   const orgId = org.orgId;
 
   const mapRaw = formData.get("mapping");
@@ -266,7 +266,7 @@ export async function contarImportados(): Promise<{ ok: true; total: number } | 
   const user = await requireAuth();
   const org = await resolveActiveOrg(user);
   if (!org) return { ok: false, erro: "Sessão inválida." };
-  if (ROLE_RANK[org.role] < ROLE_RANK.agent) return { ok: false, erro: "Sem permissão." };
+  if (ROLE_RANK[org.role] < ROLE_RANK.manager) return { ok: false, erro: "Sem permissão (requer Gerente ou Administrador)." };
   const admin = createAdminClient();
   const { count, error } = await admin
     .from("contacts")

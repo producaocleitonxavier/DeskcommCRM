@@ -56,9 +56,9 @@ export default async function AgentsListPage() {
   return (
     <div className="flex h-full flex-col gap-6 p-6">
       <CommandHero
-        eyebrow="Agente de IA · Agentes"
-        titulo={traduzir("Agentes de IA", idioma)}
-        subtitulo={traduzir("Configure o comportamento dos agentes que respondem no WhatsApp.", idioma)}
+        eyebrow="Configurações · Assistente de IA"
+        titulo="Assistente do gabinete"
+        subtitulo="Quem responde quando o cidadão escreve no WhatsApp: o jeito de falar, o horário e se responde sozinho ou só sugere."
       />
       <AgentsList initialData={agents} canWrite={canWrite} />
     </div>

@@ -65,7 +65,7 @@ export default function EnriquecerClient() {
   return (
     <div className="gip-ambient-bg mx-auto max-w-[900px] px-4 py-7 space-y-5">
       <CommandHero
-        eyebrow="Inteligência · Enriquecimento"
+        eyebrow="Configurações · Meu mandato"
         titulo="Aprofundar o mandato"
         subtitulo="A inteligência busca, na fonte oficial do seu mandato, o que ainda não foi preenchido — e separa o que o cidadão pode saber do que é só da equipe."
       />

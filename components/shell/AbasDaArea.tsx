@@ -50,6 +50,10 @@ export function AbasDaArea() {
       raiz.style.setProperty("--abas-da-area", `${Math.ceil(el.getBoundingClientRect().height + margem)}px`);
     };
     medir();
+    // No celular a barra rola de lado: sem isto a aba acesa ficava fora da vista.
+    const acesa = ref.current.querySelector<HTMLElement>('[aria-current="page"]');
+    const trilho = acesa?.parentElement;
+    if (acesa && trilho) trilho.scrollLeft = Math.max(0, acesa.offsetLeft - (trilho.clientWidth - acesa.offsetWidth) / 2);
     window.addEventListener("resize", medir);
     return () => {
       window.removeEventListener("resize", medir);

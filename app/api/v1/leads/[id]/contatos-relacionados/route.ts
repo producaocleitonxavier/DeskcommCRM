@@ -31,6 +31,7 @@ import { nomeDoContato } from "@/lib/contacts/rotulo-do-contato";
 import { loadAuthUser } from "@/lib/auth/server";
 import { traduzir } from "@/lib/i18n/dicionario";
 import { createClient } from "@/lib/supabase/server";
+import { exigirPerfilDaApi } from "@/lib/auth/require-role";
 
 export const dynamic = "force-dynamic";
 
@@ -73,6 +74,8 @@ export async function GET(_req: NextRequest, ctx: RouteCtx): Promise<Response> {
   if (authErr || !user) {
     return fail("unauthenticated", "Auth required.", 401, { requestId });
   }
+  const foraDoPerfil = await exigirPerfilDaApi({ requestId });
+  if (foraDoPerfil) return foraDoPerfil;
   const authUser = await loadAuthUser();
   const t = (texto: string) => traduzir(texto, authUser?.idioma ?? "pt-BR");
 

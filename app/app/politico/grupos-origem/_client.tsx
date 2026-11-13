@@ -154,8 +154,8 @@ export default function GruposOrigemClient({ grupos, aClassificar, outrasPoucas,
   return (
     <div className="gip-ambient-bg min-h-full space-y-6 p-4 md:p-6">
       <CommandHero
-        eyebrow="OPERAÇÃO · CAMPANHA"
-        titulo="Grupos de origem"
+        eyebrow="Pessoas · De onde vieram"
+        titulo="De onde vieram"
         subtitulo="Organize de onde seus contatos vieram em grupos do seu mandato. Cada mandato é diferente — arrume do seu jeito."
       />
 

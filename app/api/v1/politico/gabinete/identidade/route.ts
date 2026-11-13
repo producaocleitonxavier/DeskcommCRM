@@ -17,6 +17,7 @@ import { validateOutboundMedia } from "@/lib/messaging/media/upload-validation";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { requireAuth, resolveActiveOrg } from "@/lib/auth/server";
+import { requireRole } from "@/lib/auth/require-role";
 
 export const dynamic = "force-dynamic";
 
@@ -29,6 +30,9 @@ export async function POST(req: NextRequest): Promise<Response> {
   const user = await requireAuth();
   const org = await resolveActiveOrg(user);
   if (!org) return fail("forbidden", "Organização inválida.", 403, { requestId });
+  // Timbre e assinatura do parlamentar: só gestor troca (a tela já exigia; a rota não).
+  const authz = await requireRole("manager", { requestId, resource: "pol_gabinete_config" });
+  if (!authz.ok) return authz.response;
 
   const declared = Number(req.headers.get("content-length") ?? 0);
   if (declared > MAX_MEDIA_BYTES + 1_048_576) {

@@ -44,7 +44,7 @@ export default async function ObrasPage() {
   return (
     <div className="gip-ambient-bg mx-auto max-w-[1140px] space-y-6 px-4 py-7">
       <CommandHero
-        eyebrow="Gabinete · Território"
+        eyebrow="Emendas e Obras · Obras"
         titulo="Obras & Fiscalização"
         subtitulo={
           executivo

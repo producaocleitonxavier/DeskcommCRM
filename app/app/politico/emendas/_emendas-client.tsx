@@ -147,8 +147,8 @@ export default function EmendasClient(props: EmendasClientProps) {
   return (
     <div className="gip-ambient-bg mx-auto max-w-[1140px] px-4 py-7 space-y-6">
       <CommandHero
-        eyebrow="Gabinete · Emendas"
-        titulo="Emendas Parlamentares"
+        eyebrow="Emendas e Obras · Emendas"
+        titulo="Emendas"
         subtitulo={ehDeputado ? "Indicações por município, região e área — do pedido à execução." : "Emendas da cidade por bairro e área — do pedido à execução."}
         acoes={[
           { href: "/app/politico/emendas/novo", label: "+ Nova emenda", primary: true },

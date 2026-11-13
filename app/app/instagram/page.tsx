@@ -375,7 +375,7 @@ export default async function InstagramHubPage() {
     <div className="mx-auto max-w-[1140px] px-4 py-7 space-y-5">
       {/* ── Header ───────────────────────────────────────────────── */}
       <CommandHero
-        eyebrow="Canais · Instagram"
+        eyebrow="Captação · Pelo Instagram"
         titulo="Instagram"
         subtitulo="GIPCHAT — comentários e DMs no automático, o seu motor próprio de captação."
         extra={

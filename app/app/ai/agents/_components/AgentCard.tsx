@@ -60,11 +60,11 @@ export function AgentCard({ agent, canWrite }: Props) {
     <Card className="flex h-full flex-col gap-3 p-4">
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0 flex-1">
-          <h3 className="truncate font-medium" title={agent.name}>
+          <h3 className="line-clamp-2 font-medium" title={agent.name}>
             {agent.name}
           </h3>
           <p
-            className="truncate text-xs text-muted-foreground"
+            className="sr-only"
             title={
               origemDoModelo(agent) === "versao_publicada"
                 ? t("Modelo da versão publicada — é o que atende o cliente.")
@@ -87,16 +87,17 @@ export function AgentCard({ agent, canWrite }: Props) {
       {agent.description && (
         <p className="line-clamp-2 text-xs text-muted-foreground">{agent.description}</p>
       )}
-      <dl className="grid grid-cols-2 gap-2 pt-1 text-xs">
-        <div>
-          <dt className="text-muted-foreground">{t("Tipo")}</dt>
-          <dd className="font-mono">{agent.kind ?? "rag_bot"}</dd>
-        </div>
-        <div>
-          <dt className="text-muted-foreground">{t("Prioridade")}</dt>
-          <dd className="font-mono">{agent.priority ?? "—"}</dd>
-        </div>
-      </dl>
+      <p className="pt-1 text-xs text-muted-foreground">
+        {status === "published"
+          ? "No ar: é quem responde no WhatsApp."
+          : status === "paused"
+            ? "Pausado: não responde até ser religado."
+            : status === "archived"
+              ? "Arquivado: não é mais usado."
+              : status === "invalid"
+                ? "Com problema na configuração. Abra para corrigir."
+                : "Ainda não está no ar. Abra, revise e publique para ele começar a responder."}
+      </p>
       <div className="mt-auto pt-2">
         <Link href={`/app/ai/agents/${agent.id}`}>
           <Button variant="outline" size="sm" className="w-full">

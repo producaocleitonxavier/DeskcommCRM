@@ -21,17 +21,17 @@ export default async function NotFound() {
     <main className="flex min-h-screen items-center justify-center p-8">
       <Card className="w-full max-w-md p-8 text-center">
         <h1 className="text-2xl font-semibold">
-          {traduzir("404 — Página não encontrada", idioma)}
+          Não achamos esta página
         </h1>
         <p className="mt-2 text-sm text-muted-foreground">
-          {traduzir("Verifique o link ou volte pra inbox.", idioma)}
+          O endereço pode ter mudado. Volte para o início e siga pelo menu.
         </p>
         <div className="mt-6 flex justify-center gap-2">
           <Button asChild variant="outline">
             <Link href="/">{traduzir("Voltar", idioma)}</Link>
           </Button>
           <Button asChild>
-            <Link href="/app/inbox">{traduzir("Voltar pra Inbox", idioma)}</Link>
+            <Link href="/app">Ir para o início</Link>
           </Button>
         </div>
       </Card>

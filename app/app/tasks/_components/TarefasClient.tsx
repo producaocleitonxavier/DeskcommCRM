@@ -73,7 +73,7 @@ export function TarefasClient({ podeEditar }: { podeEditar: boolean }) {
   return (
     <div className="mx-auto flex w-full max-w-5xl flex-col gap-6 p-4 sm:p-6">
       <CommandHero
-        eyebrow="Operação · Tarefas"
+        eyebrow="Agenda · Tarefas"
         titulo="Tarefas"
         subtitulo="O que ficou combinado, com prazo. Tarefa ligada a uma pessoa aparece na linha do tempo dela."
       />

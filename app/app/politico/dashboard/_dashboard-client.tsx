@@ -84,18 +84,11 @@ export default function DashboardClient({ dash, funil, calls, claro, atendimento
     <div className="gip-ambient-bg mx-auto max-w-[1140px] px-4 py-7 space-y-6">
       {/* ── 1. Header ───────────────────────────────────────────── */}
       <div>
-        <Link
-          href="/app/politico"
-          className="inline-flex items-center gap-1 text-sm text-muted-foreground transition-colors hover:text-foreground"
-        >
-          <ArrowLeft className="h-4 w-4" aria-hidden />
-          GIP
-        </Link>
-        <div className="mt-3">
+        <div>
           <CommandHero
-            eyebrow="GIP · Painel"
-            titulo="Dashboard"
-            subtitulo="Panorama central da campanha."
+            eyebrow="Hoje · Painel"
+            titulo="Painel"
+            subtitulo="Os números do mandato num só lugar: a base, o atendimento e a equipe."
             extra={
               dash ? (
                 <span
@@ -134,13 +127,10 @@ export default function DashboardClient({ dash, funil, calls, claro, atendimento
           {funil && funil.funil_total > 0 && (
             <section className="gip-glass p-6 sm:p-7">
               <div className="mb-2 flex flex-wrap items-end justify-between gap-3">
-                <SectionHeader title="Funil Político" subtitle="Distribuição da base pelos estágios" />
-                <div className="flex flex-wrap gap-2">
-                  <Badge>Taxa de ativação: {funil.taxa_ativacao_pct}%</Badge>
-                  <Badge>Taxa de conversão: {funil.taxa_conversao_pct}%</Badge>
-                </div>
+                <SectionHeader title="Como a base está distribuída" subtitle="Quantas pessoas há em cada nível de proximidade com o mandato" />
               </div>
               <FunnelBoard
+                showConversion={false}
                 className="mt-5"
                 data={[
                   { label: "Novo cadastro", value: funil.funil_novo_cadastro, color: FUNIL_HEX[0]! },
@@ -154,7 +144,7 @@ export default function DashboardClient({ dash, funil, calls, claro, atendimento
           )}
 
           {/* ── 4. Grid de gráficos (2x2 com Fila; 3-em-linha sem) ── */}
-          <section className={`grid grid-cols-1 gap-4 ${mostrarFila ? "lg:grid-cols-2" : "lg:grid-cols-3"}`}>
+          <section className={`grid grid-cols-1 gap-4 ${mostrarFila ? "lg:grid-cols-3" : "lg:grid-cols-2"}`}>
             <PieChartCard
               title="Distribuição por Nível"
               data={[
@@ -171,16 +161,6 @@ export default function DashboardClient({ dash, funil, calls, claro, atendimento
                 { name: "Quentes", value: dash.leads_quentes, fill: "#EF4444" },
                 { name: "Mornos", value: dash.leads_mornos, fill: "#F59E0B" },
                 { name: "Frios", value: dash.leads_frios, fill: "#3B82F6" },
-              ]}
-            />
-            <PieChartCard
-              title="Módulos Ativos"
-              data={[
-                { name: "Eventos", value: dash.total_eventos, fill: "#4352C4" },
-                { name: "Alertas", value: dash.alertas_ativos, fill: "#EF4444" },
-                { name: "Pesquisas", value: dash.pesquisas_ativas, fill: "#F59E0B" },
-                { name: "Perfis sociais", value: dash.perfis_monitorados, fill: "#22C55E" },
-                { name: "Adversários", value: dash.adversarios_ativos, fill: "#8B5CF6" },
               ]}
             />
             {mostrarFila && (
@@ -295,7 +275,7 @@ function BlocoAtendimento({ m, claro }: { m: MetricasDeAtendimento; claro: boole
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
         <KpiCard label="Pessoas que procuraram o gabinete" valor={m.conversas} icone={MessageCircle} />
         <KpiCard
-          label="Responderam em (metade dos casos)"
+          label="Tempo até a primeira resposta"
           valor={formatarDuracao(m.medianaPrimeiraRespostaSeg)}
           icone={Clock}
         />

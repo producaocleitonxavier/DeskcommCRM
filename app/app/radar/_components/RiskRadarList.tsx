@@ -50,7 +50,11 @@ function followupWhen(iso: string, t: (texto: string) => string): string {
 export function destinoDaDemandaSemPasso(demanda: {
   conversation_id: string | null;
   contact_id: string;
+  id?: string;
+  do_gabinete?: boolean;
 }): string {
+  // Demanda do gabinete tem tela própria: é lá que se cobra o órgão e se avisa o cidadão.
+  if (demanda.do_gabinete && demanda.id) return `/app/politico/demandas/${demanda.id}`;
   if (demanda.conversation_id) return `/app/inbox?id=${demanda.conversation_id}`;
   return `/app/contacts/${demanda.contact_id}`;
 }
@@ -123,11 +127,12 @@ export function RiskRadarList() {
               <li key={d.id} className="flex items-center justify-between gap-3 rounded-lg px-2.5 py-1.5 text-xs transition-colors hover:bg-white/[0.04]" style={{ background: "rgba(255,255,255,0.03)" }}>
                 <Link
                   href={destinoDaDemandaSemPasso(d)}
-                  className="truncate font-medium hover:underline"
+                  className="min-w-0 flex-1 truncate hover:underline"
                   data-testid="radar-sem-passo-link"
                   style={{ color: "var(--color-text)" }}
                 >
-                  {d.contact_name ?? t("Contato sem nome")}
+                  <span className="font-semibold">{d.assunto || "Demanda sem assunto"}</span>
+                  <span style={{ color: "var(--color-text-muted)" }}> · {d.contact_name ?? t("Contato sem nome")}</span>
                 </Link>
                 <span
                   className="shrink-0 rounded-full px-2 py-0.5 text-[11px] font-bold tabular-nums"
@@ -139,7 +144,7 @@ export function RiskRadarList() {
             ))}
           </ul>
           {semPasso.length > 8 && (
-            <p className="mt-2 text-xs" style={{ color: "var(--color-text-muted)" }}>e mais {semPasso.length - 8} — a lista mostra as 8 paradas há mais tempo.</p>
+            <p className="mt-2 text-xs" style={{ color: "var(--color-text-muted)" }}>e mais {semPasso.length - 8}. A lista mostra as 8 paradas há mais tempo; toque numa linha para abrir e combinar o próximo passo.</p>
           )}
         </section>
       ) : null}

@@ -70,8 +70,8 @@ export default function NutricaoClient({ inicial }: { inicial: EstadoDaNutricao 
   return (
     <div className="gip-ambient-bg mx-auto max-w-[860px] space-y-6 px-4 py-7">
       <CommandHero
-        eyebrow="Gabinete · Relacionamento"
-        titulo="Nutrição mensal"
+        eyebrow="Mensagens automáticas · Todo mês"
+        titulo="Mensagem de todo mês"
         subtitulo="Uma mensagem por mês para quem se aproximou do mandato. Você escolhe o número, escreve os textos e liga quando quiser."
         extra={
           <span

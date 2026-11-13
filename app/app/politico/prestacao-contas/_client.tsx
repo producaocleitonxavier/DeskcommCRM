@@ -62,8 +62,8 @@ export default function PrestacaoContasClient({ dados, ondeInvestir, ehAdmin }: 
   return (
     <div className="gip-ambient-bg mx-auto max-w-[1140px] space-y-[18px] px-4 py-7">
       <CommandHero
-        eyebrow="Gabinete · Prestação de Contas"
-        titulo="Painel do Mandato"
+        eyebrow="Hoje · Prestação de contas"
+        titulo="Prestação de contas"
         subtitulo="O trabalho do mandato em números — demandas atendidas, ofícios, obras, emendas e a base crescendo. A conta que o cidadão vê."
       />
 

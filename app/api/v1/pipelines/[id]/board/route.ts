@@ -30,6 +30,7 @@ import { createClient } from "@/lib/supabase/server";
 import { idsDeContatosPessoais } from "@/app/api/v1/conversations/_handler";
 import type { BoardData, Pipeline, Stage } from "@/lib/kanban/types";
 import type { Lead } from "@/lib/types/leads";
+import { exigirPerfilDaApi } from "@/lib/auth/require-role";
 
 export const dynamic = "force-dynamic";
 
@@ -450,6 +451,8 @@ export async function GET(_req: NextRequest, ctx: RouteCtx): Promise<Response> {
   if (authErr || !user) {
     return fail("unauthenticated", "Auth required.", 401, { requestId });
   }
+  const foraDoPerfil = await exigirPerfilDaApi({ requestId });
+  if (foraDoPerfil) return foraDoPerfil;
   const authUser = await loadAuthUser();
   const t = (texto: string) => traduzir(texto, authUser?.idioma ?? "pt-BR");
 

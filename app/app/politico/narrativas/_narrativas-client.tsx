@@ -107,7 +107,7 @@ export default function NarrativasClient({ temMandato, mandatoNome, electionId, 
     <div className="gip-ambient-bg mx-auto max-w-[1040px] px-4 py-7 space-y-5">
       {/* Cabeçalho */}
       <CommandHero
-        eyebrow="Inteligência · Narrativas"
+        eyebrow="Estratégia · Narrativas"
         titulo="Narrativas Territoriais"
         subtitulo="A IA lê um bairro inteiro — voto, sua base, demandas, lideranças e a disputa — e escreve a estratégia do território."
       />
