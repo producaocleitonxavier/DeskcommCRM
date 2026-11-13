@@ -129,7 +129,7 @@ export function UsageChart({ payload }: Props) {
         )}
       </ChartCard>
 
-      <ChartCard title={t("Volume de texto processado por dia")}>
+      <ChartCard title="Quanto texto a IA leu e escreveu por dia">
         {!hasTokens ? (
           <EmptyChart />
         ) : (
@@ -223,7 +223,7 @@ export function UsageChart({ payload }: Props) {
               <Line
                 type="monotone"
                 dataKey="p95"
-                name={t("pior caso comum")}
+                name="as mais demoradas"
                 stroke="hsl(0 84% 60%)"
                 strokeWidth={2}
                 dot={false}

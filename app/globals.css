@@ -862,6 +862,18 @@
 .wr-btn-dark {
   transition: transform 0.15s ease, filter 0.15s ease, background 0.15s ease, box-shadow 0.15s ease;
 }
+/* Botão verde DESLIGADO: cinza claro e sem brilho. Antes ficava verde-oliva com texto
+   escuro (opacidade), que parecia defeito e não se lia. */
+.wr-btn-dark:disabled {
+  background: color-mix(in srgb, var(--color-text) 12%, transparent) !important;
+  color: var(--color-text-subtle) !important;
+  border-color: transparent !important;
+  box-shadow: none !important;
+  opacity: 1 !important;
+  cursor: not-allowed;
+  transform: none !important;
+  filter: none !important;
+}
 .wr-btn:hover,
 .wr-btn-dark:hover {
   transform: scale(1.02);

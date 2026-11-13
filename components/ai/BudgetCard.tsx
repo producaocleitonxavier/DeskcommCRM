@@ -111,7 +111,7 @@ function frameDoEstado(
     return t("Isto é só acompanhamento. A IA não vai parar sozinha por gasto.");
   }
   if (status.enforcement_mode === "avisar") {
-    return `${t("Avisamos ao passar de")} ${status.alarm_threshold_pct}% ${t("do limite. A IA não para.")}`;
+    return `Avisamos ao passar de ${status.alarm_threshold_pct}% do limite. O assistente continua respondendo mesmo acima dele.`;
   }
   if (efetivoEm && new Date(efetivoEm).getTime() > Date.now()) {
     return `${t("A parada começa a valer em")} ${fmtData(efetivoEm, tagDoIdioma)}. ${t("Até lá, só avisamos.")}`;

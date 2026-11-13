@@ -114,9 +114,9 @@ export function UsageDashboardClient({ agents, initial }: Props) {
               atendimento. Os turnos têm o card ao lado.
             */}
             <StatCard
-              label={t("Chamadas de IA")}
+              label="Vezes que a IA foi acionada"
               value={q.data.totals.invocations.toLocaleString("pt-BR")}
-              hint={t("cada resposta do agente pode fazer várias")}
+              hint="uma resposta ao cidadão pode acionar a IA mais de uma vez"
             />
             {/*
               Turno = um job distinto com chamada `agent_turn` que deu certo, e
@@ -125,20 +125,20 @@ export function UsageDashboardClient({ agents, initial }: Props) {
               deixa de contar — o hint diz isso em vez de esconder.
             */}
             <StatCard
-              label={t("Turnos do agente")}
+              label="Respostas do assistente"
               value={q.data.totals.agent_turns.toLocaleString("pt-BR")}
               hint={
                 q.data.totals.avg_cost_per_turn_cents === null
-                  ? t("sem turnos no período")
-                  : `${t("custo médio por turno:")} ${formatCentsUSDFino(q.data.totals.avg_cost_per_turn_cents)} · ${t("conta só os turnos que a fila ainda guarda (padrão: 90 dias)")}`
+                  ? "nenhuma resposta no período"
+                  : `custo médio por resposta: ${formatCentsUSDFino(q.data.totals.avg_cost_per_turn_cents)} · conta as respostas dos últimos 90 dias`
               }
             />
             <StatCard
-              label={t("Taxa de cache")}
+              label="Texto reaproveitado"
               value={`${(q.data.totals.cache_hit_rate * 100).toLocaleString("pt-BR", {
                 maximumFractionDigits: 1,
               })}%`}
-              hint={t("do texto enviado à IA veio do cache, que custa bem menos")}
+              hint="parte do texto enviado à IA já estava guardada, e isso custa bem menos"
             />
             <StatCard
               label={t("Passaram para uma pessoa")}
@@ -154,13 +154,13 @@ export function UsageDashboardClient({ agents, initial }: Props) {
               prometia o segundo e media o primeiro.
             */}
             <StatCard
-              label={t("Tempo de uma chamada à IA")}
+              label="Tempo de resposta da IA"
               value={`${(q.data.totals.p95_latency_ms / 1000).toLocaleString("pt-BR", {
                 maximumFractionDigits: 1,
               })} s`}
               hint={`${t("a maioria responde em")} ${(
                 q.data.totals.p50_latency_ms / 1000
-              ).toLocaleString("pt-BR", { maximumFractionDigits: 1 })} s; ${t("este é o pior caso comum")}`}
+              ).toLocaleString("pt-BR", { maximumFractionDigits: 1 })} s; este número é o das mais demoradas`}
             />
           </div>
 

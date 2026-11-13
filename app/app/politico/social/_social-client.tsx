@@ -15,6 +15,7 @@ import {
   type MonitorConfig, type ResumoOpiniao, type Mencao,
 } from "@/app/actions/politico/opiniaoPublica";
 import { soTemPerfilComoNome } from "@/lib/politico/radar-imprensa";
+import { rotuloDoTipo } from "@/lib/politico/rotulo-tipo";
 
 const SENT = {
   positivo: { label: "Positivo", cor: "#22C55E", bg: "rgba(34,197,94,0.14)" },
@@ -27,7 +28,7 @@ function pct(n: number, total: number): number {
 }
 function fmtData(iso: string | null): string {
   if (!iso) return "—";
-  return new Date(iso).toLocaleDateString("pt-BR", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" });
+  return new Date(iso).toLocaleDateString("pt-BR", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit", timeZone: "America/Sao_Paulo" });
 }
 
 export default function OpiniaoPublicaClient({ config, resumo, mencoes }: { config: MonitorConfig; resumo: ResumoOpiniao; mencoes: Mencao[] }) {
@@ -108,7 +109,7 @@ export default function OpiniaoPublicaClient({ config, resumo, mencoes }: { conf
                   style={coletaVelha ? { background: "rgba(245,158,11,0.16)", color: "#B45309" } : { background: "rgba(34,197,94,0.14)", color: "#15803D" }}
                   title={coletaVelha ? "A coleta está parada. Clique em Atualizar." : undefined}
                 >
-                  última coleta: {new Date(resumo.ultimaColeta).toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" })}
+                  última coleta: {new Date(resumo.ultimaColeta).toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit", timeZone: "America/Sao_Paulo" })}
                   {coletaVelha ? ` · há ${diasDesdeColeta} dias` : ""}
                 </span>
               )}
@@ -118,7 +119,7 @@ export default function OpiniaoPublicaClient({ config, resumo, mencoes }: { conf
         </div>
         <div className="flex items-center gap-2">
           <button type="button" onClick={() => setCfgAberto((v) => !v)} className="inline-flex items-center gap-1.5 rounded-full px-3 py-2 text-sm font-semibold" style={{ border: "1px solid var(--color-border)", color: "var(--color-text-muted)" }}>
-            <Settings2 className="h-4 w-4" aria-hidden /> Termos
+            <Settings2 className="h-4 w-4" aria-hidden /> Palavras monitoradas
           </button>
           <button type="button" onClick={atualizar} disabled={atualizando || !temConfig} className="inline-flex items-center gap-1.5 rounded-full px-4 py-2 text-sm font-semibold disabled:opacity-50" style={{ background: "var(--color-accent)", color: "#16181D" }}>
             <RefreshCw className={`h-4 w-4 ${atualizando ? "animate-spin" : ""}`} aria-hidden /> {atualizando ? "Buscando…" : "Atualizar"}
@@ -219,7 +220,7 @@ export default function OpiniaoPublicaClient({ config, resumo, mencoes }: { conf
                     const w = Math.max(8, (t.total / resumo.topicos[0]!.total) * 100);
                     return (
                       <div key={t.topico} className="flex items-center gap-3">
-                        <span className="flex w-28 shrink-0 items-center gap-1.5 text-sm capitalize" style={{ color: "var(--color-text)" }}><Icone className="h-3.5 w-3.5 shrink-0" style={{ color: cor }} aria-hidden />{t.topico}</span>
+                        <span className="flex w-28 shrink-0 items-center gap-1.5 text-sm capitalize" style={{ color: "var(--color-text)" }}><Icone className="h-3.5 w-3.5 shrink-0" style={{ color: cor }} aria-hidden />{rotuloDoTipo(t.topico)}</span>
                         <div className="h-2 flex-1 overflow-hidden rounded-full" style={{ background: "color-mix(in srgb, var(--color-text) 8%, transparent)" }}><div className="h-full rounded-full" style={{ width: `${w}%`, background: cor, transformOrigin: "left", animation: `gip-bar-grow 0.7s cubic-bezier(0.16,1,0.3,1) ${(i * 0.05).toFixed(2)}s both`, boxShadow: `0 0 10px color-mix(in srgb, ${cor} 45%, transparent)` }} /></div>
                         <span className="w-6 shrink-0 text-right text-xs tabular-nums" style={{ color: "var(--color-text-subtle)" }}>{t.total}</span>
                       </div>
@@ -268,7 +269,7 @@ export default function OpiniaoPublicaClient({ config, resumo, mencoes }: { conf
                       </div>
                       <p className="line-clamp-3 text-sm font-medium" style={{ color: "var(--color-text)" }}>{m.titulo}</p>
                       <div className="mt-auto flex flex-wrap items-center gap-x-2 gap-y-1 pt-2.5 text-[10px]" style={{ color: "var(--color-text-subtle)" }}>
-                        {m.topico && <span className="capitalize">{m.topico}</span>}
+                        {m.topico && <span className="capitalize">{rotuloDoTipo(m.topico)}</span>}
                         {m.bairro && <span>· {m.bairro}</span>}
                         <span>· {fmtData(m.publicadoEm)}</span>
                         {href && <ExternalLink className="ml-auto h-3 w-3 opacity-0 transition-opacity group-hover:opacity-100" aria-hidden />}

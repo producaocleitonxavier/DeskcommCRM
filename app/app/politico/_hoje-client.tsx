@@ -79,7 +79,7 @@ function badgeAtencao(a: GabineteHoje["atencao"][number]): { label: string; tipo
 }
 
 function horaDe(iso: string): string {
-  return new Date(iso).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
+  return new Date(iso).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit", timeZone: "America/Sao_Paulo" });
 }
 
 function diaMes(iso: string): string {

@@ -69,7 +69,7 @@ const FILTROS: { id: Filtro; label: string }[] = [
 ];
 
 function fmtData(d: string | null): string {
-  return d ? new Date(d).toLocaleDateString("pt-BR", { day: "2-digit", month: "short", year: "numeric" }) : "—";
+  return d ? new Date(d).toLocaleDateString("pt-BR", { day: "2-digit", month: "short", year: "numeric", timeZone: "America/Sao_Paulo" }) : "—";
 }
 
 /** "atrasada 3d" / "hoje" / "em 5d" a partir da data da visita. */
@@ -235,8 +235,8 @@ export default function VisitasClient({ visitas, kpis, assessores, usuarioAtualI
               v.orgao,
               v.municipio,
               STATUS_PILL[st]?.label ?? st,
-              v.visitaEm ? new Date(v.visitaEm).toLocaleDateString("pt-BR") : "",
-              v.realizadaEm ? new Date(v.realizadaEm).toLocaleDateString("pt-BR") : "",
+              v.visitaEm ? new Date(v.visitaEm).toLocaleDateString("pt-BR", { timeZone: "America/Sao_Paulo" }) : "",
+              v.realizadaEm ? new Date(v.realizadaEm).toLocaleDateString("pt-BR", { timeZone: "America/Sao_Paulo" }) : "",
               v.responsavelId ? v.responsavelNome || "Responsável" : "Sem responsável",
               v.relato,
               v.presentes,
