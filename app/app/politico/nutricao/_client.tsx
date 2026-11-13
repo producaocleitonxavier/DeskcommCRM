@@ -62,7 +62,7 @@ export default function NutricaoClient({ inicial }: { inicial: EstadoDaNutricao 
     iniciarVirar(async () => {
       const r = await ligarNutricao(ligar);
       if (!r.ok) { toast.error(r.erro); return; }
-      toast.success(ligar ? "Nutrição ligada." : "Nutrição desligada. Ninguém novo entra na cadência.");
+      toast.success(ligar ? "Mensagem do mês ligada." : "Mensagem do mês desligada. Ninguém novo passa a receber.");
       router.refresh();
     });
   }
@@ -93,7 +93,7 @@ export default function NutricaoClient({ inicial }: { inicial: EstadoDaNutricao 
           Quem pedir para sair para de receber na hora.
         </p>
         <p className="tabular-nums">
-          <strong style={{ color: "var(--color-text)" }}>Já entraram na cadência:</strong> {inicial.jaEntraram} {inicial.jaEntraram === 1 ? "pessoa" : "pessoas"}.
+          <strong style={{ color: "var(--color-text)" }}>Já estão recebendo:</strong> {inicial.jaEntraram} {inicial.jaEntraram === 1 ? "pessoa" : "pessoas"}.
         </p>
       </div>
 
@@ -160,7 +160,7 @@ export default function NutricaoClient({ inicial }: { inicial: EstadoDaNutricao 
         {inicial.ligada ? (
           <>
             <p className="text-sm" style={{ color: "var(--color-text-muted)" }}>
-              Ligada no número <strong style={{ color: "var(--color-text)" }}>{canalEscolhido?.rotulo ?? "escolhido"}</strong>. Desligar impede novas entradas; quem já está na cadência segue até o fim.
+              Ligada no número <strong style={{ color: "var(--color-text)" }}>{canalEscolhido?.rotulo ?? "escolhido"}</strong>. Desligar impede novas entradas; quem já está recebendo segue até o fim.
             </p>
             <button type="button" onClick={() => virar(false)} disabled={virando} className="wr-btn inline-flex items-center gap-2 disabled:opacity-60">
               {virando ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden /> : <Power className="h-4 w-4" aria-hidden />} Desligar a nutrição
@@ -170,7 +170,7 @@ export default function NutricaoClient({ inicial }: { inicial: EstadoDaNutricao 
           <>
             <p className="text-sm" style={{ color: "var(--color-text-muted)" }}>
               {prontaParaLigar
-                ? "Número e textos salvos. Ao ligar, quem virar simpatizante daqui para a frente entra na cadência."
+                ? "Número e textos salvos. Ao ligar, quem virar simpatizante daqui para a frente passa a receber."
                 : mudou
                   ? "Salve as mudanças acima antes de ligar."
                   : !inicial.publicada
@@ -178,7 +178,7 @@ export default function NutricaoClient({ inicial }: { inicial: EstadoDaNutricao 
                     : "Escolha o número (passo 1) e salve para destravar."}
             </p>
             <button type="button" onClick={() => virar(true)} disabled={virando || !prontaParaLigar} className="wr-btn-dark inline-flex items-center gap-2 disabled:opacity-60">
-              {virando ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden /> : prontaParaLigar ? <Power className="h-4 w-4" aria-hidden /> : <Lock className="h-4 w-4" aria-hidden />} Ligar a nutrição
+              {virando ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden /> : prontaParaLigar ? <Power className="h-4 w-4" aria-hidden /> : <Lock className="h-4 w-4" aria-hidden />} Ligar a mensagem do mês
             </button>
           </>
         )}

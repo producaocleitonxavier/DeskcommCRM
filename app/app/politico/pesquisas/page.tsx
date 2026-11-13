@@ -151,7 +151,7 @@ export default async function PesquisasPage({
       {/* Cards */}
       {pesquisas.length === 0 ? (
         <div className="rounded-xl border bg-card p-8 text-center text-sm text-muted-foreground">
-          Nenhuma pesquisa encontrada.
+          Nenhuma pesquisa ainda. Crie a primeira em “Nova pesquisa”: você escreve as perguntas, manda o link e acompanha as respostas chegando.
         </div>
       ) : (
         <div className="grid gap-4 sm:grid-cols-2">

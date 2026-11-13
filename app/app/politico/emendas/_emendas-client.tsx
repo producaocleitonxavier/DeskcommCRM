@@ -152,7 +152,7 @@ export default function EmendasClient(props: EmendasClientProps) {
         subtitulo={ehDeputado ? "Indicações por município, região e área — do pedido à execução." : "Emendas da cidade por bairro e área — do pedido à execução."}
         acoes={[
           { href: "/app/politico/emendas/novo", label: "+ Nova emenda", primary: true },
-          { href: "/app/politico/emendas/pedidos", label: "Pedidos" },
+          { href: "/app/politico/emendas/pedidos", label: "Pedidos de emenda" },
         ]}
         extra={
           ehAdmin ? (

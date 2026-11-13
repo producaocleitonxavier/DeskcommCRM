@@ -47,14 +47,14 @@ const OBJETIVOS: MetaObjetivo[] = [
     placeholderMensagem: "Quer receber, em primeira mão, os conteúdos que a gente produz? Responde SIM que eu te mando.",
   },
   {
-    v: "cobrar", titulo: "Cobrar o retorno de uma demanda", desc: "Dar um retorno sobre um pedido.",
-    quando: "Começa quando eu inscrever a pessoa", Icon: Clock, nomePadrao: "Retorno da demanda",
+    v: "cobrar", titulo: "Dar retorno de uma demanda", desc: "Avisar a pessoa sobre o andamento do que ela pediu.",
+    quando: "Começa quando eu escolher a pessoa", Icon: Clock, nomePadrao: "Retorno da demanda",
     rotuloMensagem: "A mensagem de retorno",
     placeholderMensagem: "Oi! Passando pra te atualizar sobre o seu pedido — já encaminhamos ao órgão e estamos acompanhando.",
   },
   {
     v: "lembrar", titulo: "Lembrar de um evento", desc: "Avisar sobre um evento ou agenda.",
-    quando: "Começa quando eu inscrever a pessoa", Icon: CalendarCheck, nomePadrao: "Lembrete de evento",
+    quando: "Começa quando eu escolher a pessoa", Icon: CalendarCheck, nomePadrao: "Lembrete de evento",
     rotuloMensagem: "A mensagem do lembrete",
     placeholderMensagem: "Oi! Passando pra lembrar do nosso encontro. Conto com a sua presença!",
   },

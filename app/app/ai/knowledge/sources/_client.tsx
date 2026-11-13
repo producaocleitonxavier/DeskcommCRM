@@ -73,13 +73,13 @@ export function AcervoClient({ initialSources, initialChave, agentes }: Props) {
       <ChaveDeConhecimento estado={estado} onChaveCadastrada={recarregar} />
       <StatusDaBase materiais={lista} podeIndexar={estado.pode_indexar} />
 
-      <div className="flex items-center justify-between gap-3">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <p className="text-sm text-text-muted">
           {lista.length === 0
             ? t("Nenhum material ainda.")
-            : `${lista.length} ${lista.length === 1 ? t("material") : t("materiais")} ${t("no acervo.")}`}
+            : `${lista.length} ${lista.length === 1 ? "material guardado" : "materiais guardados"}.`}
         </p>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           {lista.length > 0 ? (
             <Button
               variant="outline"
@@ -94,7 +94,7 @@ export function AcervoClient({ initialSources, initialChave, agentes }: Props) {
               {reindexAll.isPending ? t("Preparando…") : t("Preparar tudo de novo")}
             </Button>
           ) : null}
-          <Button onClick={() => setNovoAberto(true)} data-testid="acervo-adicionar">
+          <Button className="order-first sm:order-none" onClick={() => setNovoAberto(true)} data-testid="acervo-adicionar">
             <Plus className="mr-2 h-4 w-4" aria-hidden />
             {t("Adicionar material")}
           </Button>

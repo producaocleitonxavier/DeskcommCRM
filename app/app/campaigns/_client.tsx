@@ -63,7 +63,7 @@ export function ListaDeCampanhas() {
       <CommandHero
         eyebrow="Relacionamento · Envio em massa"
         titulo="Envio em massa"
-        subtitulo="Fale com a base que você escolhe — por origem e estágio no funil, no ritmo que não queima o número. Quem responde entra no atendimento e recebe o material sozinho."
+        subtitulo="Você escolhe para quem mandar (por origem e por nível de proximidade) e o sistema envia aos poucos, para o número não ser bloqueado. Quem responde entra no atendimento e recebe o material sozinho."
         acoes={[
           { href: "/app/campaigns/new", label: "Novo disparo", primary: true },
           { href: "/app/campaigns/saude", label: "Saúde dos números" },

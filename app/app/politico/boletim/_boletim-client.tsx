@@ -148,7 +148,7 @@ export default function BoletimClient({
       <CommandHero
         eyebrow="Estratégia · Boletim"
         titulo="Boletim Semanal"
-        subtitulo="O raio-x da semana num lugar só — e o que fazer. O escopo se adapta ao seu mandato."
+        subtitulo="O raio-x da semana num lugar só — e o que fazer. Feito sob medida para o seu mandato."
         extra={
           <span className="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-bold" style={{ background: "rgba(255,255,255,0.12)", color: "#FFF", border: "1px solid rgba(255,255,255,0.25)" }}>
             <MapPin size={13} /> {abrangLabel} · {lugar}
@@ -180,7 +180,7 @@ export default function BoletimClient({
                       {fmtData(h.periodoDe)} a {fmtData(h.periodoAte)}
                     </span>
                     <span className="mt-0.5 flex items-center gap-1.5 text-[11px]" style={{ color: "var(--color-text-subtle)" }}>
-                      {h.origem === "cron" ? <><Clock size={11} /> semana automática</> : "gerado à mão"}
+                      {h.origem === "cron" ? <><Clock size={11} /> semana automática</> : "gerado por você"}
                     </span>
                   </span>
                   <span className="shrink-0 font-heading text-lg font-black tabular-nums" style={{ color: h.indice >= 0 ? VERDE : VERMELHO }}>

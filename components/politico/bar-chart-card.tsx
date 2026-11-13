@@ -38,6 +38,17 @@ export interface BarChartCardProps {
 
 const COR_PADRAO = "#C4E64A"; // espelha var(--color-accent-400)
 
+/** Número curto para eixo e rótulo: 8.000.000 → "8 mi", 65.194 → "65 mil", 812 → "812". */
+export function numeroCurto(v: number): string {
+  const abs = Math.abs(v);
+  if (abs >= 1_000_000) {
+    const mi = v / 1_000_000;
+    return `${mi.toLocaleString("pt-BR", { maximumFractionDigits: abs >= 10_000_000 ? 0 : 1 })} mi`;
+  }
+  if (abs >= 10_000) return `${Math.round(v / 1000).toLocaleString("pt-BR")} mil`;
+  return v.toLocaleString("pt-BR");
+}
+
 interface TooltipProps {
   active?: boolean;
   label?: string | number;
@@ -98,7 +109,7 @@ export function BarChartCard({ title, data, height = 280, horizontal = false, cl
           />
           {horizontal ? (
             <>
-              <XAxis type="number" domain={[0, topo]} tick={eixoTick} tickLine={false} axisLine={{ stroke: "rgba(255,255,255,0.08)" }} allowDecimals={false} />
+              <XAxis type="number" domain={[0, topo]} tick={eixoTick} tickLine={false} axisLine={{ stroke: "rgba(255,255,255,0.08)" }} allowDecimals={false} tickFormatter={numeroCurto} />
               <YAxis
                 type="category"
                 dataKey="name"
@@ -116,7 +127,7 @@ export function BarChartCard({ title, data, height = 280, horizontal = false, cl
                 tickLine={false}
                 axisLine={{ stroke: "rgba(255,255,255,0.08)" }}
               />
-              <YAxis domain={[0, topo]} tick={eixoTick} tickLine={false} axisLine={false} width={40} allowDecimals={false} />
+              <YAxis domain={[0, topo]} tick={eixoTick} tickLine={false} axisLine={false} width={48} allowDecimals={false} tickFormatter={numeroCurto} />
             </>
           )}
           <Tooltip content={<ChartTooltip />} cursor={{ fill: "rgba(255,255,255,0.05)" }} />
@@ -129,7 +140,7 @@ export function BarChartCard({ title, data, height = 280, horizontal = false, cl
               position={horizontal ? "right" : "top"}
               offset={8}
               style={{ fill: "var(--color-text)", fontSize: 12, fontWeight: 700 }}
-              formatter={(v: number) => (v > 0 ? v.toLocaleString("pt-BR") : "")}
+              formatter={(v: number) => (v > 0 ? (v >= 1_000_000 ? numeroCurto(v) : v.toLocaleString("pt-BR")) : "")}
             />
           </Bar>
         </BarChart>

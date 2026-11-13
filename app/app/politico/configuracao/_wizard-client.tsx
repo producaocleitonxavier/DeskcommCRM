@@ -193,14 +193,17 @@ export default function SetupWizard({ inicial }: { inicial: SetupInicial }) {
 
       {/* Stepper — bolinhas e rótulos maiores (estavam pequenos no celular). */}
       <div className="gip-glass p-5">
-        <div className="flex items-center gap-2.5 overflow-x-auto">
+        <p className="mb-2 text-sm font-semibold sm:hidden" style={{ color: "var(--color-text-muted)" }}>
+          Passo {passo + 1} de {PASSOS.length}
+        </p>
+        <div className="flex items-center gap-1.5 overflow-x-auto sm:gap-2.5">
           {PASSOS.map((p, i) => {
             const feito = i < passo;
             const atual = i === passo;
             return (
-              <div key={p} className="flex items-center gap-2.5 shrink-0">
+              <div key={p} className="flex shrink-0 items-center gap-1.5 sm:gap-2.5">
                 <span
-                  className="flex h-11 w-11 items-center justify-center rounded-full text-[17px] font-bold transition-colors"
+                  className="flex h-9 w-9 items-center justify-center rounded-full text-[15px] font-bold transition-colors sm:h-11 sm:w-11 sm:text-[17px]"
                   style={
                     feito
                       ? { background: "var(--color-accent)", color: "#16181D" }
@@ -211,10 +214,10 @@ export default function SetupWizard({ inicial }: { inicial: SetupInicial }) {
                 >
                   {feito ? <Check size={20} /> : i + 1}
                 </span>
-                <span className="text-[15px] font-semibold whitespace-nowrap" style={{ color: atual ? "var(--color-text)" : "var(--color-text-subtle)" }}>
+                <span className={`text-[15px] font-semibold whitespace-nowrap ${atual ? "" : "hidden sm:inline"}`} style={{ color: atual ? "var(--color-text)" : "var(--color-text-subtle)" }}>
                   {p}
                 </span>
-                {i < ultimo && <span className="mx-1.5 h-px w-7" style={{ background: "var(--color-border)" }} />}
+                {i < ultimo && <span className="mx-0.5 h-px w-3 sm:mx-1.5 sm:w-7" style={{ background: "var(--color-border)" }} />}
               </div>
             );
           })}
