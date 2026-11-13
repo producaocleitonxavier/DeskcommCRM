@@ -166,11 +166,12 @@ export default function VisitasClient({ visitas, kpis, assessores, usuarioAtualI
   /** Relatório imprimível da visita (abre numa aba → "Salvar como PDF"). Inclui
    *  as fotos nativamente — simples e sem depender do motor de PDF do servidor. */
   function imprimirRelatorio(v: VisitaItem) {
-    const esc = (s: string | null) => (s ?? "").replace(/[&<>]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" }[c] ?? c));
+    // Escapa também aspas: os valores entram em atributo (alt="…", src="…"), não só em texto.
+    const esc = (s: string | null) => (s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c] ?? c));
     const linha = (rot: string, val: string | null) => (val && val.trim() ? `<p><strong>${rot}:</strong> ${esc(val)}</p>` : "");
     const vFotos = fotos[v.id] ?? [];
     const dataVis = v.realizadaEm ? fmtData(v.realizadaEm) : fmtData(v.visitaEm);
-    const imgs = vFotos.map((f) => `<img src="${f.url}" alt="${esc(f.nome)}" />`).join("");
+    const imgs = vFotos.map((f) => `<img src="${esc(f.url)}" alt="${esc(f.nome)}" />`).join("");
     const registrouOutro = !!v.relatoPorId && v.relatoPorId !== v.responsavelId;
     const html = `<!doctype html><html lang="pt-BR"><head><meta charset="utf-8" />
 <title>Relatório de visita — ${esc(v.assunto || "Demanda")}</title>

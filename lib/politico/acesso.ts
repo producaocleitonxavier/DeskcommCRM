@@ -196,6 +196,23 @@ export const PORTAS_DA_TABELA: Readonly<Record<string, readonly string[]>> = {
   pol_agenda: ["/app/agenda", "/app/politico/visitas", "/app/politico/demandas", "/app/politico/locais"],
 };
 
+/**
+ * Papel mínimo para GRAVAR em cada tabela — o mesmo da tela que a edita. Sem isto
+ * (auditoria de 13/nov/2026) quem era só leitura gravava demanda, liderança e
+ * emenda, e quem não era gestor trocava o arquivo de um Material, que o sistema
+ * entrega sozinho aos cidadãos. Tabela fora da lista: só gestor.
+ */
+export const PAPEL_MINIMO_DA_TABELA: Readonly<Record<string, Role>> = {
+  demandas: "agent",
+  pol_liderancas: "agent",
+  pol_emendas: "agent",
+  pol_projetos_lei: "agent",
+  pol_obras: "agent",
+  pol_locais: "agent",
+  pol_agenda: "agent",
+  pol_materiais: "manager",
+};
+
 export function decidirGravacaoNaTabela(
   tabela: string,
   papel: Role,
@@ -203,7 +220,9 @@ export function decidirGravacaoNaTabela(
   portasDoMenu: ReadonlySet<string>,
   ehPlataforma = false,
 ): DecisaoDeAcesso {
-  if (ehPlataforma || !perfilRestrito || ROLE_RANK[papel] >= ROLE_RANK.manager) return "ok";
+  if (ehPlataforma) return "ok";
+  if (ROLE_RANK[papel] < ROLE_RANK[PAPEL_MINIMO_DA_TABELA[tabela] ?? "manager"]) return "sem_papel";
+  if (!perfilRestrito || ROLE_RANK[papel] >= ROLE_RANK.manager) return "ok";
   const portas = PORTAS_DA_TABELA[tabela];
   // Tabela sem porta declarada: para perfil restrito, falha fechado.
   if (!portas) return "fora_do_perfil";
@@ -221,4 +240,9 @@ export async function perfilAlcancaTabela(tabela: string): Promise<boolean> {
   );
   const perfilRestrito = Array.isArray((org.interface_settings as { destinos?: unknown } | null | undefined)?.destinos);
   return decidirGravacaoNaTabela(tabela, org.role, perfilRestrito, portas, ehPlataforma) === "ok";
+}
+
+/** Administrador da plataforma fora de acompanhamento: não tem papel nem perfil a cobrar. */
+export function ehPlataformaSemSuporte(user: { is_platform_admin?: boolean | null; support?: unknown }): boolean {
+  return Boolean(user.is_platform_admin) && !user.support;
 }

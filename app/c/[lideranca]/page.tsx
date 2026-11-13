@@ -13,6 +13,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { marcaDaInstalacao } from "@/lib/branding/instalacao";
 import { env } from "@/lib/env";
 import CaptacaoClient from "./_client";
+import { caminhoPertenceAOrg } from "@/lib/storage/caminho-da-org";
 
 export const dynamic = "force-dynamic";
 
@@ -39,7 +40,7 @@ export default async function CaptacaoPublicaPage({ params }: { params: Promise<
     .maybeSingle();
   const ident = (cfg ?? null) as { nome_parlamentar: string | null; cargo: string | null; logo_path: string | null } | null;
   let logoUrl: string | null = null;
-  if (ident?.logo_path) {
+  if (ident && caminhoPertenceAOrg(ident.logo_path, l.organization_id)) {
     const { data: signed } = await admin.storage.from("gabinete-identidade").createSignedUrl(ident.logo_path, 60 * 60);
     logoUrl = signed?.signedUrl ?? null;
   }

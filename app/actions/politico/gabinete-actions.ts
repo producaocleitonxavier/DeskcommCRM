@@ -12,8 +12,10 @@
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { requireAuth, resolveActiveOrg, orgSeAoMenos } from "@/lib/auth/server";
-import { perfilAlcancaTabela } from "@/lib/politico/acesso";
+import { ehPlataformaSemSuporte, perfilAlcancaTabela } from "@/lib/politico/acesso";
 import { nomesDosAtendentes } from "@/lib/users/nome-do-atendente";
+import { caminhoPertenceAOrg } from "@/lib/storage/caminho-da-org";
+import { ROLE_RANK } from "@/lib/auth/types";
 
 export type AcaoResultado = { ok: true; id?: string } | { ok: false; erro: string };
 export interface CidadaoOpcao {
@@ -34,13 +36,27 @@ export interface AnexoDemanda {
 const BUCKET_ANEXOS = "gabinete-anexos";
 
 // Tabelas do gabinete que as actions podem gravar (whitelist).
-const FORA_DO_PERFIL = "Esta área não faz parte do seu perfil de acesso.";
+const FORA_DO_PERFIL = "Você não tem permissão para esta ação.";
+/** Colunas que só o servidor escreve: caminho de arquivo, organização e identificador. */
+const COLUNAS_SO_DO_SERVIDOR = /(^|_)path$|^id$|^organization_id$/;
 const TABELAS = new Set(["demandas", "pol_liderancas", "pol_emendas", "pol_projetos_lei", "pol_agenda", "pol_obras", "pol_materiais", "pol_locais"]);
 
-async function orgAtiva(): Promise<string | null> {
+/** A organização da sessão para LEITURA (qualquer membro). */
+async function orgParaLer(): Promise<string | null> {
   const user = await requireAuth();
   const org = await resolveActiveOrg(user);
   return org?.orgId ?? null;
+}
+
+/** A organização da sessão para GRAVAR — só atendente ou acima (ou a plataforma).
+ * "Somente leitura" não grava por estas ações. */
+async function orgAtiva(): Promise<string | null> {
+  const user = await requireAuth();
+  const org = await resolveActiveOrg(user);
+  if (!org) return null;
+  const ehPlataforma = ehPlataformaSemSuporte(user);
+  if (!ehPlataforma && ROLE_RANK[org.role] < ROLE_RANK.agent) return null;
+  return org.orgId;
 }
 
 /** Como orgAtiva, mas também devolve o id do usuário logado — para carimbar
@@ -49,6 +65,8 @@ async function orgEUsuario(): Promise<{ org: string; userId: string } | null> {
   const user = await requireAuth();
   const org = await resolveActiveOrg(user);
   if (!org) return null;
+  const ehPlataforma = ehPlataformaSemSuporte(user);
+  if (!ehPlataforma && ROLE_RANK[org.role] < ROLE_RANK.agent) return null;
   return { org: org.orgId, userId: user.id };
 }
 
@@ -75,7 +93,7 @@ function normalizarTelefone(tel: string): string | null {
 export async function buscarCidadaos(q: string): Promise<CidadaoOpcao[]> {
   const termo = q.trim();
   if (termo.length < 2) return [];
-  const org = await orgAtiva();
+  const org = await orgParaLer();
   if (!org) return [];
   const db = await createClient();
   const { data } = await db
@@ -187,7 +205,7 @@ export async function criarRegistro(tabela: string, dados: Record<string, unknow
   // a coluna (9093) — as outras do whitelist não têm. Não sobrescreve se o caller
   // já mandou explicitamente. Nova Demanda e Nova Visita passam por aqui.
   // A Nota do cidadão nunca nasce pela mão da equipe (mesma régua do atualizar).
-  const semNota = Object.fromEntries(Object.entries(dados).filter(([k]) => !k.startsWith("pol_avaliacao_")));
+  const semNota = Object.fromEntries(Object.entries(dados).filter(([k]) => !k.startsWith("pol_avaliacao_") && !COLUNAS_SO_DO_SERVIDOR.test(k)));
   const payload: Record<string, unknown> = { ...semNota, organization_id: sessao.org };
   if (tabela === "demandas" && payload.pol_registrado_por_id === undefined) {
     payload.pol_registrado_por_id = sessao.userId;
@@ -210,7 +228,7 @@ export async function atualizarRegistro(tabela: string, id: string, patch: Recor
   if (!org) return { ok: false, erro: "Sessão ou organização inválida." };
   // A Nota do cidadão mede o atendimento da própria equipe: só quem a grava é a
   // resposta do cidadão (lib/politico/avaliacao.ts), nunca esta ação genérica.
-  const limpo = Object.fromEntries(Object.entries(patch).filter(([k]) => !k.startsWith("pol_avaliacao_")));
+  const limpo = Object.fromEntries(Object.entries(patch).filter(([k]) => !k.startsWith("pol_avaliacao_") && !COLUNAS_SO_DO_SERVIDOR.test(k)));
   if (Object.keys(limpo).length === 0) return { ok: false, erro: "Nada para atualizar." };
   const db = await createClient();
   const { error } = await db.from(tabela).update(limpo).eq("id", id).eq("organization_id", org);
@@ -451,7 +469,7 @@ export async function excluirRegistro(tabela: string, id: string): Promise<AcaoR
  * policy de storage), por isso a URL é assinada pelo admin client.
  */
 export async function listarAnexosDemanda(demandaId: string): Promise<AnexoDemanda[]> {
-  const org = await orgAtiva();
+  const org = await orgParaLer();
   if (!org) return [];
   const db = await createClient();
   const { data } = await db
@@ -473,7 +491,10 @@ export async function listarAnexosDemanda(demandaId: string): Promise<AnexoDeman
   const admin = createAdminClient();
   const out: AnexoDemanda[] = [];
   for (const a of linhas) {
-    const { data: signed } = await admin.storage.from(BUCKET_ANEXOS).createSignedUrl(a.storage_path, 60 * 60);
+    // Só assina o que está na pasta do próprio gabinete (a coluna é gravável por membro).
+    const { data: signed } = caminhoPertenceAOrg(a.storage_path, org)
+      ? await admin.storage.from(BUCKET_ANEXOS).createSignedUrl(a.storage_path, 60 * 60)
+      : { data: null };
     out.push({
       id: a.id,
       nome_arquivo: a.nome_arquivo,

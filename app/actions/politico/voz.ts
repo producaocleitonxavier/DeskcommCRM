@@ -34,6 +34,8 @@ import { mp3ParaNotaDeVoz, VOICE_MIME } from "@/lib/messaging/media/voice-transc
 import { openSharedContactConversation } from "@/lib/messaging/open-shared-contact-conversation";
 import { sendMessageHandler } from "@/app/api/v1/messages/_handler";
 import type { SendMessageInput } from "@/lib/schemas";
+import { destinosDaInterface } from "@/lib/navigation/interface";
+import { ehPlataformaSemSuporte } from "@/lib/politico/acesso";
 
 async function gerenteDaOrg() {
   const user = await requireAuth();
@@ -169,6 +171,16 @@ export type RecadoVozStatus = "enviado" | "voz_desarmada" | "blackout" | "sem_te
  * Demandas, Lideranças, Emendas e Obras. Travas centralizadas (consentimento via
  * vozArmada, aviso de IA falado, silêncio de 72h). 1:1 — nunca massa.
  */
+/** Telas que têm o botão de recado de voz: basta uma delas no perfil de quem envia. */
+const TELAS_DO_RECADO_DE_VOZ = [
+  "/app/politico/demandas",
+  "/app/politico/liderancas",
+  "/app/politico/emendas",
+  "/app/politico/obras",
+];
+/** Teto do texto de um recado (cada letra é síntese de voz paga). */
+const TAMANHO_MAXIMO_DO_RECADO = 700;
+
 export async function mandarRecadoDeVoz(
   contactId: string,
   texto: string,
@@ -176,8 +188,26 @@ export async function mandarRecadoDeVoz(
   const user = await requireAuth();
   const org = await resolveActiveOrg(user);
   if (!org) return { ok: false, erro: "Sessão inválida.", status: "falha" };
+  // Quem pode: atendente ou acima, e (abaixo de gestor) só quem tem no menu uma das
+  // telas onde o botão mora. Antes bastava estar logado — até "somente leitura"
+  // mandava áudio na voz do parlamentar (auditoria de 13/nov/2026).
+  const ehPlataforma = ehPlataformaSemSuporte(user);
+  if (!ehPlataforma) {
+    if (ROLE_RANK[org.role as Role] < ROLE_RANK.agent) {
+      return { ok: false, erro: "Você não tem permissão para enviar recado de voz.", status: "falha" };
+    }
+    if (ROLE_RANK[org.role as Role] < ROLE_RANK.manager) {
+      const portas = new Set(destinosDaInterface(org.interface_settings, false, org.role).map((d) => d.href));
+      if (!TELAS_DO_RECADO_DE_VOZ.some((p) => portas.has(p))) {
+        return { ok: false, erro: "Você não tem permissão para enviar recado de voz.", status: "falha" };
+      }
+    }
+  }
   const corpo = (texto ?? "").trim();
   if (!corpo) return { ok: false, erro: "Escreva o texto do recado.", status: "falha" };
+  if (corpo.length > TAMANHO_MAXIMO_DO_RECADO) {
+    return { ok: false, erro: `O recado está longo demais (máximo de ${TAMANHO_MAXIMO_DO_RECADO} letras).`, status: "falha" };
+  }
 
   const db = await createClient();
   const cfg = await lerVozConfig(db, org.orgId);
@@ -217,15 +247,21 @@ export async function mandarRecadoDeVoz(
   const up = await admin.storage.from("whatsapp-media").upload(waPath, ogg.buffer, { contentType: VOICE_MIME, upsert: true });
   if (up.error) return { ok: false, erro: "Falha ao salvar o áudio.", status: "falha" };
 
-  // Aviso de IA em texto (precede o áudio) quando não vai falado — best-effort.
+  // Aviso de IA em texto (precede o áudio) quando não vai falado. OBRIGATÓRIO: sem
+  // o aviso, o áudio não sai — voz sintética sem identificação não vai a cidadão.
   if (!rotuloNoAudio) {
     try {
-      await sendMessageHandler(
+      const aviso = await sendMessageHandler(
         db,
         { organization_id: org.orgId, actor: { type: "user", id: user.id }, requestId: randomUUID(), idioma: user.idioma },
         { conversation_id: conversationId, type: "text", body: AVISO_IA_TEXTO },
       );
-    } catch { /* o rótulo-texto é best-effort; o áudio é o que importa */ }
+      const situacao = (aviso as { status?: string } | null)?.status;
+      // "queued" não é enviado (canal parado, sessão caída): só segue com o aviso de fato fora.
+      if (!situacao || !["sent", "delivered", "read"].includes(situacao)) throw new Error("aviso_nao_saiu");
+    } catch {
+      return { ok: false, erro: "Não consegui enviar o aviso de que o áudio foi criado com IA, então o recado não foi enviado. Tente de novo.", status: "falha" };
+    }
   }
 
   const input: SendMessageInput = {

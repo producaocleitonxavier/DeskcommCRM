@@ -14,6 +14,7 @@ import { requireAuth, resolveActiveOrg } from "@/lib/auth/server";
 import { marcaDaOrganizacaoParaPdf } from "@/lib/propostas/marca-da-organizacao-para-pdf";
 import { buscarPrestacaoContas, normalizarPeriodo, PERIODO_LABEL } from "@/lib/politico/prestacao-contas-dados";
 import { renderRelatorioPrestacaoContasPdf } from "@/lib/politico/prestacao-pdf";
+import { caminhoPertenceAOrg } from "@/lib/storage/caminho-da-org";
 
 export type RelatorioResultado = { ok: true; url: string } | { ok: false; erro: string };
 
@@ -36,7 +37,7 @@ export async function gerarRelatorioPrestacaoContas(periodoRaw?: string): Promis
     .maybeSingle();
   const ident = (cfg ?? null) as { nome_parlamentar: string | null; subtitulo: string | null; logo_path: string | null } | null;
   let logoUrl = marca.logoUrl;
-  if (ident?.logo_path) {
+  if (ident && caminhoPertenceAOrg(ident.logo_path, orgId)) {
     const { data: s } = await admin.storage.from("gabinete-identidade").createSignedUrl(ident.logo_path, 60 * 60);
     if (s?.signedUrl) logoUrl = s.signedUrl;
   }

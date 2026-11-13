@@ -126,9 +126,11 @@ describe("gravação genérica do gabinete respeita o perfil", () => {
 
   it("assessor de rua NÃO grava liderança, emenda, projeto de lei nem material", async () => {
     const { decidirGravacaoNaTabela } = await import("./acesso");
-    for (const t of ["pol_liderancas", "pol_emendas", "pol_projetos_lei", "pol_materiais"]) {
+    for (const t of ["pol_liderancas", "pol_emendas", "pol_projetos_lei"]) {
       expect(decidirGravacaoNaTabela(t, "agent", true, rua), t).toBe("fora_do_perfil");
     }
+    // Material é de gestor: o atendente é barrado já pelo papel.
+    expect(decidirGravacaoNaTabela("pol_materiais", "agent", true, rua)).toBe("sem_papel");
   });
 
   it("controle negativo: gestor, menu completo e plataforma não mudam; tabela sem porta falha fechado só no perfil restrito", async () => {
@@ -136,7 +138,31 @@ describe("gravação genérica do gabinete respeita o perfil", () => {
     expect(decidirGravacaoNaTabela("pol_emendas", "manager", true, rua)).toBe("ok");
     expect(decidirGravacaoNaTabela("pol_emendas", "agent", false, new Set())).toBe("ok");
     expect(decidirGravacaoNaTabela("pol_emendas", "agent", true, rua, true)).toBe("ok");
-    expect(decidirGravacaoNaTabela("tabela_nova", "agent", true, rua)).toBe("fora_do_perfil");
-    expect(decidirGravacaoNaTabela("tabela_nova", "agent", false, rua)).toBe("ok");
+    // Tabela sem papel declarado: só gestor grava.
+    expect(decidirGravacaoNaTabela("tabela_nova", "agent", true, rua)).toBe("sem_papel");
+    expect(decidirGravacaoNaTabela("tabela_nova", "agent", false, rua)).toBe("sem_papel");
+    expect(decidirGravacaoNaTabela("tabela_nova", "manager", false, rua)).toBe("ok");
+  });
+});
+
+describe("papel mínimo para gravar (auditoria de 13/nov)", () => {
+  it("somente leitura não grava em tabela nenhuma, com ou sem perfil restrito", async () => {
+    const { decidirGravacaoNaTabela, PAPEL_MINIMO_DA_TABELA } = await import("./acesso");
+    for (const t of Object.keys(PAPEL_MINIMO_DA_TABELA)) {
+      expect(decidirGravacaoNaTabela(t, "viewer", false, new Set()), t).toBe("sem_papel");
+      expect(decidirGravacaoNaTabela(t, "viewer", true, new Set(["/app/politico/demandas"])), t).toBe("sem_papel");
+    }
+  });
+
+  it("atendente não troca o arquivo de um Material (é de gestor); gestor troca", async () => {
+    const { decidirGravacaoNaTabela } = await import("./acesso");
+    expect(decidirGravacaoNaTabela("pol_materiais", "agent", false, new Set())).toBe("sem_papel");
+    expect(decidirGravacaoNaTabela("pol_materiais", "manager", false, new Set())).toBe("ok");
+  });
+
+  it("controle: atendente segue gravando demanda; plataforma passa", async () => {
+    const { decidirGravacaoNaTabela } = await import("./acesso");
+    expect(decidirGravacaoNaTabela("demandas", "agent", false, new Set())).toBe("ok");
+    expect(decidirGravacaoNaTabela("pol_materiais", "viewer", false, new Set(), true)).toBe("ok");
   });
 });

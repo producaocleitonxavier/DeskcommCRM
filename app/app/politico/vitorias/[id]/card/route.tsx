@@ -20,6 +20,7 @@ import sharp from "sharp";
 
 import { requireAuth, resolveActiveOrg } from "@/lib/auth/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { caminhoPertenceAOrg } from "@/lib/storage/caminho-da-org";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -70,6 +71,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
   const { data: cfg } = await admin.from("pol_gabinete_config").select("moldura_vitoria_path").eq("organization_id", org.orgId).maybeSingle();
   const molduraPath = (cfg?.moldura_vitoria_path as string | null) ?? null;
   if (!molduraPath) return erro("O gabinete ainda não subiu a moldura (Identidade do Mandato).", 409);
+  if (!caminhoPertenceAOrg(molduraPath, org.orgId)) return erro("Moldura inválida.", 422);
 
   const { data: anexos } = await admin
     .from("pol_demanda_anexos")
@@ -80,7 +82,9 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
   const mapa = new Map((anexos ?? []).map((a) => [a.id, a.storage_path]));
   const antesPath = mapa.get(antesId);
   const depoisPath = mapa.get(depoisId);
-  if (!antesPath || !depoisPath) return erro("Fotos inválidas pra esta demanda.", 422);
+  if (!caminhoPertenceAOrg(antesPath, org.orgId) || !caminhoPertenceAOrg(depoisPath, org.orgId)) {
+    return erro("Fotos inválidas pra esta demanda.", 422);
+  }
 
   const [molduraBuf, antesBuf, depoisBuf] = await Promise.all([
     baixar(admin, "gabinete-identidade", molduraPath),

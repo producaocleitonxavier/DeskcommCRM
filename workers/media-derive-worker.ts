@@ -44,6 +44,7 @@ import { motivoDaRecusaDeDestino } from "@/lib/automation/destinos-internos-auto
 import { DETALHE_TECNICO } from "@/lib/event-log/aviso-de-evento-morto";
 import { MENSAGEM_REDIGIDA } from "@/lib/lgpd/cascata";
 import { avaliarPedidosFalados } from "@/workers/media-derive-worker.pedidos";
+import { caminhoPertenceAOrg } from "@/lib/storage/caminho-da-org";
 
 export const MEDIA_DERIVE_CONSUMER_KEY = "media_derive_v1";
 const DRAIN_MAX_ATTEMPTS = 5; // espelho de lib/event-log/drain.ts
@@ -186,6 +187,10 @@ export async function deriveMessageMedia(row: EventRow): Promise<HandlerResult> 
   };
 
   try {
+    // A coluna é gravável por membro: só lê arquivo da própria organização.
+    if (!caminhoPertenceAOrg(msg.media_storage_path, msg.organization_id)) {
+      throw new Error("storage_path_outside_organization");
+    }
     const dl = await admin.storage.from("whatsapp-media").download(msg.media_storage_path);
     if (dl.error || !dl.data) throw new Error(`storage_download_failed: ${dl.error?.message ?? "no_data"}`);
     const buffer = Buffer.from(await dl.data.arrayBuffer());

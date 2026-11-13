@@ -56745,3 +56745,66 @@ create index if not exists idx_demandas_avaliacao_nota
   where pol_avaliacao_nota is not null;
 
 notify pgrst, 'reload schema';
+
+-- ── 9097: views pol_vw_* com RLS de quem consulta + caminho de arquivo preso à organização — apêndice idempotente. Ver migration 9097. ──
+
+-- (1) views do módulo político: RLS de quem consulta + sem chave anônima
+do $$
+declare v text;
+begin
+  for v in
+    select c.relname
+      from pg_class c
+      join pg_namespace n on n.oid = c.relnamespace
+     where n.nspname = 'public' and c.relkind = 'v' and c.relname like 'pol\_vw\_%'
+  loop
+    execute format('alter view public.%I set (security_invoker = true)', v);
+    execute format('revoke all on public.%I from anon', v);
+    execute format('revoke all on public.%I from public', v);
+    execute format('grant select on public.%I to authenticated', v);
+    execute format('grant select on public.%I to service_role', v);
+  end loop;
+end $$;
+
+-- (2) caminho de arquivo preso à organização da linha
+do $$
+declare
+  alvo record;
+  nome text;
+begin
+  for alvo in
+    select * from (values
+      ('pol_demanda_anexos', 'storage_path'),
+      ('pol_obra_fotos', 'storage_path'),
+      ('pol_liderancas', 'foto_path'),
+      ('pol_gabinete_config', 'logo_path'),
+      ('pol_gabinete_config', 'assinatura_path'),
+      ('pol_gabinete_config', 'timbrado_path'),
+      ('pol_gabinete_config', 'moldura_vitoria_path'),
+      ('messages', 'media_storage_path'),
+      ('contacts', 'avatar_storage_path'),
+      ('conversation_notes', 'media_storage_path')
+    ) as t(tabela, coluna)
+  loop
+    -- tabela/coluna podem não existir numa instalação mais antiga: pula.
+    if not exists (
+      select 1 from information_schema.columns
+       where table_schema = 'public' and table_name = alvo.tabela and column_name = alvo.coluna
+    ) then
+      continue;
+    end if;
+    nome := alvo.tabela || '_' || alvo.coluna || '_da_org';
+    if exists (
+      select 1 from pg_constraint
+       where conname = nome and conrelid = format('public.%I', alvo.tabela)::regclass
+    ) then
+      continue;
+    end if;
+    execute format(
+      'alter table public.%I add constraint %I check (%I is null or (%I like organization_id::text || ''/%%'' and strpos(%I, chr(92)) = 0)) not valid',
+      alvo.tabela, nome, alvo.coluna, alvo.coluna, alvo.coluna
+    );
+  end loop;
+end $$;
+
+notify pgrst, 'reload schema';

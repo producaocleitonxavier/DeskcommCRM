@@ -12,6 +12,7 @@ import { createClient } from "@/lib/supabase/server";
 import { requireAuth, resolveActiveOrg } from "@/lib/auth/server";
 import LiderancasClient from "./_liderancas-client";
 import { exigirAcessoPolitico } from "@/lib/politico/acesso";
+import { caminhoPertenceAOrg } from "@/lib/storage/caminho-da-org";
 
 export const dynamic = "force-dynamic";
 
@@ -75,7 +76,7 @@ async function buscarLiderancas(organizationId: string): Promise<Lideranca[]> {
 
   // Fotos: assina em LOTE (uma chamada) as que têm foto_path.
   const urlPorPath = new Map<string, string>();
-  const paths = linhas.map((l) => l.foto_path).filter((p): p is string => !!p);
+  const paths = linhas.map((l) => l.foto_path).filter((p): p is string => caminhoPertenceAOrg(p, organizationId));
   if (paths.length > 0) {
     const { createAdminClient } = await import("@/lib/supabase/admin");
     const { data: signed } = await createAdminClient().storage.from("gabinete-liderancas").createSignedUrls(paths, 60 * 60);
