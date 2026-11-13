@@ -631,9 +631,9 @@ function Kpi({
   destaque?: boolean;
 }) {
   return (
-    <div className="gip-glass flex items-center gap-3 p-3.5">
+    <div className="gip-glass flex min-w-0 items-center gap-2.5 p-3 sm:gap-3 sm:p-3.5">
       <div
-        className="grid h-10 w-10 shrink-0 place-items-center rounded-xl"
+        className="grid h-9 w-9 shrink-0 place-items-center rounded-xl sm:h-10 sm:w-10"
         style={{
           background: `color-mix(in srgb, ${destaque ? "var(--color-accent)" : cor ?? "var(--color-text)"} 14%, transparent)`,
           color: destaque ? "var(--accent-ink, var(--color-accent))" : cor ?? "var(--color-text-muted)",
@@ -649,7 +649,7 @@ function Kpi({
         >
           {valor}
         </p>
-        <p className="mt-1 text-[11px] font-medium uppercase leading-tight tracking-wide text-text-subtle">
+        <p className="mt-1 break-words text-[10px] font-medium uppercase leading-tight text-text-subtle sm:text-[11px] sm:tracking-wide">
           {rotulo}
           {sub && <span className="ml-1 normal-case tracking-normal text-text-muted">{sub}</span>}
         </p>

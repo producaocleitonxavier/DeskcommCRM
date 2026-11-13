@@ -170,7 +170,7 @@ export function AppShell({ sidebarCollapsed, podeAtender, temaClaro, children }:
         >
           {vestirBase ? (
             <div className="war-room wr-claro wr-navy-section min-h-full" data-theme="light">
-              <AbasDaArea />
+              <AbasDaArea navy />
               {children}
             </div>
           ) : vestirBranco ? (
@@ -189,7 +189,7 @@ export function AppShell({ sidebarCollapsed, podeAtender, temaClaro, children }:
             </>
           ) : (
             <>
-              <AbasDaArea />
+              <AbasDaArea navy={telaNavy} />
               {children}
             </>
           )}

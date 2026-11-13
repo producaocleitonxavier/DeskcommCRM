@@ -57,7 +57,8 @@ export const AREAS_DO_GABINETE: readonly AreaDoGabinete[] = [
       { href: P, label: "Hoje" },
       { href: `${P}/dashboard`, label: "Painel" },
       { href: `${P}/prestacao-contas`, label: "Prestação de contas", seVe: `${P}/dashboard` },
-      { href: "/app/activities", label: "O que a equipe fez" },
+      // "O que a equipe fez" (atividades das conversas) saiu daqui em 13/nov: não é do
+      // dia a dia. Mora em Configurações › Avançado.
     ],
   },
   {
@@ -75,7 +76,7 @@ export const AREAS_DO_GABINETE: readonly AreaDoGabinete[] = [
     grupo: "topo",
     abas: [
       { href: `${P}/leads`, label: "Pessoas" },
-      { href: "/app/contacts", label: "Contatos" },
+      // "Contatos" duplicava Pessoas (decisão de 13/nov): mora em Configurações › Avançado.
       { href: `${P}/grupos-origem`, label: "De onde vieram" },
       { href: `${P}/importar`, label: "Importar lista" },
     ],
@@ -86,7 +87,6 @@ export const AREAS_DO_GABINETE: readonly AreaDoGabinete[] = [
     abas: [
       { href: "/app/agenda", label: "Agenda" },
       { href: "/app/tasks", label: "Tarefas" },
-      { href: `${P}/locais`, label: "Locais & Eventos" },
     ],
   },
 
@@ -104,7 +104,7 @@ export const AREAS_DO_GABINETE: readonly AreaDoGabinete[] = [
     ],
   },
   { label: "Projetos de Lei", grupo: "gabinete", abas: [{ href: `${P}/projetos-lei`, label: "Projetos de Lei" }] },
-  { label: "Materiais", grupo: "gabinete", abas: [{ href: `${P}/materiais`, label: "Materiais" }] },
+  { label: "Locais & Eventos", grupo: "gabinete", abas: [{ href: `${P}/locais`, label: "Locais & Eventos" }] },
 
   // ── Relacionamento: falar com a base ───────────────────────────────────────
   {
@@ -121,11 +121,17 @@ export const AREAS_DO_GABINETE: readonly AreaDoGabinete[] = [
     label: "Captação",
     grupo: "relacionamento",
     abas: [
-      { href: "/app/captacao-qr", label: "Por QR" },
-      // A tela do Instagram exige administrador: a aba só aparece para quem pode abri-la.
-      { href: "/app/instagram", label: "Pelo Instagram", seVe: "/app/instagram/conectar" },
+      { href: "/app/captacao-qr", label: "Captação" },
     ],
   },
+  // Instagram logo abaixo de Captação (pedido de 13/nov). A tela exige administrador:
+  // a porta só aparece para quem pode abri-la.
+  {
+    label: "Instagram",
+    grupo: "relacionamento",
+    abas: [{ href: "/app/instagram", label: "Instagram", seVe: "/app/instagram/conectar" }],
+  },
+  { label: "Materiais", grupo: "relacionamento", abas: [{ href: `${P}/materiais`, label: "Materiais" }] },
   {
     label: "Mobilização",
     grupo: "relacionamento",

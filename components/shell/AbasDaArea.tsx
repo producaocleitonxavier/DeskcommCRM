@@ -19,7 +19,7 @@ import { useAuth } from "@/hooks/auth/AuthProvider";
 import { portaDaTela } from "@/lib/navigation/menu-do-gabinete";
 import { portasDoUsuario } from "@/lib/navigation/registry";
 
-export function AbasDaArea() {
+export function AbasDaArea({ navy = false }: { /** Tela marinho: abas em verde (pedido de 13/nov). */ navy?: boolean }) {
   const pathname = usePathname();
   const { user, activeOrg } = useAuth();
   const portas = portasDoUsuario(
@@ -64,9 +64,11 @@ export function AbasDaArea() {
 
   return (
     <nav ref={ref} aria-label={`Telas de ${achado.porta.label}`} className="mx-auto mb-4 w-full" style={{ maxWidth: "1140px" }} data-abas-da-area>
+      {/* Todas as abas à vista, sem rolagem lateral: no celular elas quebram em mais
+          de uma linha (pedido de 13/nov — a barra de rolagem escondia abas). */}
       <div
-        className="flex gap-1 overflow-x-auto rounded-full p-1"
-        style={{ background: "rgba(127,127,127,0.10)", border: "1px solid var(--color-border)" }}
+        className="flex flex-wrap gap-1 rounded-3xl p-1"
+        style={{ background: "rgba(127,127,127,0.10)", border: navy ? "1px solid rgba(215,243,106,0.35)" : "1px solid var(--color-border)" }}
       >
         {achado.porta.abas.map((a) => {
           const ativa = a.href === achado.aba.href;
@@ -75,8 +77,16 @@ export function AbasDaArea() {
               key={a.href}
               href={a.href}
               aria-current={ativa ? "page" : undefined}
-              className="inline-flex items-center gap-1.5 whitespace-nowrap rounded-full px-4 py-1.5 text-sm font-semibold transition-colors"
-              style={ativa ? { background: "var(--tab-active-bg, #14233A)", color: "var(--tab-active-fg, #D7F36A)" } : { color: "var(--color-text-muted)" }}
+              className="inline-flex items-center gap-1.5 whitespace-nowrap rounded-full px-3 py-1.5 text-[13px] font-semibold transition-colors sm:px-4 sm:text-sm"
+              style={
+                navy
+                  ? ativa
+                    ? { background: "#D7F36A", color: "#16181D" }
+                    : { color: "#D7F36A" }
+                  : ativa
+                    ? { background: "var(--tab-active-bg, #14233A)", color: "var(--tab-active-fg, #D7F36A)" }
+                    : { color: "var(--color-text-muted)" }
+              }
             >
               {a.label}
               {a.href === "/app/ai/cases" && <ContadorDeCasos compacto={false} />}

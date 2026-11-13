@@ -9,9 +9,9 @@ const TUDO = new Set<string>([...CATALOGO]);
 const perfil = (chave: "rua" | "gabinete") => new Set<string>(PERFIS_DE_ACESSO.find((p) => p.chave === chave)!.destinos ?? []);
 
 describe("menu do gabinete — enxuga sem perder tela", () => {
-  it("fica em 19 portas no menu lateral", () => {
-    expect(AREAS_DO_GABINETE).toHaveLength(19);
-    expect(portasDoGabinete(TUDO)).toHaveLength(19);
+  it("fica em 21 portas no menu lateral", () => {
+    expect(AREAS_DO_GABINETE).toHaveLength(21);
+    expect(portasDoGabinete(TUDO)).toHaveLength(21);
   });
 
   it("toda aba aponta para uma tela que existe no catálogo (ou acompanha uma que existe)", () => {
@@ -37,19 +37,19 @@ describe("menu do gabinete — enxuga sem perder tela", () => {
       "/app/ai/cases", "/app/politico/raio-x", "/app/politico/comparativo", "/app/politico/radar-zonal",
       "/app/politico/cadeiras", "/app/politico/boletim", "/app/politico/pesquisas", "/app/politico/briefing",
       "/app/politico/social", "/app/politico/narrativas", "/app/campaigns", "/app/captacao-qr",
-      "/app/politico/grupos-origem", "/app/politico/kanban", "/app/politico/multiplicadores", "/app/contacts",
-      "/app/tasks", "/app/politico/materiais", "/app/ai/followups", "/app/instagram", "/app/activities",
+      "/app/politico/grupos-origem", "/app/politico/kanban", "/app/politico/multiplicadores",
+      "/app/tasks", "/app/politico/materiais", "/app/ai/followups", "/app/instagram",
     ];
     for (const href of antigas) expect(cobertos.has(href), href).toBe(true);
   });
 
   it("assessor de RUA vê só as portas dele, com o nome certo", () => {
     const portas = portasDoGabinete(perfil("rua"));
-    expect(portas.map((p) => p.label)).toEqual(["Hoje", "Pessoas", "Agenda", "Demandas", "Visitas Técnicas", "Obras & Fiscalização"]);
+    expect(portas.map((p) => p.label)).toEqual(["Hoje", "Pessoas", "Agenda", "Demandas", "Visitas Técnicas", "Obras & Fiscalização", "Locais & Eventos"]);
     // "Emendas e Obras" vira "Obras & Fiscalização" para quem só enxerga Obras.
     expect(portas.find((p) => p.label === "Obras & Fiscalização")!.href).toBe("/app/politico/obras");
     // Agenda dele tem Agenda + Locais & Eventos, sem Tarefas.
-    expect(portas.find((p) => p.label === "Agenda")!.abas.map((a) => a.label)).toEqual(["Agenda", "Locais & Eventos"]);
+    expect(portas.find((p) => p.label === "Agenda")!.abas.map((a) => a.label)).toEqual(["Agenda"]);
   });
 
   it("controle negativo: a camada nunca mostra o que o usuário não enxerga", () => {
@@ -96,10 +96,11 @@ describe("uma pele por seção — trocar de aba não troca a cor", () => {
   it("trabalho do dia é branco; campanha e análise são marinho", async () => {
     const { peleDaTela } = await import("./menu-do-gabinete");
     expect(peleDaTela("/app/politico")).toBe("branco");
-    expect(peleDaTela("/app/activities")).toBe("branco");
+    expect(peleDaTela("/app/politico/locais")).toBe("branco");
     expect(peleDaTela("/app/templates")).toBe("branco");
-    expect(peleDaTela("/app/contacts/abc")).toBe("branco");
-    expect(peleDaTela("/app/politico/materiais")).toBe("branco");
+    expect(peleDaTela("/app/tasks")).toBe("branco");
+    expect(peleDaTela("/app/politico/materiais")).toBe("marinho");
+    expect(peleDaTela("/app/instagram")).toBe("marinho");
     expect(peleDaTela("/app/politico/nutricao")).toBe("marinho");
     expect(peleDaTela("/app/politico/funil")).toBe("marinho");
     expect(peleDaTela("/app/politico/raio-x")).toBe("marinho");

@@ -115,6 +115,9 @@ export function ConversationHeader({
   // atendendo em instalação que nunca configurou agente nenhum.
   const automaticoDaOrg = useAutomaticoAtivo();
   const [reassignOpen, setReassignOpen] = useState(false);
+  // CELULAR: a barra de ações (7 botões em 3 linhas) tomava a tela e não sobrava
+  // lugar para LER a conversa. No celular ela fica recolhida atrás de "Ações".
+  const [acoesNoCelular, setAcoesNoCelular] = useState(false);
   const [confirmFecharOpen, setConfirmFecharOpen] = useState(false);
   const [confirmArquivarOpen, setConfirmArquivarOpen] = useState(false);
   const [confirmPessoalOpen, setConfirmPessoalOpen] = useState(false);
@@ -319,7 +322,15 @@ export function ConversationHeader({
           barra inteira para baixo. Ela também não é `shrink-0`, pelo mesmo
           motivo da barra. */}
       <div className="flex min-w-0 flex-col items-end gap-1">
-      <div className="flex min-w-0 flex-wrap items-center gap-1.5">
+      <button
+        type="button"
+        onClick={() => setAcoesNoCelular((v) => !v)}
+        aria-expanded={acoesNoCelular}
+        className="inline-flex items-center gap-1 rounded-md border border-border px-3 py-1.5 text-xs font-semibold md:hidden"
+      >
+        {acoesNoCelular ? "Fechar ações" : "Ações"}
+      </button>
+      <div className={`min-w-0 flex-wrap items-center gap-1.5 md:flex ${acoesNoCelular ? "flex" : "hidden"}`}>
         {/* Primeira da barra e sem rótulo escrito: é ferramenta de LEITURA, não
             ação de atendimento, e não muda de lugar com o estado da conversa.
             Só o ícone porque a barra já quebrou a caixa útil em 1280px uma vez

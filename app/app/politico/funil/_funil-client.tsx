@@ -87,7 +87,6 @@ export default function FunilClient({
         eyebrow="Mobilização · Funil"
         titulo="Funil"
         subtitulo={`${total.toLocaleString("pt-BR")} ${total === 1 ? "pessoa" : "pessoas"} na base — de novo cadastro a voto certo.`}
-        acoes={[{ href: "/app/politico/leads/novo", label: "+ Novo cadastro", primary: true }]}
       />
 
       {/* ── Funil hero + conversões ─────────────────────────────── */}

@@ -11,6 +11,8 @@
  */
 import Link from "next/link";
 
+import { CommandHero } from "@/components/politico/command-hero";
+
 interface Cartao {
   href: string;
   titulo: string;
@@ -91,6 +93,8 @@ const SECOES: Secao[] = [
     texto: "Ajustes técnicos. Quase ninguém precisa abrir.",
     recolhida: true,
     cartoes: [
+      { href: "/app/contacts", titulo: "Contatos (lista completa)", texto: "A lista técnica de contatos, com duplicados e etiquetas. No dia a dia use Pessoas." },
+      { href: "/app/activities", titulo: "Atividades das conversas", texto: "O que aconteceu nas conversas no período: o que foi a equipe e o que foi o assistente." },
       { href: "/app/ai", titulo: "Todas as telas da IA", texto: "A lista completa dos ajustes do assistente, para quem configura.", seVe: "/app/ai/agents" },
       { href: "/app/settings/recursos", titulo: "Recursos opcionais", texto: "O que está ligado ou desligado no sistema." },
       { href: "/app/settings/automacoes", titulo: "Regras automáticas", texto: "O limite geral das regras em que a IA escolhe o próximo passo." },
@@ -148,10 +152,11 @@ export function SecoesDoGabinete({
 
   return (
     <div className="mx-auto mb-10 w-full max-w-6xl space-y-8" data-secoes-do-gabinete>
-      <header>
-        <h1 className="text-2xl font-semibold tracking-tight" style={{ color: "var(--color-text)" }}>Configurações</h1>
-        <p className="text-sm" style={{ color: "var(--color-text-muted)" }}>O que se ajusta uma vez: o mandato, os canais, o assistente, a equipe e a sua conta.</p>
-      </header>
+      <CommandHero
+        eyebrow="GIP · Configurações"
+        titulo="Configurações"
+        subtitulo="O que se ajusta uma vez: o mandato, os canais, o assistente, a equipe e a sua conta."
+      />
       {secoes.map((s) =>
         s.recolhida ? (
           <details key={s.titulo} className="rounded-xl border p-4" style={{ borderColor: "var(--color-border)" }}>
