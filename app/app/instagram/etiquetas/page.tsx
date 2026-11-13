@@ -21,7 +21,7 @@ interface Nivel {
 }
 
 // Os MESMOS 5 níveis do funil operacional (engajamento.ts) — explicador do lado
-// do Instagram, sem inventar escada paralela. "Militante" é quem multiplica.
+// do Instagram, sem inventar escada paralela. "Multiplicador" é quem multiplica.
 const NIVEIS: Nivel[] = [
   {
     n: 1,
@@ -46,7 +46,7 @@ const NIVEIS: Nivel[] = [
   },
   {
     n: 4,
-    nome: "Militante",
+    nome: "Multiplicador",
     icone: Megaphone,
     oQueE: "Multiplica o seu trabalho — traz gente nova (indicações) e vira voz ativa. O mais valioso.",
     comoChega: "Sobe quando indica outras pessoas — a indicação é o sinal mais forte do funil.",

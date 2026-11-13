@@ -52,7 +52,7 @@ interface LiderancaRanking {
 
 const SUPPORT_LABELS: Record<string, string> = {
   voto_certo: "Voto certo",
-  militante: "Militante",
+  militante: "Multiplicador",
   apoiador: "Apoiador",
   simpatizante: "Simpatizante",
   novo_cadastro: "Novo cadastro",

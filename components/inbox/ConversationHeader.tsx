@@ -223,7 +223,7 @@ export function ConversationHeader({
     // Nenhuma ação some — um menu "mais" esconderia o "Lembrar" que a spec
     // `canais-baseline` clica, e, pior, esconderia ação de quem atende.
     <div
-      className="flex flex-wrap items-center justify-between gap-3 border-b px-4 py-3"
+      className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2 border-b px-3 py-2 md:px-4 md:py-3"
       style={{
         background: "color-mix(in srgb, var(--color-surface-elevated) 45%, transparent)",
         backdropFilter: "blur(14px) saturate(140%)",
@@ -231,7 +231,7 @@ export function ConversationHeader({
         borderColor: "color-mix(in srgb, var(--color-text) 8%, transparent)",
       }}
     >
-      <div className="flex min-w-0 items-center gap-3">
+      <div className="flex min-w-0 flex-1 basis-0 items-center gap-3 md:flex-none md:basis-auto">
         {/* Avatar do contato — amarra o cabeçalho à lista e ao painel do CRM
             (as três colunas passam a mostrar a mesma pessoa). O logo do canal
             vai no cantinho, como na linha da lista. */}
@@ -307,7 +307,7 @@ export function ConversationHeader({
           )}
         </div>
         {phone && (
-          <p className="mt-0.5 flex min-w-0 items-center gap-1 truncate text-xs text-muted-foreground">
+          <p className="mt-0.5 hidden min-w-0 items-center gap-1 truncate text-xs text-muted-foreground md:flex">
             <Phone size={11} weight="regular" aria-hidden /> {phone}
           </p>
         )}
@@ -321,7 +321,7 @@ export function ConversationHeader({
           (#1625): na linha do nome ele alargava a identidade e empurrava a
           barra inteira para baixo. Ela também não é `shrink-0`, pelo mesmo
           motivo da barra. */}
-      <div className="flex min-w-0 flex-col items-end gap-1">
+      <div className={`flex min-w-0 flex-col items-end gap-1 ${acoesNoCelular ? "basis-full md:basis-auto" : ""}`}>
       <button
         type="button"
         onClick={() => setAcoesNoCelular((v) => !v)}

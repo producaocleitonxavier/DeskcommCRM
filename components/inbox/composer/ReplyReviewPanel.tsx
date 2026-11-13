@@ -106,7 +106,7 @@ export function ReplyReviewPanel({
   };
   return (
     <section
-      className="mb-3 space-y-2 rounded-xl border p-3"
+      className="mb-2 space-y-2 rounded-xl border px-3 py-1.5 sm:mb-3 sm:p-3"
       style={{
         background: "color-mix(in srgb, var(--color-surface-elevated) 55%, transparent)",
         borderColor: "color-mix(in srgb, var(--color-text) 10%, transparent)",
@@ -116,7 +116,7 @@ export function ReplyReviewPanel({
       aria-label={t("Assistência do agente")}
     >
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <p className="text-sm font-medium">
+        <p className="text-xs font-medium sm:text-sm">
           {t(draft ? (statuses[draft.status] ?? "Assistência do agente") : "Assistência do agente")}
         </p>
         <Button

@@ -117,7 +117,7 @@ export default function DashboardClient({ dash, funil, calls, claro, atendimento
           <section aria-label="Indicadores principais" className="grid grid-cols-2 gap-4 lg:grid-cols-4">
             <KpiCard label="Total de contatos" valor={dash.total_leads} icone={Users} />
             <KpiCard label="Votos certos" valor={dash.votos_certos} icone={BadgeCheck} variant="dark" />
-            <KpiCard label="Militantes" valor={dash.militantes} icone={Megaphone} />
+            <KpiCard label="Multiplicadores" valor={dash.militantes} icone={Megaphone} />
             <KpiCard label="Apoiadores" valor={dash.apoiadores} icone={Heart} />
           </section>
 
@@ -136,7 +136,7 @@ export default function DashboardClient({ dash, funil, calls, claro, atendimento
                   { label: "Novo cadastro", value: funil.funil_novo_cadastro, color: FUNIL_HEX[0]! },
                   { label: "Simpatizante", value: funil.funil_simpatizante, color: FUNIL_HEX[1]! },
                   { label: "Apoiador", value: funil.funil_apoiador, color: FUNIL_HEX[2]! },
-                  { label: "Militante", value: funil.funil_militante, color: FUNIL_HEX[3]! },
+                  { label: "Multiplicador", value: funil.funil_militante, color: FUNIL_HEX[3]! },
                   { label: "Voto certo", value: funil.funil_voto_certo, color: FUNIL_HEX[4]! },
                 ]}
               />
@@ -151,7 +151,7 @@ export default function DashboardClient({ dash, funil, calls, claro, atendimento
                 { name: "Novos cadastros", value: dash.novos_cadastros, fill: FUNIL_HEX[0]! },
                 { name: "Simpatizantes", value: dash.simpatizantes, fill: FUNIL_HEX[1]! },
                 { name: "Apoiadores", value: dash.apoiadores, fill: FUNIL_HEX[2]! },
-                { name: "Militantes", value: dash.militantes, fill: FUNIL_HEX[3]! },
+                { name: "Multiplicadores", value: dash.militantes, fill: FUNIL_HEX[3]! },
                 { name: "Votos certos", value: dash.votos_certos, fill: FUNIL_HEX[4]! },
               ]}
             />

@@ -196,7 +196,7 @@ export default function SetupWizard({ inicial }: { inicial: SetupInicial }) {
         <p className="mb-2 text-sm font-semibold sm:hidden" style={{ color: "var(--color-text-muted)" }}>
           Passo {passo + 1} de {PASSOS.length}
         </p>
-        <div className="flex items-center gap-1.5 overflow-x-auto sm:gap-2.5">
+        <div className="flex flex-wrap items-center gap-x-1.5 gap-y-2 sm:gap-2.5">
           {PASSOS.map((p, i) => {
             const feito = i < passo;
             const atual = i === passo;

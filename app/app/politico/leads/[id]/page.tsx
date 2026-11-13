@@ -80,7 +80,7 @@ const ETAPAS_FUNIL = [
   { value: "novo_cadastro", label: "Novo cadastro", idx: 0 },
   { value: "simpatizante", label: "Simpatizante", idx: 1 },
   { value: "apoiador", label: "Apoiador", idx: 2 },
-  { value: "militante", label: "Militante", idx: 3 },
+  { value: "militante", label: "Multiplicador", idx: 3 },
   { value: "voto_certo", label: "Voto certo", idx: 4 },
 ] as const;
 

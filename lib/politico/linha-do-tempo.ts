@@ -21,7 +21,7 @@ const NIVEL_LABEL: Record<string, string> = {
   novo_cadastro: "Novo cadastro",
   simpatizante: "Simpatizante",
   apoiador: "Apoiador",
-  militante: "Militante",
+  militante: "Multiplicador",
   voto_certo: "Voto certo",
 };
 

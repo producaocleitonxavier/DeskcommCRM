@@ -17,7 +17,7 @@ const STAGES = [
   { value: "novo_cadastro", label: "Novo cadastro", hex: "#C9CEF3", badge: { bg: "#EEF0FB", fg: "#3B4280" } },
   { value: "simpatizante", label: "Simpatizante", hex: "#9AA5EA", badge: { bg: "#DDE1F7", fg: "#2F3DA8" } },
   { value: "apoiador", label: "Apoiador", hex: "#6B79DD", badge: { bg: "#B4BCF0", fg: "#1E2A80" } },
-  { value: "militante", label: "Militante", hex: "#4352C4", badge: { bg: "#4352C4", fg: "#FFFFFF" } },
+  { value: "militante", label: "Multiplicador", hex: "#4352C4", badge: { bg: "#4352C4", fg: "#FFFFFF" } },
   { value: "voto_certo", label: "Voto certo", hex: "#26318F", badge: { bg: "#26318F", fg: "#FFFFFF" } },
 ] as const;
 

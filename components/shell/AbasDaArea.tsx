@@ -63,7 +63,7 @@ export function AbasDaArea({ navy = false }: { /** Tela marinho: abas em verde (
   if (!mostra || !achado) return null;
 
   return (
-    <nav ref={ref} aria-label={`Telas de ${achado.porta.label}`} className="mx-auto mb-4 w-full" style={{ maxWidth: "1140px" }} data-abas-da-area>
+    <nav ref={ref} aria-label={`Telas de ${achado.porta.label}`} className={`mx-auto mb-4 w-full${/^\/app\/inbox\/[^/]+/.test(pathname ?? "") ? " hidden md:block" : ""}`} style={{ maxWidth: "1140px" }} data-abas-da-area>
       {/* Todas as abas à vista, sem rolagem lateral: no celular elas quebram em mais
           de uma linha (pedido de 13/nov — a barra de rolagem escondia abas). */}
       <div

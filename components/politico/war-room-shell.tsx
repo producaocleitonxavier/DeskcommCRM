@@ -56,6 +56,8 @@ export const ROTAS_NAVY = [
   // (Atendimento: Inbox/Radar/Respostas/Casos, todos marinho). A seção é uma
   // unidade e tem uma pele só. Regra: GABINETE=branco, resto=marinho.
   "/app/politico/voz",
+  // Configurar mandato: casa com Configurações (marinho) — pedido de 13/nov.
+  "/app/politico/configuracao",
 ];
 
 /**

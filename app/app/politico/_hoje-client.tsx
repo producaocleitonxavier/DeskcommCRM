@@ -203,7 +203,7 @@ function PlacarEquipe({ linhas }: { linhas: PlacarMembro[] }) {
               >
                 {iniciaisDe(l.nome)}
               </span>
-              <span className="min-w-0 flex-1 truncate text-sm font-semibold" style={{ color: "var(--color-text)" }}>
+              <span className="min-w-0 flex-1 break-words text-sm font-semibold leading-snug" style={{ color: "var(--color-text)" }}>
                 {l.nome}
               </span>
               <div className="hidden items-center gap-3 sm:flex">
@@ -243,7 +243,7 @@ function PlacarEquipe({ linhas }: { linhas: PlacarMembro[] }) {
  */
 function CargaEquipe({ linhas }: { linhas: CargaMembro[] }) {
   return (
-    <section aria-label="Carga da equipe" className="gip-glass p-6 sm:p-7">
+    <section aria-label="Carga da equipe" className="gip-glass p-4 sm:p-7">
       <SectionHeader
         title="Carga da equipe · agora"
         subtitle="O que está na mão de cada um — e quantas já passaram do prazo"
@@ -253,17 +253,17 @@ function CargaEquipe({ linhas }: { linhas: CargaMembro[] }) {
       <div className="overflow-hidden rounded-xl" style={{ border: "1px solid var(--color-border)" }}>
         <div className="flex items-center gap-2 px-4 py-2 text-[11px] font-bold uppercase tracking-wide" style={{ background: "rgba(127,127,127,0.06)", color: "var(--color-text-subtle)" }}>
           <span className="flex-1">Responsável</span>
-          <span className="w-20 text-right">Abertas</span>
-          <span className="w-20 text-right">Atrasadas</span>
+          <span className="w-[4.25rem] shrink-0 text-right sm:w-20">Abertas</span>
+          <span className="w-[4.75rem] shrink-0 text-right sm:w-20">Atrasadas</span>
         </div>
         <ul>
           {linhas.map((l) => (
             <li key={l.userId ?? "sem"} className="flex items-center gap-2 px-4 py-2.5" style={{ borderTop: "1px solid var(--color-border)" }}>
-              <span className="min-w-0 flex-1 truncate text-sm font-semibold" style={{ color: l.userId ? "var(--color-text)" : "var(--color-text-subtle)" }}>
+              <span className="min-w-0 flex-1 break-words text-sm font-semibold leading-snug" style={{ color: l.userId ? "var(--color-text)" : "var(--color-text-subtle)" }}>
                 {l.nome}
               </span>
-              <span className="w-20 text-right text-sm font-bold tabular-nums" style={{ color: "var(--color-text)" }}>{l.abertas}</span>
-              <span className="w-20 text-right text-sm font-bold tabular-nums" style={{ color: l.atrasadas > 0 ? "#C82333" : "var(--color-text-subtle)" }}>
+              <span className="w-[4.25rem] shrink-0 text-right text-sm font-bold tabular-nums sm:w-20" style={{ color: "var(--color-text)" }}>{l.abertas}</span>
+              <span className="w-[4.75rem] shrink-0 text-right text-sm font-bold tabular-nums sm:w-20" style={{ color: l.atrasadas > 0 ? "#C82333" : "var(--color-text-subtle)" }}>
                 {l.atrasadas}
               </span>
             </li>

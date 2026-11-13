@@ -20,7 +20,7 @@ const NIVEIS: { v: SegmentoPesquisa["niveis"][number]; l: string }[] = [
   { v: "novo_cadastro", l: "Novo cadastro" },
   { v: "simpatizante", l: "Simpatizante" },
   { v: "apoiador", l: "Apoiador" },
-  { v: "militante", l: "Militante" },
+  { v: "militante", l: "Multiplicador" },
   { v: "voto_certo", l: "Voto certo" },
 ];
 const TEMPS: { v: SegmentoPesquisa["temperaturas"][number]; l: string }[] = [
