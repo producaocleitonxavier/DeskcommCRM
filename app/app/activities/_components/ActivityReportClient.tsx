@@ -140,11 +140,9 @@ export function ActivityReportClient() {
         // a mesma coisa em silêncio.
         <EmptyState
           icon={ClockCounterClockwise}
-          headline={t("Nada aconteceu neste período")}
-          subcopy={t(
-            "Nenhum acontecimento foi registrado na janela escolhida — nem por pessoas, nem pelos agentes. Aumente o período ou confira se o atendimento está de pé.",
-          )}
-          primary={{ label: t("Ver conversas"), href: "/app/inbox" }}
+          headline="Nenhuma conversa movimentada neste período"
+          subcopy="Aqui entra o que acontece nas conversas: respostas, encaminhamentos e mudanças feitas pela equipe ou pelo assistente. Aumente o período para ver mais. O que cada assessor registrou no gabinete está no placar da tela Hoje."
+          primary={{ label: "Ver o placar da equipe", href: "/app/politico" }}
         />
       ) : (
         <>

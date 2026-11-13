@@ -49,7 +49,7 @@ export function visitaAgendada(d: VisitaDemanda): boolean {
   return t >= Date.now();
 }
 
-export type StatusVisita = "realizada" | "atrasada" | "agendada";
+export type StatusVisita = "realizada" | "atrasada" | "agendada" | "encerrada";
 
 /**
  * Bucket da visita para o painel "Visitas Técnicas": realizada vence tudo;
@@ -58,10 +58,13 @@ export type StatusVisita = "realizada" | "atrasada" | "agendada";
 export function statusVisita(d: VisitaDemanda): StatusVisita {
   if (d.realizadaEm) return "realizada";
   if (visitaPendente(d)) return "atrasada";
+  // Demanda já resolvida/encerrada sem a visita marcada como feita: não está
+  // "agendada" (a data pode até ter passado) — foi encerrada sem registro da visita.
+  if (ESTADOS_FECHADOS.has(d.estado)) return "encerrada";
   return "agendada";
 }
 
-const RANK_VISITA: Record<StatusVisita, number> = { atrasada: 0, agendada: 1, realizada: 2 };
+const RANK_VISITA: Record<StatusVisita, number> = { atrasada: 0, agendada: 1, realizada: 2, encerrada: 3 };
 
 /**
  * Ordenação do painel: ATRASADAS primeiro, depois agendadas, depois realizadas;

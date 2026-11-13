@@ -107,11 +107,15 @@ export async function buscarPrestacaoContas(orgId: string, periodo: Periodo): Pr
         ) / 10
       : null;
 
-  const oficios = await contar(db, "pol_demanda_eventos", orgId, (q) => {
-    q = q.eq("tipo", "oficio_emitido");
-    if (desde) q = q.gte("created_at", desde);
-    return q;
-  });
+  // Ofícios: no MANDATO INTEIRO conta o que a tela Ofícios lista (demanda com
+  // número de ofício) — antes contava só os registros de emissão, e os dois números
+  // discordavam (1 aqui, 7 lá). Com período, vale a data da emissão.
+  const oficiosDoMandato = await contar(db, "demandas", orgId, (q) =>
+    q.not("pol_oficio_rotulo", "is", null),
+  );
+  const oficios = desde
+    ? await contar(db, "pol_demanda_eventos", orgId, (q) => q.eq("tipo", "oficio_emitido").gte("created_at", desde))
+    : oficiosDoMandato;
   const avisos = await contar(db, "pol_demanda_eventos", orgId, (q) => {
     q = q.eq("tipo", "cidadao_avisado");
     if (desde) q = q.gte("created_at", desde);
@@ -169,7 +173,7 @@ export async function buscarPrestacaoContas(orgId: string, periodo: Periodo): Pr
   const demandasTotM = await contar(db, "demandas", orgId, (q) =>
     q.eq("pol_gabinete", true).eq("estado", "resolvida").eq("pol_autoatendimento", false),
   );
-  const oficiosTotM = await contar(db, "pol_demanda_eventos", orgId, (q) => q.eq("tipo", "oficio_emitido"));
+  const oficiosTotM = oficiosDoMandato;
   // obrasEntregues já é sem período; base também.
   const totaisMandato = { demandas: demandasTotM, oficios: oficiosTotM, obras: obrasEntregues, base: baseTotal };
 

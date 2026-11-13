@@ -80,7 +80,7 @@ function tempoRelativo(iso: string | null): string | null {
   if (dias === 0) return "hoje";
   if (dias === 1) return "ontem";
   if (dias < 7) return `há ${dias} dias`;
-  if (dias < 30) return `há ${Math.floor(dias / 7)} sem`;
+  if (dias < 30) { const sem = Math.floor(dias / 7); return `há ${sem} ${sem === 1 ? "semana" : "semanas"}`; }
   if (dias < 365) { const m = Math.floor(dias / 30); return `há ${m} ${m === 1 ? "mês" : "meses"}`; }
   return `há ${Math.floor(dias / 365)} ano${dias < 730 ? "" : "s"}`;
 }
@@ -94,6 +94,8 @@ function diasDesde(iso: string | null): number | null {
 }
 
 /** Degraus do engajamento (espelha o motor): o que falta pra pessoa subir. */
+/** Quantos cartões cada etapa mostra antes do "Ver mais". */
+const CARTOES_POR_ETAPA = 10;
 const META_APOIADOR = 20;
 const META_MULTIPLICADOR = 50;
 function proximoDegrau(score: number): { texto: string; alvo: number } {
@@ -114,6 +116,9 @@ export default function KanbanClient({ colunas, grupos }: Props) {
   const [gruposSel, setGruposSel] = useState<string[]>([]);
   const [tempsSel, setTempsSel] = useState<string[]>([]);
   const [selecionado, setSelecionado] = useState<CardPessoa | null>(null);
+  // Celular: a etapa à mostra. Qualquer tela: quantos cartões cada etapa já abriu.
+  const [etapaCel, setEtapaCel] = useState<string | null>(null);
+  const [abertas, setAbertas] = useState<Record<string, number>>({});
 
   function alternar(lista: string[], v: string): string[] {
     return lista.includes(v) ? lista.filter((x) => x !== v) : [...lista, v];
@@ -142,6 +147,9 @@ export default function KanbanClient({ colunas, grupos }: Props) {
     [colunas, soApoiador],
   );
 
+  // A etapa do celular precisa estar entre as visíveis (o filtro "só apoiadores" esconde as duas primeiras).
+  const etapaNoCelular = colunasVisiveis.some((c) => c.estagio === etapaCel) ? etapaCel : (colunasVisiveis[0]?.estagio ?? null);
+
   const temPessoas = colunas.some((c) => c.total > 0);
 
   // Resumo do funil: a campanha num relance. Base = todo mundo; apoiador+ = quem
@@ -161,7 +169,7 @@ export default function KanbanClient({ colunas, grupos }: Props) {
       <CommandHero
         eyebrow="Relacionamento · Mobilização"
         titulo="Mobilização"
-        subtitulo="Seu público andando pelo funil, por etapa. O sistema move sozinho conforme a pessoa se engaja — e você pode mover à mão quando conhecer alguém."
+        subtitulo="A sua base, etapa por etapa. O sistema move sozinho conforme a pessoa se envolve, e você pode mover à mão quando conhecer alguém."
       />
 
       {/* Resumo — a campanha num relance (o funil inteiro + conversão) */}
@@ -187,7 +195,7 @@ export default function KanbanClient({ colunas, grupos }: Props) {
           ))}
           <div className="ml-auto text-right">
             <p className="text-2xl font-bold tabular-nums text-accent">{resumo.taxa}%</p>
-            <p className="text-xs text-text-subtle">viraram apoiador+</p>
+            <p className="text-xs text-text-subtle">já são apoiadores ou mais</p>
           </div>
         </div>
       )}
@@ -254,19 +262,41 @@ export default function KanbanClient({ colunas, grupos }: Props) {
 
       {!temPessoas ? (
         <div className="gip-glass p-8 text-center">
-          <p className="text-sm font-medium text-foreground">Ninguém no funil ainda.</p>
+          <p className="text-sm font-medium text-foreground">Ninguém na base ainda.</p>
           <p className="mt-1 text-sm text-text-muted">
             Conforme as pessoas forem entrando e se engajando (palestras, QR, pesquisas, respostas), elas aparecem
             aqui e sobem de etapa sozinhas.
           </p>
         </div>
       ) : (
-        <div className="flex gap-4 overflow-x-auto pb-2">
+        <>
+        {/* No celular as colunas não cabem lado a lado: mostra UMA etapa, escolhida aqui. */}
+        <div className="flex gap-1.5 overflow-x-auto pb-1 md:hidden" role="tablist" aria-label="Etapa">
           {colunasVisiveis.map((col) => {
-            const visiveis = col.cards.filter(cardPassa);
+            const ativa = col.estagio === etapaNoCelular;
+            return (
+              <button
+                key={col.estagio}
+                type="button"
+                role="tab"
+                aria-selected={ativa}
+                onClick={() => setEtapaCel(col.estagio)}
+                className="shrink-0 rounded-full px-3 py-1.5 text-xs font-semibold"
+                style={ativa ? { background: "var(--color-accent)", color: "#16181D" } : { background: "color-mix(in srgb, var(--color-text) 8%, transparent)", color: "var(--color-text-muted)" }}
+              >
+                {col.label} {col.total.toLocaleString("pt-BR")}
+              </button>
+            );
+          })}
+        </div>
+        <div className="flex gap-4 pb-2 md:overflow-x-auto">
+          {colunasVisiveis.map((col) => {
+            const todos = col.cards.filter(cardPassa);
+            const limite = abertas[col.estagio] ?? CARTOES_POR_ETAPA;
+            const visiveis = todos.slice(0, limite);
             const ocultosPeloCap = Math.max(0, col.total - col.cards.length);
             return (
-              <div key={col.estagio} className="flex min-w-[260px] flex-1 basis-0 flex-col">
+              <div key={col.estagio} className={`min-w-0 flex-1 basis-0 flex-col md:flex md:min-w-[260px] ${col.estagio === etapaNoCelular ? "flex" : "hidden"}`}>
                 {/* Cabeçalho da coluna, na cor da etapa */}
                 <div
                   className="mb-2 flex items-center gap-2 rounded-xl px-3 py-2"
@@ -292,6 +322,16 @@ export default function KanbanClient({ colunas, grupos }: Props) {
                       <CardView key={c.contactId} card={c} onAbrir={() => setSelecionado(c)} />
                     ))
                   )}
+                  {todos.length > visiveis.length && (
+                    <button
+                      type="button"
+                      onClick={() => setAbertas((a) => ({ ...a, [col.estagio]: limite + CARTOES_POR_ETAPA }))}
+                      className="rounded-xl px-3 py-2 text-center text-xs font-semibold text-text-muted transition-colors hover:text-foreground"
+                      style={{ border: "1px dashed color-mix(in srgb, var(--color-text) 22%, transparent)" }}
+                    >
+                      Ver mais {Math.min(CARTOES_POR_ETAPA, todos.length - visiveis.length)} de {todos.length - visiveis.length}
+                    </button>
+                  )}
                   {ocultosPeloCap > 0 && (
                     <p className="px-1 text-center text-[11px] text-text-subtle">
                       + {ocultosPeloCap.toLocaleString("pt-BR")} não exibidos
@@ -302,6 +342,7 @@ export default function KanbanClient({ colunas, grupos }: Props) {
             );
           })}
         </div>
+        </>
       )}
 
       <DetalheDrawer

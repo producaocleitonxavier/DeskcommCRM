@@ -87,6 +87,7 @@ const STATUS_PILL: Record<string, { bg: string; color: string; label: string }> 
   atrasada: { bg: "rgba(239,68,68,0.14)", color: "#C82333", label: "Atrasada" },
   agendada: { bg: "rgba(59,130,246,0.14)", color: "#1D4ED8", label: "Agendada" },
   realizada: { bg: "rgba(34,197,94,0.14)", color: "#15803D", label: "Realizada" },
+  encerrada: { bg: "rgba(100,116,139,0.16)", color: "#475569", label: "Encerrada sem registro da visita" },
 };
 
 export default function VisitasClient({ visitas, kpis, assessores, usuarioAtualId, temRelato, fotos, tipoMandato, presencas }: Props) {
@@ -276,7 +277,7 @@ export default function VisitasClient({ visitas, kpis, assessores, usuarioAtualI
             </button>
           ))}
           <span className="ml-auto text-xs" style={{ color: "var(--color-text-subtle)" }}>
-            {lista.length} de {visitas.length} visita(s)
+            {lista.length} de {visitas.length} {visitas.length === 1 ? "visita" : "visitas"}
           </span>
         </div>
       </section>

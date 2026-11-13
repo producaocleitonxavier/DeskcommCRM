@@ -33,7 +33,7 @@ export default async function ActivitiesReportPage({
       <CommandHero
         eyebrow="Hoje · O que a equipe fez"
         titulo="O que a equipe fez"
-        subtitulo="O que aconteceu na operação no período — e quanto disso foi a equipe."
+        subtitulo="O que aconteceu nas conversas no período: quanto foi a equipe e quanto foi o assistente. O que cada assessor registrou no gabinete (demandas, visitas, cadastros) está no placar da aba Hoje."
       />
 
       <Relatorios abaInicial={abaInicial} />

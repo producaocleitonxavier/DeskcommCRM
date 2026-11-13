@@ -174,14 +174,14 @@ export function ContactsListClient() {
                   origem ao lado. Uma etiqueta mostra o nome; duas mostram a
                   primeira e o resto em contagem. */}
               {tags.length === 0
-                ? `${t("Tag")}: ${t("todas")}`
+                ? `${"Etiqueta"}: ${t("todas")}`
                 : tags.length === 1
-                  ? `${t("Tag")}: ${tags[0]}`
-                  : `${t("Tag")}: ${tags[0]} +${tags.length - 1}`}
+                  ? `${"Etiqueta"}: ${tags[0]}`
+                  : `${"Etiqueta"}: ${tags[0]} +${tags.length - 1}`}
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="start">
-            <DropdownMenuLabel>{t("Tag")}</DropdownMenuLabel>
+            <DropdownMenuLabel>{"Etiqueta"}</DropdownMenuLabel>
             <DropdownMenuSeparator />
             <DropdownMenuItem
               onClick={() => {
