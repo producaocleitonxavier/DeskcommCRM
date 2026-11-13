@@ -24,12 +24,13 @@ const RISK_META: Record<
 > = {
   critico: { label: "Crítico", variant: "error" },
   em_risco: { label: "Em risco", variant: "warning" },
-  em_voo: { label: "Em voo", variant: "info" },
+  em_voo: { label: "Com retorno marcado", variant: "info" },
 };
 
 function coldFor(hours: number, t: (texto: string) => string): string {
-  if (hours < 48) return `${t("parado há")} ${hours}h`;
-  return `${t("parado há")} ${Math.round(hours / 24)}d`;
+  if (hours < 24) return `${t("parado há")} ${Math.max(1, hours)}h`;
+  const dias = Math.round(hours / 24);
+  return `${t("parado há")} ${dias} ${dias === 1 ? "dia" : "dias"}`;
 }
 
 function followupWhen(iso: string, t: (texto: string) => string): string {
@@ -132,11 +133,14 @@ export function RiskRadarList() {
                   className="shrink-0 rounded-full px-2 py-0.5 text-[11px] font-bold tabular-nums"
                   style={d.horas_aberta >= 720 ? { background: "rgba(239,68,68,0.16)", color: "#FCA5A5" } : { background: "rgba(255,255,255,0.06)", color: "var(--color-text-muted)" }}
                 >
-                  {t("aberta há")} {d.horas_aberta}h
+                  {t("aberta há")} {d.horas_aberta >= 24 ? `${Math.round(d.horas_aberta / 24)} ${Math.round(d.horas_aberta / 24) === 1 ? "dia" : "dias"}` : `${Math.max(1, d.horas_aberta)}h`}
                 </span>
               </li>
             ))}
           </ul>
+          {semPasso.length > 8 && (
+            <p className="mt-2 text-xs" style={{ color: "var(--color-text-muted)" }}>e mais {semPasso.length - 8} — a lista mostra as 8 paradas há mais tempo.</p>
+          )}
         </section>
       ) : null}
 
@@ -212,7 +216,7 @@ export function RiskRadarList() {
           {data.counts.em_risco} {t("em risco")}
         </Badge>
         <Badge variant="info">
-          {data.counts.em_voo} {t("em voo")}
+          {data.counts.em_voo} com retorno marcado
         </Badge>
       </div>
 

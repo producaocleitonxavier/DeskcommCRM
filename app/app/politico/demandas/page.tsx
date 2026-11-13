@@ -19,6 +19,7 @@ import { RelatorioPdfButton } from "@/components/politico/relatorio-pdf-button";
 import { CommandHero } from "@/components/politico/command-hero";
 import { corDoOrgao, normalizarOrgao, rollupPorOrgao, ordenarUrgencia, alertaCobranca, type DemandaCobranca, type OrgaoRollup, type AlertaCobranca } from "@/lib/politico/demanda-cobranca";
 import { exigirAcessoPolitico } from "@/lib/politico/acesso";
+import { rotuloDoTipo } from "@/lib/politico/rotulo-tipo";
 
 export const dynamic = "force-dynamic";
 
@@ -312,7 +313,9 @@ async function contarEstados(organizationId: string, temAuto: boolean, temRespon
     .eq("organization_id", organizationId)
     .eq("pol_gabinete", true)
     .eq("estado", "resolvida")
-    .gte("aberta_em", inicioMes.toISOString());
+    // Resolvida ESTE MÊS = FECHADA este mês (antes filtrava pela data de abertura:
+    // demanda aberta em outubro e resolvida em novembro não contava — dava 0).
+    .gte("fechada_em", inicioMes.toISOString());
   if (temAuto) qResolv = qResolv.eq("pol_autoatendimento", false);
   const { count: resolvidasMes } = await qResolv;
   counts._resolvidas_mes = resolvidasMes ?? 0;
@@ -827,7 +830,7 @@ export default async function GabinetePage({
                             )}
                             {d.pol_tipo && (
                               <span className="inline-flex items-center rounded-full border px-2 py-0.5 text-[11px] font-medium" style={{ borderColor: "var(--color-border)", color: "var(--color-text-muted)" }}>
-                                {d.pol_tipo.replace(/_/g, " ")}
+                                {rotuloDoTipo(d.pol_tipo)}
                               </span>
                             )}
                           </div>

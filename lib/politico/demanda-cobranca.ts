@@ -62,7 +62,8 @@ export function corDoOrgao(nome: string): { bg: string; color: string } {
 }
 
 /** Replica a regra de atraso da lista (puro, sem depender de Date externa). */
-function estaAtrasada(abertaEm: string, prazoDias: number | null): boolean {
+/** A régua ÚNICA de "demanda atrasada": passou do prazo de atendimento (padrão 30 dias). */
+export function estaAtrasada(abertaEm: string, prazoDias: number | null): boolean {
   const dias = prazoDias && prazoDias > 0 ? prazoDias : PRAZO_PADRAO_DIAS;
   const limite = new Date(abertaEm).getTime() + dias * 86400000;
   return Date.now() > limite;

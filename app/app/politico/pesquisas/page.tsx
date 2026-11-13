@@ -131,7 +131,7 @@ export default async function PesquisasPage({
         subtitulo="Pesquisas de opinião e intenção de voto com links públicos e contagem de respostas."
         acoes={[
           { href: "/app/politico/pesquisas/nova", label: "+ Nova pesquisa", primary: true },
-          { href: "/app/politico", label: "← War Room" },
+          { href: "/app/politico", label: "← Hoje" },
         ]}
       />
 

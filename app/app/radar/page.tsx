@@ -18,7 +18,7 @@ export default async function RadarPage() {
       <CommandHero
         eyebrow="Atendimento · Radar"
         titulo="Radar de risco"
-        subtitulo="Demandas abertas que esfriaram e precisam de você. Se o assistente já agendou um retorno, aparece como “em voo”; sem próximo passo, é risco de perder o cliente."
+        subtitulo="Demandas abertas que pararam e precisam de você. Cada uma é um cidadão esperando resposta. Se o assistente já marcou um retorno, ela aparece como “com retorno marcado”."
       />
       <RiskRadarList />
     </div>

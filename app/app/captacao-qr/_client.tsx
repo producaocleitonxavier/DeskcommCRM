@@ -207,8 +207,8 @@ export function CaptacaoQrClient({ materiais, canais }: { materiais: Material[];
           {t("Novo ponto de captação")}
         </h2>
         <div className="grid gap-4 sm:grid-cols-2">
-          <label className="space-y-1.5">
-            <span className="text-xs font-semibold uppercase tracking-wide" style={{ color: "var(--color-text-subtle)" }}>
+          <label className="block space-y-1.5">
+            <span className="block text-xs font-semibold uppercase tracking-wide" style={{ color: "var(--color-text-subtle)" }}>
               {t("Nome do lugar")}
             </span>
             <input
@@ -223,8 +223,8 @@ export function CaptacaoQrClient({ materiais, canais }: { materiais: Material[];
               style={{ borderColor: "var(--color-border)", background: "var(--color-surface)", color: "var(--color-text)" }}
             />
           </label>
-          <label className="space-y-1.5">
-            <span className="text-xs font-semibold uppercase tracking-wide" style={{ color: "var(--color-text-subtle)" }}>
+          <label className="block space-y-1.5">
+            <span className="block text-xs font-semibold uppercase tracking-wide" style={{ color: "var(--color-text-subtle)" }}>
               {t("Material entregue")}
             </span>
             <select
@@ -241,8 +241,8 @@ export function CaptacaoQrClient({ materiais, canais }: { materiais: Material[];
           </label>
         </div>
         <div className="grid gap-4 sm:grid-cols-[1fr_220px]">
-          <label className="space-y-1.5">
-            <span className="text-xs font-semibold uppercase tracking-wide" style={{ color: "var(--color-text-subtle)" }}>
+          <label className="block space-y-1.5">
+            <span className="block text-xs font-semibold uppercase tracking-wide" style={{ color: "var(--color-text-subtle)" }}>
               {t("Endereço do lugar")} <span className="font-normal normal-case">({t("opcional")})</span>
             </span>
             <input
@@ -253,8 +253,8 @@ export function CaptacaoQrClient({ materiais, canais }: { materiais: Material[];
               style={{ borderColor: "var(--color-border)", background: "var(--color-surface)", color: "var(--color-text)" }}
             />
           </label>
-          <label className="space-y-1.5">
-            <span className="text-xs font-semibold uppercase tracking-wide" style={{ color: "var(--color-text-subtle)" }}>
+          <label className="block space-y-1.5">
+            <span className="block text-xs font-semibold uppercase tracking-wide" style={{ color: "var(--color-text-subtle)" }}>
               {t("Bairro")} <span className="font-normal normal-case">({t("opcional")})</span>
             </span>
             <input
@@ -267,8 +267,8 @@ export function CaptacaoQrClient({ materiais, canais }: { materiais: Material[];
           </label>
         </div>
         {assessores.length > 0 && (
-          <label className="space-y-1.5">
-            <span className="text-xs font-semibold uppercase tracking-wide" style={{ color: "var(--color-text-subtle)" }}>
+          <label className="block space-y-1.5">
+            <span className="block text-xs font-semibold uppercase tracking-wide" style={{ color: "var(--color-text-subtle)" }}>
               {t("Assessor responsável")} <span className="font-normal normal-case">({t("opcional")})</span>
             </span>
             <select
@@ -282,14 +282,14 @@ export function CaptacaoQrClient({ materiais, canais }: { materiais: Material[];
                 <option key={a.user_id} value={a.user_id}>{a.full_name ?? t("Membro")}</option>
               ))}
             </select>
-            <span className="text-xs" style={{ color: "var(--color-text-subtle)" }}>
+            <span className="block text-xs" style={{ color: "var(--color-text-subtle)" }}>
               {t("Os cadastros feitos por este QR contam no placar deste assessor.")}
             </span>
           </label>
         )}
         {canais.length > 1 && (
-          <label className="space-y-1.5">
-            <span className="text-xs font-semibold uppercase tracking-wide" style={{ color: "var(--color-text-subtle)" }}>
+          <label className="block space-y-1.5">
+            <span className="block text-xs font-semibold uppercase tracking-wide" style={{ color: "var(--color-text-subtle)" }}>
               {t("Número que recebe")}
             </span>
             <select
@@ -304,8 +304,8 @@ export function CaptacaoQrClient({ materiais, canais }: { materiais: Material[];
             </select>
           </label>
         )}
-        <label className="space-y-1.5">
-          <span className="text-xs font-semibold uppercase tracking-wide" style={{ color: "var(--color-text-subtle)" }}>
+        <label className="block space-y-1.5">
+          <span className="block text-xs font-semibold uppercase tracking-wide" style={{ color: "var(--color-text-subtle)" }}>
             {t("Mensagem que já vem escrita")}
           </span>
           <textarea

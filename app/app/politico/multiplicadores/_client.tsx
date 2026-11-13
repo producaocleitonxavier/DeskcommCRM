@@ -61,7 +61,7 @@ function tempoRelativo(iso: string | null): string | null {
   if (dias === 1) return "ontem";
   if (dias < 7) return `há ${dias} dias`;
   if (dias < 30) return `há ${Math.floor(dias / 7)} sem`;
-  if (dias < 365) return `há ${Math.floor(dias / 30)} meses`;
+  if (dias < 365) { const m = Math.floor(dias / 30); return `há ${m} ${m === 1 ? "mês" : "meses"}`; }
   return `há ${Math.floor(dias / 365)} ano${dias < 730 ? "" : "s"}`;
 }
 
@@ -419,7 +419,7 @@ export default function MultiplicadoresClient({
                 </Button>
                 {potenciais > 0 && (
                   <p className="mt-2 text-[12px] font-medium text-accent">
-                    ⭐ {potenciais} potencial{potenciais === 1 ? "" : "is"} —{" "}
+                    ⭐ {potenciais} {potenciais === 1 ? "potencial" : "potenciais"} —{" "}
                     {potenciais === 1 ? "convidado" : "convidados"} primeiro.
                   </p>
                 )}

@@ -69,10 +69,11 @@ export interface HojeClientProps {
 
 function badgeAtencao(a: GabineteHoje["atencao"][number]): { label: string; tipo: Tipo } {
   if (a.categoria === "atrasada") return { label: "Atrasada", tipo: "risk" };
+  if (a.categoria === "visita") return { label: "Visita sem relato", tipo: "risk" };
   if (a.categoria === "vence") {
-    if (!a.prazoISO) return { label: "Vence em breve", tipo: "warn" };
+    if (!a.prazoISO) return { label: "Visita em breve", tipo: "warn" };
     const dias = Math.ceil((new Date(a.prazoISO).getTime() - Date.now()) / 86_400_000);
-    return { label: dias <= 0 ? "Vence hoje" : `Vence em ${dias}d`, tipo: "warn" };
+    return { label: dias <= 0 ? "Visita hoje" : dias === 1 ? "Visita amanhã" : `Visita em ${dias} dias`, tipo: "warn" };
   }
   return { label: a.prioridade === "urgente" ? "Urgente" : "Alta prioridade", tipo: "warn" };
 }
@@ -656,7 +657,9 @@ export default function HojeClient({
           action={{ label: "Ver demandas", href: "/app/politico/demandas" }}
           className="mb-2"
         />
-        <FunnelBoard data={lifecycleData} className="mt-5" />
+        {/* Sem selo de "conversão": são QUANTIDADES em cada situação hoje, não um fluxo
+            (a divisão entre vizinhas dava "400%"). */}
+        <FunnelBoard data={lifecycleData} showConversion={false} className="mt-5" />
       </section>
 
       {/* ── 4. Demandas por área + evolução ─────────────────────── */}

@@ -126,7 +126,7 @@ export function ContactsListClient() {
       <CommandHero
         eyebrow="Operação · Contatos"
         titulo="Contatos"
-        subtitulo="Customer 360 — busque, filtre e gerencie contatos."
+        subtitulo="Todas as pessoas com quem o gabinete já falou — busque, filtre e abra a conversa."
       />
       {/*
         Botões de ação do cabeçalho — abrem diálogos (onClick), por isso ficam

@@ -18,6 +18,7 @@ import { SincronizarProposicoesButton } from "@/components/politico/sincronizar-
 import { classificarArea, rotuloArea } from "@/lib/politico/emenda-classificar";
 import { corDoOrgao } from "@/lib/politico/demanda-cobranca";
 import { grupoSituacao, GRUPOS_SITUACAO, type GrupoSituacao } from "@/lib/politico/projeto-lei";
+import { rotuloDoTipo } from "@/lib/politico/rotulo-tipo";
 
 const STATUS: Record<string, { label: string; bg: string; fg: string }> = {
   rascunho: { label: "Rascunho", bg: "#F0F0EB", fg: "#5B606B" },
@@ -64,7 +65,7 @@ function data(d: string | null): string {
 
 /** Tema que aparece na tela: o escrito; se vazio, a área adivinhada pelo título. */
 function temaDoProjeto(p: ProjetoItem): string {
-  return (p.tema ?? "").trim() || rotuloArea(classificarArea(p.titulo));
+  return rotuloDoTipo(p.tema) || rotuloArea(classificarArea(p.titulo));
 }
 
 export default function ProjetosClient({ kpis, projetos, ehAdmin }: ProjetosClientProps) {

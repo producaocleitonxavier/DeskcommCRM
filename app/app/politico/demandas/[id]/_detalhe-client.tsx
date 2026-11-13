@@ -556,10 +556,8 @@ export default function DetalheDemandaClient({ demanda, assessores, eventos, voz
             <p className="text-sm font-semibold" style={{ color: "var(--color-text)" }}>
               Nota do cidadão: {d.pol_avaliacao_nota} de {NOTA_MAX} · {ROTULO_DA_NOTA[d.pol_avaliacao_nota]}
             </p>
-            {d.pol_avaliacao_comentario ? (
+            {d.pol_avaliacao_comentario && (
               <p className="mt-0.5 text-sm" style={{ color: "var(--color-text-muted)" }}>“{d.pol_avaliacao_comentario}”</p>
-            ) : (
-              <p className="mt-0.5 text-xs" style={{ color: "var(--color-text-muted)" }}>A pessoa não escreveu comentário.</p>
             )}
             {notaPedeAtencao(d.pol_avaliacao_nota) && (
               <p className="mt-1 text-xs font-semibold" style={{ color: "#F87171" }}>Nota baixa: vale alguém do gabinete ligar ou escrever para entender o que faltou.</p>

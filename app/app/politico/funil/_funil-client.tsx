@@ -71,12 +71,14 @@ export default function FunilClient({
     href: `/app/politico/leads?etapa=${s.value}`,
   }));
 
-  // Conversões entre níveis consecutivos.
-  const conversoes = STAGES.slice(0, -1).map((s, i) => {
-    const atual = contagem[s.value] ?? 0;
-    const proximo = contagem[STAGES[i + 1]!.value] ?? 0;
-    const pct = atual > 0 ? Math.round((proximo / atual) * 100) : 0;
-    return { de: s.label, para: STAGES[i + 1]!.label, pct };
+  // Quanto da base JÁ CHEGOU a cada nível (nele ou acima). Antes a conta dividia
+  // o nível seguinte pelo atual — são QUANTIDADES paradas em cada nível, não um
+  // fluxo, então dava número impossível ("143%"). Esta conta nunca passa de 100%.
+  const totalNiveis = STAGES.reduce((a, s) => a + (contagem[s.value] ?? 0), 0);
+  const conversoes = STAGES.slice(1).map((s, i) => {
+    const nesteOuAcima = STAGES.slice(i + 1).reduce((a, x) => a + (contagem[x.value] ?? 0), 0);
+    const pct = totalNiveis > 0 ? Math.round((nesteOuAcima / totalNiveis) * 100) : 0;
+    return { nivel: s.label, pessoas: nesteOuAcima, pct };
   });
 
   return (
@@ -99,14 +101,14 @@ export default function FunilClient({
         </section>
 
         <section className="gip-glass p-6 sm:p-7">
-          <h2 className="mb-4 font-heading text-base font-bold">Conversão entre níveis</h2>
+          <h2 className="font-heading text-base font-bold">Até onde a base chegou</h2>
+          <p className="mb-4 mt-0.5 text-xs" style={{ color: "var(--color-text-subtle)" }}>De cada 100 pessoas, quantas já estão neste nível ou acima.</p>
           <div className="space-y-3">
             {conversoes.map((c, i) => (
               <div key={i} className="flex items-center justify-between gap-2 text-sm">
-                <div className="flex min-w-0 items-center gap-1.5" style={{ color: "var(--color-text-muted)" }}>
-                  <span className="truncate">{c.de}</span>
-                  <ArrowRight className="h-3.5 w-3.5 shrink-0" aria-hidden />
-                  <span className="truncate">{c.para}</span>
+                <div className="min-w-0" style={{ color: "var(--color-text-muted)" }}>
+                  <span>{c.nivel} ou acima</span>
+                  <span className="ml-1.5 text-xs tabular-nums" style={{ color: "var(--color-text-subtle)" }}>({c.pessoas.toLocaleString("pt-BR")})</span>
                 </div>
                 <span
                   className="shrink-0 rounded-full px-2 py-0.5 text-xs font-bold tabular-nums"

@@ -20,6 +20,8 @@ import { destinosDaInterface } from "@/lib/navigation/interface";
 import HojeClient from "./_hoje-client";
 import PageTabs from "@/components/politico/page-tabs";
 import { exigirAcessoPolitico } from "@/lib/politico/acesso";
+import { estaAtrasada } from "@/lib/politico/demanda-cobranca";
+import { rotuloDoTipo } from "@/lib/politico/rotulo-tipo";
 
 const COMANDO_TABS = [
   { id: "hoje", label: "Hoje", href: "/app/politico" },
@@ -51,7 +53,8 @@ export interface GabineteHoje {
     assunto: string;
     prioridade: string | null;
     prazoISO: string | null;
-    categoria: "atrasada" | "vence" | "prioridade";
+    /** atrasada = passou do PRAZO DE ATENDIMENTO; visita = a data da visita passou sem relato; vence = visita nos próximos 3 dias. */
+    categoria: "atrasada" | "visita" | "vence" | "prioridade";
   }[];
   agenda: { id: string; titulo: string; dataISO: string; diaInteiro: boolean; local: string | null }[];
   aniversariantes: { id: string; nome: string; cidade: string | null }[];
@@ -104,7 +107,7 @@ async function buscarGabineteHoje(organizationId: string): Promise<GabineteHoje>
   const [demRes, agendaRes, aniRes, cfgRes, obrasRes, vistoriasRes] = await Promise.all([
     db
       .from("demandas")
-      .select("id, assunto, estado, pol_prioridade, prazo_em, pol_tipo, aberta_em, fechada_em")
+      .select("id, assunto, estado, pol_prioridade, prazo_em, pol_tipo, aberta_em, fechada_em, pol_prazo_dias, pol_visita_realizada_em")
       .eq("organization_id", organizationId)
       .eq("pol_gabinete", true)
       .order("aberta_em", { ascending: false })
@@ -144,7 +147,20 @@ async function buscarGabineteHoje(organizationId: string): Promise<GabineteHoje>
       .limit(5000),
   ]);
 
-  const demandas = (demRes.data ?? []) as {
+  // MESMA BASE da tela Demandas: o trabalho do gabinete, SEM os registros em que a
+  // IA só orientou o cidadão (autoatendimento). Antes a Hoje contava esses também e
+  // os números não batiam com a tela Demandas (26 × 24, tempo médio 18 × 20 dias).
+  // Busca à parte e fail-soft: sem a coluna nesta instalação, nada é excluído.
+  const { data: autoRows } = await db
+    .from("demandas")
+    .select("id")
+    .eq("organization_id", organizationId)
+    .eq("pol_gabinete", true)
+    .eq("pol_autoatendimento", true)
+    .limit(2000);
+  const soOrientacao = new Set(((autoRows ?? []) as { id: string }[]).map((r) => r.id));
+
+  const demandas = ((demRes.data ?? []) as {
     id: string;
     assunto: string | null;
     estado: string;
@@ -153,17 +169,24 @@ async function buscarGabineteHoje(organizationId: string): Promise<GabineteHoje>
     pol_tipo: string | null;
     aberta_em: string;
     fechada_em: string | null;
-  }[];
+    pol_prazo_dias: number | null;
+    pol_visita_realizada_em: string | null;
+  }[]).filter((d) => !soOrientacao.has(d.id));
 
   // Atenção: abertas atrasadas / vencendo / alta prioridade.
-  const ordem: Record<GabineteHoje["atencao"][number]["categoria"], number> = { atrasada: 0, vence: 1, prioridade: 2 };
+  const ordem: Record<GabineteHoje["atencao"][number]["categoria"], number> = { atrasada: 0, visita: 1, vence: 2, prioridade: 3 };
   const atencao: GabineteHoje["atencao"] = [];
   for (const d of demandas) {
     if (d.estado === "resolvida" || d.estado === "encerrada") continue;
-    let categoria: "atrasada" | "vence" | "prioridade" | null = null;
-    if (d.prazo_em) {
+    let categoria: "atrasada" | "visita" | "vence" | "prioridade" | null = null;
+    // "Atrasada" é UMA coisa só no sistema: passou do prazo de atendimento — a mesma
+    // régua da Carga da equipe e da cobrança ao órgão. A data em `prazo_em` é a da
+    // VISITA: se passou sem relato, é "visita não registrada", não "atrasada"
+    // (antes as duas se misturavam e a tela mostrava 3, 8 e 10 "atrasadas").
+    if (estaAtrasada(d.aberta_em, d.pol_prazo_dias)) categoria = "atrasada";
+    else if (d.prazo_em && !d.pol_visita_realizada_em) {
       const p = new Date(d.prazo_em);
-      if (p < hojeIni) categoria = "atrasada";
+      if (p < hojeIni) categoria = "visita";
       else if (p <= em3dias) categoria = "vence";
     }
     if (!categoria && (d.pol_prioridade === "urgente" || d.pol_prioridade === "alta")) categoria = "prioridade";
@@ -201,7 +224,7 @@ async function buscarGabineteHoje(organizationId: string): Promise<GabineteHoje>
   const porArea = [...areaMap.entries()]
     .sort((a, b) => b[1] - a[1])
     .slice(0, 6)
-    .map(([k, v]) => ({ name: TIPO_LABEL[k] ?? k, value: v }));
+    .map(([k, v]) => ({ name: TIPO_LABEL[k] ?? rotuloDoTipo(k), value: v }));
 
   // Registradas por dia (últimos 14 dias).
   const registradas14d: { name: string; value: number }[] = [];
@@ -747,12 +770,10 @@ async function buscarCargaEquipe(organizationId: string): Promise<CargaMembro[]>
   }[];
 
   const SEM = "__sem__";
-  const PRAZO_PADRAO = 30;
   const tally = new Map<string, { abertas: number; atrasadas: number }>();
   for (const d of rows) {
     const resp = d.dono_user_id || d.pol_registrado_por_id || SEM;
-    const dias = d.pol_prazo_dias && d.pol_prazo_dias > 0 ? d.pol_prazo_dias : PRAZO_PADRAO;
-    const atrasada = new Date(d.aberta_em).getTime() + dias * 86_400_000 < Date.now();
+    const atrasada = estaAtrasada(d.aberta_em, d.pol_prazo_dias);
     const cur = tally.get(resp) ?? { abertas: 0, atrasadas: 0 };
     cur.abertas += 1;
     if (atrasada) cur.atrasadas += 1;
