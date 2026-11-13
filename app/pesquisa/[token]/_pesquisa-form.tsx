@@ -58,6 +58,8 @@ export default function PesquisaForm({
   const inicio = useMemo(() => Date.now(), []);
   const [resp, setResp] = useState<Record<string, unknown>>({});
   const [nome, setNome] = useState("");
+  // Campo-isca: fica fora da tela; gente não preenche, robô preenche (o servidor descarta).
+  const [isca, setIsca] = useState("");
   const [whatsapp, setWhatsapp] = useState("");
   const [cidade, setCidade] = useState("");
   const [bairro, setBairro] = useState("");
@@ -107,6 +109,7 @@ export default function PesquisaForm({
           state: estado.trim().toUpperCase().slice(0, 2) || null,
           duration_seconds: Math.round((Date.now() - inicio) / 1000),
           ...(ind ? { ind } : {}),
+          ...(isca ? { website: isca } : {}),
         }),
       });
       if (!res.ok) throw new Error("falha");
@@ -212,6 +215,16 @@ export default function PesquisaForm({
           </label>
           <p style={{ fontSize: 12.5, color: "#9AA0AE", marginBottom: 12 }}>Para o gabinete poder te dar retorno.</p>
           <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+            <input
+              type="text"
+              name="website"
+              tabIndex={-1}
+              autoComplete="off"
+              aria-hidden="true"
+              value={isca}
+              onChange={(e) => setIsca(e.target.value)}
+              style={{ position: "absolute", left: "-9999px", width: 1, height: 1, opacity: 0 }}
+            />
             <input placeholder="Seu nome" style={campoStyle} value={nome} onChange={(e) => setNome(e.target.value)} />
             <input placeholder="WhatsApp com DDD" inputMode="tel" style={campoStyle} value={whatsapp} onChange={(e) => setWhatsapp(e.target.value)} />
             <div style={{ display: "flex", gap: 10 }}>

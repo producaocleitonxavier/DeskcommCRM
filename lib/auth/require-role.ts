@@ -29,9 +29,11 @@ import type { NextResponse } from "next/server";
 import { fail, type ApiError } from "@/lib/api/wrappers";
 import { audit } from "@/lib/audit";
 import { CODIGO_ORG_DIVERGENTE, HEADER_ORG_DA_ABA } from "@/lib/auth/org-da-aba";
+import { CODIGO_FORA_DO_PERFIL, decidirApiDoPerfil } from "@/lib/auth/perfil-da-api";
 import { loadAuthUser, mfaEmDivida, orgAtivaSemPortao } from "@/lib/auth/server";
 import { ROLE_RANK, type ActiveOrg, type AuthUser, type Role } from "@/lib/auth/types";
 import { traduzir } from "@/lib/i18n/dicionario";
+import { destinosDaInterface } from "@/lib/navigation/interface";
 import { STATUS_OPERANTE, ehOperante } from "@/lib/organizacao/operante";
 import { createClient } from "@/lib/supabase/server";
 
@@ -93,6 +95,11 @@ export async function orgAtivaDaApi(user: AuthUser | null, requestId?: string): 
   if (user && org && !ehOperante(org.org_status)) {
     return { ok: false, response: orgSuspensa(user, requestId) };
   }
+  // O perfil de menu vale também nas rotas que entram por aqui (conversas, mensagens…).
+  if (user && org) {
+    const foraDoPerfil = await barrarForaDoPerfil(user, org, org.role, { requestId });
+    if (foraDoPerfil) return { ok: false, response: foraDoPerfil };
+  }
   return { ok: true, org };
 }
 
@@ -107,6 +114,19 @@ async function orgDaAbaNoHeader(): Promise<string | null> {
   try {
     const valor = (await headers()).get(HEADER_ORG_DA_ABA);
     return valor && valor.trim() ? valor.trim() : null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * O endereço da requisição, gravado pelo `proxy.ts` em `x-pathname` (sempre
+ * sobrescrito lá — o matcher do proxy cobre toda rota `/api/` — então o cliente não o forja). `null` fora de uma requisição.
+ */
+async function caminhoDaRequisicao(): Promise<string | null> {
+  try {
+    const valor = (await headers()).get("x-pathname");
+    return valor && valor.startsWith("/") ? valor : null;
   } catch {
     return null;
   }
@@ -301,5 +321,61 @@ export async function requireRole(min: Role, opts: RequireRoleOpts = {}): Promis
     };
   }
 
+  // O PERFIL DE MENU TAMBÉM VALE AQUI (lib/auth/perfil-da-api.ts): abaixo de
+  // gestor e com perfil restrito, a área da API só responde a quem tem uma das
+  // portas que a usam. Depois do papel, para o 403 de papel continuar o mesmo.
+  // Administrador da plataforma (fora de acompanhamento) não tem perfil a cobrar.
+  const foraDoPerfil = await barrarForaDoPerfil(user, org, effectiveRole as Role, { requestId, resource });
+  if (foraDoPerfil) return { ok: false, response: foraDoPerfil };
+
   return { ok: true, user, org: { ...org, role: effectiveRole as Role } };
+}
+
+/**
+ * A trava de perfil em si: devolve o 403 quando a área pedida não é do perfil de
+ * quem chama, ou `null` quando pode seguir. Um lugar só, para `requireRole`,
+ * `orgAtivaDaApi` e as rotas que autenticam por conta própria dizerem o mesmo.
+ */
+async function barrarForaDoPerfil(
+  user: AuthUser,
+  org: ActiveOrg,
+  papel: Role,
+  opts: { requestId?: string; resource?: string; portas?: readonly string[] } = {},
+): Promise<NextResponse<ApiError> | null> {
+  // Administrador da plataforma (fora de acompanhamento) não tem perfil a cobrar.
+  if (user.is_platform_admin && !user.support) return null;
+  const perfilRestrito = Array.isArray(
+    (org.interface_settings as { destinos?: unknown } | null | undefined)?.destinos,
+  );
+  if (!perfilRestrito || ROLE_RANK[papel] >= ROLE_RANK.manager) return null;
+  const portas = new Set(destinosDaInterface(org.interface_settings, false, papel).map((d) => d.href));
+  const caminho = await caminhoDaRequisicao();
+  if (decidirApiDoPerfil(caminho, papel, true, portas, opts.portas) === "ok") return null;
+  void audit({
+    action: "authz.denied",
+    actorUserId: user.id,
+    organizationId: org.orgId,
+    resourceType: opts.resource ?? null,
+    requestId: opts.requestId,
+    metadata: { reason: "fora_do_perfil", path: caminho, effective_role: papel },
+  });
+  return fail(CODIGO_FORA_DO_PERFIL, "Esta área não faz parte do seu perfil de acesso.", 403, {
+    requestId: opts.requestId,
+  });
+}
+
+/**
+ * Para Route Handler que autentica por conta própria (sem `requireRole`): a mesma
+ * trava de perfil. `null` = pode seguir (inclusive sem sessão ou sem organização:
+ * esses casos a própria rota já recusa). `portas` = as portas da rota quando ela
+ * não segue o mapa por área.
+ */
+export async function exigirPerfilDaApi(
+  opts: { requestId?: string; resource?: string; portas?: readonly string[] } = {},
+): Promise<NextResponse<ApiError> | null> {
+  const user = await loadAuthUser();
+  if (!user) return null;
+  const org = await orgAtivaSemPortao(user);
+  if (!org) return null;
+  return barrarForaDoPerfil(user, org, org.role, opts);
 }

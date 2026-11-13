@@ -22,6 +22,9 @@ export async function proxy(request: NextRequest) {
     CABECALHO_SEM_CSS,
     request.nextUrl.searchParams.has(PARAMETRO_SEM_CSS) ? "1" : "0",
   );
+  // O endereço para os handlers (a trava de perfil da API lê daqui). Mesmo motivo:
+  // gravado ANTES do `NextResponse.next` e sempre sobrescrito, para não ser forjado.
+  request.headers.set("x-pathname", request.nextUrl.pathname);
   const response = NextResponse.next({ request: { headers: request.headers } });
 
   // Inject X-Request-Id for downstream correlation (audit log, error wrappers).
@@ -159,5 +162,8 @@ export const config = {
   matcher: [
     // Run on all paths except static assets / Next internals.
     "/((?!_next/static|_next/image|favicon.ico|robots.txt|sitemap.xml|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico|css|js)$).*)",
+    // Toda rota de API passa pelo proxy, mesmo com um trecho final que pareça
+    // arquivo (`.js`, `.png`): é ele que grava o `x-pathname` que a trava de perfil lê.
+    "/api/:path*",
   ],
 };

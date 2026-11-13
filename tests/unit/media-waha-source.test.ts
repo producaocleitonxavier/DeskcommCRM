@@ -96,4 +96,38 @@ describe("fetchWahaMedia", () => {
   it("mapeia mediaUrl malformada p/ waha_media_untrusted_host", async () => {
     await expect(fetchWahaMedia("not-a-url")).rejects.toThrow("waha_media_untrusted_host");
   });
+
+  // ── auditoria de 13/nov/2026 ────────────────────────────────────────────────
+  it("caminho começando com // NÃO troca o host nem leva a chave para fora", async () => {
+    const fetchMock = vi.fn();
+    vi.stubGlobal("fetch", fetchMock);
+    await expect(fetchWahaMedia("https://publico.example//evil.test/api/files/x.jpg")).rejects.toThrow("waha_media_untrusted_host");
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("só arquivo de mídia: outro caminho da API do gateway é recusado", async () => {
+    const fetchMock = vi.fn();
+    vi.stubGlobal("fetch", fetchMock);
+    for (const url of [
+      "https://publico.example/api/sessions?all=true",
+      "https://publico.example/api/default/chats",
+      "https://publico.example/api/files/../sessions",
+      "https://publico.example/",
+    ]) {
+      await expect(fetchWahaMedia(url), url).rejects.toThrow("waha_media_untrusted_host");
+    }
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("controle: arquivo de mídia legítimo segue indo para a base, sem seguir redirecionamento", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(
+      new Response(new ArrayBuffer(1), { status: 200, headers: { "content-type": "image/png" } }),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+    await fetchWahaMedia("http://qualquer.host/api/files/sessao/foto.png?x=1");
+    expect(fetchMock).toHaveBeenCalledWith(
+      `${WAHA_BASE}/api/files/sessao/foto.png?x=1`,
+      expect.objectContaining({ redirect: "error" }),
+    );
+  });
 });

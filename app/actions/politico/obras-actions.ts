@@ -12,6 +12,7 @@ import { autenticarComPapel } from "@/lib/politico/acesso";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { requireAuth, resolveActiveOrg } from "@/lib/auth/server";
+import { caminhoPertenceAOrg } from "@/lib/storage/caminho-da-org";
 
 export type AcaoResultado = { ok: true; id?: string } | { ok: false; erro: string };
 
@@ -161,7 +162,9 @@ export async function listarFotosObra(obraId: string): Promise<FotoObra[]> {
   const admin = createAdminClient();
   const out: FotoObra[] = [];
   for (const f of linhas) {
-    const { data: signed } = await admin.storage.from(BUCKET).createSignedUrl(f.storage_path, 60 * 60);
+    const { data: signed } = caminhoPertenceAOrg(f.storage_path, org.orgId)
+      ? await admin.storage.from(BUCKET).createSignedUrl(f.storage_path, 60 * 60)
+      : { data: null };
     out.push({ id: f.id, legenda: f.legenda, latitude: f.latitude, longitude: f.longitude, created_at: f.created_at, url: signed?.signedUrl ?? null });
   }
   return out;
@@ -264,6 +267,6 @@ export async function removerFotoObra(fotoId: string): Promise<AcaoResultado> {
   const { error } = await db.from("pol_obra_fotos").delete().eq("id", fotoId).eq("organization_id", org.orgId);
   if (error) return { ok: false, erro: traduzErro(error) };
   const path = (foto as { storage_path?: string } | null)?.storage_path;
-  if (path) await createAdminClient().storage.from(BUCKET).remove([path]); // remove o binário
+  if (caminhoPertenceAOrg(path, org.orgId)) await createAdminClient().storage.from(BUCKET).remove([path]); // remove o binário
   return { ok: true };
 }

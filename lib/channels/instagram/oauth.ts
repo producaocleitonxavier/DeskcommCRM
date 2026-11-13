@@ -50,12 +50,16 @@ export interface IgOAuthState {
   exp: number;
 }
 
-const STATE_SECRET = process.env.IG_OAUTH_STATE_SECRET ?? process.env.NEXTAUTH_SECRET ?? "";
+// "||" e não "??": variável DEFINIDA porém vazia (como nasce no .env.example) também
+// cai no reserva. Sem chave nenhuma, assinar e conferir FALHAM (ver abaixo) — antes
+// a chave vazia valia, e qualquer um forjava o state de qualquer organização.
+const STATE_SECRET = process.env.IG_OAUTH_STATE_SECRET || process.env.NEXTAUTH_SECRET || "";
 
 /**
  * Gera o state HMAC-assinado para o OAuth redirect.
  */
 export function generateIgOAuthState(orgId: string, userId: string): string {
+  if (!STATE_SECRET) throw new Error("ig_oauth_state_secret_ausente");
   const nonce = randomBytes(16).toString("hex");
   const exp = Math.floor(Date.now() / 1000) + 600; // 10 minutos
   const payload = JSON.stringify({ orgId, userId, nonce, exp });
@@ -67,7 +71,7 @@ export function generateIgOAuthState(orgId: string, userId: string): string {
  * Verifica e decodifica o state.
  */
 export function verifyIgOAuthState(state: string | null): IgOAuthState | null {
-  if (!state) return null;
+  if (!state || !STATE_SECRET) return null;
   try {
     const decoded = JSON.parse(Buffer.from(state, "base64url").toString("utf8")) as {
       payload: string;

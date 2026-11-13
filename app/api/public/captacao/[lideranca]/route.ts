@@ -108,8 +108,10 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ lideranca:
         .eq("id", contactId)
         .maybeSingle();
       const cf = { ...(((cRow as { custom_fields?: Record<string, unknown> } | null)?.custom_fields) ?? {}) };
-      if (parsed.data.cidade) cf.cidade = parsed.data.cidade;
-      if (parsed.data.bairro) cf.bairro = parsed.data.bairro;
+      // Só COMPLETA o que está vazio (o comentário acima sempre disse isso; o
+      // código trocava). Digitar o telefone de alguém não prova ser essa pessoa.
+      if (parsed.data.cidade && !String(cf.cidade ?? "").trim()) cf.cidade = parsed.data.cidade;
+      if (parsed.data.bairro && !String(cf.bairro ?? "").trim()) cf.bairro = parsed.data.bairro;
       const patch: Record<string, unknown> = { custom_fields: cf };
       if (birthdate && !((cRow as { birthdate?: string | null } | null)?.birthdate)) patch.birthdate = birthdate;
       await admin.from("contacts").update(patch).eq("id", contactId).eq("organization_id", orgId);

@@ -46,7 +46,12 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
   }
 
   const { user, org } = authz;
-  const state = generateIgOAuthState(org.orgId, user.id);
+  let state: string;
+  try {
+    state = generateIgOAuthState(org.orgId, user.id);
+  } catch {
+    return NextResponse.redirect(new URL("/app/instagram/conectar?error=config", baseUrl));
+  }
   const authUrl = getIgAuthorizationUrl(config, state);
 
   void audit({

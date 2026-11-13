@@ -23,10 +23,9 @@ import { requireSupportWrite } from "@/lib/impersonate/support";
  */
 import { NextResponse } from "next/server";
 
-import { loadAuthUser } from "@/lib/auth/server";
-import { orgAtivaDaApi } from "@/lib/auth/require-role";
 import { ARCHIVED_AT, queryTolerantToMissingArchived } from "@/lib/channels/archived";
 import { createClient } from "@/lib/supabase/server";
+import { requireRole } from "@/lib/auth/require-role";
 
 export const dynamic = "force-dynamic";
 
@@ -38,12 +37,10 @@ export async function GET(
   if (supportDenied) return supportDenied;
   const { id } = await params;
 
-  const user = await loadAuthUser();
-  if (!user) return new NextResponse(null, { status: 401 });
-  const ativa = await orgAtivaDaApi(user);
-  if (!ativa.ok) return ativa.response;
-  const activeOrg = ativa.org;
-  if (!activeOrg) return new NextResponse(null, { status: 403 });
+  // Só administrador: quem lê o QR escolhe qual WhatsApp fica ligado ao canal.
+  const authz = await requireRole("admin", { resource: "channel_sessions", allowPlatformAdmin: true });
+  if (!authz.ok) return authz.response;
+  const activeOrg = authz.org;
 
   const supabase = await createClient();
   const buscar = (colunas: string) =>

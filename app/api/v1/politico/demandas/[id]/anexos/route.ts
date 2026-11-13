@@ -24,6 +24,7 @@ import { extFromMime, MAX_MEDIA_BYTES } from "@/lib/messaging/media/types";
 import { validateOutboundMedia } from "@/lib/messaging/media/upload-validation";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { exigirPerfilDaApi, requireRole } from "@/lib/auth/require-role";
 
 export const dynamic = "force-dynamic";
 
@@ -44,10 +45,16 @@ export async function POST(req: NextRequest, ctx: RouteCtx): Promise<Response> {
     data: { user },
   } = await db.auth.getUser();
   if (!user) return fail("unauthorized", "Sessao invalida.", 401, { requestId });
+  // Enviar arquivo é escrita: atendente ou acima ("somente leitura" não envia).
+  const papel = await requireRole("agent", { requestId, resource: "politico_upload" });
+  if (!papel.ok) return papel.response;
+  const foraDoPerfil = await exigirPerfilDaApi({ requestId, portas: ["/app/politico/demandas", "/app/politico/visitas"] });
+  if (foraDoPerfil) return foraDoPerfil;
 
   const { data: dem, error: demErr } = await db
     .from("demandas")
     .select("id, organization_id")
+    .eq("organization_id", papel.org.orgId)
     .eq("id", demandaId)
     .maybeSingle();
   if (demErr) return fail("internal_error", "Erro ao validar a demanda.", 500, { requestId });

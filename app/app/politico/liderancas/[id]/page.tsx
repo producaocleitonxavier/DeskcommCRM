@@ -13,6 +13,7 @@ import { requireAuth, resolveActiveOrg } from "@/lib/auth/server";
 import { lerVozConfig, vozArmada } from "@/lib/voz/config";
 import DetalheLiderancaClient, { type LiderancaDetalhe } from "./_detalhe-client";
 import { exigirAcessoPolitico } from "@/lib/politico/acesso";
+import { caminhoPertenceAOrg } from "@/lib/storage/caminho-da-org";
 
 export const dynamic = "force-dynamic";
 
@@ -47,7 +48,7 @@ export default async function LiderancaDetalhePage({
 
   const base = lidRes.data as unknown as LiderancaDetalhe & { foto_path: string | null };
   let fotoUrl: string | null = null;
-  if (base.foto_path) {
+  if (caminhoPertenceAOrg(base.foto_path, org.orgId)) {
     const { createAdminClient } = await import("@/lib/supabase/admin");
     const { data: signed } = await createAdminClient().storage.from("gabinete-liderancas").createSignedUrl(base.foto_path, 60 * 60);
     fotoUrl = signed?.signedUrl ?? null;

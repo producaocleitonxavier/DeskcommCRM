@@ -29,6 +29,7 @@ import { requireRole } from "@/lib/auth/require-role";
 import { traduzir } from "@/lib/i18n/dicionario";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
+import { caminhoPertenceAOrg } from "@/lib/storage/caminho-da-org";
 
 export const dynamic = "force-dynamic";
 
@@ -73,7 +74,7 @@ export async function GET(_req: NextRequest, ctx: RouteCtx): Promise<Response> {
     .eq("organization_id", org.orgId)
     .maybeSingle();
   if (error) return fail("internal_error", t("Erro ao buscar nota."), 500, { requestId });
-  if (!nota || !nota.media_storage_path) {
+  if (!nota || !caminhoPertenceAOrg(nota.media_storage_path, org.orgId)) {
     // Nota sem anexo não é erro de servidor: não há o que servir.
     return fail("not_found", t("Nota sem anexo."), 404, { requestId });
   }

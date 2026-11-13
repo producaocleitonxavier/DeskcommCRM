@@ -12,6 +12,7 @@ import { autenticarComPapel } from "@/lib/politico/acesso";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { requireAuth, resolveActiveOrg } from "@/lib/auth/server";
+import { caminhoPertenceAOrg } from "@/lib/storage/caminho-da-org";
 
 const BUCKET_IDENTIDADE = "gabinete-identidade";
 
@@ -96,7 +97,7 @@ export async function obterIdentidade(): Promise<IdentidadeGabinete> {
   };
   const admin = createAdminClient();
   const assinar = async (path: string | null): Promise<string | null> => {
-    if (!path) return null;
+    if (!caminhoPertenceAOrg(path, org)) return null;
     const { data: s } = await admin.storage.from(BUCKET_IDENTIDADE).createSignedUrl(path, 60 * 60);
     return s?.signedUrl ?? null;
   };
@@ -175,7 +176,7 @@ export async function removerImagemIdentidade(campo: "logo" | "assinatura" | "ti
     .eq("organization_id", org)
     .maybeSingle();
   const path = (data as Record<string, string | null> | null)?.[coluna] ?? null;
-  if (path) {
+  if (caminhoPertenceAOrg(path, org)) {
     const admin = createAdminClient();
     await admin.storage.from(BUCKET_IDENTIDADE).remove([path]);
   }

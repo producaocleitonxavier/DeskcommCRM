@@ -13,6 +13,7 @@ import { extFromMime, MAX_MEDIA_BYTES } from "@/lib/messaging/media/types";
 import { validateOutboundMedia } from "@/lib/messaging/media/upload-validation";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { exigirPerfilDaApi, requireRole } from "@/lib/auth/require-role";
 
 export const dynamic = "force-dynamic";
 
@@ -32,11 +33,17 @@ export async function POST(req: NextRequest, ctx: RouteCtx): Promise<Response> {
     data: { user },
   } = await db.auth.getUser();
   if (!user) return fail("unauthorized", "Sessão inválida.", 401, { requestId });
+  // Enviar arquivo é escrita: atendente ou acima ("somente leitura" não envia).
+  const papel = await requireRole("agent", { requestId, resource: "politico_upload" });
+  if (!papel.ok) return papel.response;
+  const foraDoPerfil = await exigirPerfilDaApi({ requestId, portas: ["/app/politico/liderancas"] });
+  if (foraDoPerfil) return foraDoPerfil;
 
   // Posse: a liderança precisa pertencer à org do usuário (RLS devolve a linha).
   const { data: lid, error: lidErr } = await db
     .from("pol_liderancas")
     .select("id, organization_id")
+    .eq("organization_id", papel.org.orgId)
     .eq("id", liderancaId)
     .maybeSingle();
   if (lidErr) return fail("internal_error", "Erro ao validar a liderança.", 500, { requestId });

@@ -20,6 +20,7 @@ import { fail } from "@/lib/api/wrappers";
 import { loadAuthUser } from "@/lib/auth/server";
 import { orgAtivaDaApi } from "@/lib/auth/require-role";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { caminhoPertenceAOrg } from "@/lib/storage/caminho-da-org";
 
 export const dynamic = "force-dynamic";
 
@@ -71,7 +72,7 @@ export async function GET(
     .maybeSingle();
 
   const row = contato as { avatar_storage_path?: string | null; is_anonymized?: boolean } | null;
-  if (!row?.avatar_storage_path || row.is_anonymized) {
+  if (!row || row.is_anonymized || !caminhoPertenceAOrg(row.avatar_storage_path, activeOrg.orgId)) {
     // 404 e não erro: "sem foto" é o estado normal da maioria dos contatos, e o
     // <AvatarFallback> das iniciais assume sozinho.
     return new Response(null, { status: 404 });

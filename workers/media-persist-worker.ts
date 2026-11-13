@@ -37,6 +37,7 @@ interface MessageMediaRow {
   id: string;
   organization_id: string;
   conversation_id: string;
+  direction?: string | null;
   media_url: string | null;
   media_mime: string | null;
   media_storage_path: string | null;
@@ -55,7 +56,7 @@ export async function persistMessageMedia(row: EventRow): Promise<HandlerResult>
     // Sem a coluna, o worker não tem como pedir o adapter e voltaria a
     // depender de uma função fixa de um canal só.
     .select(
-      "id, organization_id, conversation_id, channel_session_id, media_url, media_mime, media_storage_path, metadata",
+      "id, organization_id, conversation_id, channel_session_id, direction, media_url, media_mime, media_storage_path, metadata",
     )
     .eq("id", messageId)
     .eq("organization_id", row.organization_id)
@@ -73,6 +74,9 @@ export async function persistMessageMedia(row: EventRow): Promise<HandlerResult>
   }
   if (!msg?.media_url) return { consumer_key, status: "skipped", detail: "no media_url" };
   if (msg.media_storage_path) return { consumer_key, status: "skipped", detail: "already stored" };
+  // Mensagem ENVIADA também pode ter mídia hospedada no gateway (o eco do que foi
+  // mandado pelo celular). Quem impede abuso é `urlDeArquivoDoWaha`: só arquivo de
+  // mídia, só na origem do gateway — não a direção da mensagem.
 
   // `derivacao` é o item 2 da #2171: todo desfecho TERMINAL da derivação
   // grava `media_derived_status` junto do motivo, para a coluna nunca ficar

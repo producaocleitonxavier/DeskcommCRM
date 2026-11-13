@@ -9,6 +9,7 @@
 
 import { createAdminClient } from "@/lib/supabase/admin";
 import { logger } from "@/lib/logger";
+import { caminhoPertenceAOrg } from "@/lib/storage/caminho-da-org";
 
 export interface DrainStats {
   attempted: number;
@@ -26,6 +27,16 @@ interface QueueRow {
 }
 
 const MAX_ATTEMPTS = 3;
+
+/** Baldes em que todo caminho começa com o id da organização. */
+const BALDES_POR_ORGANIZACAO = new Set([
+  "gabinete-anexos",
+  "gabinete-identidade",
+  "gabinete-liderancas",
+  "gabinete-obras",
+  "whatsapp-media",
+  "internal-media",
+]);
 const DEFAULT_BATCH = 50;
 
 /**
@@ -63,6 +74,21 @@ export async function drainStorageRedactionQueue(
     const nextAttempts = row.attempts + 1;
 
     try {
+      // A fila é gravável por membro: sem esta conferência, uma linha plantada
+      // apagava o arquivo de OUTRA organização (auditoria de 13/nov/2026).
+      if (BALDES_POR_ORGANIZACAO.has(row.bucket) && !caminhoPertenceAOrg(row.object_path, row.organization_id)) {
+        await admin
+          .from("storage_redaction_queue")
+          .update({
+            status: "skipped",
+            attempts: nextAttempts,
+            processed_at: new Date().toISOString(),
+            error_message: "path_outside_organization",
+          })
+          .eq("id", row.id);
+        stats.skipped++;
+        continue;
+      }
       const { error: removeErr } = await admin.storage
         .from(row.bucket)
         .remove([row.object_path]);

@@ -23,6 +23,7 @@ import {
 } from "@/lib/channels";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
+import { caminhoPertenceAOrg } from "@/lib/storage/caminho-da-org";
 
 export const dynamic = "force-dynamic";
 
@@ -57,7 +58,7 @@ export async function GET(_req: NextRequest, ctx: RouteCtx): Promise<Response> {
   // Filtro explícito de organization_id por doutrina (defense-in-depth).
   const { data: msg, error } = await supabase
     .from("messages")
-    .select("id, media_url, media_mime, media_storage_path, metadata, channel_session_id")
+    .select("id, direction, media_url, media_mime, media_storage_path, metadata, channel_session_id")
     .eq("id", messageId)
     .eq("organization_id", activeOrg.orgId)
     .maybeSingle();
@@ -89,7 +90,9 @@ export async function GET(_req: NextRequest, ctx: RouteCtx): Promise<Response> {
     );
   }
 
-  if (msg.media_storage_path) {
+  // O caminho guardado tem de ser da PRÓPRIA organização: a coluna é gravável por
+  // membro, e a chave de serviço assinaria o arquivo de outro gabinete.
+  if (msg.media_storage_path && caminhoPertenceAOrg(msg.media_storage_path, activeOrg.orgId)) {
     const admin = createAdminClient();
     const { data: signed, error: signErr } = await admin.storage
       .from("whatsapp-media")
@@ -114,6 +117,9 @@ export async function GET(_req: NextRequest, ctx: RouteCtx): Promise<Response> {
   // conserto do worker removeu de lá e esqueceu aqui: com `fetchWahaMedia` em
   // duro, o path de um anexo do canal intermediado era procurado dentro do
   // contêiner do canal por QR — 404, e a tela dizia "mídia indisponível".
+  // Vale para recebida e para o eco do que foi enviado pelo celular. A proteção
+  // está em `urlDeArquivoDoWaha`: a URL guardada só vira pedido se for ARQUIVO de
+  // mídia, e sempre na origem do gateway (auditoria de 13/nov/2026).
   if (msg.media_url) {
     try {
       const admin = createAdminClient();

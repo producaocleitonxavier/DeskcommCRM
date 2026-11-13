@@ -22,6 +22,7 @@ import { canonicalPhoneBR } from "@/lib/channels/phone-variants";
 import { encontrarContatoPorTelefone } from "@/lib/channels/contato-por-telefone";
 import { registrarIndicacao } from "@/lib/politico/indicacao";
 import { recomputarEngajamento } from "@/lib/politico/engajamento";
+import { checkRateLimit } from "@/lib/ai/dispatcher/rate-limit";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -31,7 +32,12 @@ export const runtime = "nodejs";
 // A pesquisa também CAPTURA o respondente (vira contato no CRM): nome, WhatsApp,
 // cidade e bairro são obrigatórios.
 const submeterRespostaSchema = z.object({
-  answers: z.record(z.string(), z.unknown()),
+  answers: z
+    .record(z.string().max(80), z.unknown())
+    .refine((a) => Object.keys(a).length <= 100, "respostas demais")
+    .refine((a) => JSON.stringify(a).length <= 20_000, "respostas longas demais"),
+  // Campo-isca: gente não vê nem preenche; robô preenche.
+  website: z.string().max(200).optional(),
   name: z.string().trim().min(2).max(120),
   whatsapp: z.string().trim().min(8).max(25),
   city: z.string().trim().min(2).max(120),
@@ -139,6 +145,20 @@ export async function POST(
     return fail("not_found", "Pesquisa nao encontrada ou nao esta ativa", 404, { requestId });
   }
 
+  // Isca preenchida: finge sucesso e não grava nada.
+  if (parsed.data.website && parsed.data.website.trim().length > 0) {
+    return ok({ recebido: true }, { status: 201, headers: { "x-request-id": requestId } });
+  }
+  // Freio (rota pública): o link da pesquisa circula, então sem limite um robô
+  // enchia a base de gente inventada e fabricava crédito de indicação
+  // (auditoria de 13/nov/2026). Folgado o bastante para um evento num mesmo wi-fi.
+  const ip = (req.headers.get("x-forwarded-for") ?? "").split(",")[0]?.trim() || "desconhecido";
+  const porIp = await checkRateLimit(`pesquisa:ip:${ip}`, 20, 300);
+  const porPesquisa = await checkRateLimit(`pesquisa:tk:${token}`, 600, 3600);
+  if (!porIp.allowed || !porPesquisa.allowed) {
+    return fail("rate_limited", "Muitas respostas em pouco tempo. Tente novamente em alguns minutos.", 429, { requestId });
+  }
+
   const orgId = survey.organization_id as string;
   const nome = parsed.data.name.trim();
   const cidade = parsed.data.city.trim();
@@ -158,7 +178,10 @@ export async function POST(
       contactId = existente.id;
       const { data: cRow } = await db.from("contacts").select("name, custom_fields").eq("id", contactId).maybeSingle();
       const cf = { ...(((cRow as { custom_fields?: Record<string, unknown> } | null)?.custom_fields) ?? {}) };
-      cf.cidade = cidade; cf.bairro = bairro;
+      // Só COMPLETA o que está vazio: digitar o telefone de alguém não prova ser
+      // essa pessoa, então o que já está no cadastro não é trocado por aqui.
+      if (!String(cf.cidade ?? "").trim()) cf.cidade = cidade;
+      if (!String(cf.bairro ?? "").trim()) cf.bairro = bairro;
       const patch: Record<string, unknown> = { custom_fields: cf };
       if (!((cRow as { name?: string | null } | null)?.name ?? "").trim()) patch.name = nome;
       await db.from("contacts").update(patch).eq("id", contactId).eq("organization_id", orgId);
@@ -181,10 +204,25 @@ export async function POST(
     contactId = null; // não bloqueia a resposta
   }
 
+  // Uma resposta por pessoa por pesquisa: a segunda não vira nova linha (nem novo crédito).
+  if (contactId) {
+    const { data: jaRespondeu } = await db
+      .from("pol_survey_responses")
+      .select("id")
+      .eq("organization_id", orgId)
+      .eq("survey_id", survey.id)
+      .eq("contact_id", contactId)
+      .eq("completed", true)
+      .limit(1);
+    if ((jaRespondeu ?? []).length > 0) {
+      return ok({ recebido: true, repetida: true }, { status: 201, headers: { "x-request-id": requestId } });
+    }
+  }
+
   // Token da resposta gerado server-side
   const responseToken = randomUUID().replace(/-/g, "");
 
-  const { data: response, error } = await db
+  const { error } = await db
     .from("pol_survey_responses")
     .insert({
       organization_id: orgId,
@@ -197,7 +235,7 @@ export async function POST(
       completed: true,
       duration_seconds: parsed.data.duration_seconds ?? null,
     })
-    .select()
+    .select("id")
     .single();
 
   if (error) {
@@ -233,5 +271,7 @@ export async function POST(
     }
   }
 
-  return ok({ response }, { status: 201, headers: { "x-request-id": requestId } });
+  // Só confirma: a linha (com ids internos da organização e do contato) não volta
+  // para quem está de fora.
+  return ok({ recebido: true }, { status: 201, headers: { "x-request-id": requestId } });
 }

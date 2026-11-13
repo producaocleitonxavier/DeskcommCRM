@@ -12,6 +12,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { marcaDaInstalacao } from "@/lib/branding/instalacao";
 import { env } from "@/lib/env";
 import PortalTransparenciaClient, { type ObraPublica, type EmendaPublica } from "./_client";
+import { caminhoPertenceAOrg } from "@/lib/storage/caminho-da-org";
 
 export const dynamic = "force-dynamic";
 
@@ -34,7 +35,7 @@ export default async function PortalTransparenciaPage({ params }: { params: Prom
   if (!ident || !ident.portal_ativo) notFound();
 
   let logoUrl: string | null = null;
-  if (ident.logo_path) {
+  if (caminhoPertenceAOrg(ident.logo_path, orgId)) {
     const { data: signed } = await admin.storage.from("gabinete-identidade").createSignedUrl(ident.logo_path, 60 * 60);
     logoUrl = signed?.signedUrl ?? null;
   }

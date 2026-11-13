@@ -18,6 +18,7 @@ import { requireAuth, resolveActiveOrg } from "@/lib/auth/server";
 import { destinosDaInterface } from "@/lib/navigation/interface";
 import { marcaDaOrganizacaoParaPdf } from "@/lib/propostas/marca-da-organizacao-para-pdf";
 import { renderOficioPdf } from "@/lib/politico/oficio-pdf";
+import { caminhoPertenceAOrg } from "@/lib/storage/caminho-da-org";
 
 const BUCKET = "gabinete-anexos";
 
@@ -99,7 +100,7 @@ export async function gerarOficioDemanda(demandaId: string): Promise<OficioResul
   const mmParaPt = (v: number | null | undefined): number | null =>
     typeof v === "number" ? Math.round(v * 2.834645669) : null;
   const assinarIdentidade = async (p: string | null): Promise<string | null> => {
-    if (!p) return null;
+    if (!caminhoPertenceAOrg(p, org.orgId)) return null;
     const { data: s } = await admin.storage.from("gabinete-identidade").createSignedUrl(p, 60 * 60);
     return s?.signedUrl ?? null;
   };
@@ -120,6 +121,7 @@ export async function gerarOficioDemanda(demandaId: string): Promise<OficioResul
     .in("media_mime", ["image/jpeg", "image/jpg", "image/png"])
     .order("created_at", { ascending: true });
   for (const f of (fotos ?? []) as { storage_path: string; nome_arquivo: string | null }[]) {
+    if (!caminhoPertenceAOrg(f.storage_path, org.orgId)) continue;
     const { data: s } = await admin.storage.from(BUCKET).createSignedUrl(f.storage_path, 60 * 60);
     if (s?.signedUrl) anexosImagens.push({ url: s.signedUrl, nome: (f.nome_arquivo ?? "").trim() });
   }

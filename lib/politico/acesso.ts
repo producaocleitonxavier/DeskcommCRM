@@ -116,10 +116,133 @@ export async function exigirAcessoPolitico(modulo: ModuloPolitico): Promise<void
  * Aqui a régua é só o PAPEL (não o perfil de menu): várias ações são usadas por
  * mais de uma tela, e travar por porta de menu quebraria fluxos legítimos.
  */
+/**
+ * A TRAVA DE PERFIL NAS TELAS DO SISTEMA BASE.
+ *
+ * A varredura de 13/nov, feita com a conta de assessor de rua, mostrou que o
+ * perfil de menu só era cobrado nas telas `/app/politico/*`. Digitando o endereço,
+ * o assessor abria Contatos (a base inteira), Disparos, Conversas, Funis, Tarefas…
+ * — telas que o menu dele não mostra. Estas duas funções fecham essa porta:
+ * abaixo de gestor, só abre a tela cuja porta está no perfil da pessoa.
+ *
+ * `decidirPortaDoPerfil` é pura (testável). Gestor para cima e administrador da
+ * plataforma passam sempre: o perfil de menu é a régua de quem atende, não de
+ * quem coordena. Telas-índice ("Ver tudo em…") não são porta de ninguém: exigem
+ * gestor.
+ */
+export function decidirPortaDoPerfil(
+  href: string,
+  papel: Role,
+  portasDoMenu: ReadonlySet<string>,
+  opts: {
+    ehPlataforma?: boolean;
+    /** Tela-índice ("Ver tudo em…"): não é porta de ninguém. */
+    indice?: boolean;
+    /** A pessoa tem um perfil de menu que ESTREITA o que ela vê (rua, gabinete…)? */
+    perfilRestrito?: boolean;
+    /** Outra porta que também dá direito a esta área (ex.: a ficha da pessoa vale para quem tem "Pessoas"). */
+    ouPorta?: string;
+  } = {},
+): DecisaoDeAcesso {
+  if (opts.ehPlataforma) return "ok";
+  if (ROLE_RANK[papel] >= ROLE_RANK.manager) return "ok";
+  // Índice: quem tem o menu inteiro continua abrindo (ele só lista o que a pessoa
+  // já enxerga); quem tem perfil restrito, não.
+  if (opts.indice) return opts.perfilRestrito ? "sem_papel" : "ok";
+  if (portasDoMenu.has(href)) return "ok";
+  if (opts.ouPorta && portasDoMenu.has(opts.ouPorta)) return "ok";
+  return "fora_do_perfil";
+}
+
+/** Uso em `layout.tsx`/`page.tsx` de tela do sistema base: recusa quem não tem a porta no perfil. */
+export async function exigirPortaDoPerfil(href: string, opts: { indice?: boolean; ouPorta?: string } = {}): Promise<void> {
+  const user = await requireAuth();
+  const org = await resolveActiveOrg(user);
+  // Sem organização não há perfil a cobrar: a própria tela trata esse caso.
+  if (!org) return;
+  const ehPlataforma = !!user.is_platform_admin && !user.support;
+  const portas = new Set(
+    destinosDaInterface(org.interface_settings, ehPlataforma, org.role).map((d) => d.href),
+  );
+  const perfilRestrito = Array.isArray((org.interface_settings as { destinos?: unknown } | null | undefined)?.destinos);
+  if (decidirPortaDoPerfil(href, org.role, portas, { ehPlataforma, indice: opts.indice, perfilRestrito, ouPorta: opts.ouPorta }) === "ok") return;
+  // Mesma saída da trava do módulo político: volta para a Hoje do gabinete (ou
+  // para a entrada do sistema, quando nem a Hoje a pessoa tem).
+  redirect(portas.has("/app/politico") ? "/app/politico" : "/403");
+}
+
 export async function autenticarComPapel(min: Role): Promise<Awaited<ReturnType<typeof requireAuth>>> {
   const user = await requireAuth();
   const org = await resolveActiveOrg(user);
   const ehPlataforma = !!user.is_platform_admin && !user.support;
   if (org && !ehPlataforma && ROLE_RANK[org.role] < ROLE_RANK[min]) redirect("/app");
   return user;
+}
+
+/**
+ * O PERFIL TAMBÉM VALE NA GRAVAÇÃO GENÉRICA do gabinete (`criarRegistro` /
+ * `atualizarRegistro` recebem o NOME da tabela). Sem isto, um assessor de rua
+ * conseguia gravar em Lideranças ou Emendas chamando a ação direto, mesmo sem a
+ * tela no perfil. Só estreita quem tem perfil restrito e está abaixo de gestor.
+ */
+export const PORTAS_DA_TABELA: Readonly<Record<string, readonly string[]>> = {
+  demandas: ["/app/politico/demandas", "/app/politico/visitas"],
+  pol_liderancas: ["/app/politico/liderancas"],
+  pol_emendas: ["/app/politico/emendas"],
+  pol_projetos_lei: ["/app/politico/projetos-lei"],
+  pol_obras: ["/app/politico/obras"],
+  pol_locais: ["/app/politico/locais"],
+  pol_materiais: ["/app/politico/materiais"],
+  pol_agenda: ["/app/agenda", "/app/politico/visitas", "/app/politico/demandas", "/app/politico/locais"],
+};
+
+/**
+ * Papel mínimo para GRAVAR em cada tabela — o mesmo da tela que a edita. Sem isto
+ * (auditoria de 13/nov/2026) quem era só leitura gravava demanda, liderança e
+ * emenda, e quem não era gestor trocava o arquivo de um Material, que o sistema
+ * entrega sozinho aos cidadãos. Tabela fora da lista: só gestor.
+ */
+export const PAPEL_MINIMO_DA_TABELA: Readonly<Record<string, Role>> = {
+  demandas: "agent",
+  pol_liderancas: "agent",
+  pol_emendas: "agent",
+  pol_projetos_lei: "agent",
+  pol_obras: "agent",
+  pol_locais: "agent",
+  pol_agenda: "agent",
+  pol_materiais: "manager",
+};
+
+export function decidirGravacaoNaTabela(
+  tabela: string,
+  papel: Role,
+  perfilRestrito: boolean,
+  portasDoMenu: ReadonlySet<string>,
+  ehPlataforma = false,
+): DecisaoDeAcesso {
+  if (ehPlataforma) return "ok";
+  if (ROLE_RANK[papel] < ROLE_RANK[PAPEL_MINIMO_DA_TABELA[tabela] ?? "manager"]) return "sem_papel";
+  if (!perfilRestrito || ROLE_RANK[papel] >= ROLE_RANK.manager) return "ok";
+  const portas = PORTAS_DA_TABELA[tabela];
+  // Tabela sem porta declarada: para perfil restrito, falha fechado.
+  if (!portas) return "fora_do_perfil";
+  return portas.some((p) => portasDoMenu.has(p)) ? "ok" : "fora_do_perfil";
+}
+
+/** Para as ações de gravação: o perfil de quem está logado alcança esta tabela? */
+export async function perfilAlcancaTabela(tabela: string): Promise<boolean> {
+  const user = await requireAuth();
+  const org = await resolveActiveOrg(user);
+  if (!org) return false;
+  const ehPlataforma = !!user.is_platform_admin && !user.support;
+  const portas = new Set(
+    destinosDaInterface(org.interface_settings, ehPlataforma, org.role).map((d) => d.href),
+  );
+  const perfilRestrito = Array.isArray((org.interface_settings as { destinos?: unknown } | null | undefined)?.destinos);
+  return decidirGravacaoNaTabela(tabela, org.role, perfilRestrito, portas, ehPlataforma) === "ok";
+}
+
+/** Administrador da plataforma fora de acompanhamento: não tem papel nem perfil a cobrar. */
+export function ehPlataformaSemSuporte(user: { is_platform_admin?: boolean | null; support?: unknown }): boolean {
+  return Boolean(user.is_platform_admin) && !user.support;
 }
