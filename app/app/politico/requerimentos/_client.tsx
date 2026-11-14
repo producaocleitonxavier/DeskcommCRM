@@ -332,6 +332,8 @@ function Editor({
   /** Há mudança na tela que ainda não foi salva? */
   const [sujo, setSujo] = useState(inicial.id === null);
   const areaRef = useRef<HTMLTextAreaElement | null>(null);
+  /** O registro como voltou do servidor na última gravação (para atualizar a lista depois do PDF). */
+  const ultimoSalvo = useRef<DocumentoItem | null>(null);
   const ocupado = redigindo || ocupadoCom !== null;
   const dest = rotuloDoDestinatario(r.funcao);
   const lacunas = lacunasDoTexto(r.corpo);
@@ -376,6 +378,7 @@ function Editor({
       setErro(res.erro);
       return null;
     }
+    ultimoSalvo.current = res.item;
     aoSalvar(res.item);
     setR((a) => ({ ...a, id: res.item.id, situacao: res.item.situacao }));
     setSujo(false);
@@ -402,6 +405,7 @@ function Editor({
       if (res.ok) {
         setPdfUrl(res.url);
         if (aba) aba.location.href = res.url;
+        if (ultimoSalvo.current?.id === id) aoSalvar({ ...ultimoSalvo.current, temPdf: true });
       } else {
         aba?.close();
         setErro(res.erro);
@@ -702,7 +706,13 @@ function TiposDoGabinete({
             <p className="text-xs font-bold uppercase tracking-wide" style={{ color: "var(--color-text-subtle)" }}>Começar por um modelo</p>
             <div className="mt-1.5 flex flex-wrap gap-2">
               {(Object.keys(MODELOS_DE_CASA) as ModeloDeCasa[]).map((m) => (
-                <button key={m} type="button" onClick={() => aplicarModelo(m)} className="wr-btn text-left text-sm">
+                <button
+                  key={m}
+                  type="button"
+                  onClick={() => aplicarModelo(m)}
+                  className="rounded-xl px-3 py-2 text-left text-sm"
+                  style={{ background: "var(--color-surface-elevated)", border: "1px solid var(--color-border)", color: "var(--color-text)" }}
+                >
                   <span className="block font-semibold">{MODELOS_DE_CASA[m].nome}</span>
                   <span className="block text-xs" style={{ color: "var(--color-text-subtle)" }}>{MODELOS_DE_CASA[m].onde}</span>
                 </button>
