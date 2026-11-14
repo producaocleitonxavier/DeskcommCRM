@@ -42,3 +42,38 @@ describe("requerimento em PDF — regras", () => {
     expect(configDoRequerimentoDeSettings("x")).toEqual({ comissao: "", dispositivo: "" });
   });
 });
+
+import { enterEmLista, lacunasDoTexto } from "./requerimento-pdf";
+
+describe("requerimento — ajudas de edição", () => {
+  it("lista as lacunas com a posição", () => {
+    const t = "na [RUA E NÚMERO], com [ÓRGÃOS A CONVIDAR].";
+    const l = lacunasDoTexto(t);
+    expect(l.map((x) => x.trecho)).toEqual(["[RUA E NÚMERO]", "[ÓRGÃOS A CONVIDAR]"]);
+    expect(t.slice(l[0]!.inicio, l[0]!.fim)).toBe("[RUA E NÚMERO]");
+    expect(lacunasDoTexto("sem nada")).toEqual([]);
+  });
+
+  it("Enter no fim de uma linha de lista cria a próxima com marcador", () => {
+    const t = "órgãos:\n• Secretaria de Obras;";
+    const r = enterEmLista(t, t.length, t.length);
+    expect(r).toEqual({ texto: "órgãos:\n• Secretaria de Obras;\n• ", cursor: t.length + 3 });
+  });
+
+  it("Enter numa linha só com o marcador encerra a lista", () => {
+    const t = "• Secretaria de Obras;\n• ";
+    const r = enterEmLista(t, t.length, t.length);
+    expect(r).toEqual({ texto: "• Secretaria de Obras;\n", cursor: "• Secretaria de Obras;\n".length });
+  });
+
+  it("Enter fora de lista segue normal", () => {
+    expect(enterEmLista("Senhor Presidente,", 18, 18)).toBeNull();
+    expect(enterEmLista("• item\ntexto comum", 18, 18)).toBeNull();
+  });
+
+  it("Enter no meio de uma linha de lista quebra em dois itens", () => {
+    const t = "• Obras; Saúde;";
+    const r = enterEmLista(t, 9, 9);
+    expect(r?.texto).toBe("• Obras; \n• Saúde;");
+  });
+});

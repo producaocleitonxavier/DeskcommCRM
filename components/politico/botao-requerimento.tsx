@@ -10,12 +10,12 @@
  * A comissão e o artigo do regimento são de cada Casa — ficam guardados como
  * configuração do gabinete (e o navegador lembra, de reserva).
  */
-import { useRef, useState, useTransition } from "react";
+import { useRef, useState, useTransition, type KeyboardEvent } from "react";
 import { Check, Copy, FileDown, FileSignature, Loader2, Sparkles, X } from "lucide-react";
 
 import { gerarRequerimentoDeComissao } from "@/app/actions/politico/gerarEncaminhamento";
 import { emitirRequerimentoPdf, lerConfigDoRequerimento } from "@/app/actions/politico/requerimento";
-import { temLacuna as textoTemLacuna } from "@/lib/politico/requerimento-pdf";
+import { enterEmLista, lacunasDoTexto } from "@/lib/politico/requerimento-pdf";
 
 const CHAVE = "gip:requerimento";
 
@@ -122,7 +122,36 @@ export function BotaoRequerimento({ demandaId, assunto }: { demandaId: string; a
     }
   }
 
-  const temLacuna = textoTemLacuna(texto);
+  const lacunas = lacunasDoTexto(texto);
+  const temLacuna = lacunas.length > 0;
+  const areaRef = useRef<HTMLTextAreaElement | null>(null);
+
+  /** Leva o cursor até um trecho do texto, já selecionado para digitar por cima. */
+  function irPara(inicio: number, fim: number) {
+    const a = areaRef.current;
+    if (!a) return;
+    a.focus();
+    a.setSelectionRange(inicio, fim);
+    // Rola a caixa até a linha do trecho (o navegador não faz isso sozinho em toda versão).
+    const linhasAntes = a.value.slice(0, inicio).split("\n").length - 1;
+    const alturaDaLinha = parseFloat(getComputedStyle(a).lineHeight) || 22;
+    a.scrollTop = Math.max(0, linhasAntes * alturaDaLinha - a.clientHeight / 3);
+  }
+
+  /** Enter numa linha de lista ("• ") já cria o próximo item com o marcador. */
+  function aoTeclar(e: KeyboardEvent<HTMLTextAreaElement>) {
+    if (e.key !== "Enter" || e.shiftKey || e.nativeEvent.isComposing) return;
+    const a = e.currentTarget;
+    const r = enterEmLista(a.value, a.selectionStart, a.selectionEnd);
+    if (!r) return;
+    e.preventDefault();
+    setTexto(r.texto);
+    setPdfUrl(null);
+    requestAnimationFrame(() => {
+      const alvo = areaRef.current;
+      if (alvo) alvo.setSelectionRange(r.cursor, r.cursor);
+    });
+  }
 
   return (
     <>
@@ -210,17 +239,36 @@ export function BotaoRequerimento({ demandaId, assunto }: { demandaId: string; a
               {texto ? (
                 <>
                   <textarea
+                    ref={areaRef}
                     value={texto}
                     onChange={(e) => { setTexto(e.target.value); setPdfUrl(null); }}
+                    onKeyDown={aoTeclar}
                     rows={14}
                     className="wr-input w-full text-sm leading-relaxed"
                     aria-label="Texto do requerimento"
                   />
-                  <p className="text-xs" style={{ color: "var(--color-text-muted)" }}>
-                    {temLacuna
-                      ? "O que está entre [COLCHETES] a IA não sabia: preencha antes de protocolar." + (podePdf ? " O PDF só sai depois disso." : "")
-                      : "Revise antes de protocolar. O número é dado pela Casa no protocolo."}
-                  </p>
+                  {temLacuna ? (
+                    <div className="rounded-lg p-2.5 text-xs" style={{ background: "#FFF6E0", color: "#7A4B00", border: "1px solid #F2D58A" }} role="status">
+                      <p className="font-semibold">
+                        {lacunas.length === 1 ? "Falta preencher 1 trecho" : `Faltam preencher ${lacunas.length} trechos`} que a IA não sabia
+                        {podePdf ? " — o PDF só sai depois disso:" : ":"}
+                      </p>
+                      <ul className="mt-1 space-y-1">
+                        {lacunas.slice(0, 6).map((l, i) => (
+                          <li key={`${l.inicio}-${i}`}>
+                            <button type="button" onClick={() => irPara(l.inicio, l.fim)} className="text-left underline">
+                              {l.trecho}
+                            </button>
+                          </li>
+                        ))}
+                      </ul>
+                      <p className="mt-1">Clique num trecho para ir até ele. Apague os colchetes junto com o texto de dentro.</p>
+                    </div>
+                  ) : (
+                    <p className="text-xs" style={{ color: "var(--color-text-muted)" }}>
+                      Revise antes de protocolar. O número é dado pela Casa no protocolo. Em lista, o Enter já cria o próximo item com o marcador.
+                    </p>
+                  )}
                 </>
               ) : null}
             </div>

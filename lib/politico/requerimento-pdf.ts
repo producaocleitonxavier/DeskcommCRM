@@ -40,3 +40,36 @@ export function configDoRequerimentoDeSettings(settings: unknown): ConfigDoReque
   const texto = (v: unknown) => (typeof v === "string" ? v.trim().slice(0, 200) : "");
   return { comissao: texto((r as Record<string, unknown>).comissao), dispositivo: texto((r as Record<string, unknown>).dispositivo) };
 }
+
+/** Cada trecho entre colchetes que ainda falta preencher, com a posição no texto. */
+export function lacunasDoTexto(texto: string): { inicio: number; fim: number; trecho: string }[] {
+  const achados: { inicio: number; fim: number; trecho: string }[] = [];
+  for (const m of texto.matchAll(/\[[^\]\n]{3,}\]/g)) {
+    const inicio = m.index ?? 0;
+    achados.push({ inicio, fim: inicio + m[0].length, trecho: m[0] });
+  }
+  return achados;
+}
+
+const MARCADOR = "• ";
+
+/**
+ * Enter dentro de uma lista: a linha nova já nasce com o marcador. Enter numa
+ * linha que só tem o marcador ENCERRA a lista (tira o marcador). Fora de lista
+ * devolve `null` e o Enter segue normal.
+ */
+export function enterEmLista(texto: string, inicio: number, fim: number): { texto: string; cursor: number } | null {
+  const comecoDaLinha = texto.lastIndexOf("\n", inicio - 1) + 1;
+  const ateOCursor = texto.slice(comecoDaLinha, inicio);
+  if (!ateOCursor.startsWith(MARCADOR)) return null;
+  if (ateOCursor.trim() === MARCADOR.trim() && inicio === fim) {
+    const fimDaLinha = texto.indexOf("\n", inicio);
+    const resto = texto.slice(inicio, fimDaLinha === -1 ? texto.length : fimDaLinha);
+    if (resto.trim() === "") {
+      // linha só com o marcador: sai da lista
+      return { texto: texto.slice(0, comecoDaLinha) + texto.slice(inicio), cursor: comecoDaLinha };
+    }
+  }
+  const inserido = "\n" + MARCADOR;
+  return { texto: texto.slice(0, inicio) + inserido + texto.slice(fim), cursor: inicio + inserido.length };
+}
