@@ -40,6 +40,7 @@ const SECOES: Secao[] = [
       { href: "/app/politico/identidade", titulo: "Identidade do mandato", texto: "Nome, cargo, timbre e assinatura que saem nos ofícios e nas mensagens." },
       { href: "/app/politico/enriquecer", titulo: "Aprofundar o mandato", texto: "Busca informações públicas do mandato para o assistente responder melhor. Você aprova item a item." },
       { href: "/app/politico/transparencia", titulo: "Portal da Transparência", texto: "A página pública com obras e emendas que você escolher mostrar." },
+      { href: "/app/politico/requerimentos?tipos=1", titulo: "Tipos de documento", texto: "Quais documentos o gabinete apresenta à Casa (requerimento, indicação, homenagem…) e o nome de cada um. A homenagem vem desligada.", seVe: "/app/politico/oficios" },
       { href: "/app/politico/voz", titulo: "Voz do Mandato", texto: "Recados em áudio na voz do parlamentar, com o aviso de que foram criados com IA." },
     ],
   },

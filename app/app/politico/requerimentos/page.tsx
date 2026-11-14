@@ -17,7 +17,7 @@ export const dynamic = "force-dynamic";
 export default async function RequerimentosPage({
   searchParams,
 }: {
-  searchParams: Promise<{ demanda?: string; subtipo?: string }>;
+  searchParams: Promise<{ demanda?: string; subtipo?: string; tipos?: string }>;
 }) {
   await exigirAcessoPolitico("oficios");
   const sp = await searchParams;
@@ -36,6 +36,7 @@ export default async function RequerimentosPage({
       partida={partida && partida.ok ? partida.partida : null}
       avisoDePartida={partida && !partida.ok ? "Não achei a visita de onde você veio. Você pode criar o documento do zero." : null}
       subtipoInicial={typeof sp.subtipo === "string" ? sp.subtipo.slice(0, 60) : null}
+      abrirTipos={sp.tipos === "1"}
     />
   );
 }

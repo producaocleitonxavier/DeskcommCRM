@@ -49,6 +49,7 @@ import {
 } from "@/lib/webhooks/formulario";
 import { useT } from "@/hooks/i18n/useT";
 import { WebhookFormFieldsEditor } from "./WebhookFormFieldsEditor";
+import { useEhGabinete } from "./gabinete";
 
 interface Props {
   source: WebhookSourceRow;
@@ -114,6 +115,7 @@ function gerarSecretHex(): string {
 }
 
 export function SourceDetail({ source, open, onOpenChange }: Props) {
+  const gabinete = useEhGabinete();
   const localeDaData = useLocaleDeData();
   const t = useT();
   const update = useUpdateWebhookSource();
@@ -235,7 +237,7 @@ export function SourceDetail({ source, open, onOpenChange }: Props) {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          nome: "Lead de Teste",
+          nome: gabinete ? "Cadastro de teste" : "Lead de Teste",
           telefone: "11999990000",
           utm_source: "teste",
         }),
@@ -250,7 +252,7 @@ export function SourceDetail({ source, open, onOpenChange }: Props) {
         );
         return;
       }
-      toast.success(t("Funcionou! Um lead de teste entrou no seu funil."));
+      toast.success(gabinete ? "Funcionou! O cadastro de teste chegou. Ele aparece em Cadastros recebidos e não entra em Pessoas." : t("Funcionou! Um lead de teste entrou no seu funil."));
       setTestOk(true);
       void refetchEvents();
     } catch {
@@ -342,7 +344,9 @@ export function SourceDetail({ source, open, onOpenChange }: Props) {
             </Badge>
           </div>
           <SheetDescription>
-            {t("Cada envio para o endereço abaixo vira um lead no seu funil, automaticamente.")}
+            {gabinete
+              ? "Cada envio para o endereço abaixo vira um cadastro e entra em Pessoas, como Novo contato, automaticamente."
+              : t("Cada envio para o endereço abaixo vira um lead no seu funil, automaticamente.")}
           </SheetDescription>
         </SheetHeader>
 
@@ -468,7 +472,7 @@ export function SourceDetail({ source, open, onOpenChange }: Props) {
 
           <section className="space-y-3">
             <Button type="button" onClick={sendTestLead} disabled={testing || temAssinatura}>
-              {testing ? t("Enviando…") : t("Enviar lead de teste")}
+              {testing ? t("Enviando…") : gabinete ? "Enviar cadastro de teste" : t("Enviar lead de teste")}
             </Button>
             {temAssinatura ? (
               // O navegador não tem o secret — e não deve ter. Um teste daqui

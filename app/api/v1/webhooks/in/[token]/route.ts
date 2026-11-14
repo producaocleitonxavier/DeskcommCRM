@@ -16,6 +16,7 @@ import { logger } from "@/lib/logger";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createLeadHandler } from "@/app/api/v1/leads/_handler";
 import { emitLeadActivity } from "@/lib/leads/activity-emitter";
+import { garantirPessoaDoMandato } from "@/lib/politico/pessoa-de-formulario";
 import { classificarLeadInicial, type ResultadoClassificacaoInicial } from "@/lib/leads/classificacao-inicial";
 import type { CreateLeadInput } from "@/lib/schemas";
 import { mapInboundPayload, verifyInboundSignature, type FieldMap } from "@/lib/webhooks/inbound";
@@ -566,6 +567,13 @@ export async function POST(req: NextRequest, ctx: RouteCtx): Promise<NextRespons
         );
       }
     }
+  }
+
+  // Gabinete: quem se cadastra pelo formulário entra em Pessoas (base do mandato), como Novo contato.
+  // Nunca lança; fora de gabinete não faz nada. O número reservado do botão "enviar teste" da própria
+  // tela fica de fora, para o teste não plantar uma pessoa fictícia na base.
+  if (contactId && !/11999990000$/.test((mapped.phone ?? "").replace(/\D/g, ""))) {
+    await garantirPessoaDoMandato(admin, source.organization_id, contactId, source.name);
   }
 
   const leadInput: CreateLeadInput & {

@@ -92,11 +92,14 @@ export default function RequerimentosClient({
   partida,
   subtipoInicial,
   avisoDePartida,
+  abrirTipos = false,
 }: {
   painel: PainelDeDocumentos;
   partida: PontoDePartida | null;
   subtipoInicial: string | null;
   avisoDePartida: string | null;
+  /** Veio de Configurações › Tipos de documento: abre direto a janela de escolher os tipos. */
+  abrirTipos?: boolean;
 }) {
   const router = useRouter();
   /** Tira o `?demanda=` do endereço: recarregar ou voltar não pode abrir OUTRO documento novo da mesma visita. */
@@ -107,7 +110,7 @@ export default function RequerimentosClient({
   const [tipos, setTipos] = useState<TipoDeDocumento[]>(painel.tipos);
   const [busca, setBusca] = useState("");
   const [filtro, setFiltro] = useState<SituacaoDoDocumento | "todas">("todas");
-  const [configurando, setConfigurando] = useState(false);
+  const [configurando, setConfigurando] = useState(abrirTipos && painel.podeConfigurar && !painel.semTabela);
   const ligados = useMemo(() => tiposLigados(tipos), [tipos]);
 
   function novo(funcao: FuncaoDoDocumento, deDemanda: PontoDePartida | null = null, subtipo: string | null = null): Rascunho {
@@ -304,7 +307,16 @@ export default function RequerimentosClient({
           assinaturaPadrao={painel.assinaturaPadrao}
         />
       ) : null}
-      {configurando ? <TiposDoGabinete tipos={tipos} aoFechar={() => setConfigurando(false)} aoSalvar={setTipos} /> : null}
+      {configurando ? (
+        <TiposDoGabinete
+          tipos={tipos}
+          aoFechar={() => {
+            setConfigurando(false);
+            if (abrirTipos) router.replace("/app/politico/requerimentos", { scroll: false });
+          }}
+          aoSalvar={setTipos}
+        />
+      ) : null}
     </div>
   );
 }

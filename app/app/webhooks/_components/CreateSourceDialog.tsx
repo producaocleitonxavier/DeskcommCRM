@@ -27,6 +27,7 @@ import {
   type WebhookSourceRow,
 } from "@/hooks/webhooks/useWebhookSources";
 import { useT } from "@/hooks/i18n/useT";
+import { palavra, useEhGabinete } from "./gabinete";
 
 interface Props {
   open: boolean;
@@ -47,6 +48,16 @@ export function CreateSourceDialog({ open, onOpenChange, onCreated }: Props) {
 
   const pipelines = pipelinesRes?.data ?? [];
   const stages = boardRes?.data?.stages ?? [];
+  const gabinete = useEhGabinete();
+
+  // Gabinete: funil e estágio são peça do motor de vendas que fica por baixo; a tela escolhe
+  // sozinha o primeiro de cada, e a pessoa só dá o nome do formulário.
+  React.useEffect(() => {
+    if (gabinete && open && !pipelineId && pipelines[0]) setPipelineId(pipelines[0].id);
+  }, [gabinete, open, pipelineId, pipelines]);
+  React.useEffect(() => {
+    if (gabinete && open && pipelineId && !stageId && stages[0]) setStageId(stages[0].id);
+  }, [gabinete, open, pipelineId, stageId, stages]);
 
   React.useEffect(() => {
     if (!open) {
@@ -64,7 +75,7 @@ export function CreateSourceDialog({ open, onOpenChange, onCreated }: Props) {
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!pipelineId || !stageId) {
-      toast.error(t("Escolha o funil e o estágio de entrada."));
+      toast.error(gabinete ? "Ainda estou preparando a entrada. Espere um instante e tente de novo." : t("Escolha o funil e o estágio de entrada."));
       return;
     }
     try {
@@ -74,7 +85,7 @@ export function CreateSourceDialog({ open, onOpenChange, onCreated }: Props) {
         default_stage_id: stageId,
         redirect_to: redirectTo.trim() || undefined,
       });
-      toast.success(t("Fonte criada. Agora é só conectar seu site."));
+      toast.success(gabinete ? "Formulário criado. Agora é só ligar ao seu site." : t("Fonte criada. Agora é só conectar seu site."));
       onOpenChange(false);
       onCreated(res.data);
     } catch {
@@ -86,11 +97,11 @@ export function CreateSourceDialog({ open, onOpenChange, onCreated }: Props) {
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>{t("Nova fonte de captação")}</DialogTitle>
+          <DialogTitle>{gabinete ? "Novo formulário do site" : t("Nova fonte de captação")}</DialogTitle>
           <DialogDescription>
-            {t(
-              "Dê um nome e diga em qual funil o contato deve entrar quando alguém preencher seu formulário.",
-            )}
+            {gabinete
+              ? "Dê um nome para reconhecer de onde veio. Cada pessoa que preencher o formulário entra em Pessoas, como Novo contato."
+              : t("Dê um nome e diga em qual funil o contato deve entrar quando alguém preencher seu formulário.")}
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={onSubmit} className="space-y-4">
@@ -100,12 +111,14 @@ export function CreateSourceDialog({ open, onOpenChange, onCreated }: Props) {
               id="src-name"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              placeholder={t("Landing page de Black Friday")}
+              placeholder={palavra(gabinete, t("Landing page de Black Friday"), "Ex.: Abaixo-assinado do bairro")}
               minLength={1}
               maxLength={120}
               required
             />
           </div>
+          {gabinete ? null : (
+          <>
           <div className="space-y-2">
             <Label>{t("Funil de entrada")}</Label>
             <Select value={pipelineId} onValueChange={setPipelineId} disabled={pipelinesLoading}>
@@ -142,6 +155,8 @@ export function CreateSourceDialog({ open, onOpenChange, onCreated }: Props) {
               </SelectContent>
             </Select>
           </div>
+          </>
+          )}
           <div className="space-y-2">
             <Label htmlFor="src-redirect">{t("URL de obrigado (opcional)")}</Label>
             <Input
@@ -149,7 +164,7 @@ export function CreateSourceDialog({ open, onOpenChange, onCreated }: Props) {
               type="url"
               value={redirectTo}
               onChange={(e) => setRedirectTo(e.target.value)}
-              placeholder="https://tusitio.com/gracias"
+              placeholder="https://seusite.com.br/obrigado"
             />
             <p className="text-xs text-muted-foreground">
               {t("Para onde enviar a pessoa depois que ela preencher seu formulário.")}
@@ -159,8 +174,8 @@ export function CreateSourceDialog({ open, onOpenChange, onCreated }: Props) {
             <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>
               {t("Cancelar")}
             </Button>
-            <Button type="submit" disabled={create.isPending}>
-              {t("Criar fonte")}
+            <Button type="submit" disabled={create.isPending || (gabinete && (!pipelineId || !stageId))}>
+              {gabinete ? "Criar formulário" : t("Criar fonte")}
             </Button>
           </DialogFooter>
         </form>

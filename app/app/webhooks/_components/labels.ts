@@ -75,3 +75,56 @@ export const ACTION_LABELS: Record<ActionType, string> = {
   // Tarefas › Planos ao negócio, criando as N tarefas de uma vez e na ordem.
   apply_task_plan: "Aplicar um plano de tarefas ao negócio",
 };
+
+// ─────────────────────────────────────────────────────────────────────────────
+// GABINETE: a mesma máquina, com as palavras do mandato. Gatilho e ação de VENDA
+// (negócio ganho/perdido, etapa do funil, responsável do lead) não aparecem: num
+// gabinete não há o que eles disparem. Regra antiga que use um deles segue
+// funcionando e aparece com o nome de sempre.
+// ─────────────────────────────────────────────────────────────────────────────
+
+export const TRIGGER_LABELS_GABINETE: Partial<Record<TriggerEvent, string>> = {
+  "lead.created": "Quando chegar um cadastro pelo formulário do site",
+  "message.received": "Quando chegar mensagem no WhatsApp",
+  "message.failed": "Quando uma mensagem não for entregue",
+  "contact.tag_added": "Quando uma pessoa ganhar uma etiqueta",
+  "appointment.created": "Quando um horário for marcado na agenda",
+  "appointment.confirmed": "Quando um horário pendente for confirmado",
+  "appointment.rescheduled": "Quando um horário for remarcado",
+  "appointment.cancelled": "Quando um horário for cancelado",
+  "appointment.completed": "Quando alguém comparecer ao compromisso",
+  "appointment.no_show": "Quando alguém faltar ao compromisso",
+  "contact.birthday": "No aniversário de uma pessoa",
+  "lead.silent_for": "Quando a pessoa ficar N dias sem mensagem",
+};
+
+export const ACTION_LABELS_GABINETE: Partial<Record<ActionType, string>> = {
+  send_whatsapp_message: "Enviar mensagem no WhatsApp",
+  send_ai_message: "Mensagem escrita pela IA",
+  send_voice_recado: "Enviar recado em áudio (Voz do Mandato)",
+  add_tag: "Colocar uma etiqueta na pessoa",
+  assign_owner: "Passar para alguém da equipe",
+  call_webhook: "Avisar outro sistema",
+  start_message_flow: "Iniciar uma sequência de mensagens",
+  create_task: "Criar tarefa para a equipe (sem mensagem à pessoa)",
+};
+
+/** O nome de um gatilho para ESTA organização. */
+export function nomeDoGatilho(ev: TriggerEvent, gabinete: boolean): string {
+  return (gabinete && TRIGGER_LABELS_GABINETE[ev]) || TRIGGER_LABELS[ev];
+}
+
+/** O nome de uma ação para ESTA organização. */
+export function nomeDaAcao(tipo: ActionType, gabinete: boolean): string {
+  return (gabinete && ACTION_LABELS_GABINETE[tipo]) || ACTION_LABELS[tipo];
+}
+
+/** O gatilho aparece na lista de ESCOLHA? (gabinete: só os do mandato, mais o que a regra já usa) */
+export function gatilhoOferecido(ev: TriggerEvent, gabinete: boolean, emUso?: string | null): boolean {
+  return !gabinete || ev === emUso || ev in TRIGGER_LABELS_GABINETE;
+}
+
+/** A ação aparece na lista de ESCOLHA? */
+export function acaoOferecida(tipo: ActionType, gabinete: boolean): boolean {
+  return !gabinete || tipo in ACTION_LABELS_GABINETE;
+}

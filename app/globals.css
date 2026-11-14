@@ -2332,3 +2332,39 @@
   50%      { transform: translateY(-7px); }
 }
 .wr-float { animation: wr-float 5.5s ease-in-out infinite; }
+
+/* ── Janelas e listas por cima de tela MARINHO ────────────────────────────────
+   Diálogo, lista de opções e painel lateral são desenhados fora da área da página
+   (direto no corpo do documento), então não herdavam o marinho da tela e saíam
+   claros por cima dela. A tela que quer as suas janelas em marinho põe a classe
+   `gip-portais-marinho` no corpo enquanto está aberta (ver
+   app/app/webhooks/_components/gabinete.tsx). Só define as cores; não pinta fundo. */
+body.gip-portais-marinho > [role="dialog"],
+body.gip-portais-marinho > [data-radix-popper-content-wrapper],
+body.gip-portais-marinho > [data-radix-portal] {
+  --color-bg: #0f1d2e;
+  --color-surface: #182a3e;
+  --color-surface-elevated: #20374f;
+  --color-text: #ffffff;
+  --color-text-muted: rgba(255,255,255,0.78);
+  --color-text-subtle: rgba(255,255,255,0.6);
+  --color-border: rgba(255,255,255,0.12);
+  --color-border-strong: rgba(255,255,255,0.2);
+  --background: #182a3e;
+  --foreground: #ffffff;
+  --card: #182a3e;
+  --card-foreground: #ffffff;
+  --popover: #20374f;
+  --popover-foreground: #ffffff;
+  --muted: #20374f;
+  --muted-foreground: rgba(255,255,255,0.72);
+  --secondary: #20374f;
+  --secondary-foreground: #ffffff;
+  --accent: rgba(255,255,255,0.10);
+  --accent-foreground: #ffffff;
+  --primary: #D7F36A;
+  --primary-foreground: #16181D;
+  --border: rgba(255,255,255,0.14);
+  --input: rgba(255,255,255,0.18);
+  color: #ffffff;
+}

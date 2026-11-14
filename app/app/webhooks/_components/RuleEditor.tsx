@@ -43,7 +43,8 @@ import {
   type AutomationRuleRow,
 } from "@/hooks/webhooks/useAutomationRules";
 import { usePipelines, usePipelineStages, useWebhookSources } from "@/hooks/webhooks/useWebhookSources";
-import { TRIGGER_LABELS, ACTION_LABELS, type TriggerEvent, type ActionType } from "./labels";
+import { ACTION_LABELS, acaoOferecida, gatilhoOferecido, nomeDaAcao, nomeDoGatilho, type TriggerEvent, type ActionType } from "./labels";
+import { useEhGabinete } from "./gabinete";
 import { ActionConfigForm, defaultActionConfig, type ActionItem } from "./ActionConfigForm";
 import { useT } from "@/hooks/i18n/useT";
 
@@ -231,6 +232,7 @@ const QUALQUER_FONTE = "__qualquer_fonte__";
 
 export function RuleEditor({ open, onOpenChange, rule }: Props) {
   const t = useT();
+  const gabinete = useEhGabinete();
   const isEdit = !!rule;
   const [name, setName] = React.useState("");
   const [triggerEvent, setTriggerEvent] = React.useState<TriggerEvent | "">("");
@@ -463,9 +465,9 @@ export function RuleEditor({ open, onOpenChange, rule }: Props) {
                 <SelectValue placeholder={t("Escolha o gatilho")} />
               </SelectTrigger>
               <SelectContent>
-                {TRIGGER_EVENTS.map((ev) => (
+                {TRIGGER_EVENTS.filter((ev) => gatilhoOferecido(ev, gabinete, triggerEvent)).map((ev) => (
                   <SelectItem key={ev} value={ev}>
-                    {t(TRIGGER_LABELS[ev])}
+                    {t(nomeDoGatilho(ev, gabinete))}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -838,7 +840,7 @@ export function RuleEditor({ open, onOpenChange, rule }: Props) {
             {actions.map((action, idx) => (
               <div key={idx} className="space-y-3 rounded-sm border border-border p-3">
                 <div className="flex items-center justify-between">
-                  <p className="font-medium text-text">{t(ACTION_LABELS[action.type])}</p>
+                  <p className="font-medium text-text">{t(nomeDaAcao(action.type, gabinete))}</p>
                   <div className="flex items-center gap-1">
                     <Button
                       type="button"
@@ -892,9 +894,10 @@ export function RuleEditor({ open, onOpenChange, rule }: Props) {
                     as ações que regravam o lead: fechariam laço (#1528). */}
                 {(Object.keys(ACTION_LABELS) as ActionType[])
                   .filter((actionType) => !acoesQueFechamLaco(triggerEvent, [{ type: actionType }]).length)
+                  .filter((actionType) => acaoOferecida(actionType, gabinete))
                   .map((actionType) => (
                     <SelectItem key={actionType} value={actionType}>
-                      {t(ACTION_LABELS[actionType])}
+                      {t(nomeDaAcao(actionType, gabinete))}
                     </SelectItem>
                   ))}
               </SelectContent>

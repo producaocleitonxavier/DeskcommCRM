@@ -26,18 +26,21 @@ import {
   useDeleteAutomationRule,
   type AutomationRuleRow,
 } from "@/hooks/webhooks/useAutomationRules";
-import { TRIGGER_LABELS, type TriggerEvent } from "./labels";
+import { TRIGGER_LABELS, TRIGGER_LABELS_GABINETE, type TriggerEvent } from "./labels";
 import { RuleEditor } from "./RuleEditor";
 import { useT } from "@/hooks/i18n/useT";
+import { useEhGabinete } from "./gabinete";
 
 const RULES_QUERY_KEY = ["automation-rules"];
 
-function triggerLabel(trigger: string, t: (texto: string) => string): string {
-  return t(TRIGGER_LABELS[trigger as TriggerEvent] ?? trigger);
+function triggerLabel(trigger: string, t: (texto: string) => string, gabinete: boolean): string {
+  const ev = trigger as TriggerEvent;
+  return t((gabinete && TRIGGER_LABELS_GABINETE[ev]) || TRIGGER_LABELS[ev] || trigger);
 }
 
 export function RulesTab() {
   const t = useT();
+  const gabinete = useEhGabinete();
   const { data, isLoading } = useAutomationRules();
   const update = useUpdateAutomationRule();
   const del = useDeleteAutomationRule();
@@ -120,7 +123,7 @@ export function RulesTab() {
                   {r.is_active ? t("Ativa") : t("Pausada")}
                 </Badge>
               </div>
-              <p className="text-xs text-muted-foreground">{triggerLabel(r.trigger_event, t)}</p>
+              <p className="text-xs text-muted-foreground">{triggerLabel(r.trigger_event, t, gabinete)}</p>
               <p className="text-xs text-muted-foreground">
                 {r.actions.length} {r.actions.length === 1 ? t("ação") : t("ações")}
               </p>
