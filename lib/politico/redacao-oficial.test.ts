@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   PADRAO_DO_OFICIO,
+  dataDaPraxe,
   instrucoesDoRequerimento,
   limparTextoOficial,
   montarPedidoDoOficio,
@@ -54,6 +55,11 @@ describe("redação oficial do gabinete", () => {
     expect(p).toContain("visita técnica");
     expect(p).toContain("- Defesa Civil");
     expect(p).not.toContain("- \n");
+  });
+
+  it("data como a praxe escreve, no horário de Brasília", () => {
+    expect(dataDaPraxe(new Date("2026-11-24T14:00:00Z"))).toBe("24 de novembro de 2026, terça-feira, às 11 horas");
+    expect(dataDaPraxe(new Date("2026-11-04T13:30:00Z"))).toBe("04 de novembro de 2026, quarta-feira, às 10h30");
   });
 
   it("limpa a marcação e normaliza os marcadores", () => {

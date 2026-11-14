@@ -196,12 +196,12 @@ export default function SetupWizard({ inicial }: { inicial: SetupInicial }) {
         <p className="mb-2 text-sm font-semibold sm:hidden" style={{ color: "var(--color-text-muted)" }}>
           Passo {passo + 1} de {PASSOS.length} · <span style={{ color: "var(--color-text)" }}>{PASSOS[passo]}</span>
         </p>
-        <div className="flex items-center gap-1.5 sm:flex-wrap sm:gap-2.5">
+        <div className="flex items-center gap-1 sm:flex-wrap sm:gap-2.5">
           {PASSOS.map((p, i) => {
             const feito = i < passo;
             const atual = i === passo;
             return (
-              <div key={p} className="flex shrink-0 items-center gap-1.5 sm:gap-2.5">
+              <div key={p} className="flex shrink-0 items-center gap-1 sm:gap-2.5">
                 <span
                   className="flex h-9 w-9 items-center justify-center rounded-full text-[15px] font-bold transition-colors sm:h-11 sm:w-11 sm:text-[17px]"
                   style={
@@ -217,7 +217,7 @@ export default function SetupWizard({ inicial }: { inicial: SetupInicial }) {
                 <span className="hidden text-[15px] font-semibold whitespace-nowrap sm:inline" style={{ color: atual ? "var(--color-text)" : "var(--color-text-subtle)" }}>
                   {p}
                 </span>
-                {i < ultimo && <span className="mx-0.5 h-px w-3 sm:mx-1.5 sm:w-7" style={{ background: "var(--color-border)" }} />}
+                {i < ultimo && <span className="h-px w-2 sm:mx-1.5 sm:w-7" style={{ background: "var(--color-border)" }} />}
               </div>
             );
           })}

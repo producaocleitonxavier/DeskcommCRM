@@ -63,7 +63,8 @@ const TOM =
   "Tom formal, objetivo e respeitoso, em português do Brasil. Sem adjetivos de efeito, sem apelo " +
   "emocional, sem saudações exageradas. O parlamentar intermedeia e solicita providência; nunca " +
   "promete resultado, prazo ou atendimento. Devolva somente o texto do documento, sem título, " +
-  "sem comentários e sem marcação (nada de asteriscos ou cerquilhas).";
+  "sem comentários e sem marcação (nada de asteriscos ou cerquilhas). Datas, horas e números em " +
+  "algarismos, copiados exatamente como recebidos — nunca por extenso.";
 
 /** Instruções fixas do OFÍCIO a órgão ou autoridade. */
 export const PADRAO_DO_OFICIO =
@@ -112,7 +113,7 @@ const ESTRUTURA_DA_VISITA =
   "2) 'Requeiro a esta Comissão, nos termos do [dispositivo], a realização de visita técnica, com " +
   "ponto de encontro na [logradouro, número, bairro, CEP], com a finalidade de avaliar [objetivo técnico].'\n" +
   "3) 'A solicitação justifica-se pela …' — fato, risco e quem é afetado.\n" +
-  "4) 'Propõe-se que a visita técnica seja realizada no dia [data por extenso], [dia da semana], às [hora].'\n" +
+  "4) 'Propõe-se que a visita técnica seja realizada no dia [data e hora propostas, exatamente como recebidas].'\n" +
   "5) 'Para subsidiar a análise da demanda, sugere-se convidar representantes dos seguintes órgãos:' " +
   "seguido de uma linha por órgão, iniciada por '• ', no formato 'Nome por extenso – SIGLA;'. Use os " +
   "órgãos informados; se nenhum foi informado, escreva uma única linha '• [ÓRGÃOS A CONVIDAR]'.\n" +
@@ -123,7 +124,7 @@ const ESTRUTURA_DA_AUDIENCIA =
   "Estrutura (audiência pública):\n" +
   "1) 'Senhor Presidente,' (ou 'Senhora Presidente,' se a presidência da comissão for informada e for mulher).\n" +
   "2) 'Requeiro a esta [nome da comissão], nos termos do [dispositivo], a realização de audiência " +
-  "pública no dia [data por extenso], [dia da semana], às [hora], no [local], com a finalidade de " +
+  "pública no dia [data e hora propostas, exatamente como recebidas], no [local], com a finalidade de " +
   "debater [tema e alcance].'\n" +
   "3) 'A realização da audiência justifica-se pela necessidade de …' — um ou dois parágrafos.\n" +
   "4) 'Para assegurar a participação dos diferentes segmentos envolvidos e proporcionar um debate " +
@@ -185,6 +186,19 @@ export function montarPedidoDoRequerimento(d: DadosDoRequerimento): string {
     (convidados.length ? `Convidados:\n${convidados.map((c) => `- ${c}`).join("\n")}\n` : "") +
     blocoDeRelatos(d.relatos)
   );
+}
+
+/**
+ * Data e hora como a praxe escreve: "24 de novembro de 2026, terça-feira, às 11
+ * horas" / "04 de novembro de 2026, quarta-feira, às 10h30". Horário de Brasília.
+ */
+export function dataDaPraxe(d: Date): string {
+  const fuso = "America/Sao_Paulo";
+  const dia = d.toLocaleDateString("pt-BR", { day: "2-digit", month: "long", year: "numeric", timeZone: fuso });
+  const semana = d.toLocaleDateString("pt-BR", { weekday: "long", timeZone: fuso });
+  const [h, m] = d.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit", hour12: false, timeZone: fuso }).split(":");
+  const hora = m === "00" ? `${Number(h)} horas` : `${Number(h)}h${m}`;
+  return `${dia}, ${semana}, às ${hora}`;
 }
 
 /**

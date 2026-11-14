@@ -21,6 +21,7 @@ import { loadCredential } from "@/lib/ai/credentials";
 import { requireAuth, resolveActiveOrg } from "@/lib/auth/server";
 import {
   PADRAO_DO_OFICIO,
+  dataDaPraxe,
   instrucoesDoRequerimento,
   limparTextoOficial,
   montarPedidoDoOficio,
@@ -233,9 +234,7 @@ export async function gerarRequerimentoDeComissao(
   const prazo = d.prazo_em ? new Date(d.prazo_em as string) : null;
   const quando =
     prazo && !Number.isNaN(prazo.getTime())
-      ? `${prazo.toLocaleDateString("pt-BR", { day: "2-digit", month: "long", year: "numeric", timeZone: "America/Sao_Paulo" })}, ` +
-        `${prazo.toLocaleDateString("pt-BR", { weekday: "long", timeZone: "America/Sao_Paulo" })}, às ` +
-        `${prazo.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit", timeZone: "America/Sao_Paulo" })}`
+      ? dataDaPraxe(prazo)
       : null;
   const orgao = curto(d.pol_orgao_destino);
 
