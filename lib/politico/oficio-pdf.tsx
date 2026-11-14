@@ -223,7 +223,7 @@ function anexoPages(
     // A foto é posicionada ABSOLUTA na faixa de conteúdo (entre o cabeçalho e o
     // rodapé do timbrado), com tamanho fixo em pontos + objectFit:contain.
     return imgs.map((a, i) => (
-      <Page key={`anexo-${i}`} size="A4" style={styles.pageTimbrado} wrap={false}>
+      <Page key={`anexo-${i}`} size="A4" style={styles.pageTimbrado}>
         <Image src={timbrado} style={styles.fundoTimbrado} fixed />
         <Image
           src={a.url}
@@ -236,7 +236,7 @@ function anexoPages(
   const boxW = A4_PT.largura - 2 * 56;
   const boxH = A4_PT.altura - 48 - 48 - 60; // menos padding e o cabeçalho gerado
   return imgs.map((a, i) => (
-    <Page key={`anexo-${i}`} size="A4" style={styles.pageAnexo} wrap={false}>
+    <Page key={`anexo-${i}`} size="A4" style={styles.pageAnexo}>
       <View style={[styles.anexoHeader, { borderBottomColor: accent }]}>
         <Text style={[styles.marcaNome, { color: accent }]}>{marcaNome}</Text>
         {logoUrl ? <Image src={logoUrl} style={styles.logo} /> : null}
