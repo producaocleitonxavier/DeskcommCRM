@@ -260,3 +260,15 @@ export function diasParaOPrazo(prazoEm: string | null, situacao: SituacaoDoDocum
   const inicio = Date.parse(`${hojeBr}T00:00:00-03:00`);
   return Math.round((alvo - inicio) / 86_400_000);
 }
+
+/** O que mudou entre duas configurações de tipos, em frases curtas (vazio = nada mudou). */
+export function resumoDaMudancaDeTipos(antes: unknown, depois: unknown): string[] {
+  const a = new Map(normalizarTipos(Array.isArray(antes) ? antes : undefined).map((t) => [t.funcao, t]));
+  const frases: string[] = [];
+  for (const d of normalizarTipos(Array.isArray(depois) ? depois : undefined)) {
+    const era = a.get(d.funcao)!;
+    if (era.ligado !== d.ligado) frases.push(`${d.ligado ? "Ligou" : "Desligou"} ${d.rotulo}`);
+    if (era.rotulo !== d.rotulo) frases.push(`Renomeou ${era.rotulo} para ${d.rotulo}`);
+  }
+  return frases;
+}

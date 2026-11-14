@@ -110,6 +110,7 @@ export async function gerarOficioDemanda(demandaId: string): Promise<OficioResul
       cargo: ident.cargo,
       assinaturaUrl: ident.assinaturaUrl,
       assinaturaModo: ident.assinaturaModo,
+      assinaturaLinhas: ident.assinaturaLinhas,
       timbradoUrl: ident.timbradoUrl,
       timbradoMargens: ident.timbradoMargens,
       anexosImagens,

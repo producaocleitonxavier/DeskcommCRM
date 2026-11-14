@@ -13,6 +13,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { requireAuth, resolveActiveOrg } from "@/lib/auth/server";
 import { caminhoPertenceAOrg } from "@/lib/storage/caminho-da-org";
+import { limparLinhaDeAssinatura, linhasGuardadasDaAssinatura } from "@/lib/politico/assinatura-do-documento";
 
 const BUCKET_IDENTIDADE = "gabinete-identidade";
 
@@ -40,6 +41,9 @@ export interface IdentidadeGabinete {
   oficioDestinatarioPosicao: "topo" | "rodape";
   oficioMostrarAssunto: boolean;
   oficioAssinaturaModo: "imagem" | "gov_br";
+  /** As duas linhas escritas sob a linha de assinatura (vazias = nome e cargo). */
+  assinaturaLinha1: string;
+  assinaturaLinha2: string;
 }
 
 export type IdentidadeResultado = { ok: true } | { ok: false; erro: string };
@@ -67,6 +71,8 @@ export async function obterIdentidade(): Promise<IdentidadeGabinete> {
     oficioDestinatarioPosicao: "rodape",
     oficioMostrarAssunto: false,
     oficioAssinaturaModo: "imagem",
+    assinaturaLinha1: "",
+    assinaturaLinha2: "",
   };
   const org = await orgAtiva();
   if (!org) return vazio;
@@ -96,6 +102,8 @@ export async function obterIdentidade(): Promise<IdentidadeGabinete> {
     oficio_assinatura_modo: string | null;
   };
   const admin = createAdminClient();
+  const { data: orgRow } = await db.from("organizations").select("settings").eq("id", org).maybeSingle();
+  const linhas = linhasGuardadasDaAssinatura((orgRow as { settings?: unknown } | null)?.settings);
   const assinar = async (path: string | null): Promise<string | null> => {
     if (!caminhoPertenceAOrg(path, org)) return null;
     const { data: s } = await admin.storage.from(BUCKET_IDENTIDADE).createSignedUrl(path, 60 * 60);
@@ -116,7 +124,35 @@ export async function obterIdentidade(): Promise<IdentidadeGabinete> {
     oficioDestinatarioPosicao: row.oficio_destinatario_posicao === "topo" ? "topo" : "rodape",
     oficioMostrarAssunto: row.oficio_mostrar_assunto === true,
     oficioAssinaturaModo: row.oficio_assinatura_modo === "gov_br" ? "gov_br" : "imagem",
+    assinaturaLinha1: linhas.linha1,
+    assinaturaLinha2: linhas.linha2,
   };
+}
+
+/**
+ * Grava as duas linhas do bloco de assinatura dos documentos (`settings.gabinete.assinatura_do_documento`).
+ * As duas vazias = volta ao padrão (nome e cargo).
+ */
+export async function salvarTextoDaAssinatura(linha1: string, linha2: string): Promise<IdentidadeResultado> {
+  const org = await orgAtiva();
+  if (!org) return { ok: false, erro: "Sessão ou organização inválida." };
+  const admin = createAdminClient();
+  const { data, error } = await admin.from("organizations").select("settings").eq("id", org).maybeSingle();
+  // Leitura que falhou NUNCA vira base de gravação (regravar a partir de vazio apagaria tudo).
+  if (error || !data) return { ok: false, erro: "Não consegui ler as configurações. Tente de novo." };
+  const lido = (data as { settings?: unknown }).settings;
+  if (lido !== null && lido !== undefined && (typeof lido !== "object" || Array.isArray(lido))) {
+    return { ok: false, erro: "As configurações estão num formato inesperado. Avise o suporte." };
+  }
+  const settings = (lido ?? {}) as Record<string, unknown>;
+  const gabinete = (settings.gabinete && typeof settings.gabinete === "object" && !Array.isArray(settings.gabinete) ? settings.gabinete : {}) as Record<string, unknown>;
+  const novo = { linha1: limparLinhaDeAssinatura(linha1), linha2: limparLinhaDeAssinatura(linha2) };
+  const { error: errGravar } = await admin
+    .from("organizations")
+    .update({ settings: { ...settings, gabinete: { ...gabinete, assinatura_do_documento: novo } } })
+    .eq("id", org);
+  if (errGravar) return { ok: false, erro: "Não consegui salvar. Tente de novo." };
+  return { ok: true };
 }
 
 /**

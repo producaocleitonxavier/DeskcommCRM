@@ -14,6 +14,7 @@ import {
   salvarIdentidade,
   removerImagemIdentidade,
   type IdentidadeGabinete,
+  salvarTextoDaAssinatura,
 } from "@/app/actions/politico/gabinete-identidade";
 import { CommandHero } from "@/components/politico/command-hero";
 
@@ -45,6 +46,8 @@ export default function IdentidadeClient({ inicial }: { inicial: IdentidadeGabin
   const [destPosicao, setDestPosicao] = useState<"topo" | "rodape">(inicial.oficioDestinatarioPosicao);
   const [mostrarAssunto, setMostrarAssunto] = useState(inicial.oficioMostrarAssunto);
   const [assinaturaModo, setAssinaturaModo] = useState<"imagem" | "gov_br">(inicial.oficioAssinaturaModo);
+  const [assLinha1, setAssLinha1] = useState(inicial.assinaturaLinha1);
+  const [assLinha2, setAssLinha2] = useState(inicial.assinaturaLinha2);
   const [salvandoEstilo, setSalvandoEstilo] = useState(false);
   const [estiloOk, setEstiloOk] = useState(false);
 
@@ -92,8 +95,10 @@ export default function IdentidadeClient({ inicial }: { inicial: IdentidadeGabin
     setEstiloOk(false);
     setSalvandoEstilo(true);
     const res = await salvarIdentidade({ oficio_destinatario_posicao: destPosicao, oficio_mostrar_assunto: mostrarAssunto, oficio_assinatura_modo: assinaturaModo });
+    const resTexto = res.ok ? await salvarTextoDaAssinatura(assLinha1, assLinha2) : res;
     setSalvandoEstilo(false);
     if (!res.ok) return setErro(res.erro);
+    if (!resTexto.ok) return setErro(resTexto.erro);
     setEstiloOk(true);
     router.refresh();
   }
@@ -292,8 +297,8 @@ export default function IdentidadeClient({ inicial }: { inicial: IdentidadeGabin
           </label>
           <div className="flex flex-col gap-2">
             {([
-              { v: "gov_br", l: "Assino depois no gov.br (ou já vem no meu timbrado)", d: "O sistema deixa o espaço e NÃO desenha assinatura — você assina no gov.br (carimbo com hora oficial)." },
-              { v: "imagem", l: "Tenho uma imagem da minha assinatura", d: "Suba a imagem no cartão \"Assinatura\" acima — ela entra sozinha em todo ofício." },
+              { v: "imagem", l: "O sistema coloca a linha e o nome no fim do texto", d: "Para assinar à mão depois de imprimir, ou com a imagem da assinatura (se você subiu uma no cartão \"Assinatura\" acima, ela entra sozinha). A linha acompanha o texto: fica logo depois dele, em qualquer página." },
+              { v: "gov_br", l: "Sem assinatura no documento (assino no gov.br)", d: "O sistema NÃO desenha linha nem nome — você assina no gov.br (carimbo com hora oficial)." },
             ] as const).map((opt) => {
               const ativo = assinaturaModo === opt.v;
               return (
@@ -314,6 +319,25 @@ export default function IdentidadeClient({ inicial }: { inicial: IdentidadeGabin
             })}
           </div>
         </div>
+
+        {assinaturaModo === "imagem" ? (
+          <div className="space-y-2 rounded-xl p-3" style={{ border: "1px solid var(--color-border)" }}>
+            <p className="text-sm font-semibold" style={{ color: "var(--color-text)" }}>O que vai escrito embaixo da linha</p>
+            <div className="grid gap-2 sm:grid-cols-2">
+              <label className="block text-xs font-semibold" style={{ color: "var(--color-text-muted)" }}>
+                Linha de cima
+                <input type="text" value={assLinha1} onChange={(e) => setAssLinha1(e.target.value)} maxLength={80} className="wr-input mt-1 w-full text-sm font-normal" placeholder={[inicial.cargo, inicial.nome_parlamentar].filter(Boolean).join(" ") || "Ex.: Vereador Fulano de Tal"} />
+              </label>
+              <label className="block text-xs font-semibold" style={{ color: "var(--color-text-muted)" }}>
+                Linha de baixo
+                <input type="text" value={assLinha2} onChange={(e) => setAssLinha2(e.target.value)} maxLength={80} className="wr-input mt-1 w-full text-sm font-normal" placeholder="Ex.: partido, ou deixe vazio" />
+              </label>
+            </div>
+            <p className="text-xs" style={{ color: "var(--color-text-subtle)" }}>
+              Deixando as duas vazias, vão o nome e o cargo do mandato. <strong>Importante:</strong> o papel timbrado que você sobe aqui não deve trazer a linha e o nome de assinatura já impressos — impressos no papel, eles ficam num lugar fixo, o texto passa por cima e se repetem em toda página.
+            </p>
+          </div>
+        ) : null}
 
         <div className="flex items-center gap-3">
           <button type="button" disabled={salvandoEstilo} onClick={salvarEstilo} className="wr-btn-dark inline-flex items-center gap-2 disabled:opacity-60">

@@ -9,6 +9,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { marcaDaOrganizacaoParaPdf } from "@/lib/propostas/marca-da-organizacao-para-pdf";
+import { linhasDaAssinatura } from "@/lib/politico/assinatura-do-documento";
 import { imagemProntaParaPdf } from "@/lib/politico/imagem-para-pdf";
 import { caminhoPertenceAOrg } from "@/lib/storage/caminho-da-org";
 
@@ -20,6 +21,8 @@ export type IdentidadeDoOficio = {
   cidade: string | null;
   assinaturaUrl: string | null;
   assinaturaModo: "imagem" | "gov_br";
+  /** As duas linhas sob a linha de assinatura, como o gabinete escolheu (ou nome e cargo). */
+  assinaturaLinhas: { linha1: string; linha2: string };
   destinatarioPosicao: "topo" | "rodape";
   timbradoUrl: string | null;
   timbradoMargens: { topo: number | null; base: number | null; lados: number | null };
@@ -41,6 +44,8 @@ export async function identidadeDoOficio(
   orgId: string,
 ): Promise<IdentidadeDoOficio> {
   const marca = await marcaDaOrganizacaoParaPdf(db, orgId);
+  const { data: orgRow } = await db.from("organizations").select("settings").eq("id", orgId).maybeSingle();
+  const settings = (orgRow as { settings?: unknown } | null)?.settings;
   const { data: cfg } = await db
     .from("pol_gabinete_config")
     .select(
@@ -82,6 +87,7 @@ export async function identidadeDoOficio(
     cidade: ident?.cidade ?? null,
     assinaturaUrl,
     assinaturaModo: ident?.oficio_assinatura_modo === "gov_br" ? "gov_br" : "imagem",
+    assinaturaLinhas: linhasDaAssinatura(settings, ident?.nome_parlamentar ?? null, ident?.cargo ?? null),
     destinatarioPosicao: ident?.oficio_destinatario_posicao === "topo" ? "topo" : "rodape",
     timbradoUrl,
     timbradoMargens: {

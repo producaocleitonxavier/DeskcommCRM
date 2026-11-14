@@ -1147,6 +1147,12 @@ export const AUDIT_ACTIONS = [
   // Vigia de cobrança: o cron abriu/atualizou/limpou alertas de demandas
   // atrasadas sem resposta do órgão (só avisa; o envio é sempre humano).
   "pol_gabinete.demanda_cobranca_vigiada",
+  // Documentos da Casa (aba Requerimentos): o registro e a escolha dos tipos do gabinete.
+  // A mudança de tipos guarda o antes e o depois — é o histórico que a tela mostra.
+  "pol_documentos.create",
+  "pol_documentos.update",
+  "pol_documentos.delete",
+  "pol_gabinete.documentos_tipos_updated",
 ] as const;
 
 /** Um código de auditoria. Derivado de `AUDIT_ACTIONS` — não redigite a lista. */

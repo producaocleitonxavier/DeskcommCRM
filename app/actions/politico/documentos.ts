@@ -17,7 +17,9 @@
 
 import { generateText } from "ai";
 
+import { checkRateLimit } from "@/lib/ai/dispatcher/rate-limit";
 import { buildModel } from "@/lib/ai/runtime/agent";
+import { audit } from "@/lib/audit";
 import { loadAuthUser, mfaEmDivida, resolveActiveOrg } from "@/lib/auth/server";
 import { ROLE_RANK } from "@/lib/auth/types";
 import { supportWriteError } from "@/lib/impersonate/support";
@@ -27,6 +29,7 @@ import { cerebroDaOrg } from "@/lib/politico/cerebro-da-org";
 import {
   normalizarTipos,
   prepararDocumento,
+  resumoDaMudancaDeTipos,
   tiposDeSettings,
   tituloDoDocumento,
   type FuncaoDoDocumento,
@@ -44,6 +47,7 @@ import {
 import { problemaDoTextoDoRequerimento } from "@/lib/politico/requerimento-pdf";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
+import { nomesDosAtendentes } from "@/lib/users/nome-do-atendente";
 
 const BUCKET = "gabinete-anexos";
 const COLUNAS =
@@ -71,6 +75,8 @@ export type DocumentoItem = {
 type Falha = { ok: false; erro: string };
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const SEM_ACESSO = "Estes documentos são do gabinete — você não tem acesso a esta ação.";
+/** Redações com IA por pessoa, por hora. */
+const REDACOES_POR_HORA = 40;
 const SEM_TABELA = "Esta tela ainda não foi ativada no banco de dados desta instalação.";
 
 /** Sessão + organização + a trava do ofício. `null` quando a pessoa não pode. */
@@ -127,15 +133,18 @@ export type PainelDeDocumentos = {
   lembrado: { destinatario: string; dispositivo: string };
   /** O banco desta instalação ainda não tem a tabela. */
   semTabela: boolean;
+  /** O padrão do gabinete: o PDF sai com a linha e o nome para assinar? */
+  assinaturaPadrao: boolean;
 };
 
 export async function carregarDocumentos(): Promise<PainelDeDocumentos | Falha> {
   const s = await sessaoDoGabinete();
   if (!s) return { ok: false, erro: SEM_ACESSO };
   const db = await createClient();
-  const [{ data: orgRow }, lista] = await Promise.all([
+  const [{ data: orgRow }, lista, { data: cfg }] = await Promise.all([
     db.from("organizations").select("settings").eq("id", s.org.orgId).maybeSingle(),
     db.from("pol_documentos").select(COLUNAS).eq("organization_id", s.org.orgId).order("updated_at", { ascending: false }).limit(300),
+    db.from("pol_gabinete_config").select("oficio_assinatura_modo").eq("organization_id", s.org.orgId).maybeSingle(),
   ]);
   const settings = (orgRow as { settings?: unknown } | null)?.settings;
   const req = ((settings as Record<string, unknown> | undefined)?.gabinete as Record<string, unknown> | undefined)?.requerimento as
@@ -149,6 +158,7 @@ export async function carregarDocumentos(): Promise<PainelDeDocumentos | Falha> 
     podeConfigurar: s.ehGestor,
     lembrado: { destinatario: texto(req?.comissao), dispositivo: texto(req?.dispositivo) },
     semTabela: faltaATabela(lista.error),
+    assinaturaPadrao: (cfg as { oficio_assinatura_modo?: string | null } | null)?.oficio_assinatura_modo !== "gov_br",
   };
 }
 
@@ -198,6 +208,14 @@ export async function salvarDocumento(
       .single();
     if (error || !data) return { ok: false, erro: faltaATabela(error) ? SEM_TABELA : "Não consegui salvar o documento." };
     if (pronto.doc.funcao === "pedido_comissao") await lembrarComissao(s.org.orgId, pronto.doc.destinatario, pronto.doc.dispositivo);
+    await audit({
+      action: "pol_documentos.create",
+      actorUserId: s.user.id,
+      organizationId: s.org.orgId,
+      resourceType: "pol_documentos",
+      resourceId: (data as { id: string }).id,
+      metadata: { funcao: pronto.doc.funcao, rotulo: pronto.doc.rotulo, de_demanda: demanda !== null },
+    });
     return { ok: true, item: paraItem(data as Record<string, unknown>) };
   }
 
@@ -211,6 +229,14 @@ export async function salvarDocumento(
     .select(COLUNAS)
     .single();
   if (error || !data) return { ok: false, erro: "Não consegui salvar o documento." };
+  await audit({
+    action: "pol_documentos.update",
+    actorUserId: s.user.id,
+    organizationId: s.org.orgId,
+    resourceType: "pol_documentos",
+    resourceId: id,
+    metadata: { situacao_antes: situacaoAtual ?? null, situacao: pronto.doc.situacao, numero: pronto.doc.numero },
+  });
   return { ok: true, item: paraItem(data as Record<string, unknown>) };
 }
 
@@ -253,6 +279,13 @@ export async function excluirDocumento(id: string): Promise<{ ok: true } | Falha
   }
   const { error } = await db.from("pol_documentos").delete().eq("organization_id", s.org.orgId).eq("id", id).eq("situacao", "rascunho");
   if (error) return { ok: false, erro: "Não consegui apagar o documento." };
+  await audit({
+    action: "pol_documentos.delete",
+    actorUserId: s.user.id,
+    organizationId: s.org.orgId,
+    resourceType: "pol_documentos",
+    resourceId: id,
+  });
   return { ok: true };
 }
 
@@ -286,6 +319,12 @@ export async function redigirDocumento(pedido: {
   const s = await sessaoDoGabinete();
   if (!s) return { ok: false, erro: SEM_ACESSO };
   if (supportWriteError(s.user.support)) return { ok: false, erro: "A conta de suporte só consulta; não redige." };
+  // Folgado de propósito: quem redige costuma refazer algumas vezes. Só segura o descontrole
+  // (clique preso, automação), que gastaria a IA do gabinete sem ninguém ver.
+  const uso = await checkRateLimit(`pol-doc-redigir:${s.org.orgId}:${s.user.id}`, REDACOES_POR_HORA, 3600);
+  if (!uso.allowed) {
+    return { ok: false, erro: `Você já pediu ${REDACOES_POR_HORA} redações na última hora. Espere um pouco ou edite o texto à mão.` };
+  }
   const curto = (v: unknown, teto: number) => (typeof v === "string" ? v.replace(/\s+/g, " ").trim().slice(0, teto) : "");
 
   const db = await createClient();
@@ -366,7 +405,11 @@ export async function redigirDocumento(pedido: {
 }
 
 /** Gera o PDF do documento SALVO, no papel timbrado, e guarda o arquivo no registro. */
-export async function baixarPdfDoDocumento(id: string): Promise<{ ok: true; url: string } | Falha> {
+export async function baixarPdfDoDocumento(
+  id: string,
+  /** Desenhar a linha e o nome para assinar no fim do texto? Ausente = o padrão do gabinete (Identidade do Mandato). */
+  incluirAssinatura?: boolean,
+): Promise<{ ok: true; url: string } | Falha> {
   const s = await sessaoDoGabinete();
   if (!s) return { ok: false, erro: SEM_ACESSO };
   if (supportWriteError(s.user.support)) return { ok: false, erro: "A conta de suporte só consulta; não grava." };
@@ -380,6 +423,7 @@ export async function baixarPdfDoDocumento(id: string): Promise<{ ok: true; url:
 
   const admin = createAdminClient();
   const ident = await identidadeDoOficio(db, admin, s.org.orgId);
+  const comAssinatura = typeof incluirAssinatura === "boolean" ? incluirAssinatura : ident.assinaturaModo !== "gov_br";
   const agora = new Date();
   let buffer: Buffer;
   try {
@@ -396,7 +440,8 @@ export async function baixarPdfDoDocumento(id: string): Promise<{ ok: true; url:
       subtitulo: ident.subtitulo,
       cargo: ident.cargo,
       assinaturaUrl: ident.assinaturaUrl,
-      assinaturaModo: ident.assinaturaModo,
+      assinaturaModo: comAssinatura ? "imagem" : "gov_br",
+      assinaturaLinhas: ident.assinaturaLinhas,
       timbradoUrl: ident.timbradoUrl,
       timbradoMargens: ident.timbradoMargens,
       marca: ident.marca,
@@ -446,5 +491,47 @@ export async function salvarTiposDeDocumento(entrada: unknown): Promise<{ ok: tr
     .update({ settings: { ...settings, gabinete: { ...gabinete, documentos: { tipos } } } })
     .eq("id", org.orgId);
   if (errGravar) return { ok: false, erro: "Não consegui salvar. Tente de novo." };
+  const antes = tiposDeSettings(settings);
+  if (resumoDaMudancaDeTipos(antes, tipos).length > 0) {
+    await audit({
+      action: "pol_gabinete.documentos_tipos_updated",
+      actorUserId: user.id,
+      organizationId: org.orgId,
+      resourceType: "organization",
+      resourceId: org.orgId,
+      metadata: { antes, depois: tipos },
+    });
+  }
   return { ok: true, tipos };
+}
+
+export type MudancaDeTipos = { quando: string; quem: string; oQue: string[] };
+
+/** As últimas mudanças nos tipos de documento do gabinete: quem, quando e o quê. Gestor para cima. */
+export async function historicoDosTiposDeDocumento(): Promise<{ ok: true; mudancas: MudancaDeTipos[] } | Falha> {
+  const s = await sessaoDoGabinete();
+  if (!s || !s.ehGestor) return { ok: false, erro: "Só o gestor do gabinete vê este histórico." };
+  const admin = createAdminClient();
+  // Auditoria é lida com a chave de serviço (a regra do banco só mostra ao administrador);
+  // o filtro de organização vem da sessão.
+  const { data, error } = await admin
+    .from("api_audit_log")
+    .select("actor_user_id, metadata, created_at")
+    .eq("organization_id", s.org.orgId)
+    .eq("action", "pol_gabinete.documentos_tipos_updated")
+    .order("created_at", { ascending: false })
+    .limit(30);
+  if (error) return { ok: false, erro: "Não consegui ler o histórico." };
+  const linhas = (data ?? []) as { actor_user_id: string | null; metadata: Record<string, unknown> | null; created_at: string }[];
+  const nomes = await nomesDosAtendentes([...new Set(linhas.map((l) => l.actor_user_id).filter((v): v is string => !!v))]);
+  return {
+    ok: true,
+    mudancas: linhas
+      .map((l) => ({
+        quando: l.created_at,
+        quem: (l.actor_user_id && nomes.get(l.actor_user_id)) || "Alguém da equipe",
+        oQue: resumoDaMudancaDeTipos(l.metadata?.antes, l.metadata?.depois),
+      }))
+      .filter((m) => m.oQue.length > 0),
+  };
 }

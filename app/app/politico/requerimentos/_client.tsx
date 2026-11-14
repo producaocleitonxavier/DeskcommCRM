@@ -14,10 +14,12 @@ import { Check, Copy, FileDown, FilePlus2, FileText, Loader2, Search, Settings2,
 import {
   baixarPdfDoDocumento,
   excluirDocumento,
+  historicoDosTiposDeDocumento,
   redigirDocumento,
   salvarDocumento,
   salvarTiposDeDocumento,
   type DocumentoItem,
+  type MudancaDeTipos,
   type PainelDeDocumentos,
   type PontoDePartida,
 } from "@/app/actions/politico/documentos";
@@ -278,6 +280,7 @@ export default function RequerimentosClient({
           }}
           aoSalvar={aoSalvar}
           aoApagar={(id) => setItens((antes) => antes.filter((x) => x.id !== id))}
+          assinaturaPadrao={painel.assinaturaPadrao}
         />
       ) : null}
       {configurando ? <TiposDoGabinete tipos={tipos} aoFechar={() => setConfigurando(false)} aoSalvar={setTipos} /> : null}
@@ -316,12 +319,16 @@ function Editor({
   aoFechar,
   aoSalvar,
   aoApagar,
+  assinaturaPadrao,
 }: {
   inicial: Rascunho;
   aoFechar: () => void;
   aoSalvar: (item: DocumentoItem) => void;
   aoApagar: (id: string) => void;
+  assinaturaPadrao: boolean;
 }) {
+  /** O PDF sai com a linha e o nome para assinar no fim do texto? (começa no padrão do gabinete) */
+  const [comAssinatura, setComAssinatura] = useState(assinaturaPadrao);
   const [r, setR] = useState<Rascunho>(inicial);
   const [erro, setErro] = useState<string | null>(null);
   const [aviso, setAviso] = useState<string | null>(null);
@@ -401,7 +408,7 @@ function Editor({
     try {
       const id = sujo || !r.id ? await salvar() : r.id;
       if (!id) return aba?.close();
-      const res = await baixarPdfDoDocumento(id);
+      const res = await baixarPdfDoDocumento(id, comAssinatura);
       if (res.ok) {
         setPdfUrl(res.url);
         if (aba) aba.location.href = res.url;
@@ -601,6 +608,23 @@ function Editor({
             </div>
           </fieldset>
 
+          <label className="flex cursor-pointer items-start gap-2.5 rounded-xl p-3" style={{ border: "1px solid var(--color-border)" }}>
+            <input
+              type="checkbox"
+              checked={comAssinatura}
+              onChange={(e) => {
+                setComAssinatura(e.target.checked);
+                setPdfUrl(null);
+              }}
+              className="mt-0.5 h-4 w-4"
+            />
+            <span className="text-sm" style={{ color: "var(--color-text)" }}>
+              <span className="font-semibold">Incluir a linha para assinatura no fim do texto</span>
+              <span className="block text-xs" style={{ color: "var(--color-text-muted)" }}>
+                O PDF sai com o espaço, a linha e o nome logo depois do texto. Desmarque se vai assinar no gov.br.
+              </span>
+            </span>
+          </label>
           {erro ? <p className="text-sm font-semibold" style={{ color: "#C82333" }} role="alert">{erro}</p> : null}
         </div>
 
@@ -656,6 +680,17 @@ function TiposDoGabinete({
   const [lista, setLista] = useState<TipoDeDocumento[]>(tipos);
   const [erro, setErro] = useState<string | null>(null);
   const [salvando, setSalvando] = useState(false);
+  const [historico, setHistorico] = useState<MudancaDeTipos[] | "carregando" | null>(null);
+
+  async function verHistorico() {
+    setHistorico("carregando");
+    const res = await historicoDosTiposDeDocumento();
+    if (res.ok) setHistorico(res.mudancas);
+    else {
+      setHistorico(null);
+      setErro(res.erro);
+    }
+  }
 
   function aplicarModelo(m: ModeloDeCasa) {
     setLista(MODELOS_DE_CASA[m].tipos.map((t) => ({ ...t })));
@@ -744,6 +779,31 @@ function TiposDoGabinete({
               </div>
             );
           })}
+          <div className="rounded-xl p-3" style={{ border: "1px solid var(--color-border)" }}>
+            {historico === null ? (
+              <button type="button" onClick={verHistorico} className="text-sm font-semibold underline" style={{ color: "var(--color-text)" }}>
+                Ver o histórico de mudanças
+              </button>
+            ) : historico === "carregando" ? (
+              <p className="text-sm" style={{ color: "var(--color-text-muted)" }}>Carregando o histórico…</p>
+            ) : historico.length === 0 ? (
+              <p className="text-sm" style={{ color: "var(--color-text-muted)" }}>Nenhuma mudança registrada ainda.</p>
+            ) : (
+              <>
+                <p className="text-xs font-bold uppercase tracking-wide" style={{ color: "var(--color-text-subtle)" }}>Histórico de mudanças</p>
+                <ul className="mt-1.5 space-y-2">
+                  {historico.map((m, i) => (
+                    <li key={`${m.quando}-${i}`} className="text-sm" style={{ color: "var(--color-text)" }}>
+                      <span className="block text-xs" style={{ color: "var(--color-text-subtle)" }}>
+                        {new Date(m.quando).toLocaleString("pt-BR", { day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit", timeZone: "America/Sao_Paulo" })} · {m.quem}
+                      </span>
+                      {m.oQue.join(" · ")}
+                    </li>
+                  ))}
+                </ul>
+              </>
+            )}
+          </div>
           {erro ? <p className="text-sm font-semibold" style={{ color: "#C82333" }} role="alert">{erro}</p> : null}
         </div>
 

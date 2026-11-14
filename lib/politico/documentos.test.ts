@@ -118,3 +118,24 @@ describe("documentos do gabinete — conferência antes de gravar", () => {
     expect(diasParaOPrazo("2026-11-14", "protocolado", new Date("2026-11-15T02:00:00Z"))).toBe(0);
   });
 });
+
+import { resumoDaMudancaDeTipos } from "./documentos";
+
+describe("histórico dos tipos de documento", () => {
+  const base = [
+    { funcao: "pedido_comissao", rotulo: "Requerimento de comissão", ligado: true },
+    { funcao: "providencia", rotulo: "Indicação", ligado: false },
+  ];
+  it("descreve ligar, desligar e renomear", () => {
+    const depois = [
+      { funcao: "pedido_comissao", rotulo: "Pedido à comissão", ligado: true },
+      { funcao: "providencia", rotulo: "Indicação", ligado: true },
+    ];
+    expect(resumoDaMudancaDeTipos(base, depois)).toEqual(["Renomeou Requerimento de comissão para Pedido à comissão", "Ligou Indicação"]);
+    expect(resumoDaMudancaDeTipos(depois, base)).toContain("Desligou Indicação");
+  });
+  it("nada mudou = lista vazia; lixo não derruba", () => {
+    expect(resumoDaMudancaDeTipos(base, base)).toEqual([]);
+    expect(resumoDaMudancaDeTipos(null, "x")).toEqual([]);
+  });
+});

@@ -116,6 +116,11 @@ export interface OficioPdfInput {
    */
   assinaturaModo?: "imagem" | "gov_br";
   /**
+   * As duas linhas escritas sob a linha de assinatura (ex.: "Vereador Fulano" / "Partido").
+   * Ausente = nome e cargo. A de baixo vazia = uma linha só.
+   */
+  assinaturaLinhas?: { linha1: string; linha2: string } | null;
+  /**
    * Imagem A4 do papel timbrado (fundo de página inteira). Quando presente, o
    * cabeçalho/rodapé gerados são omitidos e o texto é sobreposto na faixa do
    * corpo (margens generosas que limpam o cabeçalho e o rodapé do timbrado).
@@ -183,8 +188,12 @@ function Assinatura({ d, nome, cargo }: { d: OficioPdfInput; nome: string; cargo
     <View style={styles.assinaturaBloco} wrap={false}>
       {d.assinaturaUrl ? <Image src={d.assinaturaUrl} style={styles.assinaturaImagem} /> : null}
       <View style={styles.assinaturaLinha} />
-      <Text style={styles.assinaturaNome}>{nome}</Text>
-      <Text style={styles.assinaturaCargo}>{cargo}</Text>
+      <Text style={styles.assinaturaNome}>{d.assinaturaLinhas?.linha1 || nome}</Text>
+      {d.assinaturaLinhas ? (
+        d.assinaturaLinhas.linha2 ? <Text style={styles.assinaturaCargo}>{d.assinaturaLinhas.linha2}</Text> : null
+      ) : (
+        <Text style={styles.assinaturaCargo}>{cargo}</Text>
+      )}
     </View>
   );
 }
