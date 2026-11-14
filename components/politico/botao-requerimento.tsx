@@ -145,12 +145,12 @@ export function BotaoRequerimento({ demandaId, assunto }: { demandaId: string; a
     const r = enterEmLista(a.value, a.selectionStart, a.selectionEnd);
     if (!r) return;
     e.preventDefault();
+    // Escreve na caixa e põe o cursor JÁ, antes de o React redesenhar: assim um
+    // segundo Enter em seguida encontra o cursor no lugar certo.
+    a.value = r.texto;
+    a.setSelectionRange(r.cursor, r.cursor);
     setTexto(r.texto);
     setPdfUrl(null);
-    requestAnimationFrame(() => {
-      const alvo = areaRef.current;
-      if (alvo) alvo.setSelectionRange(r.cursor, r.cursor);
-    });
   }
 
   return (
