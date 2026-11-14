@@ -19,6 +19,14 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { buildModel, chaveDePlataforma } from "@/lib/ai/runtime/agent";
 import { loadCredential } from "@/lib/ai/credentials";
 import { requireAuth, resolveActiveOrg } from "@/lib/auth/server";
+import {
+  PADRAO_DO_OFICIO,
+  instrucoesDoRequerimento,
+  limparTextoOficial,
+  montarPedidoDoOficio,
+  montarPedidoDoRequerimento,
+  type TipoDeRequerimento,
+} from "@/lib/politico/redacao-oficial";
 
 export type ResultadoEncaminhamento = { ok: true; texto: string } | { ok: false; erro: string };
 
@@ -99,7 +107,7 @@ export async function gerarEncaminhamento(demandaId: string): Promise<ResultadoE
 
   const { data: d } = await admin
     .from("demandas")
-    .select("assunto, pol_tipo, pol_orgao_destino, pol_prioridade, pol_oficio_destinatario, contacts(name)")
+    .select("assunto, pol_tipo, pol_orgao_destino, pol_prioridade, pol_oficio_destinatario, contacts(name, custom_fields)")
     .eq("organization_id", org.orgId)
     .eq("id", demandaId)
     .maybeSingle();
@@ -110,44 +118,147 @@ export async function gerarEncaminhamento(demandaId: string): Promise<ResultadoE
     return { ok: false, erro: `IA indisponível (${cerebro.erro}). Configure em IA › Credenciais.` };
   }
 
-  const contato = (d as { contacts?: { name?: string | null } | null }).contacts;
-  const demandante = contato?.name ?? "o cidadão";
-  const assunto = (d.assunto as string | null) ?? "(sem assunto)";
-  const tipo = (d.pol_tipo as string | null)?.replace(/_/g, " ") ?? "demanda";
-  const orgao = (d.pol_orgao_destino as string | null) ?? "ao órgão competente";
+  const contato = (d as { contacts?: { name?: string | null; custom_fields?: unknown } | null }).contacts;
+  const endereco = (contato?.custom_fields as { endereco_gip?: { bairro?: unknown } } | null | undefined)?.endereco_gip;
+  const bairro = typeof endereco?.bairro === "string" ? endereco.bairro : null;
   const prioridade = (d.pol_prioridade as string | null) ?? "normal";
-  const destinatario = (d.pol_oficio_destinatario as string | null)?.trim() || "";
 
-  const system =
-    "Você é assessor(a) de gabinete parlamentar no Brasil. Redige ofícios de encaminhamento " +
-    "formais, objetivos e cordiais, em português do Brasil, dirigidos a órgãos públicos. " +
-    "Não use saudações exageradas, não invente dados, números de processo ou nomes de autoridades. " +
-    "Abra o texto com o VOCATIVO adequado à autoridade destinatária, respeitando o GÊNERO dela " +
-    "(ex.: 'Senhora Comandante,' ou 'Senhor Secretário,'). NUNCA presuma o gênero masculino: deduza " +
-    "do nome e do cargo da autoridade informada. Se a autoridade não for informada ou o gênero for " +
-    "incerto, abra com 'Prezado(a) Senhor(a),'. " +
-    "Escreva apenas o corpo do encaminhamento, pronto para revisão.";
+  // O que o gabinete já registrou sobre o caso é a fonte dos fatos do ofício.
+  // Ficam de fora os eventos que só contam o andamento (aviso enviado, ofício emitido).
+  const SO_ANDAMENTO = new Set(["cidadao_avisado", "oficio_emitido", "estado_alterado"]);
+  const [{ data: eventos }, { data: ident }, { data: visita }] = await Promise.all([
+    admin
+      .from("pol_demanda_eventos")
+      .select("tipo, descricao, created_at")
+      .eq("organization_id", org.orgId)
+      .eq("demanda_id", demandaId)
+      .order("created_at", { ascending: true })
+      .limit(40),
+    admin.from("pol_gabinete_config").select("cidade").eq("organization_id", org.orgId).maybeSingle(),
+    // Colunas do relato de visita podem não existir numa instalação antiga: segue sem elas.
+    admin.from("demandas").select("pol_visita_relato").eq("organization_id", org.orgId).eq("id", demandaId).maybeSingle(),
+  ]);
+  const relatos = [
+    ...((eventos ?? []) as { tipo: string | null; descricao: string | null }[])
+      .filter((e) => !SO_ANDAMENTO.has(String(e.tipo ?? "")))
+      .map((e) => e.descricao ?? ""),
+    (visita as { pol_visita_relato?: string | null } | null)?.pol_visita_relato ?? "",
+  ].filter((r) => r.trim().length > 0);
 
+  const system = PADRAO_DO_OFICIO;
   const prompt =
-    `Redija um encaminhamento oficial curto (2 a 3 parágrafos) da seguinte demanda de cidadão, ` +
-    `para ser enviado ${orgao.startsWith("à") || orgao.startsWith("ao") ? orgao : `à ${orgao}`}.\n\n` +
-    `Demandante: ${demandante}\n` +
-    `Assunto: ${assunto}\n` +
-    `Natureza: ${tipo}\n` +
-    `Prioridade: ${prioridade}\n` +
-    (destinatario ? `Autoridade destinatária (use para o vocativo correto, com o gênero certo): ${destinatario}\n` : "") +
-    `\nEncaminhe a solicitação, contextualize de forma objetiva e peça a devida análise/providência. ` +
-    `Devolva somente o texto do encaminhamento.`;
+    montarPedidoDoOficio({
+      demandante: contato?.name ?? null,
+      bairro,
+      assunto: (d.assunto as string | null) ?? "(sem assunto)",
+      tipo: (d.pol_tipo as string | null)?.replace(/_/g, " ") ?? null,
+      orgao: (d.pol_orgao_destino as string | null) ?? null,
+      destinatario: (d.pol_oficio_destinatario as string | null)?.trim() || null,
+      cidade: (ident as { cidade?: string | null } | null)?.cidade ?? null,
+      relatos,
+    }) + (prioridade === "urgente" || prioridade === "alta" ? "Prioridade registrada pelo gabinete: " + prioridade + "\n" : "");
 
   try {
     const { text } = await generateText({
       model: buildModel(cerebro.provider, cerebro.apiKey, cerebro.model),
       system,
       prompt,
-      // Teto baixo: são poucos parágrafos. Evita queimar crédito do tenant.
-      maxOutputTokens: 600,
+      // Teto baixo: é uma página. Evita queimar crédito do tenant.
+      maxOutputTokens: 900,
     });
-    const texto = text.trim();
+    const texto = limparTextoOficial(text);
+    if (!texto) return { ok: false, erro: "A IA não retornou texto. Tente novamente." };
+    return { ok: true, texto };
+  } catch {
+    return { ok: false, erro: "Não consegui gerar agora. Tente novamente em instantes." };
+  }
+}
+
+export type PedidoDeRequerimento = {
+  tipo: TipoDeRequerimento;
+  /** Comissão a que se requer, como o gabinete escreve. */
+  comissao?: string;
+  /** Dispositivo do regimento da Casa (ex.: "art. 48 do Regimento Interno"). */
+  dispositivo?: string;
+};
+
+/**
+ * Redige o REQUERIMENTO DE COMISSÃO (visita técnica ou audiência pública) a
+ * partir de uma visita/demanda do gabinete. Só devolve o texto, para a equipe
+ * revisar e levar ao sistema da Casa — não grava nem envia nada.
+ */
+export async function gerarRequerimentoDeComissao(
+  demandaId: string,
+  pedido: PedidoDeRequerimento,
+): Promise<ResultadoEncaminhamento> {
+  const user = await autenticarComPapel("agent");
+  const org = await resolveActiveOrg(user);
+  if (!org) return { ok: false, erro: "Sessão ou organização inválida." };
+  const tipo: TipoDeRequerimento = pedido?.tipo === "audiencia_publica" ? "audiencia_publica" : "visita_tecnica";
+  const curto = (v: unknown) => (typeof v === "string" ? v.trim().slice(0, 200) : "");
+
+  const admin = createAdminClient();
+  const { data: d } = await admin
+    .from("demandas")
+    .select("assunto, pol_orgao_destino, pol_municipio, prazo_em")
+    .eq("organization_id", org.orgId)
+    .eq("id", demandaId)
+    .maybeSingle();
+  if (!d) return { ok: false, erro: "Visita não encontrada." };
+
+  const cerebro = await cerebroDaOrg(admin, org.orgId);
+  if ("erro" in cerebro) {
+    return { ok: false, erro: `IA indisponível (${cerebro.erro}). Configure em IA › Credenciais.` };
+  }
+
+  const [{ data: eventos }, { data: ident }, { data: visita }] = await Promise.all([
+    admin
+      .from("pol_demanda_eventos")
+      .select("tipo, descricao, created_at")
+      .eq("organization_id", org.orgId)
+      .eq("demanda_id", demandaId)
+      .order("created_at", { ascending: true })
+      .limit(40),
+    admin.from("pol_gabinete_config").select("cidade").eq("organization_id", org.orgId).maybeSingle(),
+    admin.from("demandas").select("pol_visita_relato").eq("organization_id", org.orgId).eq("id", demandaId).maybeSingle(),
+  ]);
+  const SO_ANDAMENTO = new Set(["cidadao_avisado", "oficio_emitido", "estado_alterado"]);
+  const relatos = [
+    ...((eventos ?? []) as { tipo: string | null; descricao: string | null }[])
+      .filter((e) => !SO_ANDAMENTO.has(String(e.tipo ?? "")))
+      .map((e) => e.descricao ?? ""),
+    (visita as { pol_visita_relato?: string | null } | null)?.pol_visita_relato ?? "",
+  ].filter((r) => r.trim().length > 0);
+
+  const prazo = d.prazo_em ? new Date(d.prazo_em as string) : null;
+  const quando =
+    prazo && !Number.isNaN(prazo.getTime())
+      ? `${prazo.toLocaleDateString("pt-BR", { day: "2-digit", month: "long", year: "numeric", timeZone: "America/Sao_Paulo" })}, ` +
+        `${prazo.toLocaleDateString("pt-BR", { weekday: "long", timeZone: "America/Sao_Paulo" })}, às ` +
+        `${prazo.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit", timeZone: "America/Sao_Paulo" })}`
+      : null;
+  const orgao = curto(d.pol_orgao_destino);
+
+  try {
+    const { text } = await generateText({
+      model: buildModel(cerebro.provider, cerebro.apiKey, cerebro.model),
+      system: instrucoesDoRequerimento(tipo),
+      prompt: montarPedidoDoRequerimento({
+        tipo,
+        assunto: (d.assunto as string | null) ?? "(sem assunto)",
+        // O endereço do ponto de encontro não é um campo da visita: sai como lacuna
+        // para a equipe preencher (ou do relato, se estiver lá).
+        local: null,
+        quando,
+        comissao: curto(pedido?.comissao) || null,
+        dispositivo: curto(pedido?.dispositivo) || null,
+        convidados: orgao ? [orgao] : [],
+        cidade: curto(d.pol_municipio) || ((ident as { cidade?: string | null } | null)?.cidade ?? null),
+        relatos,
+      }),
+      maxOutputTokens: 1200,
+    });
+    const texto = limparTextoOficial(text);
     if (!texto) return { ok: false, erro: "A IA não retornou texto. Tente novamente." };
     return { ok: true, texto };
   } catch {

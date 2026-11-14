@@ -16,6 +16,7 @@ import { CommandHero } from "@/components/politico/command-hero";
 import { KpiCard } from "@/components/politico/kpi-card";
 import { EmptyState } from "@/components/politico/empty-state";
 import { QuemVai } from "@/components/politico/quem-vai";
+import { BotaoRequerimento } from "@/components/politico/botao-requerimento";
 import { RelatorioTabela } from "@/components/politico/relatorio-tabela";
 import { corDoOrgao } from "@/lib/politico/demanda-cobranca";
 import { visitaPendente, visitaAgendada, visitaSemResponsavel, statusVisita, ordenarVisitas } from "@/lib/politico/visita-tecnica";
@@ -406,6 +407,7 @@ export default function VisitasClient({ visitas, kpis, assessores, usuarioAtualI
                     </div>
                     {/* Ações rápidas */}
                     <div className="flex flex-wrap items-center gap-2 border-t pt-3" style={{ borderColor: "var(--color-border)" }}>
+                    <BotaoRequerimento demandaId={v.id} assunto={v.assunto} />
                     {/* Responsável (DONO da visita) — distinto do "Quem vai" acima (presença
                         da equipe). Um responsável pelo relato; vários podem ir. */}
                     {euSou ? (

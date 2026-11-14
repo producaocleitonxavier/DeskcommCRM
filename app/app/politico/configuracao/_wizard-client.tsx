@@ -194,9 +194,9 @@ export default function SetupWizard({ inicial }: { inicial: SetupInicial }) {
       {/* Stepper — bolinhas e rótulos maiores (estavam pequenos no celular). */}
       <div className="gip-glass p-5">
         <p className="mb-2 text-sm font-semibold sm:hidden" style={{ color: "var(--color-text-muted)" }}>
-          Passo {passo + 1} de {PASSOS.length}
+          Passo {passo + 1} de {PASSOS.length} · <span style={{ color: "var(--color-text)" }}>{PASSOS[passo]}</span>
         </p>
-        <div className="flex flex-wrap items-center gap-x-1.5 gap-y-2 sm:gap-2.5">
+        <div className="flex items-center gap-1.5 sm:flex-wrap sm:gap-2.5">
           {PASSOS.map((p, i) => {
             const feito = i < passo;
             const atual = i === passo;
@@ -214,7 +214,7 @@ export default function SetupWizard({ inicial }: { inicial: SetupInicial }) {
                 >
                   {feito ? <Check size={20} /> : i + 1}
                 </span>
-                <span className={`text-[15px] font-semibold whitespace-nowrap ${atual ? "" : "hidden sm:inline"}`} style={{ color: atual ? "var(--color-text)" : "var(--color-text-subtle)" }}>
+                <span className="hidden text-[15px] font-semibold whitespace-nowrap sm:inline" style={{ color: atual ? "var(--color-text)" : "var(--color-text-subtle)" }}>
                   {p}
                 </span>
                 {i < ultimo && <span className="mx-0.5 h-px w-3 sm:mx-1.5 sm:w-7" style={{ background: "var(--color-border)" }} />}

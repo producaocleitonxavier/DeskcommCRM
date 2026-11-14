@@ -366,6 +366,14 @@ export function InboxLayout({ initialSelectedId = null, rascunho = null }: Inbox
     const query = params.toString();
     window.history.pushState(null, "", query ? `${pathname}?${query}` : pathname);
   }, [selectedId, searchParams, pathname]);
+  // Avisa a barra de abas da área que há uma conversa aberta (no celular ela se
+  // recolhe para a leitura ganhar a tela).
+  useEffect(() => {
+    const raiz = document.documentElement;
+    if (selectedId) raiz.setAttribute("data-conversa-aberta", "");
+    else raiz.removeAttribute("data-conversa-aberta");
+    return () => raiz.removeAttribute("data-conversa-aberta");
+  }, [selectedId]);
   const handleVisibleChange = useCallback((ids: string[]) => setVisibleIds(ids), []);
   const handleFocusReply = useCallback(() => composerRef.current?.focus(), []);
   const handleClaim = useCallback(() => {

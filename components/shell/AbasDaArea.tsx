@@ -11,7 +11,7 @@
  */
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import { ContadorDeCasos } from "@/components/shell/ContadorDeCasos";
 
@@ -34,6 +34,18 @@ export function AbasDaArea({ navy = false }: { /** Tela marinho: abas em verde (
   // barra distrairia de quem já tem o "voltar".
   const mostra = !!achado && achado.porta.abas.length >= 2 && pathname === achado.aba.href;
   const ref = useRef<HTMLElement>(null);
+  // Conversa aberta no celular: a barra sai da frente para sobrar tela para LER
+  // (o "‹ Conversas" da própria conversa já volta). Quem avisa é a tela de
+  // Conversas, por um atributo na raiz — a seleção não muda o endereço da página.
+  const [conversaAberta, setConversaAberta] = useState(false);
+  useEffect(() => {
+    const raiz = document.documentElement;
+    const ler = () => setConversaAberta(raiz.hasAttribute("data-conversa-aberta"));
+    ler();
+    const olho = new MutationObserver(ler);
+    olho.observe(raiz, { attributes: true, attributeFilter: ["data-conversa-aberta"] });
+    return () => olho.disconnect();
+  }, []);
   // Telas de altura cheia (Conversas) calculam a própria altura a partir da tela.
   // A barra avisa quanto ocupa em `--abas-da-area`, para elas descontarem — sem
   // isso a caixa de mensagem ia para baixo da dobra.
@@ -46,6 +58,10 @@ export function AbasDaArea({ navy = false }: { /** Tela marinho: abas em verde (
     const medir = () => {
       const el = ref.current;
       if (!el) return;
+      if (getComputedStyle(el).display === "none") {
+        raiz.style.setProperty("--abas-da-area", "0px");
+        return;
+      }
       const margem = parseFloat(getComputedStyle(el).marginBottom || "0") || 0;
       raiz.style.setProperty("--abas-da-area", `${Math.ceil(el.getBoundingClientRect().height + margem)}px`);
     };
@@ -59,11 +75,11 @@ export function AbasDaArea({ navy = false }: { /** Tela marinho: abas em verde (
       window.removeEventListener("resize", medir);
       raiz.style.removeProperty("--abas-da-area");
     };
-  }, [mostra, pathname]);
+  }, [mostra, pathname, conversaAberta]);
   if (!mostra || !achado) return null;
 
   return (
-    <nav ref={ref} aria-label={`Telas de ${achado.porta.label}`} className={`mx-auto mb-4 w-full${/^\/app\/inbox\/[^/]+/.test(pathname ?? "") ? " hidden md:block" : ""}`} style={{ maxWidth: "1140px" }} data-abas-da-area>
+    <nav ref={ref} aria-label={`Telas de ${achado.porta.label}`} className={`mx-auto mb-4 w-full${conversaAberta ? " hidden md:block" : ""}`} style={{ maxWidth: "1140px" }} data-abas-da-area>
       {/* Todas as abas à vista, sem rolagem lateral: no celular elas quebram em mais
           de uma linha (pedido de 13/nov — a barra de rolagem escondia abas). */}
       <div
