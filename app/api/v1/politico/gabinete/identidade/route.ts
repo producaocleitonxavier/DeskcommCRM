@@ -14,6 +14,7 @@ import { type NextRequest } from "next/server";
 import { fail, ok } from "@/lib/api/wrappers";
 import { extFromMime, MAX_MEDIA_BYTES } from "@/lib/messaging/media/types";
 import { validateOutboundMedia } from "@/lib/messaging/media/upload-validation";
+import { converterParaOPdf, mimeQueOPdfDesenha } from "@/lib/politico/imagem-para-pdf";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { requireAuth, resolveActiveOrg } from "@/lib/auth/server";
@@ -66,13 +67,30 @@ export async function POST(req: NextRequest): Promise<Response> {
     return fail("payload_too_large", "Imagem acima de 5MB.", 413, { requestId });
   }
 
-  const buffer = Buffer.from(await file.arrayBuffer());
-  const storagePath = `${org.orgId}/${campo}.${extFromMime(mime)}`;
+  let buffer = Buffer.from(await file.arrayBuffer());
+  let mimeFinal = mime;
+  let ext = extFromMime(mime);
+  // Timbrado, logo e assinatura vão para os PDFs, e o PDF só desenha PNG e JPG: uma imagem
+  // em WebP é convertida aqui, para não sair documento sem o papel timbrado.
+  if (campo !== "moldura_vitoria" && !mimeQueOPdfDesenha(mime)) {
+    try {
+      const convertida = await converterParaOPdf(buffer, campo === "timbrado" ? "timbrado" : "transparente");
+      buffer = Buffer.from(convertida.buffer);
+      mimeFinal = convertida.mime;
+      ext = convertida.ext;
+    } catch {
+      return fail("validation_failed", "Não consegui ler esta imagem. Envie em PNG ou JPG.", 422, { requestId });
+    }
+    if (buffer.length > MAX_IDENTIDADE_BYTES) {
+      return fail("payload_too_large", "A imagem ficou acima de 5MB depois de convertida. Envie em JPG.", 413, { requestId });
+    }
+  }
+  const storagePath = `${org.orgId}/${campo}.${ext}`;
 
   const admin = createAdminClient();
   const { error: upErr } = await admin.storage
     .from(BUCKET)
-    .upload(storagePath, buffer, { contentType: mime, upsert: true });
+    .upload(storagePath, buffer, { contentType: mimeFinal, upsert: true });
   if (upErr) {
     console.error("[politico.gabinete.identidade] upload failed", upErr.message);
     return fail("internal_error", "Erro ao subir a imagem.", 500, { requestId });

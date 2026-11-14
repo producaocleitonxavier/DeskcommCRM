@@ -9,6 +9,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { marcaDaOrganizacaoParaPdf } from "@/lib/propostas/marca-da-organizacao-para-pdf";
+import { imagemProntaParaPdf } from "@/lib/politico/imagem-para-pdf";
 import { caminhoPertenceAOrg } from "@/lib/storage/caminho-da-org";
 
 /** Os campos de `OficioPdfInput` que vêm da identidade do gabinete. */
@@ -62,15 +63,16 @@ export async function identidadeDoOficio(
     oficio_assinatura_modo: string | null;
   } | null;
 
-  const assinar = async (p: string | null): Promise<string | null> => {
+  // PNG/JPG vão por link; WebP (que o PDF não desenha) é convertido na hora — sem isto o
+  // documento saía sem o papel timbrado, e sem erro nenhum na tela.
+  const assinar = async (p: string | null, uso: "timbrado" | "transparente" = "transparente"): Promise<string | null> => {
     if (!caminhoPertenceAOrg(p, orgId)) return null;
-    const { data: s } = await admin.storage.from("gabinete-identidade").createSignedUrl(p, 60 * 60);
-    return s?.signedUrl ?? null;
+    return imagemProntaParaPdf(admin, "gabinete-identidade", p, uso);
   };
   const [logoProprio, assinaturaUrl, timbradoUrl] = await Promise.all([
     assinar(ident?.logo_path ?? null),
     assinar(ident?.assinatura_path ?? null),
-    assinar(ident?.timbrado_path ?? null),
+    assinar(ident?.timbrado_path ?? null, "timbrado"),
   ]);
 
   return {
