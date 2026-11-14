@@ -14,6 +14,7 @@
  */
 
 import { autenticarComPapel } from "@/lib/politico/acesso";
+import { lerModoCampanha } from "@/lib/politico/modo-campanha";
 import { revalidatePath } from "next/cache";
 
 import { createClient } from "@/lib/supabase/server";
@@ -44,6 +45,12 @@ export async function moverEtapa(contactId: string, etapa: string): Promise<Acao
   if (!org) return { ok: false, erro: "Sessão ou organização inválida." };
   const db = await createClient();
 
+  // Mandato não tem "voto certo": só instalação de campanha move alguém pra lá
+  // (settings.gabinete.modo_campanha — ver lib/politico/niveis.ts).
+  if (alvo === "voto_certo" && !(await lerModoCampanha(db, org.orgId))) {
+    return { ok: false, erro: "Etapa inválida." };
+  }
+
   const { data: lead, error: erroLead } = await db
     .from("pol_leads")
     .select("id, support_level, political_score")
@@ -51,7 +58,7 @@ export async function moverEtapa(contactId: string, etapa: string): Promise<Acao
     .eq("contact_id", cid)
     .maybeSingle();
   if (erroLead) return { ok: false, erro: erroLead.message };
-  if (!lead) return { ok: false, erro: "Essa pessoa não está no funil." };
+  if (!lead) return { ok: false, erro: "Essa pessoa não está na base do mandato." };
 
   const atual = (lead as { support_level: string }).support_level;
   if (atual === alvo) return { ok: true };

@@ -652,7 +652,7 @@ export default function HojeClient({
       {/* ── 3. Funil de atendimento (ciclo da demanda) ──────────── */}
       <section className="gip-glass p-6 sm:p-7">
         <SectionHeader
-          title="Funil de atendimento"
+          title="Etapas do atendimento"
           subtitle="O caminho de cada demanda até a resolução"
           action={{ label: "Ver demandas", href: "/app/politico/demandas" }}
           className="mb-2"

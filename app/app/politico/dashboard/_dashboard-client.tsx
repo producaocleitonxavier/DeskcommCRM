@@ -35,9 +35,11 @@ import { CommandHero } from "@/components/politico/command-hero";
 import { EmptyState } from "@/components/politico/empty-state";
 import type { CallQueueStatus, DashboardData, FunilKpis } from "./page";
 import { formatarDuracao, type MetricasDeAtendimento } from "@/lib/politico/atendimento-metricas";
+import { pluralDoNivel, rotuloDoNivel } from "@/lib/politico/niveis";
 
-// Uma COR DISTINTA por tipo de público (novo cadastro → voto certo): a mesma
-// paleta pinta o funil E a pizza "Distribuição por Nível", então a cor vira a
+// Uma COR DISTINTA por nível de relacionamento (novo contato → multiplicador;
+// a 5ª cor sobra — "voto certo" não existe no mandato e soma em Multiplicador).
+// A mesma paleta pinta o quadro dos níveis E a pizza "Distribuição por Nível", então a cor vira a
 // identidade de cada nível. Antes eram 5 tons de índigo quase iguais — não
 // diferenciavam o público. Progressão fria→quente→conquista, vívida no escuro.
 // Paleta categórica dos 5 estágios, em DUAS versões: ESCURA (brilhante p/ o
@@ -108,7 +110,7 @@ export default function DashboardClient({ dash, funil, calls, claro, atendimento
         <EmptyState
           icon={BarChart3}
           title="Sem dados ainda"
-          description="Cadastre pessoas da sua base para o painel preencher os indicadores da campanha."
+          description="Cadastre pessoas da sua base para o painel preencher os indicadores do mandato."
           action={{ label: "+ Cadastrar", href: "/app/politico/leads/novo" }}
         />
       ) : (
@@ -116,14 +118,14 @@ export default function DashboardClient({ dash, funil, calls, claro, atendimento
           {/* ── 2. KPIs principais ──────────────────────────────── */}
           <section aria-label="Indicadores principais" className="grid grid-cols-2 gap-4 lg:grid-cols-4">
             <KpiCard label="Total de contatos" valor={dash.total_leads} icone={Users} />
-            <KpiCard label="Votos certos" valor={dash.votos_certos} icone={BadgeCheck} variant="dark" />
-            <KpiCard label="Multiplicadores" valor={dash.militantes} icone={Megaphone} />
-            <KpiCard label="Apoiadores" valor={dash.apoiadores} icone={Heart} />
+            <KpiCard label={pluralDoNivel("militante")} valor={dash.militantes + (dash.votos_certos ?? 0)} icone={Megaphone} variant="dark" />
+            <KpiCard label={pluralDoNivel("apoiador")} valor={dash.apoiadores} icone={Heart} />
+            <KpiCard label={pluralDoNivel("simpatizante")} valor={dash.simpatizantes} icone={BadgeCheck} />
           </section>
 
           <BlocoAtendimento m={atendimento} claro={claro} />
 
-          {/* ── 3. Funil político ───────────────────────────────── */}
+          {/* ── 3. Níveis de relacionamento ───────────────────────────────── */}
           {funil && funil.funil_total > 0 && (
             <section className="gip-glass p-6 sm:p-7">
               <div className="mb-2 flex flex-wrap items-end justify-between gap-3">
@@ -133,11 +135,11 @@ export default function DashboardClient({ dash, funil, calls, claro, atendimento
                 showConversion={false}
                 className="mt-5"
                 data={[
-                  { label: "Novo cadastro", value: funil.funil_novo_cadastro, color: FUNIL_HEX[0]! },
-                  { label: "Simpatizante", value: funil.funil_simpatizante, color: FUNIL_HEX[1]! },
-                  { label: "Apoiador", value: funil.funil_apoiador, color: FUNIL_HEX[2]! },
-                  { label: "Multiplicador", value: funil.funil_militante, color: FUNIL_HEX[3]! },
-                  { label: "Voto certo", value: funil.funil_voto_certo, color: FUNIL_HEX[4]! },
+                  { label: rotuloDoNivel("novo_cadastro"), value: funil.funil_novo_cadastro, color: FUNIL_HEX[0]! },
+                  { label: rotuloDoNivel("simpatizante"), value: funil.funil_simpatizante, color: FUNIL_HEX[1]! },
+                  { label: rotuloDoNivel("apoiador"), value: funil.funil_apoiador, color: FUNIL_HEX[2]! },
+                  // "Voto certo" não existe no mandato: registro antigo soma em Multiplicador.
+                  { label: rotuloDoNivel("militante"), value: funil.funil_militante + (funil.funil_voto_certo ?? 0), color: FUNIL_HEX[3]! },
                 ]}
               />
             </section>
@@ -148,11 +150,10 @@ export default function DashboardClient({ dash, funil, calls, claro, atendimento
             <PieChartCard
               title="Distribuição por Nível"
               data={[
-                { name: "Novos cadastros", value: dash.novos_cadastros, fill: FUNIL_HEX[0]! },
-                { name: "Simpatizantes", value: dash.simpatizantes, fill: FUNIL_HEX[1]! },
-                { name: "Apoiadores", value: dash.apoiadores, fill: FUNIL_HEX[2]! },
-                { name: "Multiplicadores", value: dash.militantes, fill: FUNIL_HEX[3]! },
-                { name: "Votos certos", value: dash.votos_certos, fill: FUNIL_HEX[4]! },
+                { name: pluralDoNivel("novo_cadastro"), value: dash.novos_cadastros, fill: FUNIL_HEX[0]! },
+                { name: pluralDoNivel("simpatizante"), value: dash.simpatizantes, fill: FUNIL_HEX[1]! },
+                { name: pluralDoNivel("apoiador"), value: dash.apoiadores, fill: FUNIL_HEX[2]! },
+                { name: pluralDoNivel("militante"), value: dash.militantes + (dash.votos_certos ?? 0), fill: FUNIL_HEX[3]! },
               ]}
             />
             <BarChartCard

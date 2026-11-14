@@ -21,7 +21,8 @@ import { FILTRO_VAZIO } from "@/lib/campanhas/audiencia";
 import { VARIAVEL_LINK } from "@/lib/politico/pesquisa-link";
 
 export interface SegmentoPesquisa {
-  niveis: ("novo_cadastro" | "simpatizante" | "apoiador" | "militante" | "voto_certo")[];
+  /** Níveis de relacionamento (lib/politico/niveis.ts) — sem `voto_certo`: o mandato não usa. */
+  niveis: ("novo_cadastro" | "simpatizante" | "apoiador" | "militante")[];
   temperaturas: ("frio" | "morno" | "quente")[];
   /** Origem do contato (contacts.source) — ex.: pesquisa, qr, saga_palestras. */
   origens: string[];

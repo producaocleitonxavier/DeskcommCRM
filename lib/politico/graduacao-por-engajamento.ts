@@ -1,5 +1,5 @@
 /**
- * GRADUAÇÃO POR ENGAJAMENTO — a resposta move o funil político.
+ * GRADUAÇÃO POR ENGAJAMENTO — a resposta sobe o nível de relacionamento.
  *
  * ═══ O que isto faz ═══
  *
@@ -13,9 +13,10 @@
  * ═══ A regra, e por que ela PARA no simpatizante ═══
  *
  * Só promove `novo_cadastro → simpatizante`, um degrau, na PRIMEIRA interação.
- * Apoiador, militante e voto certo exigem sinal mais forte (presença, doação,
- * mobilização) ou decisão humana — responder a um WhatsApp não faz ninguém
- * militante. Promover além daqui inflaria o funil e mentiria para o estrategista.
+ * Participante e Multiplicador (apoiador/militante) exigem sinal mais forte
+ * (presença, participação, indicação) ou decisão humana — responder a um WhatsApp
+ * não faz ninguém multiplicador. Promover além daqui inflaria a base e mentiria
+ * para quem lê. (`voto_certo` nunca é dado por máquina — ver engajamento.ts.)
  *
  * ═══ Idempotente de propósito ═══
  *

@@ -284,7 +284,7 @@ function corpoInstrucaoEnquete(primeiroNome: string): string {
   const ola = primeiroNome ? `Olá, ${primeiroNome}!` : "Olá!";
   return (
     `${ola} 👋 O nosso mandato quer ouvir a população numa *pesquisa rápida*.\n\n` +
-    `Cada pessoa que responder pelo *seu link* entra como um apoiador no seu placar. 🏆\n\n` +
+    `Cada pessoa que responder pelo *seu link* conta no seu placar. 🏆\n\n` +
     `É só *encaminhar a mensagem abaixo* 👇 pra sua rede.`
   );
 }

@@ -19,12 +19,16 @@ import { requireRole } from "@/lib/auth/require-role";
 import { ROLE_RANK, type Role } from "@/lib/auth/types";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { requireSupportWrite } from "@/lib/impersonate/support";
+import { lerModoCampanha } from "@/lib/politico/modo-campanha";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
 // -- Validacao ----------------------------------------------------------------
 
+// `voto_certo` continua no enum porque é valor do banco, mas vindo de FORA só
+// entra em instalação de campanha (settings.gabinete.modo_campanha) — ver
+// lib/politico/niveis.ts. No mandato, a API recusa com 422.
 const SUPPORT_LEVELS = [
   "novo_cadastro",
   "simpatizante",
@@ -131,6 +135,11 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
 
   const db = createAdminClient();
 
+  // Mandato não tem "voto certo": só instalação de campanha aceita o valor.
+  if (parsed.data.support_level === "voto_certo" && !(await lerModoCampanha(db, orgId))) {
+    return fail("validation_error", "Nivel indisponivel nesta instalacao", 422, { requestId });
+  }
+
   // Verificar se contact_id existe e pertence a organizacao
   const { data: contact, error: errContact } = await db
     .from("contacts")
@@ -143,8 +152,8 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     return fail("not_found", "Contato nao encontrado nesta organizacao", 404, { requestId });
   }
 
-  // Trava de integridade: só político/admin classifica nos TOPOS do funil
-  // (Multiplicador/Voto certo). Assessor (manager-) é clampado pra Apoiador — a
+  // Trava de integridade: só político/admin classifica no TOPO dos níveis
+  // (Multiplicador). Assessor (manager-) é clampado pra Participante — a
   // opinião do assessor não pode fabricar topo falso e sujar a base (defesa em
   // profundidade; o form já esconde as opções).
   const ehAdmin = ROLE_RANK[authz.org.role as Role] >= ROLE_RANK.admin;

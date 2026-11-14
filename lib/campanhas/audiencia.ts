@@ -66,9 +66,14 @@ export const filtroDeAudienciaSchema = z
     origens: z.array(z.string().trim().min(1).max(40)).max(20).default([]),
 
     /**
-     * FUNIL POLÍTICO (`pol_leads.support_level`) — o estágio de apoio. É 1:1 com
+     * NÍVEL DE RELACIONAMENTO (`pol_leads.support_level`). É 1:1 com
      * o contato (um lead por pessoa), então entra como inner-join na consulta de
      * contatos, sem o risco de duplicação do funil comercial.
+     *
+     * `voto_certo` fica no enum só para não quebrar filtro JÁ SALVO: é recorte de
+     * leitura, não classifica ninguém. A tela do mandato não oferece mais a opção
+     * (lib/politico/niveis.ts), e quem pede "militante" leva junto os registros
+     * antigos de `voto_certo` (consulta-de-audiencia.ts).
      */
     niveis_de_apoio: z
       .array(z.enum(["novo_cadastro", "simpatizante", "apoiador", "militante", "voto_certo"]))

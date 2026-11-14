@@ -1,8 +1,8 @@
 "use client";
 
 /**
- * Mobilização — o quadro de campanha. Pessoas como cards em colunas por etapa do
- * funil. O operador move à mão (clique, não arrasta — à prova de criança + celular);
+ * Mobilização — o quadro da base. Pessoas como cards em colunas por nível de
+ * relacionamento. O operador move à mão (clique, não arrasta — à prova de criança + celular);
  * o motor de engajamento move sozinho. Puxado pela mesma taxonomia do Disparos.
  */
 
@@ -38,7 +38,7 @@ export interface CardPessoa {
   grupoCor: string | null;
   cidade: string | null;
   temperatura: string;
-  /** Índice de engajamento (0+). ≥20 apoiador, ≥50 multiplicador — move o funil. */
+  /** Índice de engajamento (0+). ≥20 participante, ≥50 multiplicador — sobe de nível. */
   score: number;
   /** ISO da última mexida no lead (proxy de "última interação"). */
   ultimaInteracao: string | null;
@@ -68,7 +68,7 @@ const TEMP_CFG: Record<string, { label: string; cor: string; emoji: string }> = 
   quente: { label: "Quente", cor: "#F87171", emoji: "⚡" },
 };
 
-/** Etapas escondidas quando "só apoiador+" está ligado (topo do funil). */
+/** Etapas escondidas quando "só participante pra cima" está ligado (os dois primeiros níveis). */
 const ESCONDE_SE_SO_APOIADOR = new Set(["novo_cadastro", "simpatizante"]);
 
 /** "há 3 dias", "hoje", "há 2 sem" — leitura rápida de quem está esfriando. */
@@ -100,7 +100,7 @@ const META_APOIADOR = 20;
 const META_MULTIPLICADOR = 50;
 function proximoDegrau(score: number): { texto: string; alvo: number } {
   if (score < META_APOIADOR)
-    return { texto: `Faltam ${META_APOIADOR - score} pts pra virar Apoiador`, alvo: META_APOIADOR };
+    return { texto: `Faltam ${META_APOIADOR - score} pts pra virar Participante`, alvo: META_APOIADOR };
   if (score < META_MULTIPLICADOR)
     return {
       texto: `Faltam ${META_MULTIPLICADOR - score} pts pra virar Multiplicador`,
@@ -147,20 +147,18 @@ export default function KanbanClient({ colunas, grupos }: Props) {
     [colunas, soApoiador],
   );
 
-  // A etapa do celular precisa estar entre as visíveis (o filtro "só apoiadores" esconde as duas primeiras).
+  // A etapa do celular precisa estar entre as visíveis (o filtro "só participante pra cima" esconde as duas primeiras).
   const etapaNoCelular = colunasVisiveis.some((c) => c.estagio === etapaCel) ? etapaCel : (colunasVisiveis[0]?.estagio ?? null);
 
   const temPessoas = colunas.some((c) => c.total > 0);
 
-  // Resumo do funil: a campanha num relance. Base = todo mundo; apoiador+ = quem
-  // já converteu (apoiador/multiplicador/voto certo); taxa = conversão da base.
+  // Resumo dos níveis: a base num relance. Base = todo mundo; participante+ = quem
+  // já participa ou multiplica (a coluna Multiplicador já soma registro antigo de
+  // "voto certo" — ver page.tsx); taxa = quanto da base chegou lá.
   const resumo = useMemo(() => {
     const porEtapa = new Map(colunas.map((c) => [c.estagio, c.total]));
     const base = colunas.reduce((s, c) => s + c.total, 0);
-    const apoiadorMais =
-      (porEtapa.get("apoiador") ?? 0) +
-      (porEtapa.get("militante") ?? 0) +
-      (porEtapa.get("voto_certo") ?? 0);
+    const apoiadorMais = (porEtapa.get("apoiador") ?? 0) + (porEtapa.get("militante") ?? 0);
     return { base, apoiadorMais, taxa: base > 0 ? Math.round((apoiadorMais / base) * 100) : 0, porEtapa };
   }, [colunas]);
 
@@ -172,7 +170,7 @@ export default function KanbanClient({ colunas, grupos }: Props) {
         subtitulo="A sua base, etapa por etapa. O sistema move sozinho conforme a pessoa se envolve, e você pode mover à mão quando conhecer alguém."
       />
 
-      {/* Resumo — a campanha num relance (o funil inteiro + conversão) */}
+      {/* Resumo — a base num relance (todos os níveis + quanto já participa) */}
       {temPessoas && (
         <div className="gip-glass flex flex-wrap items-center gap-x-6 gap-y-4 p-4">
           <div>
@@ -195,7 +193,7 @@ export default function KanbanClient({ colunas, grupos }: Props) {
           ))}
           <div className="ml-auto text-right">
             <p className="text-2xl font-bold tabular-nums text-accent">{resumo.taxa}%</p>
-            <p className="text-xs text-text-subtle">já são apoiadores ou mais</p>
+            <p className="text-xs text-text-subtle">já participam ou multiplicam</p>
           </div>
         </div>
       )}
@@ -209,7 +207,7 @@ export default function KanbanClient({ colunas, grupos }: Props) {
             onChange={(e) => setSoApoiador(e.target.checked)}
             className="h-4 w-4 accent-[var(--color-accent)]"
           />
-          Só apoiador pra cima
+          Só participante pra cima
         </label>
 
         {grupos.length > 0 && (
@@ -514,8 +512,8 @@ function DetalheDrawer({
                   ))}
                 </div>
                 <div className="flex justify-between text-[10px] text-text-subtle">
-                  <span>Simpatizante 5</span>
-                  <span>Apoiador 20</span>
+                  <span>Em conversa 5</span>
+                  <span>Participante 20</span>
                   <span>Multiplicador 50</span>
                 </div>
                 {degrau && <p className="text-xs text-text-muted">{degrau.texto}</p>}
@@ -568,9 +566,6 @@ function DetalheDrawer({
                         Quem traz <strong>3 pessoas</strong> vira <strong>Multiplicador</strong> na hora — é o ouro da base.
                       </span>
                     </div>
-                    <p className="text-[11px] leading-snug text-text-subtle">
-                      O <strong className="font-semibold text-text-muted">Voto certo</strong> é você quem marca à mão.
-                    </p>
                   </div>
                 )}
               </section>

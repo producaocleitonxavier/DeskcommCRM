@@ -141,7 +141,7 @@ export default function MultiplicadoresClient({
           toast.error(r.erro);
           return;
         }
-        const base = `Convite enviado para ${r.convidados} de ${r.total} apoiador${r.total === 1 ? "" : "es"}.`;
+        const base = `Convite enviado para ${r.convidados} de ${r.total} participante${r.total === 1 ? "" : "s"}.`;
         if (r.pulados.length > 0) toast.warning(`${base} ${r.pulados.length} pulado(s).`);
         else toast.success(base);
         router.refresh();
@@ -379,7 +379,7 @@ export default function MultiplicadoresClient({
                   </p>
                   <p className="whitespace-pre-line text-foreground">
                     {tipoConteudo === "enquete"
-                      ? "Olá, [nome]! 👋 O nosso mandato quer ouvir a população numa pesquisa rápida.\n\nCada pessoa que responder pelo seu link entra como apoiador no seu placar. 🏆\n\nÉ só encaminhar a mensagem abaixo 👇 pra sua rede."
+                      ? "Olá, [nome]! 👋 O nosso mandato quer ouvir a população numa pesquisa rápida.\n\nCada pessoa que responder pelo seu link conta no seu placar. 🏆\n\nÉ só encaminhar a mensagem abaixo 👇 pra sua rede."
                       : "Olá, [nome]! 👋 Saiu um conteúdo novo do nosso mandato.\n\nÉ só encaminhar a mensagem abaixo 👇 pra sua rede.\n\nObrigado por multiplicar! 🙏"}
                   </p>
                   <p className="mb-1 mt-2 text-[10.5px] text-text-subtle">↓ 2ª mensagem (o que ele encaminha):</p>
@@ -395,27 +395,27 @@ export default function MultiplicadoresClient({
           )}
         </div>
 
-        {/* Convidar apoiadores a divulgar */}
+        {/* Convidar participantes a divulgar */}
         <div className="gip-glass flex flex-col p-4">
           <div className="mb-1 flex items-center gap-2">
             <Megaphone size={18} weight="bold" className="text-accent" aria-hidden />
-            <h2 className="text-base font-semibold text-foreground">Convidar apoiadores</h2>
+            <h2 className="text-base font-semibold text-foreground">Convidar participantes</h2>
           </div>
           <p className="mb-3 text-[13px] leading-snug text-text-muted">
-            O sistema convida seus <strong className="font-semibold text-foreground">apoiadores</strong> a espalhar.
+            O sistema convida quem já <strong className="font-semibold text-foreground">participa</strong> a espalhar.
             Quem responde <strong className="font-semibold text-foreground">SIM</strong> vira divulgador sozinho.
           </p>
           <div className="mt-auto">
             {elegiveis === 0 ? (
               <p className="rounded-xl px-3 py-4 text-center text-[13px] text-text-subtle"
                 style={{ background: "color-mix(in srgb, var(--color-text) 4%, transparent)" }}>
-                Ninguém elegível agora. Conforme as pessoas viram apoiadores, aparecem aqui pra convidar.
+                Ninguém elegível agora. Conforme as pessoas passam a participar, aparecem aqui pra convidar.
               </p>
             ) : (
               <>
                 <Button onClick={onConvidar} disabled={ocupado || convidando}>
                   <Megaphone size={15} weight="bold" aria-hidden />
-                  Convidar {elegiveis} apoiador{elegiveis === 1 ? "" : "es"}
+                  Convidar {elegiveis} participante{elegiveis === 1 ? "" : "s"}
                 </Button>
                 {potenciais > 0 && (
                   <p className="mt-2 text-[12px] font-medium text-accent">
@@ -563,7 +563,7 @@ export default function MultiplicadoresClient({
 
       <SecaoPlacar
         titulo="Divulgadores"
-        subtitulo="Apoiadores que aceitaram o convite (responderam SIM)."
+        subtitulo="Participantes que aceitaram o convite (responderam SIM)."
         vazio="Nenhum divulgador ainda — eles entram pelo convite acima."
         linhas={divulgadores}
         ocupado={ocupado}

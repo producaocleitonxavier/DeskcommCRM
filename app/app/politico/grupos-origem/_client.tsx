@@ -167,7 +167,7 @@ export default function GruposOrigemClient({ grupos, aClassificar, outrasPoucas,
             <h2 className="text-base font-semibold text-foreground">Onde investir</h2>
           </div>
           <p className="mb-3 text-sm text-text-muted">
-            Quais origens mais viram apoiador — foque o próximo evento ou material nas que convertem.
+            De quais origens mais gente passa a participar — foque o próximo evento ou material nas que convertem.
           </p>
           <div className="space-y-2">
             {conversao.slice(0, 8).map((o) => (

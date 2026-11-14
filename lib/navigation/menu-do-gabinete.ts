@@ -138,7 +138,7 @@ export const AREAS_DO_GABINETE: readonly AreaDoGabinete[] = [
     abas: [
       { href: `${P}/kanban`, label: "Mobilização" },
       { href: `${P}/multiplicadores`, label: "Multiplicadores" },
-      { href: `${P}/funil`, label: "Funil" },
+      { href: `${P}/funil`, label: "Níveis" },
     ],
   },
   { label: "Pesquisas", grupo: "relacionamento", abas: [{ href: `${P}/pesquisas`, label: "Pesquisas" }] },

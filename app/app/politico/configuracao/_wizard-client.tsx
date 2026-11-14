@@ -230,7 +230,7 @@ export default function SetupWizard({ inicial }: { inicial: SetupInicial }) {
           <div>
             <h2 className="font-heading text-[22px] font-bold">Qual é o seu mandato?</h2>
             <p className="mt-1 text-sm" style={{ color: "var(--color-text-muted)" }}>
-              É só isto que muda a base do sistema — funil, modelos e o jeito de atender já vêm prontos para o seu caso.
+              É só isto que muda a base do sistema — etapas de atendimento, modelos e o jeito de atender já vêm prontos para o seu caso.
             </p>
             <div className="mt-5 grid gap-3 sm:grid-cols-2">
               {TIPOS.map(({ id, Icon, titulo, onde }) => {
@@ -369,7 +369,7 @@ export default function SetupWizard({ inicial }: { inicial: SetupInicial }) {
               <ul className="mt-2 grid gap-1.5 text-[13px] sm:grid-cols-2" style={{ color: "var(--color-text-muted)" }}>
                 <li className="flex items-center gap-2"><Check size={14} style={{ color: "#8AA62E" }} /> O conhecimento que a IA usa pra atender</li>
                 <li className="flex items-center gap-2"><Check size={14} style={{ color: "#8AA62E" }} /> O timbre do ofício com a sua identidade</li>
-                <li className="flex items-center gap-2"><Check size={14} style={{ color: "#8AA62E" }} /> O funil e os modelos do seu tipo de mandato</li>
+                <li className="flex items-center gap-2"><Check size={14} style={{ color: "#8AA62E" }} /> As etapas de atendimento e os modelos do seu tipo de mandato</li>
                 <li className="flex items-center gap-2"><ShieldCheck size={14} style={{ color: "#8AA62E" }} /> A blindagem jurídica já ativa</li>
               </ul>
             </div>

@@ -22,6 +22,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 
 import { definirFuncao, type FuncaoMultiplicador } from "@/app/actions/politico/multiplicadores-actions";
+import { niveisVisiveis } from "@/lib/politico/niveis";
 
 /* ── constantes ────────────────────────────────────────────────────────────── */
 
@@ -31,13 +32,8 @@ const FUNCOES: { value: FuncaoMultiplicador; label: string }[] = [
   { value: "divulgador", label: "Divulgador (voluntário que espalha)" },
 ];
 
-const ETAPAS = [
-  { value: "novo_cadastro", label: "Novo contato" },
-  { value: "simpatizante", label: "Simpatizante" },
-  { value: "apoiador", label: "Apoiador" },
-  { value: "militante", label: "Multiplicador" },
-  { value: "voto_certo", label: "Voto certo" },
-] as const;
+// Os 4 níveis de relacionamento do mandato — fonte única em lib/politico/niveis.ts.
+const ETAPAS = niveisVisiveis(false).map((n) => ({ value: n.value, label: n.label }));
 
 // Temperatura (frio/morno/quente) NÃO é escolhida no cadastro: quem cadastra não
 // tem como saber. É DERIVADA da jornada (engajamento real) — o "Termômetro de
@@ -145,11 +141,9 @@ function IconeProfissao() {
 /* ── form principal ────────────────────────────────────────────────────────── */
 
 export default function NovoCadastroForm({ podeTopoFunil = false }: { podeTopoFunil?: boolean }) {
-  // Assessor (não-admin) classifica só até Apoiador — Multiplicador é EARNED
-  // (quem traz gente) e Voto certo fica com o político/admin. Evita inflar a base.
-  const etapasVisiveis = podeTopoFunil
-    ? ETAPAS
-    : ETAPAS.filter((e) => e.value !== "militante" && e.value !== "voto_certo");
+  // Assessor (não-admin) classifica só até Participante — Multiplicador é EARNED
+  // (quem traz gente) e fica com o político/admin. Evita inflar a base.
+  const etapasVisiveis = podeTopoFunil ? ETAPAS : ETAPAS.filter((e) => e.value !== "militante");
   const router = useRouter();
   const [salvando, setSalvando] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
@@ -416,11 +410,11 @@ export default function NovoCadastroForm({ podeTopoFunil = false }: { podeTopoFu
       {/* ═══════════ CLASSIFICAÇÃO POLÍTICA ═══════════════════════════════ */}
       <section className="gip-glass p-6 sm:p-7 space-y-5">
         <h2 className="font-heading text-[18px] font-bold" style={{ color: "var(--color-text)" }}>
-          Classificação política
+          Relacionamento com o mandato
         </h2>
 
         <label className="block space-y-1.5">
-          <Label>Etapa no funil</Label>
+          <Label>Nível de relacionamento</Label>
           <select value={etapa} onChange={(e) => setEtapa(e.target.value)} className="wr-input">
             {etapasVisiveis.map((e) => (
               <option key={e.value} value={e.value}>{e.label}</option>

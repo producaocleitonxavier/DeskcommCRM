@@ -76,7 +76,7 @@ const ACAO_LABEL: Record<AcaoTipo, string> = {
   add_etiqueta: "Etiqueta",
   criar_contato: "Criar contato",
   notificar_equipe: "Avisar a equipe",
-  add_funil_politico: "Funil",
+  add_funil_politico: "Nível",
 };
 
 // ── Hook de dados ────────────────────────────────────────────────────────────
@@ -217,7 +217,7 @@ export default function AutomacoesInstagramPage() {
         <EmptyState
           icon={Zap}
           title="Nenhuma automação criada"
-          description="Crie uma automação para responder comentários e chamar as pessoas no Direct automaticamente, captando apoiadores sozinho."
+          description="Crie uma automação para responder comentários e chamar as pessoas no Direct automaticamente, captando contatos sozinho."
           action={{ label: "Criar primeira automação", href: "/app/instagram/automacoes/novo" }}
         />
       )}

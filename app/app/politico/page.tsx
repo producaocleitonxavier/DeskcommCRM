@@ -21,6 +21,7 @@ import HojeClient from "./_hoje-client";
 import { exigirAcessoPolitico } from "@/lib/politico/acesso";
 import { estaAtrasada } from "@/lib/politico/demanda-cobranca";
 import { rotuloDoTipo } from "@/lib/politico/rotulo-tipo";
+import { rotuloDoNivel } from "@/lib/politico/niveis";
 
 
 export const dynamic = "force-dynamic";
@@ -428,8 +429,9 @@ async function buscarMetricas(organizationId: string): Promise<MetricasHoje> {
       .select("id", { count: "exact", head: true })
       .eq("organization_id", organizationId)
       .eq("status", "active"),
-    // Funil stages — support_level alinhado ao enum real (pol-leads API):
-    // novo_cadastro, simpatizante, apoiador, militante, voto_certo.
+    // Níveis de relacionamento — support_level alinhado ao enum real (pol-leads API):
+    // novo_cadastro, simpatizante, apoiador, militante, voto_certo. A tela mostra
+    // 4: "voto certo" não existe no mandato e soma em Multiplicador (lib/politico/niveis.ts).
     db.from("pol_leads").select("id", { count: "exact", head: true }).eq("organization_id", organizationId).eq("support_level", "novo_cadastro"),
     db.from("pol_leads").select("id", { count: "exact", head: true }).eq("organization_id", organizationId).eq("support_level", "simpatizante"),
     db.from("pol_leads").select("id", { count: "exact", head: true }).eq("organization_id", organizationId).eq("support_level", "apoiador"),
@@ -445,11 +447,10 @@ async function buscarMetricas(organizationId: string): Promise<MetricasHoje> {
 
   const total = totalPessoas.count ?? 0;
   const stages = [
-    { label: "Novo contato", count: novoContato.count ?? 0, cor: "var(--wr-funnel-1)" },
-    { label: "Simpatizante", count: simpatizante.count ?? 0, cor: "var(--wr-funnel-2)" },
-    { label: "Apoiador", count: apoiador.count ?? 0, cor: "var(--wr-funnel-3)" },
-    { label: "Multiplicador", count: multiplicador.count ?? 0, cor: "var(--wr-funnel-4)" },
-    { label: "Voto certo", count: votoCerto.count ?? 0, cor: "var(--wr-funnel-5)" },
+    { label: rotuloDoNivel("novo_cadastro"), count: novoContato.count ?? 0, cor: "var(--wr-funnel-1)" },
+    { label: rotuloDoNivel("simpatizante"), count: simpatizante.count ?? 0, cor: "var(--wr-funnel-2)" },
+    { label: rotuloDoNivel("apoiador"), count: apoiador.count ?? 0, cor: "var(--wr-funnel-3)" },
+    { label: rotuloDoNivel("militante"), count: (multiplicador.count ?? 0) + (votoCerto.count ?? 0), cor: "var(--wr-funnel-4)" },
   ].map((s) => ({ ...s, pct: total > 0 ? Math.max((s.count / total) * 100, 1.2) : 0 }));
 
   // Buckets dos últimos 7 dias (por data local), rótulo = dia da semana curto.

@@ -143,6 +143,28 @@ const MARCADOR_PROMESSA = String.raw`prometo|garanto|juro`;
 const MARCADOR_CERTEZA = String.raw`pode\s+ter\s+certeza|fica\s+tranquil[oa]|com\s+certeza`;
 const GARANTIA_LITERAL = String.raw`resultado\s+garantido|garantia\s+de\s+(?:resultado|entrega)|100\s*%\s+garantid[oa]`;
 
+/**
+ * TERCEIRA PESSOA (14/nov): quem fala em nome do gabinete promete pela boca do
+ * parlamentar — "o vereador vai conseguir sua vaga", "o gabinete garante seu
+ * auxílio", "ele vai liberar sua consulta". O sujeito é fechado em quem REPRESENTA o
+ * mandato: "a prefeitura vai liberar o auxílio" é informação, não promessa nossa.
+ */
+const SUJEITO_DO_MANDATO =
+  String.raw`vereador(?:a)?|deputad[oa]|senador(?:a)?|prefeit[oa]|parlamentar|gabinete|mandato|equipe|assessoria|ele|ela|doutor(?:a)?|dr\.?|dra\.?`;
+const VERBOS_DE_ENTREGA_3P =
+  String.raw`(?:vai|v[aã]o|ir[aá]|ir[aã]o)\s+(?:te\s+|lhe\s+)?(?:conseguir|arranjar|dar|garantir|liberar|providenciar|resolver|assegurar)|` +
+  String.raw`conseguir[aá]|arranjar[aá]|dar[aá]|garantir[aá]|liberar[aá]|providenciar[aá]|resolver[aá]|assegurar[aá]|` +
+  String.raw`(?:te\s+|lhe\s+)?(?:consegue|arranja|garante|libera|providencia|resolve|assegura)`;
+
+/** Momento do voto — o que transforma "lembra da gente" em pedido de retribuição. */
+const HORA_DO_VOTO = String.raw`elei[cç][aã]o|elei[cç][oõ]es|urna|urnas|votar|vota[cç][aã]o|outubro|campanha`;
+
+/** Perder o que já tem — a ameaça que o art. 41-A, § 2º, trata como captação. */
+const PERDA = String.raw`perde|perder|perder[aá]|vai\s+perder|fica\s+sem|ficar\s+sem|ficar[aá]\s+sem|vai\s+ficar\s+sem|corta|cortar|v[aã]o\s+cortar|vai\s+ser\s+cortad[oa]`;
+
+/** "Não é possível furar a fila", "ninguém pode passar na frente": recusa, não oferta. */
+const NAO_IMPEDIDO = String.raw`(?<!(?:n[aã]o\s+[eé]\s+poss[ií]vel|imposs[ií]vel|n[aã]o\s+d[aá]\s+(?:para|pra)|n[aã]o\s+pode(?:mos)?|ningu[eé]m\s+pode|n[aã]o\s+tem\s+como)\s+)`;
+
 const REGRAS: ReadonlyArray<{ categoria: CategoriaDeCampanha; padrao: RegExp; perguntaDesarma: boolean }> = [
   {
     // CAPTAÇÃO DE SUFRÁGIO — voto ligado a uma entrega, nos dois sentidos dentro da frase.
@@ -165,6 +187,15 @@ const REGRAS: ReadonlyArray<{ categoria: CategoriaDeCampanha; padrao: RegExp; pe
         // curto (não só "que"/"se"), de uma entrega de BENEFÍCIO CONCRETO. Exigir o
         // benefício mantém o falso-positivo baixo (voto + verbo sozinhos não bastam).
         String.raw`${palavra(VOTO)}.{0,30}?(?:${ENTREGA_CURTA})\s+${ADVERBIO_OPC}${DETERMINANTE}${palavra(BENEFICIOS)}`,
+        // RECIPROCIDADE — "lembra da gente na eleição", "não esquece do vereador na hora de
+        // votar", "conto com seu voto", "retribua nas urnas", "uma mão lava a outra".
+        String.raw`(?:lembr[ae]r?|lembrem|n[aã]o\s+(?:se\s+)?esque[cç][ae]m?)\s+(?:de\s+mim|da\s+gente|de\s+n[oó]s|d[oa]\s+(?:${SUJEITO_DO_MANDATO})).{0,40}?${palavra(HORA_DO_VOTO)}`,
+        String.raw`${palavra('conto|contamos|conta|contar')}\s+com\s+(?:o\s+)?(?:seu|teu|vosso)\s+(?:voto|apoio\s+n(?:a|as)\s+(?:urna|urnas|elei[cç][aã]o|elei[cç][oõ]es))`,
+        String.raw`${palavra('retribu[a-z]+')}.{0,30}?${palavra('urna|urnas|voto|votando')}`,
+        String.raw`uma\s+m[aã]o\s+lava\s+a\s+outra`,
+        // AMEAÇA DE PERDA — "se não votar, perde o auxílio", "quem não apoiar fica sem a cesta".
+        String.raw`(?:se|quem|caso)\s+(?:voc[eê]\s+|vc\s+)?n[aã]o\s+(?:votar|apoiar|vier\s+com\s+a\s+gente).{0,50}?${palavra(PERDA)}`,
+        String.raw`${palavra(PERDA)}\s+${DETERMINANTE}${palavra(BENEFICIOS)}.{0,40}?(?:se|caso)\s+(?:voc[eê]\s+|vc\s+)?n[aã]o\s+(?:votar|apoiar)`,
       ].join('|'),
       'iu',
     ),
@@ -183,6 +214,21 @@ const REGRAS: ReadonlyArray<{ categoria: CategoriaDeCampanha; padrao: RegExp; pe
         // "prometo sua vaga", "juro seu auxílio" — promessa CRUA de benefício, sem o
         // verbo de entrega. ("garanto" já cai pelo verbo de entrega.) A negação desarma.
         String.raw`${NAO_NEGADO}${palavra(MARCADOR_PROMESSA)}\s+${ADVERBIO_OPC}${DETERMINANTE}${palavra(BENEFICIOS)}`,
+        // TERCEIRA PESSOA — "o vereador vai conseguir sua vaga", "o gabinete garante seu
+        // auxílio". Sujeito do mandato, até 25 caracteres (nome próprio no meio), verbo de
+        // entrega não negado e benefício pessoal.
+        String.raw`${palavra(SUJEITO_DO_MANDATO)}[^.!?\n]{0,25}?\s(?<!(?:n[aã]o|nunca|jamais)\s)(?:${VERBOS_DE_ENTREGA_3P})\s+${ADVERBIO_OPC}${DETERMINANTE}${palavra(BENEFICIOS)}`,
+        // FURAR FILA — "furo a fila pra você", "te passo na frente", "adianto sua cirurgia",
+        // "dou um jeitinho na sua consulta". Vale em qualquer pessoa.
+        String.raw`${NAO_NEGADO}${NAO_IMPEDIDO}${palavra('fur[a-z]+')}\s+(?:a\s+)?fila`,
+        // "Na frente" só é promessa quando é sobre a PESSOA ("te passo na frente", "coloca
+        // você na frente") ou sobre a FILA ("passar na frente da fila"). "O ônibus passa na
+        // frente da escola" não é.
+        String.raw`${NAO_NEGADO}${NAO_IMPEDIDO}${palavra('te|lhe')}\s+${palavra('pass[a-z]+|coloc[a-z]+|bot[a-z]+|p[oô]r|ponho')}\s+(?:l[aá]\s+)?na\s+frente`,
+        String.raw`${NAO_NEGADO}${NAO_IMPEDIDO}${palavra('pass[a-z]+|coloc[a-z]+|bot[a-z]+|p[oô]r|ponho')}\s+(?:voc[eê]|vc|o\s+senhor|a\s+senhora)\s+(?:l[aá]\s+)?na\s+frente`,
+        String.raw`${NAO_NEGADO}${NAO_IMPEDIDO}${palavra('pass[a-z]+|coloc[a-z]+|bot[a-z]+|p[oô]r|ponho')}\s+(?:[a-zçãõáéíóú]+\s+){0,2}?na\s+frente\s+(?:d[ao]s?\s+(?:fila|lista|outros|demais)|n[ao]\s+(?:fila|lista))`,
+        String.raw`${NAO_NEGADO}${NAO_IMPEDIDO}${palavra('adiant[a-z]+|agiliz[a-z]+|aceler[a-z]+')}\s+${DETERMINANTE}${palavra('consulta|cirurgia|exame|exames|vaga|leito|benef[ií]cio|aposentadoria|atendimento')}`,
+        String.raw`${NAO_NEGADO}${NAO_IMPEDIDO}${palavra('dou|damos|d[aá]|dar')}\s+um\s+jeit(?:o|inho)`,
       ].join('|'),
       'iu',
     ),
@@ -231,8 +277,10 @@ export function detectarPromessaDeCampanha(texto: string): AchadoDeCampanha {
 }
 
 const O_QUE_FAZER: Record<CategoriaDeCampanha, string> = {
-  captacao_de_sufragio: 'nunca ligue voto ou apoio a um favor, benefício ou entrega — é captação ilícita de sufrágio',
-  promessa_de_beneficio: 'não prometa conseguir vaga, auxílio, emprego, consulta nem qualquer benefício pessoal',
+  captacao_de_sufragio:
+    'nunca ligue voto ou apoio a um favor, benefício ou entrega, não peça retribuição nas urnas e não ameace perda de benefício — é captação ilícita de sufrágio',
+  promessa_de_beneficio:
+    'não prometa (nem em nome do parlamentar ou do gabinete) conseguir vaga, auxílio, emprego, consulta nem qualquer benefício pessoal, e não ofereça furar fila ou adiantar atendimento',
   garantia_eleitoral: 'não garanta resultado de campanha nem prometa obra como coisa certa',
 };
 

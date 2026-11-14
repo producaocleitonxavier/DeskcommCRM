@@ -130,7 +130,7 @@ export default async function RadarZonalPage({ searchParams }: { searchParams: P
             <Info className="mt-0.5 h-4 w-4 shrink-0" aria-hidden style={{ color: "var(--accent-ink, var(--color-accent))" }} />
             <p className="text-[13px] leading-relaxed" style={{ color: "rgba(255,255,255,0.72)" }}>
               <strong style={{ color: "#fff" }}>Minha Base</strong> são as pessoas <strong style={{ color: "#fff" }}>cadastradas pelo gabinete</strong> distribuídos pelas cidades onde moram.
-              Cada bolha é uma cidade — tamanho = quantidade de contatos, cor = força (novos ×1, simpatizantes ×3, apoiadores ×6).
+              Cada bolha é uma cidade — tamanho = quantidade de contatos, cor = força (novos ×1, em conversa ×3, participantes ×6).
             </p>
           </div>
           {cidades.length === 0 ? (

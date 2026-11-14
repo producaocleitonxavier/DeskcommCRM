@@ -2,7 +2,7 @@
  * /app/politico/kanban — MOBILIZAÇÃO (quadro de campanha)
  *
  * Server component: auth + carga. As pessoas aparecem como cards em colunas por
- * etapa do funil (support_level). O operador move à mão (override); o motor de
+ * nível de relacionamento (support_level). O operador move à mão (override); o motor de
  * engajamento move sozinho. Puxado pela mesma taxonomia do Disparos (origem →
  * grupo). Visual + filtros em ./_client.
  */
@@ -15,17 +15,21 @@ import { createClient } from "@/lib/supabase/server";
 import { corDoGrupo, corDaOrigem, humanizarOrigem } from "@/lib/politico/rotulo-origem";
 import KanbanClient, { type CardPessoa, type ColunaKanban, type GrupoChip } from "./_client";
 import { exigirAcessoPolitico } from "@/lib/politico/acesso";
+import { rotuloDoNivel } from "@/lib/politico/niveis";
 
 export const dynamic = "force-dynamic";
 export const metadata: Metadata = { title: "Mobilização" };
 
-/** Etapas do funil + rótulo da UI + cor (ramp índigo do Funil). militante = "Multiplicador". */
-const ETAPAS: ReadonlyArray<{ value: string; label: string; cor: string }> = [
-  { value: "novo_cadastro", label: "Novo cadastro", cor: "#C9CEF3" },
-  { value: "simpatizante", label: "Simpatizante", cor: "#9AA5EA" },
-  { value: "apoiador", label: "Apoiador", cor: "#6B79DD" },
-  { value: "militante", label: "Multiplicador", cor: "#4352C4" },
-  { value: "voto_certo", label: "Voto certo", cor: "#26318F" },
+/**
+ * Os 4 níveis de relacionamento + cor (ramp índigo). Rótulos: lib/politico/niveis.ts.
+ * "Voto certo" não existe no mandato: registro antigo guardado assim entra na
+ * coluna Multiplicador (por isso `valores` — o que a coluna lê do banco).
+ */
+const ETAPAS: ReadonlyArray<{ value: string; valores: string[]; label: string; cor: string }> = [
+  { value: "novo_cadastro", valores: ["novo_cadastro"], label: rotuloDoNivel("novo_cadastro"), cor: "#C9CEF3" },
+  { value: "simpatizante", valores: ["simpatizante"], label: rotuloDoNivel("simpatizante"), cor: "#9AA5EA" },
+  { value: "apoiador", valores: ["apoiador"], label: rotuloDoNivel("apoiador"), cor: "#6B79DD" },
+  { value: "militante", valores: ["militante", "voto_certo"], label: rotuloDoNivel("militante"), cor: "#4352C4" },
 ];
 
 /** No máximo isto de cards por coluna (o total real vem à parte, por head count). */
@@ -81,7 +85,7 @@ export default async function KanbanPage() {
         .from("pol_leads")
         .select("id", { count: "exact", head: true })
         .eq("organization_id", orgId)
-        .eq("support_level", e.value);
+        .in("support_level", e.valores);
       return count ?? 0;
     }),
   );
@@ -96,7 +100,7 @@ export default async function KanbanPage() {
           "contact_id, support_level, temperature, territory_id, political_score, updated_at, contacts!contact_id(name, source)",
         )
         .eq("organization_id", orgId)
-        .eq("support_level", e.value)
+        .in("support_level", e.valores)
         .order("updated_at", { ascending: false })
         .limit(CAP_POR_COLUNA);
       return (data ?? []) as unknown as LeadRow[];

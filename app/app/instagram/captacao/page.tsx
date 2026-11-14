@@ -34,7 +34,7 @@ const ESTAGIOS: EstagioDef[] = [
   { slug: "interagiu", titulo: "Interagiu", descricao: "Comentou/DM — pesquisa ainda não respondida" },
   { slug: "em_conversa", titulo: "Em conversa", descricao: "Pesquisa enviada, respondendo" },
   { slug: "qualificado_mgbh", titulo: "Qualificado MG/BH", descricao: "Confirmou cidade no alvo" },
-  { slug: "apoiador_whatsapp", titulo: "Apoiador c/ WhatsApp", descricao: "Deu o número + opt-in", destaque: true },
+  { slug: "apoiador_whatsapp", titulo: "Contato c/ WhatsApp", descricao: "Deu o número + opt-in", destaque: true },
   { slug: "fora_de_alvo", titulo: "Fora de alvo", descricao: "Outro estado", secundario: true },
 ];
 
@@ -245,7 +245,7 @@ export default async function CaptacaoInstagramPage() {
             Captação do Instagram
           </h1>
           <p className="text-[15px] mt-0.5" style={{ color: "var(--color-text-muted)" }}>
-            De quem interage a apoiador pronto pra 2028 — qualificado por {alvoLabel}, com WhatsApp.
+            De quem interage a contato do mandato — qualificado por {alvoLabel}, com WhatsApp.
           </p>
           {ehAdmin && (
             <Link
@@ -306,7 +306,7 @@ export default async function CaptacaoInstagramPage() {
           <p className="text-sm mt-2 max-w-xl mx-auto" style={{ color: "#B9BCC6" }}>
             Quando a automação de captação estiver ligada e o Instagram publicado, cada pessoa que
             comentar entra aqui automaticamente, é qualificada por {alvoLabel} e, se der o
-            WhatsApp, vira um apoiador reconvocável em 2028.
+            WhatsApp, passa a ser um contato do mandato, com quem dá para continuar a conversa.
           </p>
           <Link
             href="/app/instagram/automacoes"

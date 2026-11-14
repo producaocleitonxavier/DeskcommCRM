@@ -15,14 +15,15 @@ import { CommandHero } from "@/components/politico/command-hero";
 import { EmptyState } from "@/components/politico/empty-state";
 import BaseTerritorioHero, { type BaseTerritorioResumo } from "@/components/politico/base-territorio-hero";
 import { carimbarCidadesDosLeads, carimbarZonasDosLeads } from "@/app/actions/politico/gabinete-actions";
+import { nivelParaExibir, rotuloDoNivel } from "@/lib/politico/niveis";
 import type { LeadRow } from "./page";
 
+// Os 4 níveis de relacionamento do mandato. Rótulos: lib/politico/niveis.ts.
 const ETAPAS = [
-  { value: "novo_cadastro", label: "Novo contato", hex: "#C9CEF3", badge: { bg: "#EEF0FB", fg: "#3B4280" }, escuro: false },
-  { value: "simpatizante", label: "Simpatizante", hex: "#9AA5EA", badge: { bg: "#DDE1F7", fg: "#2F3DA8" }, escuro: false },
-  { value: "apoiador", label: "Apoiador", hex: "#6B79DD", badge: { bg: "#B4BCF0", fg: "#1E2A80" }, escuro: true },
-  { value: "militante", label: "Multiplicador", hex: "#4352C4", badge: { bg: "#4352C4", fg: "#FFFFFF" }, escuro: true },
-  { value: "voto_certo", label: "Voto certo", hex: "#26318F", badge: { bg: "#26318F", fg: "#FFFFFF" }, escuro: true },
+  { value: "novo_cadastro", label: rotuloDoNivel("novo_cadastro"), hex: "#C9CEF3", badge: { bg: "#EEF0FB", fg: "#3B4280" }, escuro: false },
+  { value: "simpatizante", label: rotuloDoNivel("simpatizante"), hex: "#9AA5EA", badge: { bg: "#DDE1F7", fg: "#2F3DA8" }, escuro: false },
+  { value: "apoiador", label: rotuloDoNivel("apoiador"), hex: "#6B79DD", badge: { bg: "#B4BCF0", fg: "#1E2A80" }, escuro: true },
+  { value: "militante", label: rotuloDoNivel("militante"), hex: "#4352C4", badge: { bg: "#4352C4", fg: "#FFFFFF" }, escuro: true },
 ] as const;
 
 const TEMPS = [
@@ -32,7 +33,9 @@ const TEMPS = [
 ] as const;
 
 function etapaDe(value: string) {
-  return ETAPAS.find((e) => e.value === value) ?? ETAPAS[0];
+  // "voto certo" antigo aparece como Multiplicador (o mandato não usa esse nível).
+  const v = nivelParaExibir(value, false);
+  return ETAPAS.find((e) => e.value === v) ?? ETAPAS[0];
 }
 
 // Função (equipe que divulga) — mesmo critério do placar de Multiplicadores:
@@ -236,7 +239,7 @@ export default function LeadsClient({ leads, total, contagens, cidades, mapaResu
           </label>
         </form>
 
-        {/* Nível do funil */}
+        {/* Nível de relacionamento */}
         <div className="flex flex-wrap items-center gap-2">
           <span className="mr-1 text-xs font-medium" style={{ color: "var(--color-text-subtle)" }}>Nível:</span>
           <Pill ativo={!filtros.etapa} href={href({ etapa: "" })}>

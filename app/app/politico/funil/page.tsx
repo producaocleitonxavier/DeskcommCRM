@@ -1,5 +1,5 @@
 /**
- * /app/politico/funil — Funil político (War Room 2.0)
+ * /app/politico/funil — Níveis de relacionamento (War Room 2.0)
  *
  * Server component: auth + fetch (pol_leads por estágio + pol_funnel_transitions).
  * O visual (funil hero, KPIs, tabela) vive em ./_funil-client.
@@ -15,6 +15,8 @@ import { exigirAcessoPolitico } from "@/lib/politico/acesso";
 
 export const dynamic = "force-dynamic";
 
+// Lê os 5 valores do banco, mas a tela mostra 4: "voto certo" não existe no
+// mandato (lib/politico/niveis.ts) — registro antigo soma em Multiplicador.
 const ESTAGIOS = ["novo_cadastro", "simpatizante", "apoiador", "militante", "voto_certo"] as const;
 
 export interface TransicaoRow {
@@ -163,13 +165,14 @@ export default async function FunilPoliticoPage() {
   ]);
 
   const total = ESTAGIOS.reduce((s, e) => s + (contagem[e] ?? 0), 0);
-  const engajados =
-    (contagem.simpatizante ?? 0) +
-    (contagem.apoiador ?? 0) +
-    (contagem.militante ?? 0) +
-    (contagem.voto_certo ?? 0);
+  // "Voto certo" soma em Multiplicador e some da contagem que vai pra tela.
+  const multiplicadoresNoNivel = (contagem.militante ?? 0) + (contagem.voto_certo ?? 0);
+  contagem.militante = multiplicadoresNoNivel;
+  delete contagem.voto_certo;
+  const engajados = (contagem.simpatizante ?? 0) + (contagem.apoiador ?? 0) + multiplicadoresNoNivel;
   const taxaAtivacao = total > 0 ? Math.round((engajados / total) * 100) : 0;
-  const taxaConversao = total > 0 ? Math.round(((contagem.voto_certo ?? 0) / total) * 1000) / 10 : 0;
+  // % da base que já é Multiplicador (o topo dos níveis do mandato).
+  const taxaConversao = total > 0 ? Math.round((multiplicadoresNoNivel / total) * 1000) / 10 : 0;
 
   return (
     <FunilClient

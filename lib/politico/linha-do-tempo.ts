@@ -1,9 +1,10 @@
 /**
  * LINHA DO TEMPO DO CIDADÃO 360° — junta, num feed cronológico, tudo o que
  * aquele cidadão viveu com o gabinete: como chegou (origem), as demandas, os
- * ofícios, os avisos que recebeu e as graduações no funil. O gabinete sabe TUDO
+ * ofícios, os avisos que recebeu e as mudanças de nível de relacionamento. O gabinete sabe TUDO
  * antes de atender. Isolado (self-contained): a página só chama e renderiza.
  */
+import { rotuloDoNivel } from "@/lib/politico/niveis";
 import { createClient } from "@/lib/supabase/server";
 
 export type TipoEvento = "origem" | "demanda" | "resolvida" | "encaminhada" | "oficio" | "aviso" | "funil" | "nota";
@@ -16,14 +17,11 @@ export interface EventoLinha {
   detalhe?: string | null;
 }
 
-const NIVEL_LABEL: Record<string, string> = {
-  nao_eleitor: "Não eleitor",
-  novo_cadastro: "Novo cadastro",
-  simpatizante: "Simpatizante",
-  apoiador: "Apoiador",
-  militante: "Multiplicador",
-  voto_certo: "Voto certo",
-};
+/** Rótulo do nível — fonte única em lib/politico/niveis.ts ("voto certo" antigo = Multiplicador). */
+function rotuloNaLinha(nivel: string): string {
+  if (nivel === "nao_eleitor") return "Não eleitor"; // valor legado, fora dos níveis
+  return rotuloDoNivel(nivel, false);
+}
 
 const SOURCE_LABEL: Record<string, string> = {
   Indicação: "indicação",
@@ -93,7 +91,7 @@ export async function buscarLinhaDoTempo(orgId: string, contactId: string): Prom
     }
   }
 
-  // Graduações no funil
+  // Mudanças de nível de relacionamento
   const { data: tr } = await db
     .from("pol_funnel_transitions")
     .select("id, from_level, to_level, changed_at, reason")
@@ -106,7 +104,7 @@ export async function buscarLinhaDoTempo(orgId: string, contactId: string): Prom
       id: `fun-${t.id}`,
       tipo: "funil",
       data: t.changed_at,
-      titulo: `Avançou para ${NIVEL_LABEL[t.to_level] ?? t.to_level}`,
+      titulo: `Avançou para ${rotuloNaLinha(t.to_level)}`,
       detalhe: t.reason,
     });
   }

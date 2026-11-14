@@ -14,6 +14,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 
 import { definirFuncao, type FuncaoMultiplicador } from "@/app/actions/politico/multiplicadores-actions";
+import { nivelParaExibir, niveisVisiveis } from "@/lib/politico/niveis";
 
 export interface LeadParaEdicao {
   leadId: string;
@@ -38,13 +39,8 @@ const FUNCOES: { value: FuncaoMultiplicador; label: string }[] = [
   { value: "divulgador", label: "Divulgador (voluntário que espalha)" },
 ];
 
-const ETAPAS = [
-  { value: "novo_cadastro", label: "Novo contato" },
-  { value: "simpatizante", label: "Simpatizante" },
-  { value: "apoiador", label: "Apoiador" },
-  { value: "militante", label: "Multiplicador" },
-  { value: "voto_certo", label: "Voto certo" },
-] as const;
+// Os 4 níveis de relacionamento do mandato — fonte única em lib/politico/niveis.ts.
+const ETAPAS = niveisVisiveis(false).map((n) => ({ value: n.value, label: n.label }));
 
 function Label({ children }: { children: ReactNode }) {
   return (
@@ -61,7 +57,7 @@ const ROTULO_CAMPO: Record<string, string> = {
   email: "E-mail",
   birthdate: "Data de nascimento",
   custom_fields: "Cidade/Bairro/Profissão",
-  support_level: "Etapa no funil",
+  support_level: "Nível de relacionamento",
   community_role: "Papel na comunidade",
 };
 
@@ -104,7 +100,10 @@ export default function EditarLeadForm({ inicial }: { inicial: LeadParaEdicao })
   const [bairro, setBairro] = useState(inicial.bairro);
   const [profissao, setProfissao] = useState(inicial.profissao);
 
-  const [etapa, setEtapa] = useState(inicial.support_level);
+  // "Voto certo" não existe no mandato: registro antigo aparece como Multiplicador.
+  // O valor guardado só muda se a pessoa TROCAR o nível aqui (ver handleSubmit).
+  const etapaInicial = nivelParaExibir(inicial.support_level, false);
+  const [etapa, setEtapa] = useState(etapaInicial);
   const [papel, setPapel] = useState(inicial.community_role);
   const [liderPotencial, setLiderPotencial] = useState(inicial.leader_potential);
   const [funcao, setFuncao] = useState<FuncaoMultiplicador>(inicial.funcaoInicial);
@@ -145,10 +144,10 @@ export default function EditarLeadForm({ inicial }: { inicial: LeadParaEdicao })
       }
 
       const leadBody: Record<string, unknown> = {
-        support_level: etapa,
         community_role: papel.trim() || null,
         leader_potential: liderPotencial,
       };
+      if (etapa !== etapaInicial) leadBody.support_level = etapa;
       const resL = await fetch(`/api/v1/pol-leads/${inicial.leadId}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
@@ -220,9 +219,9 @@ export default function EditarLeadForm({ inicial }: { inicial: LeadParaEdicao })
 
       {/* Classificação política */}
       <section className="gip-glass p-6 sm:p-7 space-y-5">
-        <h2 className="font-heading text-[18px] font-bold" style={{ color: "var(--color-text)" }}>Classificação política</h2>
+        <h2 className="font-heading text-[18px] font-bold" style={{ color: "var(--color-text)" }}>Relacionamento com o mandato</h2>
         <label className="block space-y-1.5">
-          <Label>Etapa no funil</Label>
+          <Label>Nível de relacionamento</Label>
           <select value={etapa} onChange={(e) => setEtapa(e.target.value)} className="wr-input">
             {ETAPAS.map((e) => (
               <option key={e.value} value={e.value}>{e.label}</option>

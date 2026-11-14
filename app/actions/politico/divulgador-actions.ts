@@ -1,7 +1,7 @@
 "use server";
 
 /**
- * CONVITE A DIVULGADOR (peça 4). O político convida os apoiadores+ a virarem
+ * CONVITE A DIVULGADOR (peça 4). O político convida quem já é Participante (ou mais) a virar
  * divulgadores: manda um convite 1-a-1 no WhatsApp ("quer conteúdos exclusivos e
  * ajudar a espalhar? Responda SIM") e marca a tag `divulgador_convidado`. Quando a
  * pessoa responde SIM, o handler `divulgador-aceite` a promove a multiplicador.
@@ -39,7 +39,7 @@ function isWhatsappBRPlausivel(phone: string): boolean {
   return phone.trim().startsWith("+55") && (d.length === 12 || d.length === 13) && /^[1-9][0-9]$/.test(d.slice(2, 4));
 }
 
-/** Quantos apoiadores+ podem ser convidados agora (pra o rótulo do botão). */
+/** Quantos participantes (ou mais) podem ser convidados agora (pra o rótulo do botão). */
 export async function contarElegiveis(): Promise<number> {
   const user = await autenticarComPapel("agent");
   const org = await resolveActiveOrg(user);
@@ -63,7 +63,7 @@ export type ConviteResultado =
   | { ok: false; erro: string };
 
 /**
- * Convida os apoiadores+ elegíveis (cap 200). Pra cada: manda o convite e marca a
+ * Convida os participantes (ou mais) elegíveis (cap 200). Pra cada: manda o convite e marca a
  * tag `divulgador_convidado`. Sem canal de WhatsApp conectado, aborta com erro
  * claro (no teste não há WAHA). Sequencial e gentil.
  */
@@ -76,7 +76,7 @@ export async function convidarDivulgadores(): Promise<ConviteResultado> {
 
   const elegiveis = await listarElegiveisParaConvite(db, org.orgId, CAP_CONVITE);
   if (elegiveis.length === 0) {
-    return { ok: false, erro: "Nenhum apoiador elegível pra convidar agora." };
+    return { ok: false, erro: "Ninguém elegível pra convidar agora." };
   }
 
   // Número DEDICADO dos multiplicadores (anti-ban): o convite sai por ele se

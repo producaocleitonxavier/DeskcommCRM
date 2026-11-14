@@ -16,6 +16,7 @@ import Link from "next/link";
 
 import { CommandHero } from "@/components/politico/command-hero";
 import SeletorPosts from "../_seletor-posts";
+import { rotuloDoNivel } from "@/lib/politico/niveis";
 
 export const dynamic = "force-dynamic";
 
@@ -72,11 +73,18 @@ const TRIGGER_OPTIONS: { value: TriggerTipo; label: string; descricao: string }[
 // jargão do motor e só confundiam (regra de ouro).
 const ACAO_OPTIONS: { value: AcaoTipo; label: string; descricao: string }[] = [
   { value: "captar_instagram", label: "Captação completa (recomendado)", descricao: "Faz tudo sozinho: responde o comentário em público, chama a pessoa no Direct, pergunta de onde ela é (estado/cidade/bairro) e o WhatsApp, e coloca no Kanban. É o recomendado — não precisa de mais nada." },
-  { value: "enviar_dm", label: "Só chamar no Direct (sem pesquisa)", descricao: "Manda só uma mensagem no Direct pra quem comentou, sem perguntar cidade nem WhatsApp. Use se não quiser o funil completo." },
+  { value: "enviar_dm", label: "Só chamar no Direct (sem pesquisa)", descricao: "Manda só uma mensagem no Direct pra quem comentou, sem perguntar cidade nem WhatsApp. Use se não quiser a captação completa." },
   { value: "responder_comentario", label: "Só responder o comentário", descricao: "Responde só em público, embaixo do comentário — sem chamar no Direct." },
 ];
 
-const NIVEIS_FUNIL = ["Simpatizante", "Apoiador", "Embaixador"];
+// Ação LEGADA (fora do menu): o valor guardado é a ETIQUETA antiga — não muda,
+// pra não quebrar automação já salva. Só o rótulo na tela segue os níveis de
+// relacionamento (lib/politico/niveis.ts).
+const NIVEIS_FUNIL: ReadonlyArray<{ value: string; label: string }> = [
+  { value: "Simpatizante", label: rotuloDoNivel("simpatizante") },
+  { value: "Apoiador", label: rotuloDoNivel("apoiador") },
+  { value: "Embaixador", label: rotuloDoNivel("militante") },
+];
 
 const sectionLabelStyle: React.CSSProperties = {
   fontSize: "11px",
@@ -152,7 +160,7 @@ function AcaoEditor({
       {acao.tipo === "add_funil_politico" && (
         <select value={acao.nivel ?? "Simpatizante"} onChange={(e) => onChange({ ...acao, nivel: e.target.value })} className="wr-input w-full">
           {NIVEIS_FUNIL.map((n) => (
-            <option key={n} value={n}>{n}</option>
+            <option key={n.value} value={n.value}>{n.label}</option>
           ))}
         </select>
       )}

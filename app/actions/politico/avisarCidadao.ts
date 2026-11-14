@@ -26,6 +26,7 @@ import { enviarRecadoDeVozNaConversa } from "@/lib/voz/enviar-recado";
 import type { MomentoVoz } from "@/lib/voz/recado";
 import { lerIdentidadeDoMandato } from "@/lib/politico/identidade-do-mandato";
 import { textoAvisoCidadao } from "@/lib/politico/aviso-cidadao-texto";
+import { bloqueioDeTextoHumano } from "@/lib/politico/trava-de-texto-humano";
 import { pedirAvaliacaoDoAtendimento } from "@/lib/politico/avaliacao";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { SendMessageInput } from "@/lib/schemas";
@@ -179,6 +180,8 @@ export async function avisarCidadao(
       protocolo: protocoloLocal,
     });
     const corpo = (opts?.texto ?? "").trim() || sugerido;
+    const bloqueio = bloqueioDeTextoHumano(corpo);
+    if (bloqueio) return { ok: false, erro: bloqueio };
 
     // Com ofício: copia o PDF para o bucket da conversa (whatsapp-media sob
     // {org}/{conversa}/, exigência do handler) e envia como DOCUMENTO com o texto

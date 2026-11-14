@@ -14,6 +14,7 @@ import { useState, useTransition, type CSSProperties, type ReactNode } from "rea
 import { Loader2, X, Send, Check } from "lucide-react";
 
 import { BannerAvisoTse, useAvisoTse } from "@/components/politico/aviso-tse";
+import { bloqueioDeTextoHumano } from "@/lib/politico/trava-de-texto-humano";
 
 export interface ModalEnviarTextoProps {
   /** Conteúdo do botão que abre o modal (ícone + rótulo). */
@@ -54,6 +55,8 @@ export function ModalEnviarTexto({
   const [pending, start] = useTransition();
   // Advertência TSE recalculada a cada edição do texto (detector puro, no cliente).
   const avisoTse = useAvisoTse(texto);
+  // Troca por voto não é advertência: é bloqueio (o servidor recusa do mesmo jeito).
+  const bloqueio = bloqueioDeTextoHumano(texto);
 
   function abrir() {
     // Reabrir sempre parte da sugestão fresca (demanda pode ter mudado).
@@ -130,7 +133,7 @@ export function ModalEnviarTexto({
               </p>
             )}
 
-            <BannerAvisoTse aviso={avisoTse} className="mt-2" />
+            <BannerAvisoTse aviso={bloqueio ?? avisoTse} className="mt-2" />
 
             {msg && (
               <div
@@ -146,7 +149,7 @@ export function ModalEnviarTexto({
               <button
                 type="button"
                 onClick={enviar}
-                disabled={pending || !texto.trim()}
+                disabled={pending || !texto.trim() || !!bloqueio}
                 className="inline-flex items-center gap-2 rounded-full px-5 py-2 text-sm font-bold disabled:opacity-60"
                 style={{ background: "var(--color-accent)", color: "#14181F" }}
               >

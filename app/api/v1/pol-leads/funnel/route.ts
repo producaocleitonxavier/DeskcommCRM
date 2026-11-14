@@ -19,12 +19,16 @@ import { ok, fail } from "@/lib/api/wrappers";
 import { requireRole } from "@/lib/auth/require-role";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { requireSupportWrite } from "@/lib/impersonate/support";
+import { lerModoCampanha } from "@/lib/politico/modo-campanha";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
 // -- Validacao ----------------------------------------------------------------
 
+// `voto_certo` continua no enum porque é valor do banco, mas vindo de FORA só
+// entra em instalação de campanha (settings.gabinete.modo_campanha) — ver
+// lib/politico/niveis.ts. No mandato, a API recusa com 422.
 const SUPPORT_LEVELS = [
   "novo_cadastro",
   "simpatizante",
@@ -76,6 +80,12 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
   }
 
   const db = createAdminClient();
+
+  // Mandato não tem "voto certo": só instalação de campanha move alguém PARA lá.
+  // (from_stage = voto_certo segue aceito: é como se tira um registro antigo.)
+  if (to_stage === "voto_certo" && !(await lerModoCampanha(db, orgId))) {
+    return fail("validation_error", "Nivel indisponivel nesta instalacao", 422, { requestId });
+  }
 
   // Buscar pol_lead atual pelo contact_id + organizacao
   const { data: polLead, error: errBusca } = await db

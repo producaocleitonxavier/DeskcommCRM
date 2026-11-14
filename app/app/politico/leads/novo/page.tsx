@@ -21,8 +21,8 @@ export default async function NovoCadastroPage() {
   const user = await requireAuth();
   const org = await resolveActiveOrg(user);
   if (!org) redirect("/app/onboarding");
-  // Só político/admin classifica nos TOPOS do funil (Multiplicador/Voto certo).
-  // Assessor vai até Apoiador — não pode inflar a base com topos de opinião.
+  // Só político/admin classifica no TOPO dos níveis (Multiplicador).
+  // Assessor vai até Participante — não pode inflar a base com topo de opinião.
   const podeTopoFunil = roleAtLeast(org.role, "admin");
 
   return (

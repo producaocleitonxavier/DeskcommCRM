@@ -9,6 +9,7 @@ import { CommandHero } from "@/components/politico/command-hero";
 import { BannerAvisoTse, useAvisoTse } from "@/components/politico/aviso-tse";
 import { prepararDisparoDaPesquisa, buscarContatosParaDisparo, type SegmentoPesquisa, type ContatoEscolha } from "@/app/actions/politico/pesquisa-disparo";
 import { VARIAVEL_LINK } from "@/lib/politico/pesquisa-link";
+import { VALORES_DO_MANDATO, rotuloDoNivel } from "@/lib/politico/niveis";
 
 const ORIGEM_LABEL: Record<string, string> = {
   pesquisa: "Pesquisa", qr: "QR Code", saga_palestras: "Palestras", manual: "Cadastro manual",
@@ -16,13 +17,11 @@ const ORIGEM_LABEL: Record<string, string> = {
 };
 const origemLabel = (s: string) => ORIGEM_LABEL[s] ?? s.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
 
-const NIVEIS: { v: SegmentoPesquisa["niveis"][number]; l: string }[] = [
-  { v: "novo_cadastro", l: "Novo cadastro" },
-  { v: "simpatizante", l: "Simpatizante" },
-  { v: "apoiador", l: "Apoiador" },
-  { v: "militante", l: "Multiplicador" },
-  { v: "voto_certo", l: "Voto certo" },
-];
+// Os 4 níveis de relacionamento do mandato — fonte única em lib/politico/niveis.ts.
+const NIVEIS: { v: SegmentoPesquisa["niveis"][number]; l: string }[] = VALORES_DO_MANDATO.map((v) => ({
+  v,
+  l: rotuloDoNivel(v),
+}));
 const TEMPS: { v: SegmentoPesquisa["temperaturas"][number]; l: string }[] = [
   { v: "frio", l: "Frio" },
   { v: "morno", l: "Morno" },
@@ -124,7 +123,7 @@ export default function DispararClient({ surveyId, titulo, numPerguntas, nomeMan
           <div className="gip-glass space-y-4 p-5">
             <p className="text-sm font-semibold">1. Quem vai receber</p>
             <div>
-              <p className="mb-1.5 text-xs font-medium" style={{ color: "var(--color-text-subtle)" }}>Nível no funil</p>
+              <p className="mb-1.5 text-xs font-medium" style={{ color: "var(--color-text-subtle)" }}>Nível de relacionamento</p>
               <div className="flex flex-wrap gap-2">
                 {NIVEIS.map((n) => {
                   const on = niveis.includes(n.v);

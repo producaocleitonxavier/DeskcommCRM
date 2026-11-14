@@ -173,7 +173,7 @@ export async function gerarNarrativa(cdMunicipio: number, munNome: string, bairr
     `TERRITÓRIO: bairro ${bairro}${regional ? `, regional administrativa ${regional}` : ""}, em ${munNome}.`,
     `VOTO (TSE) do seu candidato (${mandato.nome || "mandato"}) NESTE bairro: ${fontes.meusVotos.toLocaleString("pt-BR")} votos, de um universo de ${fontes.universo.toLocaleString("pt-BR")} votos do cargo no bairro (${pctBairro}%).`,
     `A BATALHA no bairro (candidatos que mais fizeram voto AQUI, fora você): ${adversarios.length ? adversarios.map((a) => `${a.nome}${a.partido ? ` (${a.partido})` : ""} — ${a.votos.toLocaleString("pt-BR")} votos`).join("; ") : "sem dado de adversário"}.`,
-    `BASE DE CRM DA OPERAÇÃO no bairro (contatos da campanha que usa a ferramenta — NÃO são eleitores nem a base do candidato analisado): ${fontes.leads.toLocaleString("pt-BR")} contatos — ${fontes.quentes} quentes, ${fontes.mornos} mornos, ${fontes.frios} frios; ${fontes.fortes} já apoiadores ou mais.`,
+    `BASE DE CRM DA OPERAÇÃO no bairro (contatos da campanha que usa a ferramenta — NÃO são eleitores nem a base do candidato analisado): ${fontes.leads.toLocaleString("pt-BR")} contatos — ${fontes.quentes} quentes, ${fontes.mornos} mornos, ${fontes.frios} frios; ${fontes.fortes} já participam ou multiplicam.`,
     `DEMANDAS do gabinete de contatos deste bairro: ${fontes.demAbertas} em aberto, ${fontes.demResolvidas} resolvidas.`,
     `LIDERANÇAS ativas no bairro (${fontes.liderancas}): ${liderancas.length ? liderancas.map((l) => `${l.nome}${l.cargo ? ` (${l.cargo})` : ""} [engajamento ${l.nivel_engajamento}]`).join("; ") : "nenhuma cadastrada aqui"}.`,
     `MÍDIA: monitoramento de mídia ainda não está ativo nesta conta — não há menções a considerar.`,

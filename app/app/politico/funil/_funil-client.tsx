@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * Corpo visual do Funil Político (War Room 2.0): funil hero + conversões,
+ * Corpo visual dos Níveis de relacionamento (War Room 2.0): quadro dos níveis,
  * 3 KPIs e tabela de transições recentes. Client — recebe dados do server.
  */
 
@@ -11,18 +11,21 @@ import { ArrowRight, Clock, Target, TrendingUp } from "lucide-react";
 import { FunnelBoard } from "@/components/politico/funnel-board";
 import { KpiCard } from "@/components/politico/kpi-card";
 import { CommandHero } from "@/components/politico/command-hero";
+import { nivelParaExibir, rotuloDoNivel } from "@/lib/politico/niveis";
 import type { TransicaoRow, MultiplicadorRow } from "./page";
 
+// Os 4 níveis de relacionamento do mandato. Rótulos: lib/politico/niveis.ts.
+// ("voto certo" não existe no mandato — registro antigo aparece como Multiplicador.)
 const STAGES = [
-  { value: "novo_cadastro", label: "Novo cadastro", hex: "#C9CEF3", badge: { bg: "#EEF0FB", fg: "#3B4280" } },
-  { value: "simpatizante", label: "Simpatizante", hex: "#9AA5EA", badge: { bg: "#DDE1F7", fg: "#2F3DA8" } },
-  { value: "apoiador", label: "Apoiador", hex: "#6B79DD", badge: { bg: "#B4BCF0", fg: "#1E2A80" } },
-  { value: "militante", label: "Multiplicador", hex: "#4352C4", badge: { bg: "#4352C4", fg: "#FFFFFF" } },
-  { value: "voto_certo", label: "Voto certo", hex: "#26318F", badge: { bg: "#26318F", fg: "#FFFFFF" } },
+  { value: "novo_cadastro", label: rotuloDoNivel("novo_cadastro"), hex: "#C9CEF3", badge: { bg: "#EEF0FB", fg: "#3B4280" } },
+  { value: "simpatizante", label: rotuloDoNivel("simpatizante"), hex: "#9AA5EA", badge: { bg: "#DDE1F7", fg: "#2F3DA8" } },
+  { value: "apoiador", label: rotuloDoNivel("apoiador"), hex: "#6B79DD", badge: { bg: "#B4BCF0", fg: "#1E2A80" } },
+  { value: "militante", label: rotuloDoNivel("militante"), hex: "#4352C4", badge: { bg: "#4352C4", fg: "#FFFFFF" } },
 ] as const;
 
 function stageDe(value: string) {
-  return STAGES.find((s) => s.value === value);
+  const v = nivelParaExibir(value, false);
+  return STAGES.find((s) => s.value === v);
 }
 
 function StageBadge({ value }: { value: string }) {
@@ -32,7 +35,7 @@ function StageBadge({ value }: { value: string }) {
       className="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold whitespace-nowrap"
       style={{ background: s?.badge.bg ?? "#F0F0EB", color: s?.badge.fg ?? "#5B606B" }}
     >
-      {s?.label ?? value}
+      {s?.label ?? rotuloDoNivel(value)}
     </span>
   );
 }
@@ -84,12 +87,12 @@ export default function FunilClient({
   return (
     <div className="gip-ambient-bg mx-auto max-w-[1140px] px-4 py-7 space-y-6">
       <CommandHero
-        eyebrow="Mobilização · Funil"
-        titulo="Funil"
-        subtitulo={`${total.toLocaleString("pt-BR")} ${total === 1 ? "pessoa" : "pessoas"} na base — de novo cadastro a voto certo.`}
+        eyebrow="Mobilização · Níveis"
+        titulo="Níveis de relacionamento"
+        subtitulo={`${total.toLocaleString("pt-BR")} ${total === 1 ? "pessoa" : "pessoas"} na base — de novo contato a multiplicador.`}
       />
 
-      {/* ── Funil hero + conversões ─────────────────────────────── */}
+      {/* ── Quadro dos níveis + conversões ─────────────────────────────── */}
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-[2fr_1fr]">
         <section className="gip-glass p-6 sm:p-7">
           <div className="mb-5 flex items-center justify-between gap-2">
@@ -162,7 +165,7 @@ export default function FunilClient({
       {/* ── KPIs ────────────────────────────────────────────────── */}
       <section className="grid grid-cols-1 gap-4 sm:grid-cols-3">
         <KpiCard label="Já se envolveram com o mandato" valor={taxaAtivacao} sufixo="%" icone={TrendingUp} />
-        <KpiCard label="Já são voto certo" valor={Math.round(taxaConversao)} sufixo="%" icone={Target} />
+        <KpiCard label="Já são multiplicadores" valor={Math.round(taxaConversao)} sufixo="%" icone={Target} />
         {velocidadeDias > 0 && <KpiCard label="Tempo médio para subir de nível" valor={velocidadeDias} sufixo="dias" icone={Clock} />}
       </section>
 
@@ -185,7 +188,7 @@ export default function FunilClient({
         </div>
         {multiplicadores.length === 0 ? (
           <p className="text-sm" style={{ color: "var(--color-text-subtle)" }}>
-            Ninguém indicou ainda. Quando alguém trouxer um novo cadastro, aparece aqui — o sinal mais forte de que a base está crescendo.
+            Ninguém indicou ainda. Quando alguém trouxer uma pessoa nova, aparece aqui — o sinal mais forte de que a base está crescendo.
           </p>
         ) : (
           <ol className="space-y-2">

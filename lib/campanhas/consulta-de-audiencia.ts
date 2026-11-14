@@ -195,7 +195,11 @@ export async function buscarCandidatos(
     if (filtro.origens.length > 0) consulta = consulta.in("source", filtro.origens);
     // Filtros do funil político sobre o embed inner (vale sobre o PAI).
     if (filtro.niveis_de_apoio.length > 0) {
-      consulta = consulta.in("pol_leads.support_level", filtro.niveis_de_apoio);
+      // No mandato "voto certo" não existe: quem ficou guardado assim conta como
+      // Multiplicador (lib/politico/niveis.ts), então o recorte o leva junto.
+      const niveis: string[] = [...filtro.niveis_de_apoio];
+      if (niveis.includes("militante") && !niveis.includes("voto_certo")) niveis.push("voto_certo");
+      consulta = consulta.in("pol_leads.support_level", niveis);
     }
     if (filtro.temperaturas.length > 0) {
       consulta = consulta.in("pol_leads.temperature", filtro.temperaturas);

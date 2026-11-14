@@ -1,7 +1,7 @@
 /**
- * ÍNDICE DE ENGAJAMENTO — o motor do funil automático.
+ * ÍNDICE DE ENGAJAMENTO — o motor que sobe o nível de relacionamento sozinho.
  *
- * O funil se move SOZINHO por SINAIS REAIS, ponderados: resposta pesa mais que
+ * O nível (rótulos em lib/politico/niveis.ts) se move SOZINHO por SINAIS REAIS, ponderados: resposta pesa mais que
  * recebimento passivo. O índice (guardado em `pol_leads.political_score`, que a
  * UI já mostra como "Score") é COMPUTADO dos fatos — não incrementado — então
  * recalcular é idempotente e nunca drifta.
@@ -16,7 +16,10 @@
  *    alcance não convence sozinho, mas mostra quem multiplica)
  *
  * ═══ Estágio por índice (SÓ AVANÇA, nunca rebaixa) ═══
- *   simpatizante ≥5 · apoiador ≥20 · militante ≥50 · voto_certo = eleição (manual)
+ *   simpatizante ≥5 · apoiador ≥20 · militante ≥50
+ *   TETO = militante (Multiplicador). O motor NUNCA promove a `voto_certo`: esse
+ *   valor só existe em instalação de campanha (lib/politico/niveis.ts) e nunca
+ *   é dado por máquina.
  *
  * ═══ Temperatura ═══
  *   Aqui ela só AQUECE (sinal é de engajamento). O ESFRIAMENTO por inatividade é
@@ -31,6 +34,8 @@ import { inscreverGraduadoNoDrip } from "@/lib/politico/drip-engajamento";
 
 const ORDEM_ESTAGIO = ["novo_cadastro", "simpatizante", "apoiador", "militante", "voto_certo"] as const;
 const ORDEM_TEMP = ["frio", "morno", "quente"] as const;
+/** Teto da graduação automática: o motor nunca passa de Multiplicador. */
+const TETO_AUTOMATICO: (typeof ORDEM_ESTAGIO)[number] = "militante";
 
 const PESO = { material: 1, respostaDisparo: 5, qrCadastro: 6, consentiu: 10, indicado: 10, videoAbertura: 0.5 } as const;
 /** Teto de respostas pontuadas — evita que responder 50x infle o índice. */
@@ -45,7 +50,7 @@ const TETO_RESPOSTAS = 5;
 const TETO_MATERIAL = 4;
 /** Teto de aberturas de vídeo pontuadas (10 × 0,5 = +5 máx). */
 const TETO_VIDEO_ABERTURAS = 10;
-/** Trouxe esta quantidade de gente = Multiplicador/Militante, direto. */
+/** Trouxe esta quantidade de gente = Multiplicador, direto. */
 const INDICADOS_PARA_MILITANTE = 3;
 
 const LIMIAR_ESTAGIO: Array<[number, (typeof ORDEM_ESTAGIO)[number]]> = [
@@ -155,7 +160,7 @@ export async function recomputarEngajamento(
 
     let alvoEstagio = estagioPorScore(score);
     let alvoTemp = tempPorRecencia(score, dias);
-    // Trouxe gente de verdade = Multiplicador/Militante, direto (o ouro do funil).
+    // Trouxe gente de verdade = Multiplicador, direto (o sinal mais forte).
     if (indicados >= INDICADOS_PARA_MILITANTE && ordem(ORDEM_ESTAGIO, alvoEstagio) < ordem(ORDEM_ESTAGIO, "militante")) {
       alvoEstagio = "militante";
     }
@@ -165,6 +170,9 @@ export async function recomputarEngajamento(
       if (ordem(ORDEM_ESTAGIO, alvoEstagio) < ordem(ORDEM_ESTAGIO, "simpatizante")) alvoEstagio = "simpatizante";
       if (ordem(ORDEM_TEMP, alvoTemp) < ordem(ORDEM_TEMP, "morno")) alvoTemp = "morno";
     }
+
+    // Trava explícita: nenhuma conta acima leva além do teto (nunca `voto_certo`).
+    if (ordem(ORDEM_ESTAGIO, alvoEstagio) > ordem(ORDEM_ESTAGIO, TETO_AUTOMATICO)) alvoEstagio = TETO_AUTOMATICO;
 
     // ── Estágio: só avança ──
     let avancou = false;

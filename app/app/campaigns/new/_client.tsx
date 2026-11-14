@@ -34,17 +34,16 @@ import {
   X,
 } from "lucide-react";
 
+import { niveisVisiveis } from "@/lib/politico/niveis";
+
 type Origem = { value: string; label: string; total: number; grupo?: string | null };
 type Material = { id: string; titulo: string; tipo: string };
 type CidadeOpt = { id: string; name: string; total: number };
 
-const ESTAGIOS: ReadonlyArray<readonly [string, string]> = [
-  ["novo_cadastro", "Novo cadastro"],
-  ["simpatizante", "Simpatizante"],
-  ["apoiador", "Apoiador"],
-  ["militante", "Multiplicador"],
-  ["voto_certo", "Voto certo"],
-];
+// Níveis de relacionamento — fonte única em lib/politico/niveis.ts (4 no mandato).
+const ESTAGIOS: ReadonlyArray<readonly [string, string]> = niveisVisiveis(false).map(
+  (n) => [n.value, n.label] as const,
+);
 const TEMPS: ReadonlyArray<readonly [string, string]> = [
   ["frio", "Frio"],
   ["morno", "Morno"],
@@ -328,7 +327,7 @@ export function NovaCampanha({
           )}
         </Campo>
 
-        <Campo rotulo={t("Em que ponto da jornada?")} dica={t("o estágio no funil")}>
+        <Campo rotulo={t("Em que ponto da jornada?")} dica={t("o nível de relacionamento")}>
           <div className="flex flex-wrap gap-2">
             {ESTAGIOS.map(([v, l]) => (
               <Chip key={v} ativo={niveis.includes(v)} onClick={() => setNiveis(alternar(niveis, v))}>

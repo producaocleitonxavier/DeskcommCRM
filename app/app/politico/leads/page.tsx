@@ -16,11 +16,21 @@ import type { BaseTerritorioResumo } from "@/components/politico/base-territorio
 import LeadsClient from "./_leads-client";
 import { exigirAcessoPolitico } from "@/lib/politico/acesso";
 
+import { nivelParaExibir } from "@/lib/politico/niveis";
+
 export const dynamic = "force-dynamic";
 
 const POR_PAGINA = 24;
 
-const SUPPORT_LEVELS = ["novo_cadastro", "simpatizante", "apoiador", "militante", "voto_certo"] as const;
+// Os 4 níveis de relacionamento do mandato (lib/politico/niveis.ts). "Voto certo"
+// não existe aqui: registro antigo guardado assim conta e filtra como Multiplicador.
+const SUPPORT_LEVELS = ["novo_cadastro", "simpatizante", "apoiador", "militante"] as const;
+
+/** O que cada nível lê do banco (Multiplicador leva junto o `voto_certo` antigo). */
+function valoresDoNivel(nivel: string): string[] {
+  const n = nivelParaExibir(nivel, false);
+  return n === "militante" ? ["militante", "voto_certo"] : [n];
+}
 
 export interface LeadRow {
   id: string;
@@ -82,7 +92,7 @@ async function buscarLeads(
     .order("created_at", { ascending: false })
     .range(offset, offset + POR_PAGINA - 1);
 
-  if (etapa) query = query.eq("support_level", etapa);
+  if (etapa) query = query.in("support_level", valoresDoNivel(etapa));
   if (temp) query = query.eq("temperature", temp);
   if (cidade) query = query.eq("territory_id", cidade);
   // "Esfriando": contatos QUENTES sem atividade há 7+ dias — mesmo critério do card
@@ -165,7 +175,7 @@ async function contarPorEtapa(organizationId: string): Promise<Record<string, nu
         .select("id, contacts!contact_id!inner(id)", { count: "exact", head: true })
         .eq("organization_id", organizationId)
         .not("contacts.is_blocked", "is", true)
-        .eq("support_level", lvl);
+        .in("support_level", valoresDoNivel(lvl));
       counts[lvl] = count ?? 0;
     }),
   );
@@ -186,7 +196,7 @@ export default async function PessoasPage({
 
   const params = await searchParams;
   const pagina = Math.max(1, Number(params.pagina) || 1);
-  const etapa = typeof params.etapa === "string" ? params.etapa : "";
+  const etapa = typeof params.etapa === "string" ? nivelParaExibir(params.etapa, false) : "";
   const busca = typeof params.busca === "string" ? params.busca : "";
   const temp = typeof params.temp === "string" ? params.temp : "";
   const cidade = typeof params.cidade === "string" ? params.cidade : "";

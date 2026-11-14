@@ -1,4 +1,5 @@
 import { prospectingConversationContext } from "@/lib/prospecting/context";
+import { adendoDoGabineteDaOrg } from "@/lib/politico/adendo-do-agente-da-org";
 import { setExecutionAgentOperation } from '@/lib/atendimento/fronteira-server';
 import { TIPOS_DE_CASO, TIPOS_DE_CASO_PARA_A_IA } from "@/lib/ai/case-copy";
 import { DEFAULT_CHANNEL_PROVIDER } from '@/lib/channels/capabilities';
@@ -2407,10 +2408,15 @@ async function executarTurnoDoAgente(
           !preview && input.conversationId
             ? await prospectingConversationContext(pool, tenantId, input.conversationId)
             : '';
+        // Gabinete parlamentar: a IA se apresenta como IA e passa saúde/criança para uma
+        // pessoa — regra do produto, somada ao prompt do cliente (vazio fora do gabinete).
+        const adendoDoGabinete = agentConfig !== null ? await adendoDoGabineteDaOrg(pool, tenantId) : '';
         return loadPlaybook(
           pool,
           tenantId,
-          agentConfig !== null ? { agentLayer: agentConfig.systemPrompt + prospectingContext } : undefined,
+          agentConfig !== null
+            ? { agentLayer: agentConfig.systemPrompt + adendoDoGabinete + prospectingContext }
+            : undefined,
         );
       })(),
       // Skills situacionais (F3-09): índice (name+description) SEMPRE residente — vai junto do

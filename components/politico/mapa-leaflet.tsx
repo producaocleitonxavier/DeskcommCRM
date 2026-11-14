@@ -124,7 +124,7 @@ export default function MapaLeaflet({ pontos }: MapaLeafletProps) {
                     <br />
                     {p.total.toLocaleString("pt-BR")} contatos
                     <br />
-                    {p.novos.toLocaleString("pt-BR")} novos · {p.apoiadores.toLocaleString("pt-BR")} apoiadores
+                    {p.novos.toLocaleString("pt-BR")} novos · {p.apoiadores.toLocaleString("pt-BR")} participantes
                   </div>
                 </Popup>
               </CircleMarker>

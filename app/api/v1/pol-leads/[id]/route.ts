@@ -18,6 +18,7 @@ import { ok, fail } from "@/lib/api/wrappers";
 import { requireRole } from "@/lib/auth/require-role";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { requireSupportWrite } from "@/lib/impersonate/support";
+import { lerModoCampanha } from "@/lib/politico/modo-campanha";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -28,6 +29,9 @@ interface RouteCtx {
 
 // -- Validacao ----------------------------------------------------------------
 
+// `voto_certo` continua no enum porque é valor do banco, mas vindo de FORA só
+// entra em instalação de campanha (settings.gabinete.modo_campanha) — ver
+// lib/politico/niveis.ts. No mandato, a API recusa com 422.
 const SUPPORT_LEVELS = [
   "novo_cadastro",
   "simpatizante",
@@ -118,6 +122,11 @@ export async function PATCH(req: NextRequest, ctx: RouteCtx): Promise<NextRespon
   }
 
   const db = createAdminClient();
+
+  // Mandato não tem "voto certo": só instalação de campanha aceita o valor.
+  if (parsed.data.support_level === "voto_certo" && !(await lerModoCampanha(db, orgId))) {
+    return fail("validation_error", "Nivel indisponivel nesta instalacao", 422, { requestId });
+  }
 
   // Verificar existencia + tenant
   const { data: existente, error: errBusca } = await db

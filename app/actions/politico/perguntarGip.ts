@@ -135,7 +135,7 @@ export async function perguntarGip(pergunta: string, historico: GipMsg[] = []): 
       },
     }),
     minha_base_no_bairro: tool({
-      description: "A sua base de CRM num bairro: contatos por temperatura (quentes/mornos/frios), apoiadores, e demandas abertas/resolvidas. É a base da operação, não eleitores.",
+      description: "A sua base de CRM num bairro: contatos por temperatura (quentes/mornos/frios), quem já participa ou multiplica, e demandas abertas/resolvidas. É a base da operação, não eleitores.",
       inputSchema: z.object({ bairro: z.string(), cidade: z.string().optional() }),
       execute: async ({ bairro, cidade }) => {
         usadas.add("minha_base_no_bairro");
@@ -146,7 +146,7 @@ export async function perguntarGip(pergunta: string, historico: GipMsg[] = []): 
         return {
           bairro, cidade: cid,
           contatos: Number(c.leads_total ?? 0), quentes: Number(c.leads_quente ?? 0), mornos: Number(c.leads_morno ?? 0), frios: Number(c.leads_frio ?? 0),
-          apoiadores_ou_mais: Number(c.leads_forte ?? 0), demandas_abertas: Number(c.dem_abertas ?? 0), demandas_resolvidas: Number(c.dem_resolvidas ?? 0),
+          participantes_ou_multiplicadores: Number(c.leads_forte ?? 0), demandas_abertas: Number(c.dem_abertas ?? 0), demandas_resolvidas: Number(c.dem_resolvidas ?? 0),
         };
       },
     }),

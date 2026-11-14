@@ -12,6 +12,7 @@
  * `avisarCidadao`/`avisarCobranca`). Idempotente: um cuidado por demanda.
  */
 import { autenticarComPapel } from "@/lib/politico/acesso";
+import { bloqueioDeTextoHumano } from "@/lib/politico/trava-de-texto-humano";
 import { randomUUID } from "node:crypto";
 
 import { createClient } from "@/lib/supabase/server";
@@ -116,6 +117,8 @@ export async function avisarCuidadoAoCidadao(demandaId: string, textoEditado?: s
   // a sugestão automática. O texto é dado do humano autenticado — confiável.
   const sugerido = textoCuidadoSaude({ primeiroNome, nomeParlamentar: nomeParl || null, assunto: d.assunto, saude });
   const corpo = (textoEditado ?? "").trim() || sugerido;
+  const bloqueio = bloqueioDeTextoHumano(corpo);
+  if (bloqueio) return { ok: false, erro: bloqueio };
 
   try {
     await sendMessageHandler(

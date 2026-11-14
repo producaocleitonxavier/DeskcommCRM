@@ -17,6 +17,7 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { requireAuth, resolveActiveOrg } from "@/lib/auth/server";
 import { CommandHero } from "@/components/politico/command-hero";
+import { trilhaDosNiveis } from "@/lib/politico/niveis";
 import { AvisosDoInstagram } from "@/components/instagram/avisos-do-instagram";
 
 export const dynamic = "force-dynamic";
@@ -363,9 +364,8 @@ export default async function InstagramHubPage() {
       : []),
     {
       href: "/app/instagram/etiquetas",
-      titulo: "Funil Político",
-      descricao:
-        "Os 5 níveis do funil (Novo cadastro → Simpatizante → Apoiador → Multiplicador → Voto certo) e como a pessoa sobe.",
+      titulo: "Níveis de relacionamento",
+      descricao: `Os 4 níveis de relacionamento (${trilhaDosNiveis()}) e como a pessoa sobe.`,
       icon: "tag",
       badge: null,
     },

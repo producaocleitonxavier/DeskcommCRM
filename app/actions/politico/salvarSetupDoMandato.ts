@@ -163,6 +163,24 @@ export async function salvarSetupDoMandato(entrada: unknown): Promise<ResultadoS
   const { error } = await admin.from("organizations").update({ settings: novo }).eq("id", org.orgId);
   if (error) return { ok: false, error: "erro_ao_gravar" };
 
+  // Gabinete parlamentar nasce com a trava de promessa de campanha LIGADA (14/nov):
+  // a camada é desligada por padrão no produto (clínica, loja…), então quem a liga é
+  // o próprio assistente do mandato. Não fatal — a tela de Segurança segue como caminho.
+  {
+    const { error: erroDaTrava } = await admin
+      .from("org_guardrail_layers")
+      .upsert(
+        { organization_id: org.orgId, layer: "promessa_de_campanha", enabled: true, updated_at: new Date().toISOString() },
+        { onConflict: "organization_id,layer" },
+      );
+    if (erroDaTrava) {
+      logger.warn("setup-mandato: não consegui ligar a trava de promessa de campanha", {
+        organization_id: org.orgId,
+        error: erroDaTrava.message,
+      });
+    }
+  }
+
   // Provisiona o agente do mandato (publica em MODO ASSISTIDO) quando ainda não
   // há um. NÃO FATAL: o assistente conclui mesmo se o provisionamento falhar — o
   // conteúdo gerado fica salvo e a tela do agente segue como caminho manual.

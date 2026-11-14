@@ -1,7 +1,7 @@
 /**
  * /app/politico/leads/[id] — Ficha do Lead (War Room 2.0)
  *
- * Detalhe completo de um lead político: dados de contato, posição no funil,
+ * Detalhe completo de um lead político: dados de contato, nível de relacionamento,
  * engajamento e timeline de transições.
  *
  * Acesso: manager+
@@ -20,6 +20,7 @@ import MarcarFuncao from "./_marcar-funcao";
 import { TAG_MULTIPLICADOR } from "@/lib/politico/multiplicadores";
 import { TAG_DIVULGADOR } from "@/lib/politico/divulgador";
 import { exigirAcessoPolitico } from "@/lib/politico/acesso";
+import { nivelParaExibir, niveisVisiveis, rotuloDoNivel } from "@/lib/politico/niveis";
 
 export const dynamic = "force-dynamic";
 
@@ -76,20 +77,18 @@ interface FunnelTransition {
 
 // -- Helpers -----------------------------------------------------------------
 
-const ETAPAS_FUNIL = [
-  { value: "novo_cadastro", label: "Novo cadastro", idx: 0 },
-  { value: "simpatizante", label: "Simpatizante", idx: 1 },
-  { value: "apoiador", label: "Apoiador", idx: 2 },
-  { value: "militante", label: "Multiplicador", idx: 3 },
-  { value: "voto_certo", label: "Voto certo", idx: 4 },
-] as const;
+// Os 4 níveis de relacionamento do mandato (rótulos: lib/politico/niveis.ts).
+// "Voto certo" não existe aqui: registro antigo aparece como Multiplicador —
+// por isso todo helper abaixo passa o valor por `nivelParaExibir`.
+const ETAPAS_FUNIL = niveisVisiveis(false).map((n, idx) => ({ value: n.value, label: n.label, idx }));
 
 function etapaLabel(value: string): string {
-  return ETAPAS_FUNIL.find((e) => e.value === value)?.label ?? value;
+  return rotuloDoNivel(value, false);
 }
 
 function etapaIdx(value: string): number {
-  return ETAPAS_FUNIL.find((e) => e.value === value)?.idx ?? 0;
+  const v = nivelParaExibir(value, false);
+  return ETAPAS_FUNIL.find((e) => e.value === v)?.idx ?? 0;
 }
 
 function etapaCor(value: string): string {
@@ -98,9 +97,8 @@ function etapaCor(value: string): string {
     simpatizante: "var(--wr-funnel-2)",
     apoiador: "var(--wr-funnel-3)",
     militante: "var(--wr-funnel-4)",
-    voto_certo: "var(--wr-funnel-5)",
   };
-  return mapa[value] ?? "var(--wr-funnel-1)";
+  return mapa[nivelParaExibir(value, false)] ?? "var(--wr-funnel-1)";
 }
 
 function etapaPillEstilo(value: string): { bg: string; color: string } {
@@ -109,9 +107,8 @@ function etapaPillEstilo(value: string): { bg: string; color: string } {
     simpatizante: { bg: "rgba(99,102,241,0.20)", color: "#C7D2FE" },
     apoiador: { bg: "rgba(79,70,229,0.24)", color: "#C7D2FE" },
     militante: { bg: "rgba(67,56,202,0.32)", color: "#E0E7FF" },
-    voto_certo: { bg: "rgba(67,56,202,0.44)", color: "#FFFFFF" },
   };
-  return mapa[value] ?? { bg: "rgba(129,140,248,0.16)", color: "#A5B4FC" };
+  return mapa[nivelParaExibir(value, false)] ?? { bg: "rgba(129,140,248,0.16)", color: "#A5B4FC" };
 }
 
 function tempLabel(temp: string): string {
@@ -191,7 +188,7 @@ async function buscarLead(organizationId: string, leadId: string) {
 
   if (!contact) return null;
 
-  // Buscar transições de funil
+  // Buscar transições de nível
   const { data: transitions } = await db
     .from("pol_funnel_transitions")
     .select("id, from_level, to_level, changed_at, reason")
@@ -535,11 +532,11 @@ export default async function FichaPage({
             </div>
           </div>
 
-          {/* Funil progresso */}
+          {/* Progresso nos níveis */}
           <div className="hidden sm:block">
             <FunilProgresso current={lead.support_level} />
             <div className="text-[11px] text-center mt-1.5" style={{ color: "var(--color-text-subtle)" }}>
-              Etapa {etapaIdx(lead.support_level) + 1} de {ETAPAS_FUNIL.length}
+              Nível {etapaIdx(lead.support_level) + 1} de {ETAPAS_FUNIL.length}
             </div>
           </div>
         </div>
@@ -673,7 +670,7 @@ export default async function FichaPage({
           </InfoCard>
         </div>
 
-        {/* Coluna direita (1/3): ações, KPIs, funil, tags */}
+        {/* Coluna direita (1/3): ações, KPIs, nível, tags */}
         <div className="space-y-4">
           {/* Ações rápidas */}
           <div className="gip-glass p-5">
@@ -688,7 +685,7 @@ export default async function FichaPage({
                 <Pencil style={{ width: 16, height: 16 }} /> Editar
               </Link>
               <Link href="/app/politico/funil" className="wr-btn w-full justify-center">
-                <GitBranch style={{ width: 16, height: 16 }} /> Mover no funil
+                <GitBranch style={{ width: 16, height: 16 }} /> Ver os níveis
               </Link>
               {!contact.is_blocked && (
                 <MarcarFuncao contactId={contact.id} ehMultiplicador={ehMultiplicador} funcao={funcao} />
@@ -728,12 +725,12 @@ export default async function FichaPage({
             </div>
           </div>
 
-          {/* Funil visual */}
+          {/* Nível de relacionamento */}
           <div className="gip-glass gip-glass-hover p-5">
-            <h3 className="text-[11px] font-semibold uppercase tracking-[.08em] mb-3" style={{ color: "var(--color-text-muted)" }}>Nível no funil</h3>
+            <h3 className="text-[11px] font-semibold uppercase tracking-[.08em] mb-3" style={{ color: "var(--color-text-muted)" }}>Nível de relacionamento</h3>
             <div className="flex items-center justify-between">
               <EtapaPill value={lead.support_level} />
-              <span className="text-[11px]" style={{ color: "var(--color-text-subtle)" }}>Etapa {etapaIdx(lead.support_level) + 1} de {ETAPAS_FUNIL.length}</span>
+              <span className="text-[11px]" style={{ color: "var(--color-text-subtle)" }}>Nível {etapaIdx(lead.support_level) + 1} de {ETAPAS_FUNIL.length}</span>
             </div>
             <div className="mt-3">
               <FunilProgresso current={lead.support_level} />

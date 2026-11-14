@@ -64,7 +64,7 @@ describe("convidarDivulgadores", () => {
   it("nenhum elegível → ok:false", async () => {
     montar([]);
     const r = await convidarDivulgadores();
-    expect(r).toEqual({ ok: false, erro: "Nenhum apoiador elegível pra convidar agora." });
+    expect(r).toEqual({ ok: false, erro: "Ninguém elegível pra convidar agora." });
   });
 
   it("caminho feliz: convida todos, manda convite e marca a tag", async () => {

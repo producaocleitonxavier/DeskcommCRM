@@ -277,12 +277,12 @@ export const NAV_CATALOG = [
     // herda, e só sabe deixar mais devagar.
     //
     // No fork político, DISPAROS é operação central (não "de vez em quando"): é
-    // por aqui que o gabinete fala com a base por origem × estágio do funil, no
+    // por aqui que o gabinete fala com a base por origem × nível de relacionamento, no
     // ritmo seguro. Por isso é FIXO no sidebar da Operação (o cliente pediu).
     href: "/app/campaigns",
     label: "Disparos",
     description:
-      "Dispare mensagens e materiais para a base que você escolhe — por origem e estágio no funil, no ritmo que não queima o número.",
+      "Dispare mensagens e materiais para a base que você escolhe — por origem e nível de relacionamento, no ritmo que não queima o número.",
     icon: "Megaphone",
     group: "operacao",
     section: "O dia a dia do relacionamento",
@@ -316,13 +316,13 @@ export const NAV_CATALOG = [
     sidebar: true,
   },
   {
-    // Mobilização (Modo Campanha): o quadro — as pessoas andando pelo funil por
-    // etapa. O motor move sozinho por engajamento; o operador move à mão quando
+    // Mobilização: o quadro — as pessoas andando pelos níveis de relacionamento.
+    // O motor move sozinho por engajamento; o operador move à mão quando
     // conhece alguém. Puxado pela mesma taxonomia do Disparos (origem → grupo).
     href: "/app/politico/kanban",
     label: "Mobilização",
     description:
-      "O quadro da campanha: seu público em colunas por etapa (de novo cadastro a voto certo). Sobe sozinho conforme a pessoa se engaja — e você move à mão quando quiser.",
+      "O quadro da sua base: as pessoas em colunas por nível (de novo contato a multiplicador). Sobe sozinho conforme a pessoa se envolve — e você move à mão quando quiser.",
     icon: "Kanban",
     group: "operacao",
     section: "O dia a dia do relacionamento",
@@ -852,7 +852,7 @@ export const NAV_CATALOG = [
   {
     href: "/app/instagram",
     label: "Instagram",
-    description: "GIPCHAT — responde comentários e DMs no automático e capta apoiadores no seu Instagram.",
+    description: "GIPCHAT — responde comentários e DMs no automático e capta contatos no seu Instagram.",
     icon: "InstagramLogo",
     group: "canais",
     minRole: "manager",
@@ -887,8 +887,8 @@ export const NAV_CATALOG = [
   },
   {
     href: "/app/instagram/etiquetas",
-    label: "Funil Político",
-    description: "Os 3 níveis do apoiador (Simpatizante → Apoiador → Embaixador): o que cada um significa e como a pessoa sobe.",
+    label: "Níveis de relacionamento",
+    description: "Os 4 níveis de relacionamento (Novo contato → Em conversa → Participante → Multiplicador): o que cada um significa e como a pessoa sobe.",
     icon: "InstagramLogo",
     group: "canais",
     minRole: "manager",
@@ -915,8 +915,9 @@ export const NAV_CATALOG = [
 
   // ── MÓDULO POLÍTICO — WAR ROOM 2.0 ──────────────────────────────────
   //
-  // Hub do módulo político (GIP War Room 2.0). Estende o CRM com funil político
-  // (novo_cadastro → simpatizante → apoiador → militante → voto_certo), scoring
+  // Hub do módulo político (GIP War Room 2.0). Estende o CRM com os níveis de
+  // relacionamento (novo_cadastro → simpatizante → apoiador → militante; rótulos
+  // em lib/politico/niveis.ts — voto_certo só em instalação de campanha), scoring
   // multidimensional, territórios hierárquicos e dados do TSE.
   //
   // Consolidação de sidebar (out/2026): 16 sub-páginas reorganizadas em 5 seções
@@ -961,7 +962,7 @@ export const NAV_CATALOG = [
   {
     href: "/app/politico",
     label: "Hoje",
-    description: "Central de comando — prioridades, KPIs, funil e ativação semanal.",
+    description: "Central de comando — prioridades, KPIs, níveis de relacionamento e ativação semanal.",
     icon: "Flag",
     group: "comando",
     section: "Comando",
@@ -973,7 +974,7 @@ export const NAV_CATALOG = [
   {
     href: "/app/politico/leads",
     label: "Pessoas",
-    description: "Base de apoiadores com dados eleitorais, kanban/tabela, funil eleitoral e filtros.",
+    description: "A base de pessoas do mandato — contato, zona e seção, nível de relacionamento e filtros.",
     icon: "UsersThree",
     group: "comando",
     section: "Comando",
@@ -992,8 +993,8 @@ export const NAV_CATALOG = [
   },
   {
     href: "/app/politico/funil",
-    label: "Funil",
-    description: "Kanban da jornada de apoio — de novo cadastro até voto certo, com histórico de transições.",
+    label: "Níveis",
+    description: "Os níveis de relacionamento da base — de novo contato a multiplicador, com o histórico de quem subiu.",
     icon: "GitBranch",
     group: "comando",
     minRole: "agent",
@@ -1292,7 +1293,7 @@ export const NAV_CATALOG = [
   {
     href: "/app/politico/dashboard",
     label: "Dashboard",
-    description: "Painel gerencial da campanha — KPIs, funil, temperatura, módulos e fila de ligações.",
+    description: "Painel gerencial do mandato — KPIs, níveis de relacionamento, temperatura, módulos e fila de ligações.",
     icon: "ChartBar",
     group: "comando",
     minRole: "manager",

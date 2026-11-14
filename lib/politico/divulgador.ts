@@ -31,7 +31,11 @@ export const TAG_DIVULGADOR_RECUSOU = "divulgador_recusou";
  */
 export const TAG_DIVULGADOR = "divulgador";
 
-/** Só apoiador+ merece o convite (régua garante interesse real). */
+/**
+ * Só Participante pra cima merece o convite (régua garante interesse real).
+ * `voto_certo` fica na lista só para LER registro antigo — o mandato não usa
+ * esse nível (lib/politico/niveis.ts) e ele conta como Multiplicador.
+ */
 const SUPORTE_APOIADOR_MAIS = ["apoiador", "militante", "voto_certo"];
 
 function normaliza(s: string): string {

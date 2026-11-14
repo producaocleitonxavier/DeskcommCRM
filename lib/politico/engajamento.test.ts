@@ -371,6 +371,18 @@ describe("FORWARD-ONLY — matriz estágio_atual × estágio_alvo (5×4)", () =>
   });
 });
 
+describe("TETO — o motor nunca promove a voto_certo", () => {
+  it.each([
+    [{ indicados: 50 }],
+    [{ indicados: 200, consent: true, respDisparo: 5, qrConfirmado: 1, matCamp: 4 }],
+    [{ current: "militante", indicados: 500 }],
+  ] as [Cenario][])("%o → para em militante", async (s) => {
+    const { res } = await rodar(s);
+    expect(res.estagio).toBe("militante");
+    expect(res.estagio).not.toBe("voto_certo");
+  });
+});
+
 describe("Cenários combinados — mais totais exatos", () => {
   it.each([
     [{ respDisparo: 3, qrConfirmado: 1 }, 21, "apoiador"], // 15+6

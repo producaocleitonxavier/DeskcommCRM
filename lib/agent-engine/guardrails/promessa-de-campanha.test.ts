@@ -219,3 +219,81 @@ describe('detectarPromessaDeCampanha — forma do retorno', () => {
     expect(veto).toMatch(/captação ilícita de sufrágio/i);
   });
 });
+
+describe('detectarPromessaDeCampanha — ampliação de 14/nov (parecer jurídico)', () => {
+  const barra = (frase: string, categoria: string) =>
+    expect(detectarPromessaDeCampanha(frase).categorias, frase).toContain(categoria);
+  const passa = (frase: string) => expect(detectarPromessaDeCampanha(frase).achou, frase).toBe(false);
+
+  it('terceira pessoa: promessa pela boca do parlamentar ou do gabinete', () => {
+    for (const f of [
+      'O vereador vai conseguir sua vaga na creche.',
+      'O vereador Cleiton Xavier vai conseguir a sua consulta.',
+      'A deputada vai garantir seu auxílio.',
+      'O gabinete garante a sua vaga.',
+      'Pode deixar, ele vai liberar sua cirurgia.',
+      'O doutor conseguirá o seu benefício.',
+      'A equipe vai arranjar um emprego pra você.',
+    ]) barra(f, 'promessa_de_beneficio');
+  });
+
+  it('terceira pessoa negada ou de outro sujeito passa', () => {
+    for (const f of [
+      'O vereador não vai conseguir sua vaga, mas vamos encaminhar o pedido.',
+      'O gabinete não garante a vaga; quem decide é a Secretaria.',
+      'A prefeitura vai liberar o auxílio emergencial na semana que vem, segundo o site oficial.',
+      'O vereador vai encaminhar o seu pedido de consulta à Secretaria de Saúde.',
+      'A equipe vai registrar a sua demanda e acompanhar.',
+      'Ele vai analisar o caso com a assessoria.',
+    ]) passa(f);
+  });
+
+  it('reciprocidade: pedir que a pessoa lembre do mandato na hora do voto', () => {
+    for (const f of [
+      'Resolvemos o seu problema, lembra da gente na eleição!',
+      'Não esqueça do vereador na hora de votar.',
+      'Conto com seu voto.',
+      'Agora retribua nas urnas.',
+      'Você sabe como é, uma mão lava a outra.',
+    ]) barra(f, 'captacao_de_sufragio');
+  });
+
+  it('lembrar e contar sem voto passa', () => {
+    for (const f of [
+      'Lembra da gente se precisar de mais alguma coisa.',
+      'Conto com a sua presença na audiência pública de quinta.',
+      'Não esqueça de levar o documento com foto.',
+      'A eleição do conselho tutelar é no domingo; a urna fica na escola.',
+    ]) passa(f);
+  });
+
+  it('ameaça de perda de benefício', () => {
+    for (const f of [
+      'Se você não votar com a gente, perde o auxílio.',
+      'Quem não apoiar fica sem a cesta básica.',
+      'Vai perder a sua vaga se não votar no vereador.',
+    ]) barra(f, 'captacao_de_sufragio');
+  });
+
+  it('furar fila e dar um jeitinho', () => {
+    for (const f of [
+      'Eu furo a fila pra você.',
+      'O vereador fura a fila do SUS pra senhora.',
+      'Te passo na frente na lista de espera.',
+      'A gente coloca você na frente.',
+      'Adianto a sua cirurgia.',
+      'Vamos agilizar seu exame.',
+      'Deixa comigo, eu dou um jeitinho.',
+    ]) barra(f, 'promessa_de_beneficio');
+  });
+
+  it('fila e adiantar no sentido comum passam', () => {
+    for (const f of [
+      'Não é possível furar a fila; o atendimento segue a ordem da Secretaria.',
+      'Não dá para passar ninguém na frente.',
+      'A fila do posto está grande hoje.',
+      'Vou adiantar o registro da sua demanda aqui no sistema.',
+      'O ônibus passa na frente da escola.',
+    ]) passa(f);
+  });
+});

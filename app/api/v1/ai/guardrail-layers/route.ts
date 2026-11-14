@@ -35,6 +35,7 @@ import { roleAtLeast } from "@/lib/auth/types";
 import { CAMADAS_SEMANTICAS, padraoDasCamadasNoAmbiente } from "@/lib/agent-engine/guardrails/camadas-da-org";
 import { createClient } from "@/lib/supabase/server";
 import { traduzir } from "@/lib/i18n/dicionario";
+import { setupDoMandatoCompleto } from "@/lib/politico/setup-do-mandato";
 
 export const dynamic = "force-dynamic";
 
@@ -91,6 +92,17 @@ export async function PUT(req: NextRequest): Promise<Response> {
   const corpo = parsed.data;
 
   const db = await createClient();
+  // Gabinete parlamentar: a trava de promessa de campanha fica sempre ligada.
+  if (corpo.layer === "promessa_de_campanha" && !corpo.enabled) {
+    const { data: orgRow } = await db.from("organizations").select("settings").eq("id", org.orgId).maybeSingle();
+    if (setupDoMandatoCompleto(orgRow?.settings)) {
+      return fail(
+        "layer_locked",
+        t("Em gabinete parlamentar esta proteção fica sempre ligada."),
+        409,
+      );
+    }
+  }
   const { data: gravado, error } = await db
     .from("org_guardrail_layers")
     .upsert(

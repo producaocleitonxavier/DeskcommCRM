@@ -85,7 +85,7 @@ export default function NutricaoClient({ inicial }: { inicial: EstadoDaNutricao 
 
       <div className="gip-glass space-y-2 p-5 text-sm" style={{ color: "var(--color-text-muted)" }}>
         <p>
-          <strong style={{ color: "var(--color-text)" }}>Quem recebe:</strong> só quem virar simpatizante <em>depois</em> que a nutrição for ligada
+          <strong style={{ color: "var(--color-text)" }}>Quem recebe:</strong> só quem passar para o nível Em conversa <em>depois</em> que a nutrição for ligada
           (respondeu, participou, pediu o material). A base antiga não recebe nada por aqui.
         </p>
         <p>
@@ -170,7 +170,7 @@ export default function NutricaoClient({ inicial }: { inicial: EstadoDaNutricao 
           <>
             <p className="text-sm" style={{ color: "var(--color-text-muted)" }}>
               {prontaParaLigar
-                ? "Número e textos salvos. Ao ligar, quem virar simpatizante daqui para a frente passa a receber."
+                ? "Número e textos salvos. Ao ligar, quem passar para o nível Em conversa daqui para a frente passa a receber."
                 : mudou
                   ? "Salve as mudanças acima antes de ligar."
                   : !inicial.publicada

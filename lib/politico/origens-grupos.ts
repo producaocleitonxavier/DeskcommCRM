@@ -86,7 +86,7 @@ export interface ConversaoOrigem {
   label: string;
   total: number;
   convertidos: number;
-  /** % que virou apoiador+ (apoiador/militante/voto_certo), 0–100. */
+  /** % que virou Participante ou Multiplicador (apoiador/militante + voto_certo antigo), 0–100. */
   pct: number;
 }
 

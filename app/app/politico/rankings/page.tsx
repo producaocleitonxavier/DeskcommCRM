@@ -13,6 +13,7 @@ import { createClient } from "@/lib/supabase/server";
 import { requireAuth, resolveActiveOrg } from "@/lib/auth/server";
 import { CommandHero } from "@/components/politico/command-hero";
 import { exigirAcessoPolitico } from "@/lib/politico/acesso";
+import { nivelParaExibir, rotuloDoNivel } from "@/lib/politico/niveis";
 
 export const dynamic = "force-dynamic";
 
@@ -50,13 +51,6 @@ interface LiderancaRanking {
   mobilizados: number;
 }
 
-const SUPPORT_LABELS: Record<string, string> = {
-  voto_certo: "Voto certo",
-  militante: "Multiplicador",
-  apoiador: "Apoiador",
-  simpatizante: "Simpatizante",
-  novo_cadastro: "Novo cadastro",
-};
 
 const STATUS_LABELS: Record<string, string> = {
   critico: "Critico",
@@ -144,7 +138,7 @@ export default async function RankingsPage({
                     <th className="px-4 py-3 font-medium">Cidade</th>
                     <th className="px-4 py-3 font-medium">UF</th>
                     <th className="px-4 py-3 font-medium text-right">Contatos</th>
-                    <th className="px-4 py-3 font-medium text-right">Votos certos</th>
+                    <th className="px-4 py-3 font-medium text-right">Multiplicadores</th>
                     <th className="px-4 py-3 font-medium text-right">Penetracao</th>
                     <th className="px-4 py-3 font-medium text-right">Influencia</th>
                     <th className="px-4 py-3 font-medium text-right">Crescimento</th>
@@ -159,7 +153,7 @@ export default async function RankingsPage({
                       <td className="px-4 py-3 font-medium">{c.cidade}</td>
                       <td className="px-4 py-3 text-muted-foreground">{c.state_code ?? "—"}</td>
                       <td className="px-4 py-3 text-right tabular-nums font-medium">{c.total_leads.toLocaleString("pt-BR")}</td>
-                      <td className="px-4 py-3 text-right tabular-nums">{c.votos_certos.toLocaleString("pt-BR")}</td>
+                      <td className="px-4 py-3 text-right tabular-nums">{((c.militantes ?? 0) + (c.votos_certos ?? 0)).toLocaleString("pt-BR")}</td>
                       <td className="px-4 py-3 text-right">
                         <PenetracaoBadge pct={c.penetracao_pct} />
                       </td>
@@ -311,11 +305,12 @@ function StatusBadge({ status }: { status: string }) {
   );
 }
 
-function SupportBadge({ level }: { level: string }) {
-  const label = SUPPORT_LABELS[level] ?? level;
+function SupportBadge({ level: valor }: { level: string }) {
+  // Rótulos: lib/politico/niveis.ts. "Voto certo" antigo aparece como Multiplicador.
+  const label = rotuloDoNivel(valor, false);
+  const level = nivelParaExibir(valor, false);
 
   const colorMap: Record<string, string> = {
-    voto_certo: "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200",
     militante: "bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200",
     apoiador: "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200",
     simpatizante: "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200",
