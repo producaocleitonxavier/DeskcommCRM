@@ -56,6 +56,8 @@ interface Props {
   tipoMandato: string | null;
   /** Presenças de equipe por visita (Incremento 3): quem marcou "eu vou". */
   presencas: Record<string, { user_id: string; nome: string | null }[]>;
+  /** A pessoa emite documentos do gabinete? (mesma trava dos Ofícios) Só então o atalho aparece. */
+  podeRequerimento: boolean;
 }
 
 type Filtro = "todas" | "agendadas" | "atrasadas" | "sem_responsavel" | "realizadas" | "minhas";
@@ -91,7 +93,7 @@ const STATUS_PILL: Record<string, { bg: string; color: string; label: string }> 
   encerrada: { bg: "rgba(100,116,139,0.16)", color: "#475569", label: "Encerrada sem registro da visita" },
 };
 
-export default function VisitasClient({ visitas, kpis, assessores, usuarioAtualId, temRelato, fotos, tipoMandato, presencas }: Props) {
+export default function VisitasClient({ visitas, kpis, assessores, usuarioAtualId, temRelato, fotos, tipoMandato, presencas, podeRequerimento }: Props) {
   const router = useRouter();
   const [novaAberta, setNovaAberta] = useState(false);
   const [filtro, setFiltro] = useState<Filtro>("todas");
@@ -407,7 +409,7 @@ export default function VisitasClient({ visitas, kpis, assessores, usuarioAtualI
                     </div>
                     {/* Ações rápidas */}
                     <div className="flex flex-wrap items-center gap-2 border-t pt-3" style={{ borderColor: "var(--color-border)" }}>
-                    <BotaoRequerimento demandaId={v.id} assunto={v.assunto} />
+                    {podeRequerimento ? <BotaoRequerimento demandaId={v.id} /> : null}
                     {/* Responsável (DONO da visita) — distinto do "Quem vai" acima (presença
                         da equipe). Um responsável pelo relato; vários podem ir. */}
                     {euSou ? (

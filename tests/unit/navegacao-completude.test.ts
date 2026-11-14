@@ -31,6 +31,8 @@ const BASE = path.join(RAIZ, "app", "app");
  * e quem revisar o PR a lê.
  */
 const NAV_ALLOWLIST: Record<string, string> = {
+  "/app/politico/requerimentos":
+    "segunda ABA da porta Ofícios e Requerimentos (menu do gabinete): os documentos apresentados à Casa. Não tem item próprio de propósito — decisão do cliente em 14/nov/2026 para não crescer o menu; aparece para quem vê Ofícios e usa a mesma trava de acesso",
   "/app": "redirect para /app/inbox — não é tela, é o ponto de entrada",
   "/app/ai/agents/new":
     "sub-fluxo de criar agente, alcançado pelo botão dentro da lista de Agentes",

@@ -93,7 +93,15 @@ export const AREAS_DO_GABINETE: readonly AreaDoGabinete[] = [
   // ── Gabinete: o trabalho do mandato ────────────────────────────────────────
   { label: "Demandas", grupo: "gabinete", abas: [{ href: `${P}/demandas`, label: "Demandas" }] },
   { label: "Visitas Técnicas", grupo: "gabinete", abas: [{ href: `${P}/visitas`, label: "Visitas Técnicas" }] },
-  { label: "Ofícios", grupo: "gabinete", abas: [{ href: `${P}/oficios`, label: "Ofícios" }] },
+  {
+    label: "Ofícios e Requerimentos",
+    grupo: "gabinete",
+    abas: [
+      { href: `${P}/oficios`, label: "Ofícios" },
+      // Documentos apresentados à Casa. Quem vê Ofícios vê esta aba (mesma trava de acesso).
+      { href: `${P}/requerimentos`, label: "Requerimentos", seVe: `${P}/oficios` },
+    ],
+  },
   { label: "Lideranças", grupo: "gabinete", abas: [{ href: `${P}/liderancas`, label: "Lideranças" }] },
   {
     label: "Emendas e Obras",

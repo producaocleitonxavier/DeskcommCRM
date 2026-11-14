@@ -21,6 +21,7 @@ import { visitaPendente, visitaAgendada, visitaSemResponsavel } from "@/lib/poli
 import { listarAnexosDemanda } from "@/app/actions/politico/gabinete-actions";
 import VisitasClient, { type VisitaItem, type FotoVisita } from "./_visitas-client";
 import { exigirAcessoPolitico } from "@/lib/politico/acesso";
+import { destinosDaInterface } from "@/lib/navigation/interface";
 
 export const dynamic = "force-dynamic";
 
@@ -38,6 +39,13 @@ export default async function VisitasPage() {
   // (Incremento 3). Antes exigia manager+, o que contrariava o menu do assessor
   // de rua (incremento 1, que já tem Visitas). viewer segue barrado.
   if (ROLE_RANK[org.role] < ROLE_RANK.agent) redirect("/app/politico");
+
+  // O atalho "Requerimento" só aparece para quem emite documentos do gabinete (porta Ofícios).
+  const ehPlataforma = !!user.is_platform_admin && !user.support;
+  const podeRequerimento =
+    ehPlataforma ||
+    ROLE_RANK[org.role] >= ROLE_RANK.manager ||
+    destinosDaInterface(org.interface_settings, ehPlataforma, org.role).some((d) => d.href === "/app/politico/oficios");
 
   const db = await createClient();
 
@@ -150,6 +158,7 @@ export default async function VisitasPage() {
       fotos={fotos}
       tipoMandato={tipoMandato}
       presencas={presencas}
+      podeRequerimento={podeRequerimento}
     />
   );
 }

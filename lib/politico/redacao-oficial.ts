@@ -229,3 +229,123 @@ export function limparTextoOficial(texto: string): string {
     .replace(/\n{3,}/g, "\n\n")
     .trim();
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// DOCUMENTOS DA CASA além do requerimento de comissão (indicação, pedido de
+// informação, moção…). O NOME muda de Casa para Casa — por isso a IA recebe o
+// rótulo que o gabinete usa e escolhe o verbo por ele. Nenhum artigo, cota ou
+// prazo de uma Casa específica está escrito aqui.
+// ─────────────────────────────────────────────────────────────────────────────
+
+export type FuncaoDoDocumentoDaCasa = "pedido_comissao" | "providencia" | "informacao" | "manifestacao";
+
+export type DadosDoDocumentoDaCasa = {
+  funcao: FuncaoDoDocumentoDaCasa;
+  /** O nome que ESTE gabinete dá ao documento (ex.: "Indicação", "Requerimento"). */
+  rotulo: string;
+  /** Em pedido a comissão: "visita_tecnica", "audiencia_publica" ou outro texto. */
+  subtipo?: string | null;
+  assunto: string;
+  /** A quem se pede: comissão, órgão ou autoridade. */
+  destinatario?: string | null;
+  /** Dispositivo do regimento, como o gabinete escreve. Vazio = lacuna. */
+  dispositivo?: string | null;
+  local?: string | null;
+  quando?: string | null;
+  cidade?: string | null;
+  /** O que a equipe escreveu de próprio punho para orientar a redação. */
+  orientacao?: string | null;
+  relatos?: readonly string[];
+};
+
+const PADRAO_DA_CASA =
+  "Você redige documentos que um parlamentar apresenta à sua Casa Legislativa no Brasil, no padrão de " +
+  "uma assessoria experiente. O nome do documento muda de uma Casa para outra: use o nome informado e " +
+  "o verbo que corresponde a ele — 'Indico' para indicação, 'Requeiro' para requerimento ou pedido de " +
+  "informação, 'Proponho' para moção ou voto. Só esse verbo vem em primeira pessoa; o restante é " +
+  "impessoal ('solicita-se', 'sugere-se'). Um bloco por parágrafo, com uma linha em branco entre eles. " +
+  "NÃO escreva número do documento (é dado pela Casa no protocolo), local e data, assinatura nem o bloco " +
+  "do destinatário: o sistema já os coloca. Termine no último parágrafo de conteúdo. " +
+  LACUNAS +
+  " " +
+  TOM;
+
+const ESTRUTURA_DA_PROVIDENCIA =
+  "Estrutura (pedido de providência ao Poder Executivo, por meio da Casa):\n" +
+  "1) 'Senhor Presidente,' sozinho na linha.\n" +
+  "2) O pedido, em um parágrafo: '[Verbo], nos termos do [dispositivo], ao [autoridade ou órgão " +
+  "destinatário], a [obra, serviço ou medida], na [localização completa: logradouro, número, " +
+  "referência, bairro].' Se o destinatário não foi informado, use '[AUTORIDADE OU ÓRGÃO DESTINATÁRIO]'.\n" +
+  "3) 'JUSTIFICATIVA' sozinha na linha, e em seguida um ou dois parágrafos: o fato observado, o " +
+  "risco e quem é afetado. Sem prometer atendimento nem prazo.";
+
+const ESTRUTURA_DA_INFORMACAO =
+  "Estrutura (pedido de informação a autoridade):\n" +
+  "1) 'Senhor Presidente,' sozinho na linha.\n" +
+  "2) 'Requeiro, nos termos do [dispositivo], que seja solicitado ao [autoridade ou órgão " +
+  "destinatário] o envio das seguintes informações sobre [assunto]:'.\n" +
+  "3) As perguntas, uma por linha, cada linha iniciada por '• ', objetivas e respondíveis com dado " +
+  "ou documento (o quê, quanto, quando, quem responde, cópia de qual documento). De três a seis.\n" +
+  "4) 'A solicitação justifica-se pela …' — por que a informação é necessária ao exercício da " +
+  "fiscalização parlamentar.";
+
+const ESTRUTURA_DA_MANIFESTACAO =
+  "Estrutura (manifestação da Casa: aplauso, congratulação, pesar, apoio ou protesto):\n" +
+  "1) 'Senhor Presidente,' sozinho na linha.\n" +
+  "2) '[Verbo], nos termos do [dispositivo], [o tipo de manifestação, deduzido do assunto: voto de " +
+  "aplauso, de pesar, moção de apoio, de protesto] a [pessoa ou entidade homenageada ou destinatária], " +
+  "por [motivo, em uma frase].'\n" +
+  "3) Um parágrafo com os fatos que justificam a manifestação — só os informados; nada de biografia " +
+  "inventada.\n" +
+  "4) 'Requer-se que desta manifestação seja dada ciência a [destinatário].' Se o destinatário não foi " +
+  "informado, use '[A QUEM DAR CIÊNCIA]'.";
+
+const ESTRUTURA_DE_COMISSAO_GERAL =
+  "Estrutura (pedido a uma comissão da Casa):\n" +
+  "1) 'Senhor Presidente,' sozinho na linha.\n" +
+  "2) 'Requeiro a esta [comissão], nos termos do [dispositivo], [a providência pedida], com a " +
+  "finalidade de [objetivo].'\n" +
+  "3) 'A solicitação justifica-se pela …' — fato, risco e quem é afetado.\n" +
+  "4) Se houver data, local ou convidados informados, um parágrafo para cada.";
+
+/** As instruções da IA para um documento da Casa, pela FUNÇÃO (o nome local entra no pedido). */
+export function instrucoesDoDocumentoDaCasa(funcao: FuncaoDoDocumentoDaCasa, subtipo?: string | null): string {
+  if (funcao === "pedido_comissao") {
+    if (subtipo === "visita_tecnica" || subtipo === "audiencia_publica") return instrucoesDoRequerimento(subtipo);
+    return `${PADRAO_DO_REQUERIMENTO}\n\n${ESTRUTURA_DE_COMISSAO_GERAL}`;
+  }
+  const estrutura =
+    funcao === "providencia" ? ESTRUTURA_DA_PROVIDENCIA : funcao === "informacao" ? ESTRUTURA_DA_INFORMACAO : ESTRUTURA_DA_MANIFESTACAO;
+  return `${PADRAO_DA_CASA}\n\n${estrutura}`;
+}
+
+/** O pedido de um documento da Casa: os dados do caso, um por linha. */
+export function montarPedidoDoDocumentoDaCasa(d: DadosDoDocumentoDaCasa): string {
+  if (d.funcao === "pedido_comissao" && (d.subtipo === "visita_tecnica" || d.subtipo === "audiencia_publica")) {
+    return (
+      montarPedidoDoRequerimento({
+        tipo: d.subtipo,
+        assunto: d.assunto,
+        local: d.local,
+        quando: d.quando,
+        comissao: d.destinatario,
+        dispositivo: d.dispositivo,
+        cidade: d.cidade,
+        relatos: d.relatos,
+      }) + linha("Orientação da equipe (siga, sem copiar literalmente)", d.orientacao)
+    );
+  }
+  return (
+    "Redija o documento com estes dados.\n\n" +
+    linha("Nome do documento nesta Casa", d.rotulo) +
+    linha("Assunto", d.assunto) +
+    linha(d.funcao === "pedido_comissao" ? "Comissão" : "Destinatário (autoridade, órgão ou homenageado)", d.destinatario) +
+    (d.funcao === "pedido_comissao" ? linha("Providência pedida à comissão", d.subtipo) : "") +
+    linha("Dispositivo do regimento", d.dispositivo) +
+    linha("Local (copie exatamente)", d.local) +
+    linha("Data e hora propostas", d.quando) +
+    linha("Cidade", d.cidade) +
+    linha("Orientação da equipe (siga, sem copiar literalmente)", d.orientacao) +
+    blocoDeRelatos(d.relatos)
+  );
+}
