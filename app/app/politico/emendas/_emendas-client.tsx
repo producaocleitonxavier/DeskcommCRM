@@ -69,7 +69,7 @@ export interface EmendasClientProps {
   tipo: TipoMandato;
   ehDeputado: boolean;
   kpis: { destinosAtendidos: number; totalIndicacoes: number; valorTotalIndicado: string };
-  financeiro: { alocado: string; executado: string; pendente: string };
+  financeiro: { alocado: string; executado: string; pendente: string; percentualPago: string };
   pedidosAguardando: number;
   relatorioMunicipio: RelatorioGabineteInputCliente;
   porArea: Barra[];
@@ -231,9 +231,10 @@ export default function EmendasClient(props: EmendasClientProps) {
 
           {/* Ciclo do dinheiro (nossa vantagem: não paramos no "pago"). */}
           <section className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-            <KpiCard label="Total alocado" valor={financeiro.alocado} icone={Wallet} />
-            <KpiCard label="Executado (pago)" valor={financeiro.executado} icone={CheckCircle2} />
-            <KpiCard label="Pendente" valor={financeiro.pendente} icone={Clock} />
+            {/* "Total alocado" saiu: era o mesmo número de "Valor total indicado", logo acima. */}
+            <KpiCard label="Já pago" valor={financeiro.executado} icone={CheckCircle2} />
+            <KpiCard label="Ainda a pagar" valor={financeiro.pendente} icone={Clock} />
+            <KpiCard label="Do indicado, já foi pago" valor={financeiro.percentualPago} icone={Wallet} />
           </section>
 
           {pedidosAguardando > 0 && (

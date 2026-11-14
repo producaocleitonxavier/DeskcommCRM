@@ -17,9 +17,9 @@ export default async function WebhooksPage() {
   return (
     <div className="flex h-full flex-col gap-6 p-6">
       <CommandHero
-        eyebrow="Canais · Webhooks"
-        titulo="Webhooks"
-        subtitulo="Receba contatos de fora (landing pages, formulários) e crie automações que agem sozinhas."
+        eyebrow="Configurações · Avançado"
+        titulo="Formulários do site"
+        subtitulo="Receba no sistema os cadastros feitos num site ou formulário de fora, e escolha o que acontece com cada um."
       />
       <WebhooksClient />
     </div>

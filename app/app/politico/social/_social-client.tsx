@@ -6,7 +6,7 @@
  * (Google Notícias RSS) e, em breve, comentários do Instagram (ManyChat).
  */
 
-import { useState, useTransition } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { RadioTower, RefreshCw, Settings2, TrendingUp, TrendingDown, Minus, Flame, ExternalLink, Sparkles } from "lucide-react";
 
@@ -198,7 +198,7 @@ export default function OpiniaoPublicaClient({ config, resumo, mencoes }: { conf
 
           {/* Pulso */}
           <section className="gip-glass p-6">
-            <div className="mb-4 flex items-center justify-between">
+            <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
               <h2 className="text-sm font-bold" style={{ color: "var(--color-text)" }}>Pulso da cobertura</h2>
               <div className="flex items-center gap-3 text-[11px]" style={{ color: "var(--color-text-subtle)" }}>
                 <Leg cor="var(--color-accent)" t="volume" linha /><Leg cor={SENT.positivo.cor} t="dia positivo" /><Leg cor={SENT.negativo.cor} t="dia negativo" />
@@ -249,7 +249,9 @@ export default function OpiniaoPublicaClient({ config, resumo, mencoes }: { conf
           <section className="gip-glass p-5">
             <div className="mb-3 flex items-center justify-between">
               <h2 className="text-sm font-bold" style={{ color: "var(--color-text)" }}>Notícias recentes</h2>
-              <span className="text-[11px]" style={{ color: "var(--color-text-subtle)" }}>as {Math.min(mencoes.length, 15)} mais recentes</span>
+              <span className="text-[11px]" style={{ color: "var(--color-text-subtle)" }}>
+                {mencoes.length > 15 ? `as 15 mais recentes de ${mencoes.length}` : `${mencoes.length} ${mencoes.length === 1 ? "notícia" : "notícias"}`}
+              </span>
             </div>
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
               {mencoes.slice(0, 15).map((m) => {
@@ -342,8 +344,21 @@ function smoothPath(pts: [number, number][]): string {
  */
 function PulsoArea({ dados }: { dados: { dia: string; total: number; pos: number; neg: number }[] }) {
   const [hover, setHover] = useState<number | null>(null);
+  // O desenho usa a largura REAL da caixa: esticado para caber (como era), os números e as datas
+  // saíam deformados e o gráfico ficava espremido no celular.
+  const caixa = useRef<HTMLDivElement | null>(null);
+  const [largura, setLargura] = useState(720);
+  useEffect(() => {
+    const el = caixa.current;
+    if (!el) return;
+    const medir = () => setLargura(Math.max(260, Math.round(el.getBoundingClientRect().width)));
+    medir();
+    const obs = new ResizeObserver(medir);
+    obs.observe(el);
+    return () => obs.disconnect();
+  }, []);
   if (dados.length === 0) return <p className="text-xs" style={{ color: "var(--color-text-subtle)" }}>Sem série ainda.</p>;
-  const W = 720, H = 150, padX = 12, padTop = 16, padBot = 26;
+  const W = largura, H = 170, padX = 18, padTop = 30, padBot = 26;
   const max = Math.max(...dados.map((d) => d.total), 1);
   const n = dados.length;
   const X = (i: number) => (n <= 1 ? W / 2 : padX + (i / (n - 1)) * (W - 2 * padX));
@@ -352,7 +367,11 @@ function PulsoArea({ dados }: { dados: { dia: string; total: number; pos: number
   const linha = smoothPath(pts);
   const area = `${linha} L ${X(n - 1)} ${H - padBot} L ${X(0)} ${H - padBot} Z`;
   const corDia = (d: { pos: number; neg: number }) => (d.pos > d.neg ? SENT.positivo.cor : d.neg > d.pos ? SENT.negativo.cor : SENT.neutro.cor);
-  const passo = Math.max(1, Math.ceil(n / 7));
+  // Datas e números: de quantos em quantos dias cabem sem encavalar nesta largura.
+  const passo = Math.max(1, Math.ceil(n / Math.max(3, Math.floor(W / 64))));
+  const totalDoPeriodo = dados.reduce((s, d) => s + d.total, 0);
+  const pico = dados.reduce((m, d) => (d.total > m.total ? d : m), dados[0]!);
+  const data = (iso: string) => `${iso.slice(8, 10)}/${iso.slice(5, 7)}`;
   function onMove(e: { currentTarget: SVGSVGElement; clientX: number }) {
     const rect = e.currentTarget.getBoundingClientRect();
     if (rect.width === 0) return;
@@ -363,8 +382,17 @@ function PulsoArea({ dados }: { dados: { dia: string; total: number; pos: number
   }
   const hd = hover != null ? dados[hover] : null;
   return (
-    <div style={{ position: "relative" }}>
-      <svg viewBox={`0 0 ${W} ${H}`} width="100%" height={H} preserveAspectRatio="none" role="img" aria-label="Pulso da cobertura por dia" onMouseMove={onMove} onMouseLeave={() => setHover(null)} style={{ cursor: "crosshair", display: "block" }}>
+    <div ref={caixa} style={{ position: "relative" }}>
+      {/* A resposta em uma frase, antes do desenho. */}
+      <p className="mb-2 text-sm" style={{ color: "var(--color-text)" }}>
+        <strong>{totalDoPeriodo}</strong> {totalDoPeriodo === 1 ? "notícia" : "notícias"} em {n} {n === 1 ? "dia" : "dias"}
+        {pico.total > 0 ? (
+          <>
+            {" · "}o dia com mais foi <strong>{data(pico.dia)}</strong>, com <strong>{pico.total}</strong>
+          </>
+        ) : null}
+      </p>
+      <svg viewBox={`0 0 ${W} ${H}`} width={W} height={H} role="img" aria-label={`Notícias por dia: ${totalDoPeriodo} em ${n} dias`} onMouseMove={onMove} onMouseLeave={() => setHover(null)} style={{ cursor: "crosshair", display: "block" }}>
         <defs>
           <linearGradient id="pulsoFill" x1="0" y1="0" x2="0" y2="1">
             <stop offset="0%" stopColor="color-mix(in srgb, var(--color-accent) 32%, transparent)" />
@@ -383,8 +411,11 @@ function PulsoArea({ dados }: { dados: { dia: string; total: number; pos: number
         {dados.map((d, i) => (
           <g key={d.dia}>
             <circle cx={X(i)} cy={Y(d.total)} r={hover === i ? 5.5 : 3.5} fill={corDia(d)} stroke="#0C0E13" strokeWidth={1.5} style={{ transition: "r .1s ease", opacity: 0, animation: `gip-area-in 0.4s ease ${(0.35 + (i / Math.max(n - 1, 1)) * 1.0).toFixed(2)}s forwards` }} />
+            {(i % passo === 0 || d.dia === pico.dia) && (
+              <text x={X(i)} y={Y(d.total) - 9} fontSize="11" fontWeight="700" fill="var(--color-text)" textAnchor="middle">{d.total}</text>
+            )}
             {i % passo === 0 && (
-              <text x={X(i)} y={H - 8} fontSize="9" fill="var(--color-text-subtle)" textAnchor="middle">{d.dia.slice(8, 10)}/{d.dia.slice(5, 7)}</text>
+              <text x={X(i)} y={H - 8} fontSize="10" fill="var(--color-text-subtle)" textAnchor="middle">{data(d.dia)}</text>
             )}
           </g>
         ))}

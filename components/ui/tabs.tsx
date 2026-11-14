@@ -24,7 +24,10 @@ const TabsList = React.forwardRef<
       // Aqui e não na tela do agente de propósito: TODA `TabsList` do app tem a
       // mesma fragilidade, e consertar só onde eu esbarrei deixaria as irmãs
       // quebradas com um álibi de "já foi tratado".
-      "inline-flex h-9 max-w-full items-center justify-center overflow-x-auto rounded-lg bg-muted p-1 text-muted-foreground",
+      // `justify-start`, não `justify-center`: centralizada, uma fila que NÃO cabe (celular) corta a
+      // primeira aba para fora da área rolável — ninguém alcança. Quando cabe, o `inline-flex` já
+      // encolhe até o conteúdo, então nada muda de lugar.
+      "inline-flex h-9 max-w-full items-center justify-start overflow-x-auto rounded-lg bg-muted p-1 text-muted-foreground",
       className,
     )}
     {...props}

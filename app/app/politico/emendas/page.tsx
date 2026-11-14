@@ -27,6 +27,12 @@ function moeda(cents: number): string {
   return (cents / 100).toLocaleString("pt-BR", { style: "currency", currency: "BRL", maximumFractionDigits: 0 });
 }
 
+/** O valor de uma etapa do dinheiro: o número quando há; "não informado" se a etapa já foi alcançada; traço se não. */
+function valorDaEtapa(cents: number, etapaAlcancada: boolean): string {
+  if (cents > 0) return moeda(cents);
+  return etapaAlcancada ? "não informado" : "—";
+}
+
 function emReais(cents: number): number {
   return Math.round(cents / 100);
 }
@@ -118,8 +124,13 @@ export default async function EmendasPage() {
     microRegiao: (e.micro_regiao as string | null) ?? null,
     repartida: (e.repartida_municipio as boolean | null) === true,
     valorIndicado: moeda(Number(e.valor_indicado_cents ?? 0)),
-    valorEmpenhado: moeda(Number(e.valor_empenhado_cents ?? 0)),
-    valorPago: moeda(Number(e.valor_pago_cents ?? 0)),
+    // Etapa já alcançada sem valor lançado: "não informado" (mostrar "R$ 0" numa emenda empenhada ou
+    // liquidada contradiz a própria etiqueta). Etapa ainda não alcançada: traço.
+    valorEmpenhado: valorDaEtapa(
+      Number(e.valor_empenhado_cents ?? 0),
+      ["empenhada", "liquidada", "paga"].includes(String(e.status ?? "")),
+    ),
+    valorPago: valorDaEtapa(Number(e.valor_pago_cents ?? 0), String(e.status ?? "") === "paga"),
     // Estados da régua do ciclo do dinheiro (Indicado→Empenhado→Pago). Ligamos o
     // nó pelo VALOR (>0) ou pelo STATUS já ter passado da etapa — o que vier antes.
     empenhadoOn:
@@ -141,6 +152,10 @@ export default async function EmendasPage() {
         alocado: moeda(painel.financeiro.alocadoCents),
         executado: moeda(painel.financeiro.executadoCents),
         pendente: moeda(painel.financeiro.pendenteCents),
+        percentualPago:
+          painel.financeiro.alocadoCents > 0
+            ? `${Math.round((painel.financeiro.executadoCents * 100) / painel.financeiro.alocadoCents)}%`
+            : "—",
       }}
       pedidosAguardando={painel.pedidosAguardando}
       relatorioMunicipio={relatorioMunicipio}
