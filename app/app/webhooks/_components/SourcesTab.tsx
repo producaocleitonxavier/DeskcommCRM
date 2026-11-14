@@ -46,13 +46,13 @@ export function SourcesTab() {
         <Card className="max-w-md">
           <CardHeader className="items-center text-center">
             <PlugsConnected className="mb-2 h-10 w-10 text-accent" />
-            <CardTitle>{t("Conecte sua landing page em 2 minutos")}</CardTitle>
+            <CardTitle>{t("Ligue o formulário do seu site em 2 minutos")}</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4 text-center">
             <ol className="space-y-2 text-left text-sm text-muted-foreground">
-              <li>{t("1. Crie uma fonte e diga em qual funil o contato entra.")}</li>
+              <li>{t("1. Crie uma fonte e diga para onde o cadastro vai.")}</li>
               <li>{t("2. Copie o endereço ou o formulário pronto.")}</li>
-              <li>{t("3. Cole no seu site — cada envio vira um lead aqui dentro.")}</li>
+              <li>{t("3. Cole no seu site — cada envio vira um cadastro aqui dentro.")}</li>
             </ol>
             <Button onClick={() => setCreateOpen(true)}>
               <Plus /> {t("Criar primeira fonte")}

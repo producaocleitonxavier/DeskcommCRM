@@ -5525,6 +5525,7 @@ export const DICIONARIO: Traducoes = {
     es: "Recibe contactos de afuera (landing pages, formularios) y crea automatizaciones que actúan solas.",
   },
   "Receber dados": { es: "Recibir datos" },
+  "Cadastros recebidos": { es: "Registros recibidos" },
   "Leads recebidos": { es: "Leads recibidos" },
   Automações: { es: "Automatizaciones" },
   Atividade: { es: "Actividad" },
@@ -5793,13 +5794,16 @@ export const DICIONARIO: Traducoes = {
   "Fonte excluída.": { es: "Fuente eliminada." },
   "nunca recebeu": { es: "nunca recibió" },
   "último recebimento": { es: "último recibido" },
+  "Ligue o formulário do seu site em 2 minutos": { es: "Conecta el formulario de tu sitio en 2 minutos" },
   "Conecte sua landing page em 2 minutos": { es: "Conecta tu landing page en 2 minutos" },
+  "1. Crie uma fonte e diga para onde o cadastro vai.": { es: "1. Crea una fuente e indica adónde va el registro." },
   "1. Crie uma fonte e diga em qual funil o contato entra.": {
     es: "1. Crea una fuente y di en qué embudo entra el contacto.",
   },
   "2. Copie o endereço ou o formulário pronto.": {
     es: "2. Copia la dirección o el formulario listo.",
   },
+  "3. Cole no seu site — cada envio vira um cadastro aqui dentro.": { es: "3. Pégalo en tu sitio — cada envío se convierte en un registro aquí." },
   "3. Cole no seu site — cada envio vira um lead aqui dentro.": {
     es: "3. Pégalo en tu sitio: cada envío se convierte en un lead aquí.",
   },

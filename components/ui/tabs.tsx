@@ -27,7 +27,11 @@ const TabsList = React.forwardRef<
       // `justify-start`, não `justify-center`: centralizada, uma fila que NÃO cabe (celular) corta a
       // primeira aba para fora da área rolável — ninguém alcança. Quando cabe, o `inline-flex` já
       // encolhe até o conteúdo, então nada muda de lugar.
-      "inline-flex h-9 max-w-full items-center justify-start overflow-x-auto rounded-lg bg-muted p-1 text-muted-foreground",
+      //
+      // `max-sm:flex-wrap max-sm:h-auto`: em tela de celular a fila quebra em linhas. Rolar para o lado
+      // (o que havia) deixa a última aba cortada sem nada indicar que existe mais — visto em uso real
+      // (14/nov): "Receber dados | Leads recebidos | Autom". Em tela larga nada muda.
+      "inline-flex h-9 max-w-full items-center justify-start overflow-x-auto rounded-lg bg-muted p-1 text-muted-foreground max-sm:h-auto max-sm:flex-wrap",
       className,
     )}
     {...props}
