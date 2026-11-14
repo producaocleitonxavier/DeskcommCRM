@@ -14,7 +14,6 @@ import { createClient } from "@/lib/supabase/server";
 import { lerVozConfig } from "@/lib/voz/config";
 import { vozProviderConfigurado } from "@/lib/voz/elevenlabs";
 import { lerVozSpeed } from "@/lib/voz/velocidade";
-import { BlindagemJuridica } from "@/components/politico/blindagem-juridica";
 import VozClient from "./_voz-client";
 
 export const dynamic = "force-dynamic";
@@ -30,16 +29,6 @@ export default async function VozPage() {
   const { data: orgRow } = await db.from("organizations").select("settings").eq("id", org.orgId).maybeSingle();
   const velocidade = lerVozSpeed(orgRow?.settings);
 
-  // Estado REAL da trava eleitoral (camada `promessa_de_campanha`) — o selo
-  // "Ativa e verificada" reflete o banco, não é decoração.
-  const { data: camada } = await db
-    .from("org_guardrail_layers")
-    .select("enabled")
-    .eq("organization_id", org.orgId)
-    .eq("layer", "promessa_de_campanha")
-    .maybeSingle();
-  const travaEleitoralAtiva = camada?.enabled === true;
-
   return (
     <>
       <VozClient
@@ -52,9 +41,6 @@ export default async function VozPage() {
           velocidade,
         }}
       />
-      <div className="mx-auto max-w-[760px] px-4 pb-10">
-        <BlindagemJuridica travaEleitoralAtiva={travaEleitoralAtiva} />
-      </div>
     </>
   );
 }

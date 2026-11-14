@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { NavHub } from "@/components/shell/NavHub";
 import { ENDERECOS_DAS_SECOES, SecoesDoGabinete } from "@/components/shell/SecoesDoGabinete";
+import { BlindagemJuridica } from "@/components/politico/blindagem-juridica";
 import { hubSections } from "@/lib/navigation/registry";
 import { destinosDaInterface } from "@/lib/navigation/interface";
 import { ehGabinete } from "@/lib/navigation/menu-do-gabinete";
@@ -65,7 +66,16 @@ export default async function SettingsHubPage() {
       .flatMap((sec) => sec.items)
       .filter((d) => !ENDERECOS_DAS_SECOES.has(d.href) && !comerciais.has(d.href))
       .map((d) => ({ href: d.href, titulo: traduzir(d.label, idioma), texto: d.description ? traduzir(d.description, idioma) : "" }));
-    return <SecoesDoGabinete visiveis={visiveis} resto={resto} />;
+    // As proteções que a IA aplica sozinha valem para todo o atendimento do gabinete — por isso
+    // moram aqui, e não na tela da Voz (onde estavam). Em gabinete a trava de promessa vale sempre.
+    return (
+      <>
+        <SecoesDoGabinete visiveis={visiveis} resto={resto} />
+        <div className="mx-auto w-full max-w-6xl pb-12">
+          <BlindagemJuridica travaEleitoralAtiva />
+        </div>
+      </>
+    );
   }
 
   return (

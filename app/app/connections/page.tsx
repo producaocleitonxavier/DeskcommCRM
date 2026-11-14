@@ -27,9 +27,9 @@ export default async function ConnectionsPage() {
   return (
     <div className="flex h-full flex-col gap-6 p-6">
       <CommandHero
-        eyebrow="Canais · Conexões"
-        titulo="Conexões"
-        subtitulo="Por onde você fala com o seu público. Conecte números por QR ou o número oficial da Meta, e acompanhe a saúde de cada um."
+        eyebrow="Configurações · WhatsApp e Instagram"
+        titulo="Números de WhatsApp"
+        subtitulo="Os números por onde o gabinete conversa com as pessoas. Conecte um número pelo código QR e acompanhe a saúde de cada um."
       />
       <ConexoesShell
         wahaConfigured={wahaConfigured}

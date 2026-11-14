@@ -90,6 +90,14 @@ function normalizarTelefone(tel: string): string | null {
 }
 
 /** Busca cidadãos (contacts) por nome, na org ativa. Server-side (autenticado). */
+/**
+ * A data de HOJE em Brasília (AAAA-MM-DD). `new Date().toISOString()` dá o dia de Greenwich: depois das
+ * 21h de Brasília já é "amanhã" lá, e a visita marcada à noite ficava com a data do dia seguinte.
+ */
+function hojeEmBrasilia(): string {
+  return new Intl.DateTimeFormat("en-CA", { timeZone: "America/Sao_Paulo" }).format(new Date());
+}
+
 export async function buscarCidadaos(q: string): Promise<CidadaoOpcao[]> {
   const termo = q.trim();
   if (termo.length < 2) return [];
@@ -368,7 +376,7 @@ export async function marcarVisitaRealizada(demandaId: string, realizada: boolea
   const db = await createClient();
   const { error } = await db
     .from("demandas")
-    .update({ pol_visita_realizada_em: realizada ? new Date().toISOString().slice(0, 10) : null })
+    .update({ pol_visita_realizada_em: realizada ? hojeEmBrasilia() : null })
     .eq("id", demandaId)
     .eq("organization_id", org);
   if (error) return { ok: false, erro: traduzErro(error) };
@@ -406,7 +414,7 @@ export async function registrarRelatoVisita(
     pol_visita_decisoes: (entrada.decisoes ?? "").trim() || null,
   };
   // Relato implica visita feita: se ainda não tinha data de realização, carimba hoje.
-  if (!jaRealizada) base.pol_visita_realizada_em = new Date().toISOString().slice(0, 10);
+  if (!jaRealizada) base.pol_visita_realizada_em = hojeEmBrasilia();
 
   // Autoria do relato (quem preencheu — pode ser um colega, não o responsável).
   const nomes = await nomesDosAtendentes([user.id]);

@@ -1,3 +1,4 @@
+import { CommandHero } from "@/components/politico/command-hero";
 import { redirect } from "next/navigation";
 
 import { requireAuth, resolveActiveOrg } from "@/lib/auth/server";
@@ -5,7 +6,6 @@ import { ROLE_RANK } from "@/lib/auth/types";
 import { createClient } from "@/lib/supabase/server";
 import { BudgetCard } from "@/components/ai/BudgetCard";
 import { getBudgetStatus } from "@/lib/ai/budget/check";
-import { traduzir } from "@/lib/i18n/dicionario";
 import { UsageDashboardClient } from "./_client";
 
 export const dynamic = "force-dynamic";
@@ -52,19 +52,14 @@ export default async function AiUsagePage({ searchParams }: PageProps) {
 
   const budget = await getBudgetStatus(activeOrg.orgId);
   const isAdmin = ROLE_RANK[activeOrg.role] >= ROLE_RANK.admin;
-  const idioma = user.idioma;
 
   return (
     <div className="flex h-full flex-col gap-6 p-6">
-      <header>
-        <h1 className="text-2xl font-semibold tracking-tight">{traduzir("Uso de IA", idioma)}</h1>
-        <p className="text-sm text-muted-foreground">
-          {traduzir(
-            "Quanto a inteligência artificial custou, quantas vezes foi chamada, quantos turnos o agente fez, quanto demora uma chamada e quantas vezes precisou chamar uma pessoa — nos últimos 30 dias.",
-            idioma,
-          )}
-        </p>
-      </header>
+      <CommandHero
+        eyebrow="Configurações · Assistente de IA"
+        titulo="Uso e teto de gasto"
+        subtitulo="Quanto a IA gastou, quantas respostas deu e quantas vezes precisou chamar uma pessoa da equipe — nos últimos 30 dias."
+      />
       <BudgetCard initialData={budget} isAdmin={isAdmin} />
       <UsageDashboardClient agents={agents} initial={initial} />
     </div>

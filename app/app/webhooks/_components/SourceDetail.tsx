@@ -371,7 +371,7 @@ export function SourceDetail({ source, open, onOpenChange }: Props) {
           <section className="space-y-2 rounded-sm border border-border p-3">
             <div className="flex items-center justify-between gap-3">
               <label htmlFor="authorize-ai-on-capture" className="block text-sm font-medium text-text">
-                {t("Autorizar IA para leads deste formulário")}
+                {gabinete ? "Deixar a IA atender quem se cadastrar por este formulário" : t("Autorizar IA para leads deste formulário")}
               </label>
               <Switch id="authorize-ai-on-capture" checked={Boolean(autorizaIA)}
                 disabled={!podeGerirWebhooks || update.isPending || (!temAssinatura && !autorizaIA)}
@@ -394,7 +394,9 @@ export function SourceDetail({ source, open, onOpenChange }: Props) {
           <section className="space-y-2">
             <p className="text-sm font-medium text-text">{t("Personalizar perguntas do formulário")}</p>
             <p className="text-xs text-muted-foreground">
-              {t("As respostas extras ficam nos campos personalizados do lead e no histórico desta captação. O checkbox envia sim ou não; a lista permite escolher uma opção.")}
+              {gabinete
+                ? "As respostas extras ficam guardadas no histórico de cada cadastro recebido. A caixa de marcar envia sim ou não; a lista permite escolher uma opção."
+                : t("As respostas extras ficam nos campos personalizados do lead e no histórico desta captação. O checkbox envia sim ou não; a lista permite escolher uma opção.")}
             </p>
             <WebhookFormFieldsEditor fields={formFields} onChange={setFormFields} />
             <Button
@@ -667,11 +669,13 @@ export function SourceDetail({ source, open, onOpenChange }: Props) {
             </AlertDialogTrigger>
             <AlertDialogContent>
               <AlertDialogHeader>
-                <AlertDialogTitle>{t("Excluir esta fonte?")}</AlertDialogTitle>
+                <AlertDialogTitle>{gabinete ? "Excluir este formulário?" : t("Excluir esta fonte?")}</AlertDialogTitle>
                 <AlertDialogDescription>
-                  {t(
-                    "O endereço para de funcionar imediatamente. Leads já recebidos continuam no seu funil — só a captação futura é interrompida. Essa ação não pode ser desfeita.",
-                  )}
+                  {gabinete
+                    ? "O endereço para de funcionar imediatamente. Quem já se cadastrou continua em Pessoas — só os cadastros futuros deixam de chegar. Essa ação não pode ser desfeita."
+                    : t(
+                        "O endereço para de funcionar imediatamente. Leads já recebidos continuam no seu funil — só a captação futura é interrompida. Essa ação não pode ser desfeita.",
+                      )}
                 </AlertDialogDescription>
               </AlertDialogHeader>
               <AlertDialogFooter>

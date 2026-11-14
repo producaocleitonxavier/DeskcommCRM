@@ -32,12 +32,20 @@ import {
 } from "@/hooks/webhooks/useLeadCaptures";
 import { useWebhookSources } from "@/hooks/webhooks/useWebhookSources";
 import { CapturaDetail } from "./CapturaDetail";
+import { useEhGabinete } from "./gabinete";
 import { useT } from "@/hooks/i18n/useT";
 
 const TODAS = "__todas__";
 
 export const DESFECHO_LABEL: Record<DesfechoDaCaptacao, string> = {
   criado: "Virou lead",
+  duplicado: "Reenvio",
+  recusado: "Não entrou",
+};
+
+/** O mesmo desfecho, nas palavras do gabinete (não há "lead": há cadastro). */
+export const DESFECHO_LABEL_GABINETE: Record<DesfechoDaCaptacao, string> = {
+  criado: "Recebido",
   duplicado: "Reenvio",
   recusado: "Não entrou",
 };
@@ -78,6 +86,7 @@ function paraIso(valor: string): string | undefined {
 export function CapturasTab() {
   const tagDoIdioma = useTagDeIdioma();
   const t = useT();
+  const gabinete = useEhGabinete();
   const [busca, setBusca] = React.useState("");
   const [buscaAplicada, setBuscaAplicada] = React.useState("");
   const [fonte, setFonte] = React.useState<string>(TODAS);
@@ -282,7 +291,7 @@ export function CapturasTab() {
                       </TableCell>
                       <TableCell>
                         <Badge variant={DESFECHO_VARIANTE[row.outcome]}>
-                          {t(DESFECHO_LABEL[row.outcome])}
+                          {gabinete ? DESFECHO_LABEL_GABINETE[row.outcome] : t(DESFECHO_LABEL[row.outcome])}
                         </Badge>
                       </TableCell>
                     </TableRow>

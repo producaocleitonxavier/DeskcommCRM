@@ -16,7 +16,8 @@ import {
 import { ArrowSquareOut, Clock, Globe, IdentificationCard } from "@/lib/ui/icons";
 import { MOTIVO_DA_RECUSA_LABEL, type MotivoDaRecusa } from "@/lib/webhooks/captacao";
 import type { LeadCaptureRow } from "@/hooks/webhooks/useLeadCaptures";
-import { DESFECHO_LABEL } from "./CapturasTab";
+import { DESFECHO_LABEL, DESFECHO_LABEL_GABINETE } from "./CapturasTab";
+import { useEhGabinete } from "./gabinete";
 import { useT } from "@/hooks/i18n/useT";
 import { CadastrarCampo, useCampoDoFunilDaCaptacao } from "./CadastrarCampo";
 import { useWebhookSources } from "@/hooks/webhooks/useWebhookSources";
@@ -58,6 +59,7 @@ function valorLegivel(valor: unknown): string {
 export function CapturaDetail({ captura, onOpenChange }: Props) {
   const tagDoIdioma = useTagDeIdioma();
   const t = useT();
+  const gabinete = useEhGabinete();
   // Antes do `return null`: hook não pode ficar depois de retorno condicional.
   const funil = useCampoDoFunilDaCaptacao(captura?.webhook_source_id ?? null);
   const { data: fontesRes } = useWebhookSources();
@@ -87,7 +89,7 @@ export function CapturaDetail({ captura, onOpenChange }: Props) {
                     : "neutral"
               }
             >
-              {t(DESFECHO_LABEL[captura.outcome])}
+              {gabinete ? DESFECHO_LABEL_GABINETE[captura.outcome] : t(DESFECHO_LABEL[captura.outcome])}
             </Badge>
           </div>
           <SheetDescription>
@@ -171,7 +173,15 @@ export function CapturaDetail({ captura, onOpenChange }: Props) {
             </dl>
           </section>
 
-          {captura.lead_id ? (
+          {gabinete ? (
+            captura.lead_id ? (
+              <Button asChild variant="secondary">
+                <Link href="/app/politico/leads">
+                  <ArrowSquareOut /> Ver em Pessoas
+                </Link>
+              </Button>
+            ) : null
+          ) : captura.lead_id ? (
             <Button asChild variant="secondary">
               <Link href={`/app/leads/${captura.lead_id}`}>
                 <ArrowSquareOut /> {t("Ver o lead no funil")}
