@@ -39,7 +39,9 @@ const styles = StyleSheet.create({
   // Timbrado: página sem padding (a imagem é o fundo) + faixa de conteúdo que
   // limpa o cabeçalho (~120pt) e o rodapé (~150pt) típicos do papel timbrado.
   pageTimbrado: { position: "relative", fontSize: 11, lineHeight: 1.5, color: "#1A1A1A" },
-  fundoTimbrado: { position: "absolute", top: 0, left: 0, width: "100%", height: "100%" },
+  // Tamanho em PONTOS (A4), não em %: com as margens na página, "100%" passaria a
+  // ser a área de texto e o timbrado encolheria.
+  fundoTimbrado: { position: "absolute", top: 0, left: 0, width: 595.28, height: 841.89 },
   conteudoTimbrado: { paddingTop: 120, paddingBottom: 150, paddingHorizontal: 70 },
   // Páginas de ANEXO (fotos da demanda) — uma foto por página, no MESMO papel
   // timbrado do ofício (o cabeçalho se repete, como na praxe de gabinete). Sem
