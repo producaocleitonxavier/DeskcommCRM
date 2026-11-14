@@ -76,6 +76,11 @@ export async function avisarCidadao(
   const user = await autenticarComPapel("agent");
   const org = await resolveActiveOrg(user);
   if (!org) return { ok: false, erro: "Sessão ou organização inválida." };
+  // Texto escrito pela pessoa: recusado antes de qualquer efeito (conversa, ofício).
+  {
+    const bloqueioDoTexto = bloqueioDeTextoHumano(opts?.texto);
+    if (bloqueioDoTexto) return { ok: false, erro: bloqueioDoTexto };
+  }
   const db = await createClient();
 
   const { data, error } = await db

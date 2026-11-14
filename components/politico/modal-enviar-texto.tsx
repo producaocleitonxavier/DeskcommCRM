@@ -10,7 +10,7 @@
  * mesmo padrão, para TEXTO: pré-preenche a sugestão, o assessor edita (quebra
  * parágrafo, encurta, ajusta o tom) e só então envia.
  */
-import { useState, useTransition, type CSSProperties, type ReactNode } from "react";
+import { useMemo, useState, useTransition, type CSSProperties, type ReactNode } from "react";
 import { Loader2, X, Send, Check } from "lucide-react";
 
 import { BannerAvisoTse, useAvisoTse } from "@/components/politico/aviso-tse";
@@ -56,7 +56,7 @@ export function ModalEnviarTexto({
   // Advertência TSE recalculada a cada edição do texto (detector puro, no cliente).
   const avisoTse = useAvisoTse(texto);
   // Troca por voto não é advertência: é bloqueio (o servidor recusa do mesmo jeito).
-  const bloqueio = bloqueioDeTextoHumano(texto);
+  const bloqueio = useMemo(() => bloqueioDeTextoHumano(texto), [texto]);
 
   function abrir() {
     // Reabrir sempre parte da sugestão fresca (demanda pode ter mudado).

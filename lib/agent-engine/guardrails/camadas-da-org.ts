@@ -90,9 +90,23 @@ export async function lerCamadasDaOrg(db: pg.Pool, organizationId: string): Prom
       `select layer, enabled from org_guardrail_layers where organization_id = $1`,
       [organizationId],
     );
-    return escolhaDasLinhas(rows);
+    const escolha = escolhaDasLinhas(rows);
+    // Gabinete parlamentar: a trava de promessa de campanha vale SEMPRE — mesmo sem
+    // linha (gabinete antigo) ou com a linha desligada por fora da tela.
+    if (await ehGabinete(db, organizationId)) escolha.promessa_de_campanha = true;
+    return escolha;
   } catch {
     return { ...SEM_ESCOLHA };
+  }
+}
+
+/** A organização tem identidade de gabinete? Tabela ausente ou erro contam como não. */
+async function ehGabinete(db: pg.Pool, organizationId: string): Promise<boolean> {
+  try {
+    const { rows } = await db.query('select 1 from pol_gabinete_config where organization_id = $1 limit 1', [organizationId]);
+    return rows.length > 0;
+  } catch {
+    return false;
   }
 }
 

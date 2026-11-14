@@ -145,27 +145,48 @@ const GARANTIA_LITERAL = String.raw`resultado\s+garantido|garantia\s+de\s+(?:res
 
 /**
  * TERCEIRA PESSOA (14/nov): quem fala em nome do gabinete promete pela boca do
- * parlamentar — "o vereador vai conseguir sua vaga", "o gabinete garante seu
- * auxílio", "ele vai liberar sua consulta". O sujeito é fechado em quem REPRESENTA o
- * mandato: "a prefeitura vai liberar o auxílio" é informação, não promessa nossa.
+ * parlamentar — "o vereador vai conseguir sua vaga", "o gabinete garante seu auxílio",
+ * "a gente vai arrumar um emprego pra você". O sujeito é fechado em quem REPRESENTA o
+ * mandato. "Ele", "ela", "a equipe", "o prefeito", "o doutor" ficaram de fora de
+ * propósito: no atendimento são quase sempre terceiros ("lá ela consegue o Bolsa
+ * Família", "a equipe do CRAS libera a cesta") e barrar isso quebrava a rotina.
  */
 const SUJEITO_DO_MANDATO =
-  String.raw`vereador(?:a)?|deputad[oa]|senador(?:a)?|prefeit[oa]|parlamentar|gabinete|mandato|equipe|assessoria|ele|ela|doutor(?:a)?|dr\.?|dra\.?`;
+  String.raw`vereador(?:a|es|as)?|deputad[oa]s?|senador(?:a|es|as)?|parlamentar(?:es)?|gabinete|mandato|nossa\s+equipe|nosso\s+time`;
 const VERBOS_DE_ENTREGA_3P =
-  String.raw`(?:vai|v[aã]o|ir[aá]|ir[aã]o)\s+(?:te\s+|lhe\s+)?(?:conseguir|arranjar|dar|garantir|liberar|providenciar|resolver|assegurar)|` +
-  String.raw`conseguir[aá]|arranjar[aá]|dar[aá]|garantir[aá]|liberar[aá]|providenciar[aá]|resolver[aá]|assegurar[aá]|` +
-  String.raw`(?:te\s+|lhe\s+)?(?:consegue|arranja|garante|libera|providencia|resolve|assegura)`;
+  String.raw`(?:vai|v[aã]o|ir[aá]|ir[aã]o)\s+(?:te\s+|lhe\s+)?(?:conseguir|arranjar|arrumar|dar|garantir|liberar|providenciar|resolver|assegurar)|` +
+  String.raw`conseguir[aá]|arranjar[aá]|arrumar[aá]|dar[aá]|garantir[aá]|liberar[aá]|providenciar[aá]|resolver[aá]|assegurar[aá]|` +
+  String.raw`(?:te\s+|lhe\s+)?(?:consegue|arranja|arruma|garante|libera|providencia|assegura)`;
 
-/** Momento do voto — o que transforma "lembra da gente" em pedido de retribuição. */
-const HORA_DO_VOTO = String.raw`elei[cç][aã]o|elei[cç][oõ]es|urna|urnas|votar|vota[cç][aã]o|outubro|campanha`;
+/**
+ * Momento do voto — o que transforma "lembra da gente" em pedido de retribuição.
+ * "Outubro", "campanha" e "votação" NÃO entram: são palavras do dia a dia do gabinete
+ * (mandato itinerante em outubro, campanha do agasalho, votação do projeto).
+ */
+const HORA_DO_VOTO = String.raw`elei[cç][aã]o|elei[cç][oõ]es|urna|urnas|(?:hora|dia)\s+de\s+votar|hora\s+do\s+voto`;
+
+/** Voto que NÃO é o voto na urna: enquete, consulta pública, projeto em plenário. */
+const VOTO_QUE_NAO_E_DE_URNA = String.raw`enquete|consulta|pesquisa|or[cç]amento|projeto|pr[eê]mio|concurso|plen[aá]rio|comiss[aã]o|favor[aá]vel`;
 
 /** Perder o que já tem — a ameaça que o art. 41-A, § 2º, trata como captação. */
-const PERDA = String.raw`perde|perder|perder[aá]|vai\s+perder|fica\s+sem|ficar\s+sem|ficar[aá]\s+sem|vai\s+ficar\s+sem|corta|cortar|v[aã]o\s+cortar|vai\s+ser\s+cortad[oa]`;
+const PERDA = String.raw`perde|perdem|perder|perder[aá]|vai\s+perder|fica\s+sem|ficam\s+sem|ficar\s+sem|ficar[aá]\s+sem|vai\s+ficar\s+sem`;
 
-/** "Não é possível furar a fila", "ninguém pode passar na frente": recusa, não oferta. */
+/** "Não é possível", "ninguém pode": recusa, não oferta. */
 const NAO_IMPEDIDO = String.raw`(?<!(?:n[aã]o\s+[eé]\s+poss[ií]vel|imposs[ií]vel|n[aã]o\s+d[aá]\s+(?:para|pra)|n[aã]o\s+pode(?:mos)?|ningu[eé]m\s+pode|n[aã]o\s+tem\s+como)\s+)`;
 
-const REGRAS: ReadonlyArray<{ categoria: CategoriaDeCampanha; padrao: RegExp; perguntaDesarma: boolean }> = [
+/** "Na frente" de quem: fim da oração, ou da fila/lista/dos outros. "Te passo na frente o contato" não é. */
+const NA_FRENTE_DE_QUEM = String.raw`(?=\s*(?:[.!,;:]|$|d[ao]s?\s+(?:fila|lista|outros|demais)|n[ao]\s+(?:fila|lista)))`;
+
+/** Qualquer negação na frase — desarma as regras de terceira pessoa e de fila (recusar não é prometer). */
+const TEM_NEGACAO = new RegExp(String.raw`${INICIO}(?:n[aã]o|nem|nunca|jamais|ningu[eé]m)${FIM}`, 'iu');
+
+const REGRAS: ReadonlyArray<{
+  categoria: CategoriaDeCampanha;
+  padrao: RegExp;
+  perguntaDesarma: boolean;
+  /** A regra não vale quando a frase traz uma negação, em qualquer lugar. */
+  negacaoDesarma?: boolean;
+}> = [
   {
     // CAPTAÇÃO DE SUFRÁGIO — voto ligado a uma entrega, nos dois sentidos dentro da frase.
     // Oferta vale mesmo em pergunta ("vota em mim que eu te arranjo um emprego?"), como a
@@ -187,15 +208,18 @@ const REGRAS: ReadonlyArray<{ categoria: CategoriaDeCampanha; padrao: RegExp; pe
         // curto (não só "que"/"se"), de uma entrega de BENEFÍCIO CONCRETO. Exigir o
         // benefício mantém o falso-positivo baixo (voto + verbo sozinhos não bastam).
         String.raw`${palavra(VOTO)}.{0,30}?(?:${ENTREGA_CURTA})\s+${ADVERBIO_OPC}${DETERMINANTE}${palavra(BENEFICIOS)}`,
-        // RECIPROCIDADE — "lembra da gente na eleição", "não esquece do vereador na hora de
+        // RECIPROCIDADE — "lembra da gente na eleição", "não esqueça do vereador na hora de
         // votar", "conto com seu voto", "retribua nas urnas", "uma mão lava a outra".
-        String.raw`(?:lembr[ae]r?|lembrem|n[aã]o\s+(?:se\s+)?esque[cç][ae]m?)\s+(?:de\s+mim|da\s+gente|de\s+n[oó]s|d[oa]\s+(?:${SUJEITO_DO_MANDATO})).{0,40}?${palavra(HORA_DO_VOTO)}`,
-        String.raw`${palavra('conto|contamos|conta|contar')}\s+com\s+(?:o\s+)?(?:seu|teu|vosso)\s+(?:voto|apoio\s+n(?:a|as)\s+(?:urna|urnas|elei[cç][aã]o|elei[cç][oõ]es))`,
-        String.raw`${palavra('retribu[a-z]+')}.{0,30}?${palavra('urna|urnas|voto|votando')}`,
+        String.raw`(?:${palavra('lembr[ae]r?|lembrem')}(?:-se)?|n[aã]o\s+(?:se\s+)?${palavra('esque[cç][ae]m?')})\s+(?:de\s+mim|da\s+gente|de\s+n[oó]s|d[oa]s?\s+(?:vereador(?:a|es|as)?|deputad[oa]s?|senador(?:a|es|as)?|parlamentar(?:es)?|gabinete|mandato))${FIM}[^.!?\n]{0,40}?${palavra(HORA_DO_VOTO)}`,
+        // "Conto com seu voto" — menos quando é o voto numa enquete, consulta ou projeto.
+        String.raw`${palavra('conto|contamos|conta|contar')}\s+com\s+(?:o\s+)?(?:seu|teu|vosso)\s+(?:voto${FIM}(?![^.!?\n]{0,60}${palavra(VOTO_QUE_NAO_E_DE_URNA)})|apoio\s+n(?:a|as)\s+(?:urna|urnas|elei[cç][aã]o|elei[cç][oõ]es))`,
+        String.raw`${palavra('retribu[a-zçã]+')}[^.!?\n]{0,30}?(?:${palavra('urna|urnas|votando')}|com\s+(?:o\s+)?(?:seu|teu)\s+voto${FIM})`,
         String.raw`uma\s+m[aã]o\s+lava\s+a\s+outra`,
-        // AMEAÇA DE PERDA — "se não votar, perde o auxílio", "quem não apoiar fica sem a cesta".
-        String.raw`(?:se|quem|caso)\s+(?:voc[eê]\s+|vc\s+)?n[aã]o\s+(?:votar|apoiar|vier\s+com\s+a\s+gente).{0,50}?${palavra(PERDA)}`,
-        String.raw`${palavra(PERDA)}\s+${DETERMINANTE}${palavra(BENEFICIOS)}.{0,40}?(?:se|caso)\s+(?:voc[eê]\s+|vc\s+)?n[aã]o\s+(?:votar|apoiar)`,
+        // AMEAÇA DE PERDA — "se não votar, perde o auxílio", "quem não apoiar fica sem a
+        // cesta". A perda tem de ser de um BENEFÍCIO: "se não votar na enquete, perde a
+        // chance de opinar" e "quem não votar fica sem tirar passaporte" são informação.
+        String.raw`(?:se|quem|caso)\s+(?:voc[eê]s?\s+|vc\s+)?n[aã]o\s+(?:votar(?:em)?|apoiar(?:em)?|vier\s+com\s+a\s+gente)[^.!?\n]{0,50}?${palavra(PERDA)}\s+${DETERMINANTE}${palavra(BENEFICIOS)}`,
+        String.raw`${palavra(PERDA)}\s+${DETERMINANTE}${palavra(BENEFICIOS)}[^.!?\n]{0,40}?(?:se|caso)\s+(?:voc[eê]s?\s+|vc\s+)?n[aã]o\s+(?:votar|apoiar)`,
       ].join('|'),
       'iu',
     ),
@@ -214,25 +238,39 @@ const REGRAS: ReadonlyArray<{ categoria: CategoriaDeCampanha; padrao: RegExp; pe
         // "prometo sua vaga", "juro seu auxílio" — promessa CRUA de benefício, sem o
         // verbo de entrega. ("garanto" já cai pelo verbo de entrega.) A negação desarma.
         String.raw`${NAO_NEGADO}${palavra(MARCADOR_PROMESSA)}\s+${ADVERBIO_OPC}${DETERMINANTE}${palavra(BENEFICIOS)}`,
-        // TERCEIRA PESSOA — "o vereador vai conseguir sua vaga", "o gabinete garante seu
-        // auxílio". Sujeito do mandato, até 25 caracteres (nome próprio no meio), verbo de
-        // entrega não negado e benefício pessoal.
-        String.raw`${palavra(SUJEITO_DO_MANDATO)}[^.!?\n]{0,25}?\s(?<!(?:n[aã]o|nunca|jamais)\s)(?:${VERBOS_DE_ENTREGA_3P})\s+${ADVERBIO_OPC}${DETERMINANTE}${palavra(BENEFICIOS)}`,
-        // FURAR FILA — "furo a fila pra você", "te passo na frente", "adianto sua cirurgia",
-        // "dou um jeitinho na sua consulta". Vale em qualquer pessoa.
-        String.raw`${NAO_NEGADO}${NAO_IMPEDIDO}${palavra('fur[a-z]+')}\s+(?:a\s+)?fila`,
-        // "Na frente" só é promessa quando é sobre a PESSOA ("te passo na frente", "coloca
-        // você na frente") ou sobre a FILA ("passar na frente da fila"). "O ônibus passa na
-        // frente da escola" não é.
-        String.raw`${NAO_NEGADO}${NAO_IMPEDIDO}${palavra('te|lhe')}\s+${palavra('pass[a-z]+|coloc[a-z]+|bot[a-z]+|p[oô]r|ponho')}\s+(?:l[aá]\s+)?na\s+frente`,
-        String.raw`${NAO_NEGADO}${NAO_IMPEDIDO}${palavra('pass[a-z]+|coloc[a-z]+|bot[a-z]+|p[oô]r|ponho')}\s+(?:voc[eê]|vc|o\s+senhor|a\s+senhora)\s+(?:l[aá]\s+)?na\s+frente`,
-        String.raw`${NAO_NEGADO}${NAO_IMPEDIDO}${palavra('pass[a-z]+|coloc[a-z]+|bot[a-z]+|p[oô]r|ponho')}\s+(?:[a-zçãõáéíóú]+\s+){0,2}?na\s+frente\s+(?:d[ao]s?\s+(?:fila|lista|outros|demais)|n[ao]\s+(?:fila|lista))`,
-        String.raw`${NAO_NEGADO}${NAO_IMPEDIDO}${palavra('adiant[a-z]+|agiliz[a-z]+|aceler[a-z]+')}\s+${DETERMINANTE}${palavra('consulta|cirurgia|exame|exames|vaga|leito|benef[ií]cio|aposentadoria|atendimento')}`,
-        String.raw`${NAO_NEGADO}${NAO_IMPEDIDO}${palavra('dou|damos|d[aá]|dar')}\s+um\s+jeit(?:o|inho)`,
+        // PASSAR NA FRENTE e ADIANTAR — só quando é sobre a PESSOA e na PRIMEIRA pessoa:
+        // "te passo na frente", "coloco você na frente", "adianto sua cirurgia", "vamos
+        // agilizar seu exame", "dou um jeitinho". "Para agilizar o atendimento, me informe…",
+        // "idoso passa na frente por lei" e "dar um jeito nesse buraco" são rotina e passam.
+        String.raw`${NAO_NEGADO}${NAO_IMPEDIDO}${palavra('te|lhe')}\s+${palavra('pass[a-z]+|coloc[a-z]+|bot[a-z]+|ponho')}\s+(?:l[aá]\s+)?na\s+frente${NA_FRENTE_DE_QUEM}`,
+        String.raw`${NAO_NEGADO}${NAO_IMPEDIDO}${palavra('pass[a-z]+|coloc[a-z]+|bot[a-z]+|ponho')}\s+(?:voc[eê]|vc|o\s+senhor|a\s+senhora)\s+(?:l[aá]\s+)?na\s+frente${NA_FRENTE_DE_QUEM}`,
+        String.raw`${NAO_NEGADO}${NAO_IMPEDIDO}${palavra(String.raw`adianto|adiantamos|agilizo|agilizamos|acelero|aceleramos|antecipo|antecipamos|(?:vou|vamos|a\s+gente\s+vai)\s+(?:adiantar|agilizar|acelerar|antecipar)`)}\s+(?:a\s+|o\s+)?(?:sua|seu|tua|teu)\s+${palavra('consulta|cirurgia|exame|exames|vaga|leito|benef[ií]cio|aposentadoria')}`,
+        String.raw`${NAO_NEGADO}${NAO_IMPEDIDO}${palavra(String.raw`dou|damos|vou\s+dar|vamos\s+dar|a\s+gente\s+d[aá]`)}\s+(?:um|aquele)\s+jeitinho`,
       ].join('|'),
       'iu',
     ),
     perguntaDesarma: false,
+  },
+  {
+    // TERCEIRA PESSOA — "o vereador vai conseguir sua vaga", "o gabinete garante seu
+    // auxílio". Regra separada porque aqui PERGUNTA e NEGAÇÃO desarmam: "o gabinete garante
+    // vaga? Não", "nem o vereador consegue vaga fora da fila" e "o vereador não promete que
+    // vai conseguir a vaga" são a RECUSA da promessa, não a promessa.
+    categoria: 'promessa_de_beneficio',
+    padrao: new RegExp(
+      String.raw`${palavra(SUJEITO_DO_MANDATO)}[^.!?\n]{0,45}?\s(?:${VERBOS_DE_ENTREGA_3P})\s+${ADVERBIO_OPC}${DETERMINANTE}${palavra(BENEFICIOS)}`,
+      'iu',
+    ),
+    perguntaDesarma: true,
+    negacaoDesarma: true,
+  },
+  {
+    // FURAR FILA — vale em qualquer pessoa. "Ninguém fura a fila" e "furar a fila não é
+    // correto" são recusa: a negação desarma.
+    categoria: 'promessa_de_beneficio',
+    padrao: new RegExp(String.raw`${palavra(String.raw`fur[a-zçã]+|pulo|pulamos|vou\s+pular|vamos\s+pular`)}\s+(?:a\s+)?fila${FIM}`, 'iu'),
+    perguntaDesarma: true,
+    negacaoDesarma: true,
   },
   {
     // GARANTIA ELEITORAL — resultado prometido com certeza. "prometo que vou resolver",
@@ -262,20 +300,36 @@ function frases(texto: string): string[] {
     .filter((f) => f.length > 0);
 }
 
+/** Teto do que o detector lê. Mensagem de WhatsApp não chega perto; acima disso é só custo. */
+export const TAMANHO_MAXIMO_ANALISADO = 8000;
+
+/**
+ * Prepara o texto: forma NFC (acento decomposto casa igual), espaços e tabs em sequência
+ * viram UM espaço — uma regra antiga é cúbica em espaços, e 5 mil espaços depois de "vota"
+ * travavam o processo por dezenas de segundos — e corte no teto.
+ */
+function normalizar(texto: string): string {
+  return texto.slice(0, TAMANHO_MAXIMO_ANALISADO).normalize('NFC').replace(/[^\S\n]+/gu, ' ');
+}
+
 export function detectarPromessaDeCampanha(texto: string): AchadoDeCampanha {
   const achadas = new Set<CategoriaDeCampanha>();
-  for (const frase of frases(texto)) {
+  for (const frase of frases(normalizar(texto))) {
     const pergunta = frase.endsWith('?');
+    let negada: boolean | null = null;
     for (const regra of REGRAS) {
       if (!regra.padrao.test(frase)) continue;
       if (regra.perguntaDesarma && pergunta) continue;
+      if (regra.negacaoDesarma) {
+        negada ??= TEM_NEGACAO.test(frase);
+        if (negada) continue;
+      }
       achadas.add(regra.categoria);
     }
   }
   const categorias = [...achadas];
   return { achou: categorias.length > 0, categorias };
 }
-
 const O_QUE_FAZER: Record<CategoriaDeCampanha, string> = {
   captacao_de_sufragio:
     'nunca ligue voto ou apoio a um favor, benefício ou entrega, não peça retribuição nas urnas e não ameace perda de benefício — é captação ilícita de sufrágio',

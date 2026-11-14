@@ -231,9 +231,10 @@ describe('detectarPromessaDeCampanha — ampliação de 14/nov (parecer jurídic
       'O vereador Cleiton Xavier vai conseguir a sua consulta.',
       'A deputada vai garantir seu auxílio.',
       'O gabinete garante a sua vaga.',
-      'Pode deixar, ele vai liberar sua cirurgia.',
-      'O doutor conseguirá o seu benefício.',
-      'A equipe vai arranjar um emprego pra você.',
+      'O mandato conseguirá o seu benefício.',
+      'A nossa equipe vai arranjar um emprego pra você.',
+      'O vereador vai arrumar um emprego pra você.',
+      'Os vereadores vão conseguir sua vaga.',
     ]) barra(f, 'promessa_de_beneficio');
   });
 
@@ -251,6 +252,7 @@ describe('detectarPromessaDeCampanha — ampliação de 14/nov (parecer jurídic
   it('reciprocidade: pedir que a pessoa lembre do mandato na hora do voto', () => {
     for (const f of [
       'Resolvemos o seu problema, lembra da gente na eleição!',
+      'Lembre-se da gente na eleição.',
       'Não esqueça do vereador na hora de votar.',
       'Conto com seu voto.',
       'Agora retribua nas urnas.',
@@ -270,6 +272,7 @@ describe('detectarPromessaDeCampanha — ampliação de 14/nov (parecer jurídic
   it('ameaça de perda de benefício', () => {
     for (const f of [
       'Se você não votar com a gente, perde o auxílio.',
+      'Se vocês não votarem, perdem o auxílio.',
       'Quem não apoiar fica sem a cesta básica.',
       'Vai perder a sua vaga se não votar no vereador.',
     ]) barra(f, 'captacao_de_sufragio');
@@ -278,6 +281,8 @@ describe('detectarPromessaDeCampanha — ampliação de 14/nov (parecer jurídic
   it('furar fila e dar um jeitinho', () => {
     for (const f of [
       'Eu furo a fila pra você.',
+      'Pulo a fila pra você.',
+      'Vou antecipar sua cirurgia.',
       'O vereador fura a fila do SUS pra senhora.',
       'Te passo na frente na lista de espera.',
       'A gente coloca você na frente.',
@@ -295,5 +300,75 @@ describe('detectarPromessaDeCampanha — ampliação de 14/nov (parecer jurídic
       'Vou adiantar o registro da sua demanda aqui no sistema.',
       'O ônibus passa na frente da escola.',
     ]) passa(f);
+  });
+});
+
+describe('detectarPromessaDeCampanha — rotina que a revisão independente achou barrada (14/nov)', () => {
+  // Cada frase abaixo foi barrada pela primeira versão da ampliação. Todas têm de passar.
+  const ROTINA = [
+    'Para agilizar o atendimento, me informe seu nome completo e bairro.',
+    'Para agilizar seu atendimento, pode me mandar uma foto do local?',
+    'Pra adiantar o atendimento, já me passa o endereço.',
+    'A equipe vai agilizar o atendimento da sua demanda.',
+    'A UBS consegue adiantar a consulta em caso de urgência; procure a recepção.',
+    'Sua mãe precisa ir ao CRAS; lá ela consegue o Bolsa Família.',
+    'Seu filho tem direito: ele consegue a vaga fazendo a inscrição no site da prefeitura até sexta.',
+    'A equipe do CRAS libera a cesta básica mediante cadastro.',
+    'A equipe do posto de saúde vai dar a consulta conforme a ordem da fila.',
+    'A equipe da prefeitura libera o alvará em até 30 dias.',
+    'O prefeito vai liberar o auxílio emergencial na semana que vem, segundo a prefeitura.',
+    'A prefeita anunciou que vai dar um vale-alimentação para os servidores.',
+    'A doutora do posto libera o exame depois da consulta.',
+    'O doutor vai dar o remédio certo, fique tranquila.',
+    'Ela vai dar o remédio no horário certo, conforme a receita?',
+    'Ele vai dar uma consulta na agenda e te retorna.',
+    'A senhora perguntou se ele vai conseguir a vaga; quem decide é a secretaria.',
+    'O vereador não promete que vai conseguir a vaga, mas vai cobrar.',
+    'Não temos como dizer se o vereador vai conseguir a vaga.',
+    'Nem o vereador consegue vaga fora da fila da central.',
+    'O gabinete não te consegue vaga, mas encaminha o pedido à secretaria.',
+    'O mandato garante vaga? Não: quem define é a central de vagas.',
+    'O gabinete resolve exames? Não, quem marca é a UBS.',
+    'O gabinete resolve consulta e exame? Encaminhamos à Secretaria de Saúde.',
+    'Ninguém fura a fila: o atendimento segue a ordem da regulação.',
+    'O gabinete não vai furar a fila de ninguém.',
+    'Não vamos furar a fila, mas vamos cobrar a secretaria.',
+    'Furar a fila não é correto e o gabinete não faz isso.',
+    'Idoso e gestante têm prioridade por lei e passam na frente dos demais.',
+    'Quem tem prioridade legal passa na frente na fila.',
+    'Te passo na frente o contato da secretaria.',
+    'Vamos cobrar a prefeitura para dar um jeito nesse buraco.',
+    'Alguém precisa dar um jeito nessa iluminação, vou registrar.',
+    'Não esqueça do mandato itinerante no dia 5 de outubro, na praça.',
+    'Lembra da equipe que esteve na sua rua em outubro? Vamos voltar aí.',
+    'Lembre da gente na campanha do agasalho: estamos recebendo doações.',
+    'Lembra do vereador na campanha de vacinação do bairro?',
+    'Não esqueça do vereador amanhã, na audiência pública antes da votação.',
+    'Lembra da elaboração do projeto que vai a votação na quinta?',
+    'Contamos com seu voto na enquete do orçamento participativo.',
+    'O vereador conta com seu voto na consulta pública sobre a praça.',
+    'Se você não votar na enquete até sexta, perde a chance de opinar.',
+    'Quem não votar e não justificar fica sem poder tirar passaporte.',
+    'Se não votar, o eleitor precisa justificar ou perde alguns direitos.',
+    'Retribuir visita — voto de aplauso.',
+    'O vereador vai encaminhar o seu pedido de vaga à Secretaria de Educação.',
+    'O gabinete vai registrar o pedido de consulta e acompanhar.',
+    'A gente vai dar retorno assim que a secretaria responder.',
+    'Vou dar uma olhada no seu caso e te retorno.',
+  ];
+  it.each(ROTINA)('passa: %s', (frase) => {
+    expect(detectarPromessaDeCampanha(frase).categorias).toEqual([]);
+  });
+
+  it('não trava com espaço em excesso (era cúbico): 20 mil espaços em menos de 300 ms', () => {
+    const inicio = Date.now();
+    detectarPromessaDeCampanha('vota' + ' '.repeat(20000) + 'x');
+    detectarPromessaDeCampanha('seu voto' + '\t '.repeat(10000) + 'x');
+    expect(Date.now() - inicio).toBeLessThan(300);
+  });
+
+  it('acento decomposto (NFD) casa igual', () => {
+    const nfd = 'Se você não votar com a gente, perde o auxílio.'.normalize('NFD');
+    expect(detectarPromessaDeCampanha(nfd).categorias).toContain('captacao_de_sufragio');
   });
 });

@@ -11,9 +11,13 @@
  */
 import type pg from 'pg';
 import type { Queryable } from '../../queue/queue';
+import { apresentacaoDaIADaOrg } from '@/lib/politico/adendo-do-agente-da-org';
 
 /** Modo do gate quando a 1ª mensagem sai sem disclosure (knob, DISCLOSURE_MODE). */
 export type DisclosureMode = 'inject' | 'veto';
+
+/** Marca, na telemetria, a apresentação padrão do gabinete (não é linha de `disclosure_template_versions`). */
+export const VERSAO_PADRAO_DO_GABINETE = 'padrao-do-gabinete';
 
 export interface LoadedDisclosureTemplate {
   /** texto pt-br do disclosure (injetado no modo inject, exigido do modelo no modo veto). */
@@ -75,8 +79,11 @@ export async function loadDisclosureTemplate(db: Queryable, tenantId: string): P
     [tenantId],
   );
   const row = rows[0];
-  if (row === undefined) return null;
-  return { body: row.body, versionId: row.version_id };
+  if (row !== undefined) return { body: row.body, versionId: row.version_id };
+  // Gabinete parlamentar que não publicou um texto próprio: a IA se apresenta com a
+  // frase padrão ("Sou a IA do gabinete do vereador Fulano."). Fora de gabinete, null.
+  const padrao = await apresentacaoDaIADaOrg(db, tenantId);
+  return padrao === null ? null : { body: padrao, versionId: VERSAO_PADRAO_DO_GABINETE };
 }
 
 /**

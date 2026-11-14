@@ -11,6 +11,9 @@ describe("trava do texto escrito por pessoa", () => {
     expect(bloqueioDeTextoHumano("Vou conseguir sua vaga na creche")).toBeNull();
     expect(bloqueioDeTextoHumano("Prometo que vou resolver")).toBeNull();
   });
+  it("texto acima do teto não segue (o detector não leria o fim)", () => {
+    expect(bloqueioDeTextoHumano("a".repeat(4001))).toContain("longo demais");
+  });
   it("rotina e vazio passam", () => {
     expect(bloqueioDeTextoHumano("Sua demanda foi encaminhada à Secretaria de Obras.")).toBeNull();
     expect(bloqueioDeTextoHumano("")).toBeNull();
