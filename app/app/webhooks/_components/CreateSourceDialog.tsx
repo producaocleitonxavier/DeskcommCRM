@@ -43,21 +43,21 @@ export function CreateSourceDialog({ open, onOpenChange, onCreated }: Props) {
   const [redirectTo, setRedirectTo] = React.useState("");
 
   const { data: pipelinesRes, isLoading: pipelinesLoading } = usePipelines();
-  const { data: boardRes, isLoading: stagesLoading } = usePipelineStages(pipelineId || null);
+  const pipelinesPrevia = pipelinesRes?.data ?? [];
+  const gabinete = useEhGabinete();
+  // Gabinete: funil e estágio são peça do motor de vendas que fica por baixo. A pessoa só dá o nome
+  // do formulário; a tela usa o primeiro funil e o primeiro estágio. DERIVADO, não guardado em
+  // estado: sincronizar por efeito brigava com o efeito que limpa o estágio ao trocar de funil.
+  const pipelineEfetivo = pipelineId || (gabinete ? (pipelinesPrevia[0]?.id ?? "") : "");
+  const { data: boardRes, isLoading: stagesLoading } = usePipelineStages(pipelineEfetivo || null);
   const create = useCreateWebhookSource();
 
   const pipelines = pipelinesRes?.data ?? [];
   const stages = boardRes?.data?.stages ?? [];
-  const gabinete = useEhGabinete();
+  const stageEfetivo = stageId || (gabinete ? (stages[0]?.id ?? "") : "");
+  /** Gabinete sem funil ou sem estágio por baixo: não há onde o cadastro entrar. */
+  const semEntrada = gabinete && !pipelinesLoading && !stagesLoading && (!pipelineEfetivo || !stageEfetivo);
 
-  // Gabinete: funil e estágio são peça do motor de vendas que fica por baixo; a tela escolhe
-  // sozinha o primeiro de cada, e a pessoa só dá o nome do formulário.
-  React.useEffect(() => {
-    if (gabinete && open && !pipelineId && pipelines[0]) setPipelineId(pipelines[0].id);
-  }, [gabinete, open, pipelineId, pipelines]);
-  React.useEffect(() => {
-    if (gabinete && open && pipelineId && !stageId && stages[0]) setStageId(stages[0].id);
-  }, [gabinete, open, pipelineId, stageId, stages]);
 
   React.useEffect(() => {
     if (!open) {
@@ -74,15 +74,15 @@ export function CreateSourceDialog({ open, onOpenChange, onCreated }: Props) {
 
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!pipelineId || !stageId) {
+    if (!pipelineEfetivo || !stageEfetivo) {
       toast.error(gabinete ? "Ainda estou preparando a entrada. Espere um instante e tente de novo." : t("Escolha o funil e o estágio de entrada."));
       return;
     }
     try {
       const res = await create.mutateAsync({
         name,
-        default_pipeline_id: pipelineId,
-        default_stage_id: stageId,
+        default_pipeline_id: pipelineEfetivo,
+        default_stage_id: stageEfetivo,
         redirect_to: redirectTo.trim() || undefined,
       });
       toast.success(gabinete ? "Formulário criado. Agora é só ligar ao seu site." : t("Fonte criada. Agora é só conectar seu site."));
@@ -100,7 +100,7 @@ export function CreateSourceDialog({ open, onOpenChange, onCreated }: Props) {
           <DialogTitle>{gabinete ? "Novo formulário do site" : t("Nova fonte de captação")}</DialogTitle>
           <DialogDescription>
             {gabinete
-              ? "Dê um nome para reconhecer de onde veio. Cada pessoa que preencher o formulário entra em Pessoas, como Novo contato."
+              ? "Dê um nome para reconhecer de onde veio. Quem preencher o formulário com um telefone válido entra em Pessoas, como Novo contato."
               : t("Dê um nome e diga em qual funil o contato deve entrar quando alguém preencher seu formulário.")}
           </DialogDescription>
         </DialogHeader>
@@ -117,6 +117,11 @@ export function CreateSourceDialog({ open, onOpenChange, onCreated }: Props) {
               required
             />
           </div>
+          {semEntrada ? (
+            <p className="rounded-md border border-border p-3 text-sm" role="alert">
+              Esta instalação está sem a entrada interna que recebe os cadastros. Avise quem cuida do sistema: não dá para criar o formulário assim.
+            </p>
+          ) : null}
           {gabinete ? null : (
           <>
           <div className="space-y-2">
@@ -164,7 +169,7 @@ export function CreateSourceDialog({ open, onOpenChange, onCreated }: Props) {
               type="url"
               value={redirectTo}
               onChange={(e) => setRedirectTo(e.target.value)}
-              placeholder="https://seusite.com.br/obrigado"
+              placeholder={palavra(gabinete, "https://tusitio.com/gracias", "https://seusite.com.br/obrigado")}
             />
             <p className="text-xs text-muted-foreground">
               {t("Para onde enviar a pessoa depois que ela preencher seu formulário.")}
@@ -174,7 +179,7 @@ export function CreateSourceDialog({ open, onOpenChange, onCreated }: Props) {
             <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>
               {t("Cancelar")}
             </Button>
-            <Button type="submit" disabled={create.isPending || (gabinete && (!pipelineId || !stageId))}>
+            <Button type="submit" disabled={create.isPending || (gabinete && (!pipelineEfetivo || !stageEfetivo))}>
               {gabinete ? "Criar formulário" : t("Criar fonte")}
             </Button>
           </DialogFooter>

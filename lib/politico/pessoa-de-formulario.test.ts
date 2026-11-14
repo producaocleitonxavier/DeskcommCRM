@@ -33,6 +33,8 @@ describe("cadastro do formulário do site vira pessoa do mandato", () => {
     const { cliente, inseridos } = clienteFalso({ data: { organization_id: "org-1" } }, { error: null });
     expect(await garantirPessoaDoMandato(cliente, "org-1", "contato-1", "LP da praça")).toBe("criada");
     expect(inseridos[0]).toMatchObject({ organization_id: "org-1", contact_id: "contato-1", support_level: "novo_cadastro", temperature: "frio", consent_origin: "Formulário do site: LP da praça" });
+    // preencher formulário não é consentir: o carimbo de consentimento não é gravado
+    expect(inseridos[0]).not.toHaveProperty("consent_at");
   });
 
   it("quem já é pessoa da base não é mexido", async () => {

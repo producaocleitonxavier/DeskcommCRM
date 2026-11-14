@@ -20,9 +20,12 @@ export default async function WebhooksPage() {
   const db = await createClient();
   const { data: gab } = await db.from("pol_gabinete_config").select("organization_id").eq("organization_id", activeOrg!.orgId).maybeSingle();
   const gabinete = !!gab;
+  // A pele marinho só existe no tema claro do gabinete (no tema escuro as janelas já são escuras).
+  const { data: orgRow } = await db.from("organizations").select("settings").eq("id", activeOrg!.orgId).maybeSingle();
+  const marinho = ((orgRow as { settings?: { tema?: string | null } | null } | null)?.settings?.tema ?? null) === "claro";
 
   return (
-    <ModoGabinete gabinete={gabinete}>
+    <ModoGabinete gabinete={gabinete} marinho={marinho}>
     <div className="flex h-full flex-col gap-6 p-6">
       <CommandHero
         eyebrow="Configurações · Avançado"

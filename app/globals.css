@@ -2340,11 +2340,17 @@
    `gip-portais-marinho` no corpo enquanto está aberta (ver
    app/app/webhooks/_components/gabinete.tsx). Só define as cores; não pinta fundo. */
 body.gip-portais-marinho > [role="dialog"],
+body.gip-portais-marinho > [role="alertdialog"],
 body.gip-portais-marinho > [data-radix-popper-content-wrapper],
 body.gip-portais-marinho > [data-radix-portal] {
-  --color-bg: #0f1d2e;
-  --color-surface: #182a3e;
-  --color-surface-elevated: #20374f;
+  /* A janela fica um tom ACIMA do fundo da tela (#0f1d2e), para se destacar dele. As utilidades
+     do Tailwind leem os `--color-*`; os nomes shadcn abaixo ficam para o CSS que os usa direto. */
+  --color-bg: #182a3e;
+  --color-surface: #20374f;
+  --color-surface-elevated: #2a4563;
+  --color-error: #ff9b93;
+  --color-error-fg: #ff9b93;
+  --color-error-bg: rgba(255,155,147,0.14);
   --color-text: #ffffff;
   --color-text-muted: rgba(255,255,255,0.78);
   --color-text-subtle: rgba(255,255,255,0.6);

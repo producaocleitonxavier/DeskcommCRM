@@ -19,12 +19,12 @@ export function useEhGabinete(): boolean {
   return useContext(Contexto);
 }
 
-export function ModoGabinete({ gabinete, children }: { gabinete: boolean; children: ReactNode }) {
+export function ModoGabinete({ gabinete, marinho, children }: { gabinete: boolean; /** A tela está na pele marinho (tema claro do gabinete)? */ marinho: boolean; children: ReactNode }) {
   useEffect(() => {
-    if (!gabinete) return;
+    if (!gabinete || !marinho) return;
     document.body.classList.add("gip-portais-marinho");
     return () => document.body.classList.remove("gip-portais-marinho");
-  }, [gabinete]);
+  }, [gabinete, marinho]);
   return <Contexto.Provider value={gabinete}>{children}</Contexto.Provider>;
 }
 

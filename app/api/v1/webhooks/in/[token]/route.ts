@@ -573,7 +573,15 @@ export async function POST(req: NextRequest, ctx: RouteCtx): Promise<NextRespons
   // Nunca lança; fora de gabinete não faz nada. O número reservado do botão "enviar teste" da própria
   // tela fica de fora, para o teste não plantar uma pessoa fictícia na base.
   if (contactId && !/11999990000$/.test((mapped.phone ?? "").replace(/\D/g, ""))) {
-    await garantirPessoaDoMandato(admin, source.organization_id, contactId, source.name);
+    const pessoa = await garantirPessoaDoMandato(admin, source.organization_id, contactId, source.name);
+    if (pessoa === "erro") {
+      logger.error("[webhooks.inbound] cadastro não virou pessoa do mandato", {
+        organization_id: source.organization_id,
+        webhook_source_id: source.id,
+        contact_id: contactId,
+        request_id: requestId,
+      });
+    }
   }
 
   const leadInput: CreateLeadInput & {

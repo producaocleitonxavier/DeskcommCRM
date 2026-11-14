@@ -345,7 +345,7 @@ export function SourceDetail({ source, open, onOpenChange }: Props) {
           </div>
           <SheetDescription>
             {gabinete
-              ? "Cada envio para o endereço abaixo vira um cadastro e entra em Pessoas, como Novo contato, automaticamente."
+              ? "Cada envio para o endereço abaixo vira um cadastro. Com um telefone válido, a pessoa entra em Pessoas como Novo contato, automaticamente."
               : t("Cada envio para o endereço abaixo vira um lead no seu funil, automaticamente.")}
           </SheetDescription>
         </SheetHeader>

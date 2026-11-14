@@ -43,7 +43,7 @@ import {
   type AutomationRuleRow,
 } from "@/hooks/webhooks/useAutomationRules";
 import { usePipelines, usePipelineStages, useWebhookSources } from "@/hooks/webhooks/useWebhookSources";
-import { ACTION_LABELS, acaoOferecida, gatilhoOferecido, nomeDaAcao, nomeDoGatilho, type TriggerEvent, type ActionType } from "./labels";
+import { TRIGGER_LABELS, ACTION_LABELS, acaoOferecida, gatilhoOferecido, nomeDaAcao, nomeDoGatilho, type TriggerEvent, type ActionType } from "./labels";
 import { useEhGabinete } from "./gabinete";
 import { ActionConfigForm, defaultActionConfig, type ActionItem } from "./ActionConfigForm";
 import { useT } from "@/hooks/i18n/useT";
@@ -467,7 +467,7 @@ export function RuleEditor({ open, onOpenChange, rule }: Props) {
               <SelectContent>
                 {TRIGGER_EVENTS.filter((ev) => gatilhoOferecido(ev, gabinete, triggerEvent)).map((ev) => (
                   <SelectItem key={ev} value={ev}>
-                    {t(nomeDoGatilho(ev, gabinete))}
+                    {gabinete ? nomeDoGatilho(ev, true) : t(TRIGGER_LABELS[ev])}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -840,7 +840,7 @@ export function RuleEditor({ open, onOpenChange, rule }: Props) {
             {actions.map((action, idx) => (
               <div key={idx} className="space-y-3 rounded-sm border border-border p-3">
                 <div className="flex items-center justify-between">
-                  <p className="font-medium text-text">{t(nomeDaAcao(action.type, gabinete))}</p>
+                  <p className="font-medium text-text">{gabinete ? nomeDaAcao(action.type, true) : t(ACTION_LABELS[action.type])}</p>
                   <div className="flex items-center gap-1">
                     <Button
                       type="button"
@@ -897,7 +897,7 @@ export function RuleEditor({ open, onOpenChange, rule }: Props) {
                   .filter((actionType) => acaoOferecida(actionType, gabinete))
                   .map((actionType) => (
                     <SelectItem key={actionType} value={actionType}>
-                      {t(nomeDaAcao(actionType, gabinete))}
+                      {gabinete ? nomeDaAcao(actionType, true) : t(ACTION_LABELS[actionType])}
                     </SelectItem>
                   ))}
               </SelectContent>

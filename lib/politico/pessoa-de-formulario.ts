@@ -40,8 +40,9 @@ export async function garantirPessoaDoMandato(
       contact_id: contactId,
       support_level: "novo_cadastro",
       temperature: "frio",
+      // Só a ORIGEM. `consent_at` fica vazio de propósito: preencher um formulário não é consentir, e
+      // esse carimbo conta pontos no índice de engajamento — promoveria a pessoa sem ela ter feito nada.
       consent_origin: origemDoFormulario(nomeDaFonte),
-      consent_at: new Date().toISOString(),
     });
     if (!error) return "criada";
     // Já é pessoa da base (cadastrou de novo, ou veio por outro caminho): não mexe no nível nem na origem.

@@ -34,8 +34,9 @@ import { useEhGabinete } from "./gabinete";
 const RULES_QUERY_KEY = ["automation-rules"];
 
 function triggerLabel(trigger: string, t: (texto: string) => string, gabinete: boolean): string {
-  const ev = trigger as TriggerEvent;
-  return t((gabinete && TRIGGER_LABELS_GABINETE[ev]) || TRIGGER_LABELS[ev] || trigger);
+  const doGabinete = gabinete ? TRIGGER_LABELS_GABINETE[trigger as TriggerEvent] : undefined;
+  if (doGabinete) return doGabinete;
+  return t(TRIGGER_LABELS[trigger as TriggerEvent] ?? trigger);
 }
 
 export function RulesTab() {
