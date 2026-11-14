@@ -32,6 +32,13 @@ describe("redação oficial do gabinete", () => {
     expect(p).not.toContain("O que o gabinete registrou");
   });
 
+  it("local e protocolo entram quando o gabinete preencheu", () => {
+    const p = montarPedidoDoOficio({ assunto: "Poda", local: "Rua A, nº 1, Bairro B, CEP 30000-000", protocolo: "31.0001/2026-01" });
+    expect(p).toContain("Local da ocorrência (copie exatamente): Rua A, nº 1, Bairro B, CEP 30000-000");
+    expect(p).toContain("Protocolo já aberto no órgão (copie exatamente): 31.0001/2026-01");
+    expect(montarPedidoDoOficio({ assunto: "Poda" })).not.toContain("Protocolo");
+  });
+
   it("sem cidadão, avisa que a demanda é do gabinete", () => {
     expect(montarPedidoDoOficio({ assunto: "Iluminação da praça" })).toContain("(nenhum — demanda do próprio gabinete)");
   });

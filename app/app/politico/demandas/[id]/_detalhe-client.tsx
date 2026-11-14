@@ -54,6 +54,8 @@ export interface DemandaDetalhe {
   prazo_em: string | null;
   pol_prazo_dias: number | null;
   pol_respondeu?: boolean | null;
+  pol_local_ocorrencia?: string | null;
+  pol_protocolo_orgao?: string | null;
   pol_respondeu_em?: string | null;
   // Relato de campo da visita (referência pro gabinete escrever o ofício).
   pol_visita_realizada_em?: string | null;
@@ -81,6 +83,8 @@ export interface EventoDemanda {
 }
 
 export interface Props {
+  /** As colunas de local e protocolo existem nesta instalação (migration 9098)? */
+  temLocalEProtocolo?: boolean;
   demanda: DemandaDetalhe;
   assessores: Opcao[];
   eventos: EventoDemanda[];
@@ -150,7 +154,7 @@ function paraInputDate(d: string | null): string {
   return new Date(d).toISOString().slice(0, 10);
 }
 
-export default function DetalheDemandaClient({ demanda, assessores, eventos, vozArmada, mostrarAssuntoOficio, politicoNome, politicoCargo, podeOficio = true }: Props) {
+export default function DetalheDemandaClient({ demanda, assessores, eventos, vozArmada, mostrarAssuntoOficio, politicoNome, politicoCargo, podeOficio = true, temLocalEProtocolo = false }: Props) {
   const router = useRouter();
 
   const [d, setD] = useState<DemandaDetalhe>(demanda);
@@ -196,6 +200,12 @@ export default function DetalheDemandaClient({ demanda, assessores, eventos, voz
   const [numeroOficio, setNumeroOficio] = useState(d.pol_oficio_rotulo ?? "");
   const [destinatarioOficio, setDestinatarioOficio] = useState(d.pol_oficio_destinatario ?? "");
   const [assuntoOficio, setAssuntoOficio] = useState(d.pol_oficio_assunto ?? "");
+  // Os dois dados que o ofício cita e que não têm de onde sair (migration 9098).
+  const [localOcorrencia, setLocalOcorrencia] = useState(d.pol_local_ocorrencia ?? "");
+  const [protocoloOrgao, setProtocoloOrgao] = useState(d.pol_protocolo_orgao ?? "");
+  const localEProtocolo = temLocalEProtocolo
+    ? { pol_local_ocorrencia: localOcorrencia.trim() || null, pol_protocolo_orgao: protocoloOrgao.trim() || null }
+    : {};
 
   const fechada = d.estado === "resolvida" || d.estado === "encerrada";
   const primeiroNomeCidadao = (d.contacts?.name ?? "").trim().split(/\s+/)[0] ?? "";
@@ -252,6 +262,7 @@ export default function DetalheDemandaClient({ demanda, assessores, eventos, voz
       pol_oficio_rotulo: numeroOficio.trim() || null,
       pol_oficio_destinatario: destinatarioOficio.trim() || null,
       pol_oficio_assunto: assuntoOficio.trim() || null,
+      ...localEProtocolo,
       prazo_em: prazo ? new Date(prazo + "T12:00:00").toISOString() : null,
       pol_prazo_dias: prazoDias && Number(prazoDias) > 0 ? Math.round(Number(prazoDias)) : null,
     };
@@ -717,6 +728,7 @@ export default function DetalheDemandaClient({ demanda, assessores, eventos, voz
                   pol_oficio_rotulo: numeroOficio.trim(),
                   pol_oficio_destinatario: destinatarioOficio.trim() || null,
                   pol_oficio_assunto: assuntoOficio.trim() || null,
+                  ...localEProtocolo,
                 });
                 const res = await gerarOficioDemanda(d.id);
                 setGerandoOficio(false);
@@ -743,6 +755,7 @@ export default function DetalheDemandaClient({ demanda, assessores, eventos, voz
                 await atualizarRegistro("demandas", d.id, {
                   pol_oficio_destinatario: destinatarioOficio.trim() || null,
                   pol_oficio_assunto: assuntoOficio.trim() || null,
+                  ...localEProtocolo,
                 });
                 const res = await gerarEncaminhamento(d.id);
                 setGerandoIA(false);
@@ -894,6 +907,42 @@ export default function DetalheDemandaClient({ demanda, assessores, eventos, voz
               Escreva do jeito que o seu gabinete numera. É esse número que sai no ofício.
             </p>
           </div>
+          {temLocalEProtocolo && (
+            <>
+              <div>
+                <label className="mb-1 block text-sm font-semibold" style={{ color: "var(--color-text)" }}>
+                  Onde é o problema
+                </label>
+                <input
+                  value={localOcorrencia}
+                  onChange={(e) => setLocalOcorrencia(e.target.value)}
+                  maxLength={300}
+                  placeholder="Ex.: Rua Campinas, em frente ao nº 715, esquina com a Rua Hortência, Bairro Esplanada, CEP 30280-090"
+                  className="w-full rounded-lg px-3.5 py-2.5 text-sm outline-none"
+                  style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)", color: "var(--color-text)" }}
+                />
+                <p className="mt-1 text-xs" style={{ color: "var(--color-text-subtle)" }}>
+                  Rua, número, referência, bairro e CEP. A IA usa este endereço ao redigir.
+                </p>
+              </div>
+              <div>
+                <label className="mb-1 block text-sm font-semibold" style={{ color: "var(--color-text)" }}>
+                  Protocolo no órgão (se já existe)
+                </label>
+                <input
+                  value={protocoloOrgao}
+                  onChange={(e) => setProtocoloOrgao(e.target.value)}
+                  maxLength={80}
+                  placeholder="Ex.: 31.00886334/2026-86"
+                  className="w-full rounded-lg px-3.5 py-2.5 text-sm outline-none"
+                  style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)", color: "var(--color-text)" }}
+                />
+                <p className="mt-1 text-xs" style={{ color: "var(--color-text-subtle)" }}>
+                  O número que a prefeitura ou o órgão deu ao pedido. Em branco, o ofício não cita protocolo.
+                </p>
+              </div>
+            </>
+          )}
           {mostrarAssuntoOficio && (
             <div>
               <label className="mb-1 block text-sm font-semibold" style={{ color: "var(--color-text)" }}>

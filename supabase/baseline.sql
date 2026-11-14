@@ -56808,3 +56808,11 @@ begin
 end $$;
 
 notify pgrst, 'reload schema';
+
+-- ---- demanda: local da ocorrência e protocolo no órgão (migration 9098) ----
+alter table public.demandas add column if not exists pol_local_ocorrencia text;
+alter table public.demandas add column if not exists pol_protocolo_orgao text;
+comment on column public.demandas.pol_local_ocorrencia is 'Local da ocorrência como vai no ofício: logradouro, número, referência, bairro, CEP.';
+comment on column public.demandas.pol_protocolo_orgao is 'Número do protocolo já aberto no órgão (ex.: prefeitura), quando existe.';
+
+notify pgrst, 'reload schema';

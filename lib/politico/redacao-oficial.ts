@@ -30,6 +30,10 @@ export type DadosDoOficio = {
   destinatario?: string | null;
   /** Cidade do gabinete. */
   cidade?: string | null;
+  /** Local da ocorrência como vai no ofício (logradouro, número, referência, bairro, CEP). */
+  local?: string | null;
+  /** Número do protocolo já aberto no órgão. */
+  protocolo?: string | null;
   /** O que foi registrado sobre o caso (relato, histórico), do mais antigo ao mais novo. */
   relatos?: readonly string[];
 };
@@ -163,6 +167,8 @@ export function montarPedidoDoOficio(d: DadosDoOficio): string {
     linha("Órgão de destino", d.orgao) +
     linha("Autoridade destinatária (para o vocativo)", d.destinatario) +
     linha("Cidade do gabinete", d.cidade) +
+    linha("Local da ocorrência (copie exatamente)", d.local) +
+    linha("Protocolo já aberto no órgão (copie exatamente)", d.protocolo) +
     blocoDeRelatos(d.relatos)
   );
 }

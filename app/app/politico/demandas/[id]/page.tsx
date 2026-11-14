@@ -61,6 +61,16 @@ export default async function DemandaDetalhePage({
     .eq("id", id)
     .maybeSingle();
 
+  // Local da ocorrência e protocolo no órgão (migration 9098) — à parte e tolerante:
+  // sem as colunas nesta instalação, o detalhe segue sem os dois campos.
+  const { data: localRow, error: localErro } = await db
+    .from("demandas")
+    .select("pol_local_ocorrencia, pol_protocolo_orgao")
+    .eq("organization_id", org.orgId)
+    .eq("id", id)
+    .maybeSingle();
+  const temLocalEProtocolo = !localErro;
+
   // Relato de campo da visita (migrations 9085/9087) — a REFERÊNCIA pro gabinete
   // escrever o ofício ("30s depois que a visita terminou, já está aqui"). Busca à
   // parte e fail-soft: sem as colunas, o detalhe segue sem o bloco de relato.
@@ -114,7 +124,8 @@ export default async function DemandaDetalhePage({
 
   return (
     <DetalheDemandaClient
-      demanda={{ ...(demRes.data as Record<string, unknown>), ...(respRow ?? {}), ...(relatoRow ?? {}), ...(notaRow ?? {}) } as unknown as DemandaDetalhe}
+      demanda={{ ...(demRes.data as Record<string, unknown>), ...(respRow ?? {}), ...(relatoRow ?? {}), ...(notaRow ?? {}), ...(localRow ?? {}) } as unknown as DemandaDetalhe}
+      temLocalEProtocolo={temLocalEProtocolo}
       assessores={assessores}
       eventos={eventos}
       vozArmada={vozOk}

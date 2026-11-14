@@ -99,6 +99,25 @@ async function cerebroDaOrg(
   return { erro: "nenhuma IA configurada nesta instalação" };
 }
 
+/** Local da ocorrência e protocolo no órgão (migration 9098). Sem as colunas, devolve vazio. */
+async function localEProtocoloDaDemanda(
+  admin: ReturnType<typeof createAdminClient>,
+  orgId: string,
+  demandaId: string,
+): Promise<{ local: string | null; protocolo: string | null }> {
+  const { data } = await admin
+    .from("demandas")
+    .select("pol_local_ocorrencia, pol_protocolo_orgao")
+    .eq("organization_id", orgId)
+    .eq("id", demandaId)
+    .maybeSingle();
+  const linha = data as { pol_local_ocorrencia?: string | null; pol_protocolo_orgao?: string | null } | null;
+  return {
+    local: linha?.pol_local_ocorrencia?.trim() || null,
+    protocolo: linha?.pol_protocolo_orgao?.trim() || null,
+  };
+}
+
 export async function gerarEncaminhamento(demandaId: string): Promise<ResultadoEncaminhamento> {
   const user = await autenticarComPapel("agent");
   const org = await resolveActiveOrg(user);
@@ -139,6 +158,7 @@ export async function gerarEncaminhamento(demandaId: string): Promise<ResultadoE
     // Colunas do relato de visita podem não existir numa instalação antiga: segue sem elas.
     admin.from("demandas").select("pol_visita_relato").eq("organization_id", org.orgId).eq("id", demandaId).maybeSingle(),
   ]);
+  const { local, protocolo } = await localEProtocoloDaDemanda(admin, org.orgId, demandaId);
   const relatos = [
     ...((eventos ?? []) as { tipo: string | null; descricao: string | null }[])
       .filter((e) => !SO_ANDAMENTO.has(String(e.tipo ?? "")))
@@ -156,6 +176,8 @@ export async function gerarEncaminhamento(demandaId: string): Promise<ResultadoE
       orgao: (d.pol_orgao_destino as string | null) ?? null,
       destinatario: (d.pol_oficio_destinatario as string | null)?.trim() || null,
       cidade: (ident as { cidade?: string | null } | null)?.cidade ?? null,
+      local,
+      protocolo,
       relatos,
     }) + (prioridade === "urgente" || prioridade === "alta" ? "Prioridade registrada pelo gabinete: " + prioridade + "\n" : "");
 
@@ -245,9 +267,9 @@ export async function gerarRequerimentoDeComissao(
       prompt: montarPedidoDoRequerimento({
         tipo,
         assunto: (d.assunto as string | null) ?? "(sem assunto)",
-        // O endereço do ponto de encontro não é um campo da visita: sai como lacuna
-        // para a equipe preencher (ou do relato, se estiver lá).
-        local: null,
+        // Ponto de encontro = o local da ocorrência, quando o gabinete o preencheu;
+        // senão sai como lacuna para a equipe completar.
+        local: (await localEProtocoloDaDemanda(admin, org.orgId, demandaId)).local,
         quando,
         comissao: curto(pedido?.comissao) || null,
         dispositivo: curto(pedido?.dispositivo) || null,
