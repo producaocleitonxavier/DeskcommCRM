@@ -16,7 +16,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { requireAuth, resolveActiveOrg } from "@/lib/auth/server";
 import { destinosDaInterface } from "@/lib/navigation/interface";
-import { marcaDaOrganizacaoParaPdf } from "@/lib/propostas/marca-da-organizacao-para-pdf";
+import { identidadeDoOficio } from "@/lib/politico/identidade-do-oficio";
 import { renderOficioPdf } from "@/lib/politico/oficio-pdf";
 import { caminhoPertenceAOrg } from "@/lib/storage/caminho-da-org";
 
@@ -70,43 +70,9 @@ export async function gerarOficioDemanda(demandaId: string): Promise<OficioResul
   const destinatario = (d.pol_oficio_destinatario ?? "").trim() || null;
   const agora = new Date();
 
-  const marca = await marcaDaOrganizacaoParaPdf(db, org.orgId);
   const admin = createAdminClient();
-
-  // Identidade do gabinete (pol_gabinete_config): nome/cargo/subtitulo/cidade +
-  // logo e assinatura próprios. Caem para a marca da organização quando ausentes.
-  const { data: cfg } = await db
-    .from("pol_gabinete_config")
-    .select(
-      "nome_parlamentar, cargo, subtitulo, cidade, logo_path, assinatura_path, timbrado_path, timbrado_margem_topo_mm, timbrado_margem_base_mm, timbrado_margem_lados_mm, oficio_destinatario_posicao, oficio_assinatura_modo",
-    )
-    .eq("organization_id", org.orgId)
-    .maybeSingle();
-  const ident = (cfg ?? null) as {
-    nome_parlamentar: string | null;
-    cargo: string | null;
-    subtitulo: string | null;
-    cidade: string | null;
-    logo_path: string | null;
-    assinatura_path: string | null;
-    timbrado_path: string | null;
-    timbrado_margem_topo_mm: number | null;
-    timbrado_margem_base_mm: number | null;
-    timbrado_margem_lados_mm: number | null;
-    oficio_destinatario_posicao: string | null;
-    oficio_assinatura_modo: string | null;
-  } | null;
-  // mm → pontos (1mm ≈ 2.8346pt). null = usa o padrão do renderizador.
-  const mmParaPt = (v: number | null | undefined): number | null =>
-    typeof v === "number" ? Math.round(v * 2.834645669) : null;
-  const assinarIdentidade = async (p: string | null): Promise<string | null> => {
-    if (!caminhoPertenceAOrg(p, org.orgId)) return null;
-    const { data: s } = await admin.storage.from("gabinete-identidade").createSignedUrl(p, 60 * 60);
-    return s?.signedUrl ?? null;
-  };
-  const logoProprio = await assinarIdentidade(ident?.logo_path ?? null);
-  const assinaturaUrl = await assinarIdentidade(ident?.assinatura_path ?? null);
-  const timbradoUrl = await assinarIdentidade(ident?.timbrado_path ?? null);
+  // Identidade do gabinete (nome, cargo, timbrado, assinatura) — a mesma do requerimento.
+  const ident = await identidadeDoOficio(db, admin, org.orgId);
 
   // Fotos anexadas à demanda (JPG/PNG) → uma PÁGINA EXTRA por foto, no timbrado.
   // Só jpeg/png: são os formatos que o @react-pdf renderiza com segurança (um
@@ -133,25 +99,21 @@ export async function gerarOficioDemanda(demandaId: string): Promise<OficioResul
       ano: agora.getFullYear(),
       numeroLabel: rotulo,
       destinatario,
-      destinatarioPosicao: ident?.oficio_destinatario_posicao === "topo" ? "topo" : "rodape",
+      destinatarioPosicao: ident.destinatarioPosicao,
       assunto: (d.pol_oficio_assunto ?? "").trim() || null,
       corpo,
       orgao: d.pol_orgao_destino ?? null,
-      cidade: ident?.cidade ?? null,
+      cidade: ident.cidade,
       dataISO: agora.toISOString(),
-      nome: ident?.nome_parlamentar ?? null,
-      subtitulo: ident?.subtitulo ?? null,
-      cargo: ident?.cargo ?? null,
-      assinaturaUrl,
-      assinaturaModo: ident?.oficio_assinatura_modo === "gov_br" ? "gov_br" : "imagem",
-      timbradoUrl,
-      timbradoMargens: {
-        topo: mmParaPt(ident?.timbrado_margem_topo_mm),
-        base: mmParaPt(ident?.timbrado_margem_base_mm),
-        lados: mmParaPt(ident?.timbrado_margem_lados_mm),
-      },
+      nome: ident.nome,
+      subtitulo: ident.subtitulo,
+      cargo: ident.cargo,
+      assinaturaUrl: ident.assinaturaUrl,
+      assinaturaModo: ident.assinaturaModo,
+      timbradoUrl: ident.timbradoUrl,
+      timbradoMargens: ident.timbradoMargens,
       anexosImagens,
-      marca: { appName: marca.appName, accentHex: marca.accentHex, logoUrl: logoProprio ?? marca.logoUrl },
+      marca: ident.marca,
     });
   } catch {
     return { ok: false, erro: "Falha ao renderizar o PDF do ofício." };

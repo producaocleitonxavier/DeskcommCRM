@@ -35,6 +35,8 @@ const styles = StyleSheet.create({
   // Destinatário no TOPO (estilo Denilson) + linha "Assunto:".
   destinatarioTopo: { marginBottom: 20, fontSize: 11, lineHeight: 1.4 },
   assuntoLinha: { marginBottom: 16, fontSize: 11, fontWeight: 700 },
+  tituloRequerimento: { fontSize: 12, fontWeight: 700, textAlign: "center", marginBottom: 24 },
+  dataRequerimento: { marginTop: 24, fontSize: 11 },
   footer: { position: "absolute", bottom: 28, left: 56, right: 56, fontSize: 8, color: "#888", textAlign: "center", borderTopWidth: 0.5, borderTopColor: "#CCC", paddingTop: 6 },
   // Timbrado: página sem padding (a imagem é o fundo) + faixa de conteúdo que
   // limpa o cabeçalho (~120pt) e o rodapé (~150pt) típicos do papel timbrado.
@@ -58,6 +60,15 @@ const styles = StyleSheet.create({
 const A4_PT = { largura: 595.28, altura: 841.89 } as const;
 
 export interface OficioPdfInput {
+  /**
+   * "requerimento" troca a moldura do ofício (número, data no topo, destinatário)
+   * pela do requerimento de comissão: título centralizado, o texto, e a data com a
+   * cidade no fim, antes da assinatura. O papel (timbrado, margens, assinatura) é
+   * o mesmo. Ausente = ofício.
+   */
+  modelo?: "oficio" | "requerimento";
+  /** Título do requerimento (ex.: "REQUERIMENTO DE COMISSÃO"). Só no modelo requerimento. */
+  titulo?: string | null;
   numero: number;
   ano: number;
   /**
@@ -132,9 +143,12 @@ const MESES = [
   "julho", "agosto", "setembro", "outubro", "novembro", "dezembro",
 ];
 
-function dataPorExtenso(iso: string, cidade: string | null): string {
-  const d = new Date(iso);
-  const texto = `${d.getDate()} de ${MESES[d.getMonth()]} de ${d.getFullYear()}`;
+/** Data do documento no horário de BRASÍLIA (o servidor roda em UTC: sem isto, depois das 21h saía o dia seguinte). */
+export function dataPorExtenso(iso: string, cidade: string | null): string {
+  const partes = new Intl.DateTimeFormat("en-CA", { timeZone: "America/Sao_Paulo", year: "numeric", month: "numeric", day: "numeric" })
+    .formatToParts(new Date(iso));
+  const parte = (tipo: string) => Number(partes.find((p) => p.type === tipo)?.value ?? 0);
+  const texto = `${parte("day")} de ${MESES[parte("month") - 1]} de ${parte("year")}`;
   return cidade ? `${cidade}, ${texto}.` : `${texto}.`;
 }
 
@@ -147,11 +161,49 @@ function numeroDoOficio(d: OficioPdfInput): string {
   return `OFÍCIO Nº ${String(d.numero ?? 0).padStart(3, "0")}/${d.ano ?? new Date().getFullYear()}`;
 }
 
+/** O texto, com as linhas de pedido (iniciadas por "• ") em negrito. */
+function TextoDoCorpo({ corpo }: { corpo: string }): React.ReactElement {
+  return (
+    <Text style={styles.corpo}>
+      {corpo.split("\n").map((linha, i, todas) => {
+        const quebra = i < todas.length - 1 ? "\n" : "";
+        return linha.trimStart().startsWith("• ") ? (
+          <Text key={i} style={styles.pedido}>{linha + quebra}</Text>
+        ) : (
+          linha + quebra
+        );
+      })}
+    </Text>
+  );
+}
+
+/** Bloco de assinatura (imagem, linha, nome e cargo) — nunca quebra entre páginas. */
+function Assinatura({ d, nome, cargo }: { d: OficioPdfInput; nome: string; cargo: string }): React.ReactElement {
+  return (
+    <View style={styles.assinaturaBloco} wrap={false}>
+      {d.assinaturaUrl ? <Image src={d.assinaturaUrl} style={styles.assinaturaImagem} /> : null}
+      <View style={styles.assinaturaLinha} />
+      <Text style={styles.assinaturaNome}>{nome}</Text>
+      <Text style={styles.assinaturaCargo}>{cargo}</Text>
+    </View>
+  );
+}
+
 function Corpo({ d, nome, cargo }: { d: OficioPdfInput; nome: string; cargo: string }): React.ReactElement {
   const destino = d.orgao?.trim() ? `Ao(À) ${d.orgao.trim()}` : "Ao órgão competente";
   const destinatarioManual = (d.destinatario ?? "").trim();
   const assunto = (d.assunto ?? "").trim();
   const noTopo = d.destinatarioPosicao === "topo";
+  if (d.modelo === "requerimento") {
+    return (
+      <>
+        <Text style={styles.tituloRequerimento}>{(d.titulo ?? "").trim() || "REQUERIMENTO DE COMISSÃO"}</Text>
+        <TextoDoCorpo corpo={d.corpo} />
+        <Text style={styles.dataRequerimento}>{dataPorExtenso(d.dataISO, d.cidade)}</Text>
+        {d.assinaturaModo === "gov_br" ? null : <Assinatura d={d} nome={nome} cargo={cargo} />}
+      </>
+    );
+  }
   return (
     <>
       <View style={styles.linhaTopo}>
@@ -168,26 +220,10 @@ function Corpo({ d, nome, cargo }: { d: OficioPdfInput; nome: string; cargo: str
       {destinatarioManual ? null : <Text style={styles.destinatario}>{destino}</Text>}
       {/* Linha "Assunto:" (quando preenchida). */}
       {assunto ? <Text style={styles.assuntoLinha}>Assunto: {assunto}</Text> : null}
-      <Text style={styles.corpo}>
-        {d.corpo.split("\n").map((linha, i, todas) => {
-          const quebra = i < todas.length - 1 ? "\n" : "";
-          return linha.trimStart().startsWith("• ") ? (
-            <Text key={i} style={styles.pedido}>{linha + quebra}</Text>
-          ) : (
-            linha + quebra
-          );
-        })}
-      </Text>
+      <TextoDoCorpo corpo={d.corpo} />
       {/* Bloco de assinatura: só no modo "imagem". No "gov_br" não desenha nada
           (assina no gov.br com hora oficial, ou a assinatura já vem no timbrado). */}
-      {d.assinaturaModo === "gov_br" ? null : (
-        <View style={styles.assinaturaBloco} wrap={false}>
-          {d.assinaturaUrl ? <Image src={d.assinaturaUrl} style={styles.assinaturaImagem} /> : null}
-          <View style={styles.assinaturaLinha} />
-          <Text style={styles.assinaturaNome}>{nome}</Text>
-          <Text style={styles.assinaturaCargo}>{cargo}</Text>
-        </View>
-      )}
+      {d.assinaturaModo === "gov_br" ? null : <Assinatura d={d} nome={nome} cargo={cargo} />}
       {/* Destinatário no RODAPÉ (estilo Cleiton) — após a assinatura. */}
       {destinatarioManual && !noTopo ? (
         <View style={styles.destinatarioRodape} wrap={false}>
@@ -252,7 +288,7 @@ function OficioDoc({ d }: { d: OficioPdfInput }): React.ReactElement {
   const subtitulo = (d.subtitulo ?? "Gabinete — Atendimento ao cidadão").trim();
   const cargo = (d.cargo ?? "Gabinete Parlamentar").trim();
   const logoUrl = d.marca.logoUrl;
-  const numeroFmt = numeroDoOficio(d);
+  const numeroFmt = d.modelo === "requerimento" ? (d.titulo ?? "").trim() || "Requerimento de comissão" : numeroDoOficio(d);
   const anexos = anexoPages(d, nome, accent, logoUrl);
 
   // Com papel timbrado: a imagem é o fundo da página inteira (cabeçalho e rodapé
