@@ -1153,6 +1153,8 @@ export const AUDIT_ACTIONS = [
   "pol_documentos.update",
   "pol_documentos.delete",
   "pol_gabinete.documentos_tipos_updated",
+  // Relatório de visita técnica gerado em PDF (documento do gabinete, guardado na visita).
+  "pol_gabinete.relatorio_de_visita_gerado",
 ] as const;
 
 /** Um código de auditoria. Derivado de `AUDIT_ACTIONS` — não redigite a lista. */

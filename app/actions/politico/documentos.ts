@@ -315,6 +315,8 @@ export async function redigirDocumento(pedido: {
   dispositivo?: string | null;
   orientacao?: string | null;
   demandaId?: string | null;
+  /** Só em homenagem: a data da cerimônia (AAAA-MM-DD), se já marcada. */
+  cerimoniaEm?: string | null;
 }): Promise<{ ok: true; texto: string } | Falha> {
   const s = await sessaoDoGabinete();
   if (!s) return { ok: false, erro: SEM_ACESSO };
@@ -391,6 +393,10 @@ export async function redigirDocumento(pedido: {
         orientacao: curto(pedido.orientacao, 1500) || null,
         local,
         quando,
+        cerimonia:
+          tipo.funcao === "homenagem" && typeof pedido.cerimoniaEm === "string" && /^\d{4}-\d{2}-\d{2}$/.test(pedido.cerimoniaEm)
+            ? new Date(`${pedido.cerimoniaEm}T12:00:00-03:00`).toLocaleDateString("pt-BR", { day: "numeric", month: "long", year: "numeric", timeZone: "America/Sao_Paulo" })
+            : null,
         cidade,
         relatos,
       }),

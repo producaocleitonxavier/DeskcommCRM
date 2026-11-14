@@ -56887,3 +56887,10 @@ create trigger trg_pol_documento_expurgo before delete on public.pol_documentos
   for each row execute function public.fn_pol_documento_expurgo();
 
 notify pgrst, 'reload schema';
+
+-- ── 9100: pol_documentos aceita a função 'homenagem' — apêndice idempotente. Ver migration 9100. ──
+alter table public.pol_documentos drop constraint if exists pol_documentos_funcao_check;
+alter table public.pol_documentos add constraint pol_documentos_funcao_check
+  check (funcao in ('pedido_comissao', 'providencia', 'informacao', 'manifestacao', 'homenagem'));
+
+notify pgrst, 'reload schema';

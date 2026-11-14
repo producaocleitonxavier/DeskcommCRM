@@ -30,7 +30,7 @@ describe("documentos do gabinete — tipos por gabinete", () => {
   it("configuração guardada: respeita rótulo e ligado; o que falta entra desligado", () => {
     const t = tiposDeSettings({ gabinete: { documentos: { tipos: [{ funcao: "providencia", rotulo: "  Indicação   legislativa ", ligado: true }] } } });
     expect(t[0]).toEqual({ funcao: "providencia", rotulo: "Indicação legislativa", ligado: true });
-    expect(t).toHaveLength(4);
+    expect(t).toHaveLength(FUNCOES.length);
     expect(tiposLigados(t)).toHaveLength(1); // o requerimento de comissão NÃO volta ligado sozinho
   });
 
@@ -43,7 +43,7 @@ describe("documentos do gabinete — tipos por gabinete", () => {
       null,
       7,
     ]);
-    expect(t).toHaveLength(4);
+    expect(t).toHaveLength(FUNCOES.length);
     expect(t.find((x) => x.funcao === "manifestacao")).toEqual({ funcao: "manifestacao", rotulo: "Moção", ligado: false });
     expect(t.find((x) => x.funcao === "informacao")!.rotulo).toHaveLength(60);
   });
@@ -137,5 +137,26 @@ describe("histórico dos tipos de documento", () => {
   it("nada mudou = lista vazia; lixo não derruba", () => {
     expect(resumoDaMudancaDeTipos(base, base)).toEqual([]);
     expect(resumoDaMudancaDeTipos(null, "x")).toEqual([]);
+  });
+});
+
+import { rotuloDaData } from "./documentos";
+
+describe("homenagem — quinta função", () => {
+  const tipos = normalizarTipos([{ funcao: "homenagem", rotulo: "Diploma de honra ao mérito", ligado: true }]);
+  it("entra desligada em quem já tinha configuração guardada sem ela", () => {
+    const antigos = normalizarTipos([{ funcao: "pedido_comissao", rotulo: "Requerimento de comissão", ligado: true }]);
+    expect(antigos.find((t) => t.funcao === "homenagem")).toEqual({ funcao: "homenagem", rotulo: "Homenagem", ligado: false });
+  });
+  it("guarda a honraria como subtipo e aceita 'realizado'", () => {
+    const r = prepararDocumento({ funcao: "homenagem", assunto: "Dona Maria", subtipo: " Título de cidadania honorária ", situacao: "protocolado", prazo_em: "2026-12-10" }, tipos);
+    expect(r.ok && r.doc.subtipo).toBe("Título de cidadania honorária");
+    expect(r.ok && r.doc.prazo_em).toBe("2026-12-10");
+    expect(situacoesDaFuncao("homenagem")).toContain("realizado");
+    expect(situacoesDaFuncao("homenagem")).not.toContain("respondido");
+  });
+  it("a data da homenagem é a da cerimônia, não prazo de resposta", () => {
+    expect(rotuloDaData("homenagem").campo).toBe("Data da cerimônia");
+    expect(rotuloDaData("informacao").campo).toBe("Prazo de resposta");
   });
 });

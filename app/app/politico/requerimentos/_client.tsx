@@ -29,7 +29,9 @@ import {
   MODELOS_DE_CASA,
   ROTULO_DA_SITUACAO,
   SUBTIPOS_DE_COMISSAO,
+  SUGESTOES_DE_HONRARIA,
   diasParaOPrazo,
+  rotuloDaData,
   situacoesDaFuncao,
   tiposLigados,
   type FuncaoDoDocumento,
@@ -70,9 +72,18 @@ const fmtData = (iso: string) => {
   return Number.isNaN(d.getTime()) ? "" : d.toLocaleDateString("pt-BR", { day: "2-digit", month: "short", year: "numeric", timeZone: "America/Sao_Paulo" });
 };
 
+/** AAAA-MM-DD de `dias` depois da data do protocolo (ou de hoje, em Brasília, se ainda não há protocolo). */
+function somarDias(base: string, dias: number): string {
+  const inicio = /^\d{4}-\d{2}-\d{2}$/.test(base) ? base : new Intl.DateTimeFormat("en-CA", { timeZone: "America/Sao_Paulo" }).format(new Date());
+  const d = new Date(`${inicio}T12:00:00Z`);
+  d.setUTCDate(d.getUTCDate() + dias);
+  return d.toISOString().slice(0, 10);
+}
+
 function rotuloDoDestinatario(funcao: FuncaoDoDocumento): { campo: string; exemplo: string } {
   if (funcao === "pedido_comissao") return { campo: "Comissão", exemplo: "Ex.: Comissão de Meio Ambiente e Política Urbana" };
   if (funcao === "manifestacao") return { campo: "Para quem é a manifestação", exemplo: "Ex.: Associação de Moradores do Bairro Tal" };
+  if (funcao === "homenagem") return { campo: "Quem recebe a homenagem", exemplo: "Ex.: Dona Maria das Graças, líder comunitária" };
   return { campo: "A quem se pede", exemplo: "Ex.: Prefeito Municipal · Secretaria de Obras" };
 }
 
@@ -251,7 +262,17 @@ export default function RequerimentosClient({
                           </span>
                           {dias !== null ? (
                             <span className="rounded-full px-2 py-0.5 text-[11px] font-bold" style={dias < 0 ? { background: "#FDE8E8", color: "#B42318" } : { background: "#FFF6E0", color: "#7A4B00" }}>
-                              {dias < 0 ? `Prazo vencido há ${-dias} ${-dias === 1 ? "dia" : "dias"}` : dias === 0 ? "Prazo vence hoje" : `Prazo em ${dias} ${dias === 1 ? "dia" : "dias"}`}
+                              {d.funcao === "homenagem"
+                                ? dias < 0
+                                  ? `Cerimônia era há ${-dias} ${-dias === 1 ? "dia" : "dias"}`
+                                  : dias === 0
+                                    ? "Cerimônia hoje"
+                                    : `Cerimônia em ${dias} ${dias === 1 ? "dia" : "dias"}`
+                                : dias < 0
+                                  ? `Prazo vencido há ${-dias} ${-dias === 1 ? "dia" : "dias"}`
+                                  : dias === 0
+                                    ? "Prazo vence hoje"
+                                    : `Prazo em ${dias} ${dias === 1 ? "dia" : "dias"}`}
                             </span>
                           ) : null}
                         </span>
@@ -371,6 +392,7 @@ function Editor({
         dispositivo: r.dispositivo,
         orientacao: r.orientacao,
         demandaId: r.demandaId,
+        cerimoniaEm: r.funcao === "homenagem" ? r.prazo_em : null,
       });
       if (res.ok) mudar("corpo", res.texto);
       else setErro(res.erro);
@@ -524,6 +546,25 @@ function Editor({
             </div>
           ) : null}
 
+          {r.funcao === "homenagem" ? (
+            <label className={rotuloCampo} style={{ color: "var(--color-text)" }}>
+              Honraria
+              <input
+                value={r.subtipo}
+                onChange={(e) => mudar("subtipo", e.target.value)}
+                maxLength={60}
+                list="gip-honrarias"
+                className="wr-input mt-1 w-full font-normal"
+                placeholder="Como a sua Casa chama (ex.: Diploma de honra ao mérito)"
+              />
+              <datalist id="gip-honrarias">
+                {SUGESTOES_DE_HONRARIA.map((h) => (
+                  <option key={h} value={h} />
+                ))}
+              </datalist>
+            </label>
+          ) : null}
+
           <label className={rotuloCampo} style={{ color: "var(--color-text)" }}>
             Assunto
             <input value={r.assunto} onChange={(e) => mudar("assunto", e.target.value)} maxLength={300} className="wr-input mt-1 w-full font-normal" placeholder="Ex.: Falta de iluminação na Rua das Acácias" />
@@ -602,8 +643,23 @@ function Editor({
                 <input type="date" value={r.protocolado_em} onChange={(e) => mudar("protocolado_em", e.target.value)} className="wr-input mt-1 w-full font-normal" />
               </label>
               <label className={rotuloCampo} style={{ color: "var(--color-text)" }}>
-                Prazo de resposta <span className="font-normal" style={{ color: "var(--color-text-subtle)" }}>(se a sua Casa tiver)</span>
+                {rotuloDaData(r.funcao).campo} <span className="font-normal" style={{ color: "var(--color-text-subtle)" }}>({rotuloDaData(r.funcao).dica})</span>
                 <input type="date" value={r.prazo_em} onChange={(e) => mudar("prazo_em", e.target.value)} className="wr-input mt-1 w-full font-normal" />
+                {r.funcao !== "homenagem" ? (
+                  <span className="mt-1 flex flex-wrap gap-1.5 font-normal">
+                    {[15, 30].map((dias) => (
+                      <button
+                        key={dias}
+                        type="button"
+                        onClick={() => mudar("prazo_em", somarDias(r.protocolado_em, dias))}
+                        className="rounded-full px-2.5 py-0.5 text-xs"
+                        style={{ background: "var(--color-surface-elevated)", border: "1px solid var(--color-border)", color: "var(--color-text-muted)" }}
+                      >
+                        {r.protocolado_em ? `${dias} dias depois do protocolo` : `daqui a ${dias} dias`}
+                      </button>
+                    ))}
+                  </span>
+                ) : null}
               </label>
             </div>
           </fieldset>

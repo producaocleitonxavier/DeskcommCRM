@@ -237,7 +237,7 @@ export function limparTextoOficial(texto: string): string {
 // prazo de uma Casa específica está escrito aqui.
 // ─────────────────────────────────────────────────────────────────────────────
 
-export type FuncaoDoDocumentoDaCasa = "pedido_comissao" | "providencia" | "informacao" | "manifestacao";
+export type FuncaoDoDocumentoDaCasa = "pedido_comissao" | "providencia" | "informacao" | "manifestacao" | "homenagem";
 
 export type DadosDoDocumentoDaCasa = {
   funcao: FuncaoDoDocumentoDaCasa;
@@ -252,6 +252,8 @@ export type DadosDoDocumentoDaCasa = {
   dispositivo?: string | null;
   local?: string | null;
   quando?: string | null;
+  /** Só em homenagem: a data da cerimônia, já por extenso. */
+  cerimonia?: string | null;
   cidade?: string | null;
   /** O que a equipe escreveu de próprio punho para orientar a redação. */
   orientacao?: string | null;
@@ -262,7 +264,7 @@ const PADRAO_DA_CASA =
   "Você redige documentos que um parlamentar apresenta à sua Casa Legislativa no Brasil, no padrão de " +
   "uma assessoria experiente. O nome do documento muda de uma Casa para outra: use o nome informado e " +
   "o verbo que corresponde a ele — 'Indico' para indicação, 'Requeiro' para requerimento ou pedido de " +
-  "informação, 'Proponho' para moção ou voto. Só esse verbo vem em primeira pessoa; o restante é " +
+  "informação, 'Proponho' para moção, voto ou homenagem. Só esse verbo vem em primeira pessoa; o restante é " +
   "impessoal ('solicita-se', 'sugere-se'). Um bloco por parágrafo, com uma linha em branco entre eles. " +
   "NÃO escreva número do documento (é dado pela Casa no protocolo), local e data, assinatura nem o bloco " +
   "do destinatário: o sistema já os coloca. Termine no último parágrafo de conteúdo. " +
@@ -300,6 +302,16 @@ const ESTRUTURA_DA_MANIFESTACAO =
   "4) 'Requer-se que desta manifestação seja dada ciência a [destinatário].' Se o destinatário não foi " +
   "informado, use '[A QUEM DAR CIÊNCIA]'.";
 
+const ESTRUTURA_DA_HOMENAGEM =
+  "Estrutura (proposta de homenagem da Casa a pessoa ou entidade):\n" +
+  "1) 'Senhor Presidente,' sozinho na linha.\n" +
+  "2) '[Verbo], nos termos do [dispositivo], a concessão de [honraria informada] a [homenageado].' Se a " +
+  "honraria não foi informada, use '[HONRARIA]'.\n" +
+  "3) 'JUSTIFICATIVA' sozinha na linha, e em seguida um ou dois parágrafos com os fatos que justificam a " +
+  "homenagem — SOMENTE os informados. Não invente biografia, cargos, datas, prêmios nem números; o que " +
+  "faltar para sustentar a homenagem vira lacuna, como '[TRAJETÓRIA E SERVIÇOS PRESTADOS]'.\n" +
+  "4) Se a data da cerimônia foi informada: 'Propõe-se que a entrega ocorra em [data, exatamente como recebida].'";
+
 const ESTRUTURA_DE_COMISSAO_GERAL =
   "Estrutura (pedido a uma comissão da Casa):\n" +
   "1) 'Senhor Presidente,' sozinho na linha.\n" +
@@ -315,7 +327,13 @@ export function instrucoesDoDocumentoDaCasa(funcao: FuncaoDoDocumentoDaCasa, sub
     return `${PADRAO_DO_REQUERIMENTO}\n\n${ESTRUTURA_DE_COMISSAO_GERAL}`;
   }
   const estrutura =
-    funcao === "providencia" ? ESTRUTURA_DA_PROVIDENCIA : funcao === "informacao" ? ESTRUTURA_DA_INFORMACAO : ESTRUTURA_DA_MANIFESTACAO;
+    funcao === "providencia"
+      ? ESTRUTURA_DA_PROVIDENCIA
+      : funcao === "informacao"
+        ? ESTRUTURA_DA_INFORMACAO
+        : funcao === "homenagem"
+          ? ESTRUTURA_DA_HOMENAGEM
+          : ESTRUTURA_DA_MANIFESTACAO;
   return `${PADRAO_DA_CASA}\n\n${estrutura}`;
 }
 
@@ -341,9 +359,11 @@ export function montarPedidoDoDocumentoDaCasa(d: DadosDoDocumentoDaCasa): string
     linha("Assunto", d.assunto) +
     linha(d.funcao === "pedido_comissao" ? "Comissão" : "Destinatário (autoridade, órgão ou homenageado)", d.destinatario) +
     (d.funcao === "pedido_comissao" ? linha("Providência pedida à comissão", d.subtipo) : "") +
+    (d.funcao === "homenagem" ? linha("Honraria", d.subtipo) : "") +
     linha("Dispositivo do regimento", d.dispositivo) +
-    linha("Local (copie exatamente)", d.local) +
-    linha("Data e hora propostas", d.quando) +
+    (d.funcao === "homenagem"
+      ? linha("Data da cerimônia (copie exatamente)", d.cerimonia)
+      : linha("Local (copie exatamente)", d.local) + linha("Data e hora propostas", d.quando)) +
     linha("Cidade", d.cidade) +
     linha("Orientação da equipe (siga, sem copiar literalmente)", d.orientacao) +
     blocoDeRelatos(d.relatos)

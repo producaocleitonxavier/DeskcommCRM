@@ -61,6 +61,8 @@ export interface HojeClientProps {
   cargaEquipe?: CargaMembro[] | null;
   /** Visitas realizadas prontas pra ofício (só gabinete). 0 = faixa some. */
   visitasProntasOficio?: number;
+  /** Documentos da Casa com prazo (ou cerimônia) nos próximos 7 dias, ou já vencido. */
+  documentosComPrazo?: { id: string; rotulo: string; assunto: string; dias: number; cerimonia: boolean }[];
   /** Registros de Rua (captura de campo) ainda na mesa. 0 = card some. */
   registrosDeRua?: number;
   /** Vitórias (demandas resolvidas com foto) prontas pra virar card. 0 = some. */
@@ -287,6 +289,7 @@ export default function HojeClient({
   placarEquipe = null,
   cargaEquipe = null,
   visitasProntasOficio = 0,
+  documentosComPrazo = [],
   registrosDeRua = 0,
   vitoriasPraMostrar = 0,
 }: HojeClientProps) {
@@ -546,6 +549,32 @@ export default function HojeClient({
               })}
             </ul>
           )}
+          {documentosComPrazo.length > 0 ? (
+            <div className="mt-3 border-t pt-3" style={{ borderColor: "var(--color-border)" }}>
+              <p className="mb-1.5 text-xs font-semibold uppercase tracking-wide" style={{ color: "var(--color-text-subtle)" }}>Documentos com data chegando</p>
+              <ul className="space-y-1.5">
+                {documentosComPrazo.map((d) => {
+                  const vencido = d.dias < 0;
+                  const quando = d.cerimonia
+                    ? vencido ? `cerimônia há ${-d.dias}d` : d.dias === 0 ? "cerimônia hoje" : `cerimônia em ${d.dias}d`
+                    : vencido ? `venceu há ${-d.dias}d` : d.dias === 0 ? "vence hoje" : `vence em ${d.dias}d`;
+                  return (
+                    <li key={d.id}>
+                      <Link href="/app/politico/requerimentos" className="flex items-center gap-2 rounded-lg px-2 py-1.5 transition-colors hover:bg-[var(--color-surface-elevated)]">
+                        <span
+                          className="shrink-0 rounded-full px-2 py-0.5 text-[10px] font-bold"
+                          style={vencido && !d.cerimonia ? { background: "#FBE4E2", color: "#A3302A" } : { background: "#FFF6E0", color: "#7A4B00" }}
+                        >
+                          {quando}
+                        </span>
+                        <span className="truncate text-sm" style={{ color: "var(--color-text)" }}>{d.rotulo}: {d.assunto}</span>
+                      </Link>
+                    </li>
+                  );
+                })}
+              </ul>
+            </div>
+          ) : null}
         </div>
 
         {/* Agenda de hoje */}

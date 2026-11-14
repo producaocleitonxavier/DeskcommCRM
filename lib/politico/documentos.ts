@@ -12,7 +12,7 @@
  * O que está desligado não aparece na tela.
  */
 
-export const FUNCOES = ["pedido_comissao", "providencia", "informacao", "manifestacao"] as const;
+export const FUNCOES = ["pedido_comissao", "providencia", "informacao", "manifestacao", "homenagem"] as const;
 export type FuncaoDoDocumento = (typeof FUNCOES)[number];
 
 export const SITUACOES = ["rascunho", "protocolado", "aprovado", "realizado", "respondido", "arquivado"] as const;
@@ -45,9 +45,14 @@ export const DESCRICAO_DA_FUNCAO: Record<FuncaoDoDocumento, { nome: string; para
     exemplos: "Pedido de informação · Requerimento de informação",
   },
   manifestacao: {
-    nome: "Manifestação ou homenagem",
+    nome: "Manifestação",
     paraQue: "Registra aplauso, pesar, apoio ou protesto em nome da Casa.",
     exemplos: "Moção · Voto de pesar · Voto de aplauso",
+  },
+  homenagem: {
+    nome: "Homenagem",
+    paraQue: "Propõe uma honraria da Casa a uma pessoa ou entidade, com data de cerimônia.",
+    exemplos: "Diploma de honra ao mérito · Título de cidadania · Reunião solene",
   },
 };
 
@@ -77,6 +82,7 @@ export const MODELOS_DE_CASA = {
       { funcao: "providencia", rotulo: "Indicação", ligado: false },
       { funcao: "informacao", rotulo: "Pedido de informação", ligado: false },
       { funcao: "manifestacao", rotulo: "Moção", ligado: false },
+      { funcao: "homenagem", rotulo: "Homenagem", ligado: false },
     ],
   },
   indicacao: {
@@ -87,6 +93,7 @@ export const MODELOS_DE_CASA = {
       { funcao: "manifestacao", rotulo: "Moção", ligado: true },
       { funcao: "informacao", rotulo: "Requerimento de informação", ligado: true },
       { funcao: "pedido_comissao", rotulo: "Requerimento de comissão", ligado: false },
+      { funcao: "homenagem", rotulo: "Homenagem", ligado: false },
     ],
   },
   requerimento: {
@@ -97,6 +104,7 @@ export const MODELOS_DE_CASA = {
       { funcao: "informacao", rotulo: "Requerimento de informação", ligado: true },
       { funcao: "manifestacao", rotulo: "Requerimento de votos", ligado: true },
       { funcao: "pedido_comissao", rotulo: "Requerimento de comissão", ligado: false },
+      { funcao: "homenagem", rotulo: "Homenagem", ligado: false },
     ],
   },
 } as const satisfies Record<string, { nome: string; onde: string; tipos: readonly TipoDeDocumento[] }>;
@@ -123,7 +131,7 @@ export function limparRotulo(v: unknown): string {
 
 /**
  * Normaliza uma lista de tipos vinda de qualquer lugar (configuração guardada ou
- * formulário): sempre devolve as QUATRO funções, uma vez cada, na ordem recebida;
+ * formulário): sempre devolve TODAS as funções, uma vez cada, na ordem recebida;
  * o que faltar entra desligado com o rótulo padrão; rótulo vazio volta ao padrão.
  */
 export function normalizarTipos(entrada: unknown): TipoDeDocumento[] {
@@ -166,7 +174,17 @@ export function situacoesDaFuncao(funcao: FuncaoDoDocumento): SituacaoDoDocument
   if (funcao === "pedido_comissao") return ["rascunho", "protocolado", "aprovado", "realizado", "arquivado"];
   if (funcao === "informacao") return ["rascunho", "protocolado", "aprovado", "respondido", "arquivado"];
   if (funcao === "providencia") return ["rascunho", "protocolado", "aprovado", "respondido", "arquivado"];
+  if (funcao === "homenagem") return ["rascunho", "protocolado", "aprovado", "realizado", "arquivado"];
   return ["rascunho", "protocolado", "aprovado", "arquivado"];
+}
+
+/** Honrarias mais comuns — só sugestão: o campo aceita o nome que a Casa do gabinete usa. */
+export const SUGESTOES_DE_HONRARIA = ["Diploma de honra ao mérito", "Título de cidadania honorária", "Reunião solene"] as const;
+
+/** O nome do campo de data de cada função (homenagem tem cerimônia, não prazo de resposta). */
+export function rotuloDaData(funcao: FuncaoDoDocumento): { campo: string; dica: string } {
+  if (funcao === "homenagem") return { campo: "Data da cerimônia", dica: "quando estiver marcada" };
+  return { campo: "Prazo de resposta", dica: "se a sua Casa tiver" };
 }
 
 export const TAMANHO_MAXIMO_DO_DOCUMENTO = 12000;
@@ -231,7 +249,8 @@ export function prepararDocumento(
       funcao: e.funcao,
       // O rótulo é o do gabinete NA HORA em que o documento nasce: renomear o tipo depois não reescreve os antigos.
       rotulo: tipo.rotulo,
-      subtipo: e.funcao === "pedido_comissao" ? curto(e.subtipo, 60) || null : null,
+      // Subtipo: o pedido feito à comissão, ou a honraria da homenagem. Nas outras funções não existe.
+      subtipo: e.funcao === "pedido_comissao" || e.funcao === "homenagem" ? curto(e.subtipo, 60) || null : null,
       assunto,
       destinatario: curto(e.destinatario, 300) || null,
       dispositivo: curto(e.dispositivo, 200) || null,

@@ -15,14 +15,16 @@ describe("documentos da Casa — o nome é do gabinete, a regra não é de Casa 
     expect(p).toContain("JUSTIFICATIVA");
     expect(i).toContain("uma por linha");
     expect(m).toContain("seja dada ciência");
-    for (const t of [p, i, m, instrucoesDoDocumentoDaCasa("pedido_comissao", "seminário")]) {
+    const h = instrucoesDoDocumentoDaCasa("homenagem");
+    expect(h).toContain("Não invente biografia");
+    for (const t of [p, i, m, h, instrucoesDoDocumentoDaCasa("pedido_comissao", "seminário")]) {
       expect(t).toContain("NUNCA invente dado");
       expect(t).toContain("nunca promete resultado");
     }
   });
 
   it("nenhuma regra de uma Casa específica está no texto fixo", () => {
-    const tudo = (["pedido_comissao", "providencia", "informacao", "manifestacao"] as const)
+    const tudo = (["pedido_comissao", "providencia", "informacao", "manifestacao", "homenagem"] as const)
       .map((f) => instrucoesDoDocumentoDaCasa(f, "outro"))
       .join("\n");
     expect(tudo).not.toMatch(/Belo Horizonte|Contagem|art\. ?\d|30 dias|20 por mês/i);
@@ -63,5 +65,20 @@ describe("documentos da Casa — o nome é do gabinete, a regra não é de Casa 
       destinatario: "Comissão de Mobilidade",
     });
     expect(t).toContain("Providência pedida à comissão: seminário sobre mobilidade");
+  });
+  it("homenagem: leva a honraria e a data da cerimônia; data e local de demanda NÃO entram", () => {
+    const t = montarPedidoDoDocumentoDaCasa({
+      funcao: "homenagem",
+      rotulo: "Homenagem",
+      subtipo: "Diploma de honra ao mérito",
+      assunto: "Dona Maria",
+      cerimonia: "10 de dezembro de 2026",
+      quando: "4 de outubro de 2026, às 21 horas",
+      local: "Rua A, 10",
+    });
+    expect(t).toContain("Honraria: Diploma de honra ao mérito");
+    expect(t).toContain("Data da cerimônia (copie exatamente): 10 de dezembro de 2026");
+    expect(t).not.toContain("4 de outubro");
+    expect(t).not.toContain("Rua A, 10");
   });
 });

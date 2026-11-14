@@ -22,6 +22,7 @@ import { exigirAcessoPolitico } from "@/lib/politico/acesso";
 import { estaAtrasada } from "@/lib/politico/demanda-cobranca";
 import { rotuloDoTipo } from "@/lib/politico/rotulo-tipo";
 import { rotuloDoNivel } from "@/lib/politico/niveis";
+import { diasParaOPrazo, type FuncaoDoDocumento, type SituacaoDoDocumento } from "@/lib/politico/documentos";
 
 
 export const dynamic = "force-dynamic";
@@ -554,6 +555,37 @@ async function contarRegistrosDeRua(organizationId: string): Promise<number> {
   return count ?? 0;
 }
 
+export type DocumentoComPrazo = { id: string; rotulo: string; assunto: string; dias: number; cerimonia: boolean };
+
+/**
+ * Documentos da Casa com data chegando (7 dias) ou já vencida — o lembrete do pedido de
+ * informação sem resposta e da homenagem com cerimônia perto. Tabela ausente (SQL não rodado)
+ * ou erro devolvem vazio: o Hoje nunca cai por causa disto.
+ */
+async function buscarDocumentosComPrazo(organizationId: string): Promise<DocumentoComPrazo[]> {
+  try {
+    const db = await createClient();
+    const { data, error } = await db
+      .from("pol_documentos")
+      .select("id, funcao, rotulo, assunto, situacao, prazo_em")
+      .eq("organization_id", organizationId)
+      .not("prazo_em", "is", null)
+      .in("situacao", ["protocolado", "aprovado"])
+      .order("prazo_em", { ascending: true })
+      .limit(50);
+    if (error || !data) return [];
+    return (data as { id: string; funcao: FuncaoDoDocumento; rotulo: string; assunto: string; situacao: SituacaoDoDocumento; prazo_em: string }[])
+      .map((d) => ({ id: d.id, rotulo: d.rotulo, assunto: d.assunto, dias: diasParaOPrazo(d.prazo_em, d.situacao), cerimonia: d.funcao === "homenagem" }))
+      // Vencido há muito tempo deixa de ser lembrete e vira ruído que empurra os de agora para fora:
+      // prazo vencido aparece por 30 dias; cerimônia que já passou, por 3.
+      .filter((d): d is DocumentoComPrazo => d.dias !== null && d.dias <= 7 && d.dias >= (d.cerimonia ? -3 : -30))
+      .sort((a, b) => Math.abs(a.dias) - Math.abs(b.dias))
+      .slice(0, 6);
+  } catch {
+    return [];
+  }
+}
+
 async function buscarVisitasProntasOficio(
   organizationId: string,
 ): Promise<{ total: number; primeiraId: string | null }> {
@@ -788,6 +820,9 @@ async function buscarCargaEquipe(organizationId: string): Promise<CargaMembro[]>
 
 // -- Componente (server) -----------------------------------------------------
 
+/** Gestor para cima vê os documentos mesmo com menu personalizado sem a porta Ofícios. */
+const ROLE_DE_GESTOR: ReadonlySet<string> = new Set(["manager", "admin"]);
+
 export default async function HojePage() {
   await exigirAcessoPolitico("hoje");
   const user = await requireAuth();
@@ -845,6 +880,8 @@ export default async function HojePage() {
   const prontasOficio = podeOficio
     ? await buscarVisitasProntasOficio(org.orgId)
     : { total: 0, primeiraId: null };
+  // Lembrete de prazo dos documentos — só para quem emite documentos do gabinete.
+  const documentosComPrazo = podeOficio || ROLE_DE_GESTOR.has(org.role) ? await buscarDocumentosComPrazo(org.orgId) : [];
 
   return (
     <>
@@ -866,6 +903,7 @@ export default async function HojePage() {
         placarEquipe={placarEquipe}
         cargaEquipe={cargaEquipe}
         visitasProntasOficio={prontasOficio.total}
+        documentosComPrazo={documentosComPrazo}
         registrosDeRua={registrosDeRua}
         vitoriasPraMostrar={vitoriasPraMostrar}
       />
