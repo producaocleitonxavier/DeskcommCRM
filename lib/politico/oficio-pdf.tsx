@@ -24,6 +24,7 @@ const styles = StyleSheet.create({
   data: { fontSize: 11 },
   destinatario: { marginBottom: 20, fontSize: 11, fontWeight: 700 },
   corpo: { fontSize: 11, lineHeight: 1.6, textAlign: "justify" },
+  pedido: { fontWeight: 700 },
   assinaturaBloco: { marginTop: 48, alignItems: "center" },
   assinaturaImagem: { height: 56, width: 180, objectFit: "contain", marginBottom: 2 },
   assinaturaLinha: { width: 220, borderTopWidth: 1, borderTopColor: "#1A1A1A", marginBottom: 4 },
@@ -165,11 +166,20 @@ function Corpo({ d, nome, cargo }: { d: OficioPdfInput; nome: string; cargo: str
       {destinatarioManual ? null : <Text style={styles.destinatario}>{destino}</Text>}
       {/* Linha "Assunto:" (quando preenchida). */}
       {assunto ? <Text style={styles.assuntoLinha}>Assunto: {assunto}</Text> : null}
-      <Text style={styles.corpo}>{d.corpo}</Text>
+      <Text style={styles.corpo}>
+        {d.corpo.split("\n").map((linha, i, todas) => {
+          const quebra = i < todas.length - 1 ? "\n" : "";
+          return linha.trimStart().startsWith("• ") ? (
+            <Text key={i} style={styles.pedido}>{linha + quebra}</Text>
+          ) : (
+            linha + quebra
+          );
+        })}
+      </Text>
       {/* Bloco de assinatura: só no modo "imagem". No "gov_br" não desenha nada
           (assina no gov.br com hora oficial, ou a assinatura já vem no timbrado). */}
       {d.assinaturaModo === "gov_br" ? null : (
-        <View style={styles.assinaturaBloco}>
+        <View style={styles.assinaturaBloco} wrap={false}>
           {d.assinaturaUrl ? <Image src={d.assinaturaUrl} style={styles.assinaturaImagem} /> : null}
           <View style={styles.assinaturaLinha} />
           <Text style={styles.assinaturaNome}>{nome}</Text>
@@ -178,7 +188,7 @@ function Corpo({ d, nome, cargo }: { d: OficioPdfInput; nome: string; cargo: str
       )}
       {/* Destinatário no RODAPÉ (estilo Cleiton) — após a assinatura. */}
       {destinatarioManual && !noTopo ? (
-        <View style={styles.destinatarioRodape}>
+        <View style={styles.destinatarioRodape} wrap={false}>
           <Text>{destinatarioManual}</Text>
         </View>
       ) : null}
@@ -206,12 +216,12 @@ function anexoPages(
     const base = m.base ?? TIMBRADO_MARGENS_PADRAO.base;
     const lados = m.lados ?? TIMBRADO_MARGENS_PADRAO.lados;
     const boxW = A4_PT.largura - 2 * lados;
-    const boxH = A4_PT.altura - topo - base;
+    const boxH = A4_PT.altura - topo - base - 2;
     const timbrado = d.timbradoUrl;
     // A foto é posicionada ABSOLUTA na faixa de conteúdo (entre o cabeçalho e o
     // rodapé do timbrado), com tamanho fixo em pontos + objectFit:contain.
     return imgs.map((a, i) => (
-      <Page key={`anexo-${i}`} size="A4" style={styles.pageTimbrado}>
+      <Page key={`anexo-${i}`} size="A4" style={styles.pageTimbrado} wrap={false}>
         <Image src={timbrado} style={styles.fundoTimbrado} fixed />
         <Image
           src={a.url}
@@ -224,7 +234,7 @@ function anexoPages(
   const boxW = A4_PT.largura - 2 * 56;
   const boxH = A4_PT.altura - 48 - 48 - 60; // menos padding e o cabeçalho gerado
   return imgs.map((a, i) => (
-    <Page key={`anexo-${i}`} size="A4" style={styles.pageAnexo}>
+    <Page key={`anexo-${i}`} size="A4" style={styles.pageAnexo} wrap={false}>
       <View style={[styles.anexoHeader, { borderBottomColor: accent }]}>
         <Text style={[styles.marcaNome, { color: accent }]}>{marcaNome}</Text>
         {logoUrl ? <Image src={logoUrl} style={styles.logo} /> : null}
@@ -254,11 +264,9 @@ function OficioDoc({ d }: { d: OficioPdfInput }): React.ReactElement {
     };
     return (
       <Document>
-        <Page size="A4" style={styles.pageTimbrado}>
+        <Page size="A4" style={[styles.pageTimbrado, margens]}>
           <Image src={d.timbradoUrl} style={styles.fundoTimbrado} fixed />
-          <View style={margens}>
-            <Corpo d={d} nome={nome} cargo={cargo} />
-          </View>
+          <Corpo d={d} nome={nome} cargo={cargo} />
         </Page>
         {anexos}
       </Document>
